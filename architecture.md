@@ -201,7 +201,7 @@ Istio 1.24 supports Kubernetes up to 1.31, which is why `provision.sh` pins the 
 
 ### What is running
 
-24 pods on one node, and six ArgoCD Applications that all report Synced and Healthy.
+25 pods on one node (one is a finished ArgoCD setup job), and six ArgoCD Applications that all report Synced and Healthy.
 
 | Namespace | Pods | Memory in use |
 |---|---|---|
