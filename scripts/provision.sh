@@ -135,9 +135,14 @@ detect_platform_args() {
   if [[ -n "$platform" ]]; then
     PLATFORM_ARGS=(--set "global.platform=${platform}")
     if [[ "$platform" == "k3s" ]]; then
-      # Recent k3s versions load CNI plugins from data/cni. The chart's k3s profile
-      # installs the istio-cni binary into data/current/bin, where containerd never looks.
-      CNI_EXTRA_ARGS=(--set "cni.cniBinDir=/var/lib/rancher/k3s/data/cni")
+      # The CNI plugin directory differs between k3s versions, and the istio-cni binary must
+      # land in the directory containerd searches. Read it from the node's containerd config.
+      local bin_dir=""
+      bin_dir="$(docker exec "k3d-${CLUSTER_NAME}-server-0" \
+        sed -n 's/^[[:space:]]*bin_dir = "\(.*\)"/\1/p' /var/lib/rancher/k3s/agent/etc/containerd/config.toml 2>/dev/null | head -1 || true)"
+      bin_dir="${bin_dir:-/var/lib/rancher/k3s/data/cni}"
+      CNI_EXTRA_ARGS=(--set "cni.cniBinDir=${bin_dir}")
+      ok "containerd searches ${bin_dir} for CNI plugins"
     fi
     ok "Using Istio platform profile: ${platform}"
   fi
