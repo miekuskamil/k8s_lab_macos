@@ -134,9 +134,13 @@ kubectl -n shop set env deploy/backend-v1 deploy/backend-v2 RATE_LIMIT_RPS=20
 ./scripts/traffic-test.sh 200 20
 ```
 
-**What you should see.** Status 429 for most requests above the limit. The Grafana stat "Requests rejected by the backend rate limiter" goes up.
+Wait for the rollout to finish (`kubectl -n shop rollout status deploy/backend-v1`) before you send traffic.
 
-**Undo.** `kubectl -n shop set env deploy/backend-v1 deploy/backend-v2 RATE_LIMIT_RPS=0`. If you do nothing, ArgoCD reverts the change within a few seconds, because `shop-apps` self-heals. That is the drift correction from section 2, applied to your own experiment.
+**What you should see.** Status 429 for the requests above the limit. Each pod has its own bucket of 20 requests per second, so the total allowed rate depends on how many pods receive traffic. The Grafana stat "Requests rejected by the backend rate limiter" goes up.
+
+**Undo.** `kubectl -n shop set env deploy/backend-v1 deploy/backend-v2 RATE_LIMIT_RPS=0`
+
+`shop-apps` self-heals, so ArgoCD would normally revert a manual change to a Deployment within seconds. The Application lists `RATE_LIMIT_RPS` and `EXTRA_LATENCY_MS` under `ignoreDifferences`, so these two variables stay as you set them. Any other manual edit to the Deployments is still reverted.
 
 ## 4. Recipes
 

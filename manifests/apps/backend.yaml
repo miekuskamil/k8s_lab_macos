@@ -57,6 +57,8 @@ spec:
               value: http://jaeger-collector.observability.svc.cluster.local:4318
             - name: RATE_LIMIT_RPS
               value: "0"
+            - name: EXTRA_LATENCY_MS
+              value: "0"
           resources:
             requests:
               cpu: 50m
@@ -147,6 +149,8 @@ spec:
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: http://jaeger-collector.observability.svc.cluster.local:4318
             - name: RATE_LIMIT_RPS
+              value: "0"
+            - name: EXTRA_LATENCY_MS
               value: "0"
           resources:
             requests:

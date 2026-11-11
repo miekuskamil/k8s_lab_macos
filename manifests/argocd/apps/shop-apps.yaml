@@ -14,10 +14,19 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: shop
+  # These two variables are experiment controls. ArgoCD ignores them, so a manual
+  # "kubectl set env" stays in place until you undo it.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jqPathExpressions:
+        - .spec.template.spec.containers[].env[] | select(.name == "RATE_LIMIT_RPS" or .name == "EXTRA_LATENCY_MS")
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
     retry:
       limit: 5
       backoff:
