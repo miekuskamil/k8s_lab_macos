@@ -25,6 +25,7 @@ spec:
       labels:
         app: redis
     spec:
+      enableServiceLinks: false
       serviceAccountName: redis
       automountServiceAccountToken: false
       securityContext:

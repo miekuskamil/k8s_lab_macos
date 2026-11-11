@@ -22,6 +22,7 @@ spec:
       labels:
         app: frontend
     spec:
+      enableServiceLinks: false
       serviceAccountName: frontend
       automountServiceAccountToken: false
       securityContext:

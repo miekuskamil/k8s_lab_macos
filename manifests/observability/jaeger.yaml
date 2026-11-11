@@ -25,6 +25,7 @@ spec:
       labels:
         app: jaeger
     spec:
+      enableServiceLinks: false
       serviceAccountName: jaeger
       automountServiceAccountToken: false
       securityContext:

@@ -25,6 +25,7 @@ spec:
         app: backend
         version: v1
     spec:
+      enableServiceLinks: false
       serviceAccountName: backend
       automountServiceAccountToken: false
       securityContext:
@@ -115,6 +116,7 @@ spec:
         app: backend
         version: v2
     spec:
+      enableServiceLinks: false
       serviceAccountName: backend
       automountServiceAccountToken: false
       securityContext:

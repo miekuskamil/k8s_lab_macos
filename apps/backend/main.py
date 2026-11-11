@@ -30,7 +30,8 @@ from pydantic import BaseModel, Field
 APP_VERSION = os.getenv("APP_VERSION", "v1")
 POD_NAME = os.getenv("HOSTNAME", socket.gethostname())
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
-REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+# Not REDIS_PORT: Kubernetes injects REDIS_PORT=tcp://<ip>:6379 for a Service named redis.
+REDIS_PORT = int(os.getenv("REDIS_PORT_NUMBER", "6379"))
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
 OTEL_ENABLED = os.getenv("OTEL_ENABLED", "true").lower() == "true"
 RATE_LIMIT_RPS = float(os.getenv("RATE_LIMIT_RPS", "0"))

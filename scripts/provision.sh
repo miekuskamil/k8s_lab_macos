@@ -19,6 +19,8 @@ GATEWAY_API_VERSION="${GATEWAY_API_VERSION:-v1.2.1}"
 ARGOCD_CHART_VERSION="${ARGOCD_CHART_VERSION:-7.7.11}"
 SYNC_TIMEOUT_SECONDS="${SYNC_TIMEOUT_SECONDS:-900}"
 CLUSTER_NAME="${CLUSTER_NAME:-k8s-lab}"
+# Istio 1.24 supports Kubernetes 1.28 to 1.31, and ArgoCD 7.7 does not know newer API schemas.
+K3S_IMAGE="${K3S_IMAGE:-rancher/k3s:v1.31.5-k3s1}"
 KUBE_CONTEXT="k3d-${CLUSTER_NAME}"
 IMAGE_TAG="1.0.0"
 
@@ -65,6 +67,7 @@ ensure_cluster() {
     k3d cluster start "$CLUSTER_NAME" >/dev/null 2>&1 || true
   else
     k3d cluster create "$CLUSTER_NAME" \
+      --image "$K3S_IMAGE" \
       --servers 1 --agents 0 \
       --port "8080:8080@loadbalancer" \
       --k3s-arg "--disable=traefik@server:0" \
