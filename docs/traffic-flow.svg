@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 720" width="1100" height="720" role="img" aria-labelledby="t d" font-family="-apple-system, Helvetica, Arial, sans-serif">
+<title id="t">Traffic flow and trust zones</title><desc id="d">A request enters at localhost:8080, crosses the k3d load balancer, the shop-gateway, ztunnel, the waypoint and a backend, and reaches Redis. HBONE mTLS edges are thick blue, plaintext edges are black, telemetry edges are dashed gray.</desc>
+<defs>
+<marker id="a-mtls" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f6feb"/></marker>
+<marker id="a-plain" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#24292f"/></marker>
+<marker id="a-tele" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6e7781"/></marker>
+</defs>
+<rect width="1100" height="720" fill="#ffffff"/>
+<rect x="165" y="20" width="925" height="690" rx="8" fill="#f6f8fa" stroke="#8c959f" stroke-width="1.5"/>
+<text x="173" y="36" font-size="11" font-weight="700" fill="#24292f">OrbStack: Docker engine</text>
+<rect x="180" y="48" width="900" height="652" rx="8" fill="#f6f8fa" stroke="#8c959f" stroke-width="1.5"/>
+<text x="188" y="64" font-size="11" font-weight="700" fill="#24292f">k3d cluster k8s-lab (load balancer + k3s node containers)</text>
+<rect x="360" y="78" width="710" height="612" rx="8" fill="#f6f8fa" stroke="#8c959f" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="368" y="94" font-size="11" font-weight="700" fill="#24292f">k3s node container</text>
+<rect x="10" y="200" width="145" height="130" rx="8" fill="#f1f3f5" stroke="#6e7781" stroke-width="1.5"/>
+<text x="18" y="216" font-size="11" font-weight="700" fill="#6e7781">macOS host</text>
+<rect x="372" y="200" width="120" height="100" rx="8" fill="#fff4e0" stroke="#bf8700" stroke-width="1.5"/>
+<text x="380" y="216" font-size="11" font-weight="700" fill="#bf8700">ns shop-ingress</text>
+<rect x="530" y="100" width="120" height="460" rx="8" fill="#eef3fb" stroke="#1f6feb" stroke-width="1.5"/>
+<text x="538" y="116" font-size="11" font-weight="700" fill="#1f6feb">ns istio-system</text>
+<rect x="700" y="100" width="360" height="470" rx="8" fill="#eaf5ec" stroke="#2da44e" stroke-width="1.5"/>
+<text x="708" y="116" font-size="11" font-weight="700" fill="#2da44e">ns shop (ambient mode)</text>
+<rect x="530" y="590" width="530" height="92" rx="8" fill="#eaf5ec" stroke="#2da44e" stroke-width="1.5"/>
+<text x="538" y="606" font-size="11" font-weight="700" fill="#2da44e">ns observability (ambient mode)</text>
+<rect x="22" y="245" width="120" height="50" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="82.0" y="267.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">Browser</text>
+<text x="82.0" y="281.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">localhost:8080</text>
+<rect x="195" y="250" width="130" height="70" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="260.0" y="275.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">k3d load balancer</text>
+<text x="260.0" y="289.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">host :8080</text>
+<text x="260.0" y="303.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">to node :8080</text>
+<rect x="382" y="225" width="100" height="50" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="432.0" y="247.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">shop-gateway</text>
+<text x="432.0" y="261.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">Envoy :8080</text>
+<rect x="545" y="120" width="90" height="50" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="590.0" y="142.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">istiod</text>
+<text x="590.0" y="156.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">xDS :15012</text>
+<rect x="545" y="200" width="90" height="340" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="590.0" y="353.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">ztunnel</text>
+<text x="590.0" y="367.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">one per node</text>
+<text x="590.0" y="381.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">HBONE :15008</text>
+<text x="590.0" y="395.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">metrics :15020</text>
+<rect x="740" y="225" width="110" height="50" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="795.0" y="247.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">frontend</text>
+<text x="795.0" y="261.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">:3000</text>
+<rect x="740" y="330" width="110" height="50" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="795.0" y="352.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">waypoint</text>
+<text x="795.0" y="366.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">Envoy</text>
+<rect x="740" y="420" width="100" height="45" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="790.0" y="439.5" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">backend-v1</text>
+<text x="790.0" y="453.5" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">2 pods :8000</text>
+<rect x="740" y="478" width="100" height="45" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="790.0" y="497.5" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">backend-v2</text>
+<text x="790.0" y="511.5" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">1 pod :8000</text>
+<rect x="930" y="440" width="100" height="60" rx="14" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="980.0" y="467.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">redis</text>
+<text x="980.0" y="481.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">:6379</text>
+<rect x="550" y="615" width="120" height="52" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="610.0" y="638.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">Prometheus</text>
+<text x="610.0" y="652.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">:9090</text>
+<rect x="730" y="615" width="120" height="52" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="790.0" y="638.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">Grafana</text>
+<text x="790.0" y="652.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">:3000</text>
+<rect x="910" y="615" width="140" height="52" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="980.0" y="638.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">Jaeger :16686</text>
+<text x="980.0" y="652.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">OTLP :4317, :4318</text>
+<polyline points="142,270 195,270" fill="none" stroke="#24292f" stroke-width="1.8" marker-end="url(#a-plain)"/>
+<text x="168" y="262" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">1 HTTP</text>
+<polyline points="325,262 382,262" fill="none" stroke="#24292f" stroke-width="1.8" marker-end="url(#a-plain)"/>
+<text x="353" y="254" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">2 TCP</text>
+<polyline points="482,250 545,250" fill="none" stroke="#1f6feb" stroke-width="3.5" marker-end="url(#a-mtls)"/>
+<text x="514" y="242" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">3 HBONE</text>
+<polyline points="635,235 740,235" fill="none" stroke="#24292f" stroke-width="1.8" marker-end="url(#a-plain)"/>
+<text x="688" y="227" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">4 deliver</text>
+<polyline points="740,265 635,265" fill="none" stroke="#24292f" stroke-width="1.8" marker-end="url(#a-plain)"/>
+<text x="688" y="284" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">5 HTTP :8000</text>
+<polyline points="635,345 740,345" fill="none" stroke="#1f6feb" stroke-width="3.5" marker-end="url(#a-mtls)"/>
+<text x="688" y="337" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">6 HBONE</text>
+<polyline points="740,368 635,368" fill="none" stroke="#1f6feb" stroke-width="3.5" marker-end="url(#a-mtls)"/>
+<text x="688" y="386" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">7 HBONE 90 v1 / 10 v2</text>
+<polyline points="635,442 740,442" fill="none" stroke="#24292f" stroke-width="1.8" marker-end="url(#a-plain)"/>
+<text x="688" y="434" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">8 deliver</text>
+<polyline points="635,500 740,500" fill="none" stroke="#24292f" stroke-width="1.8" marker-end="url(#a-plain)"/>
+<text x="688" y="492" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">8 deliver</text>
+<polyline points="840,442 930,462" fill="none" stroke="#1f6feb" stroke-width="3.5" marker-end="url(#a-mtls)"/>
+<text x="885" y="436" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">9 L4 mTLS</text>
+<polyline points="840,500 930,482" fill="none" stroke="#1f6feb" stroke-width="3.5" marker-end="url(#a-mtls)"/>
+<polyline points="590,170 590,200" fill="none" stroke="#6e7781" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a-tele)"/>
+<text x="590" y="188" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">xDS, certs</text>
+<polyline points="850,355 1045,355 1045,615" fill="none" stroke="#6e7781" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a-tele)"/>
+<text x="950" y="347" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">OTLP traces</text>
+<polyline points="610,615 610,585 790,585 790,570" fill="none" stroke="#6e7781" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a-tele)"/>
+<text x="700" y="580" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">scrape</text>
+<polyline points="730,641 670,641" fill="none" stroke="#6e7781" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a-tele)"/>
+<text x="700" y="636" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">PromQL</text>
+<polyline points="850,641 910,641" fill="none" stroke="#6e7781" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a-tele)"/>
+<text x="880" y="636" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">traces</text>
+<polyline points="14,440 70,440" fill="none" stroke="#1f6feb" stroke-width="3.5" marker-end="url(#a-mtls)"/>
+<polyline points="14,462 70,462" fill="none" stroke="#24292f" stroke-width="1.8" marker-end="url(#a-plain)"/>
+<polyline points="14,484 70,484" fill="none" stroke="#6e7781" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a-tele)"/>
+<text x="10" y="34" font-size="16" font-weight="700" text-anchor="start" fill="#24292f">Traffic flow</text>
+<text x="10" y="52" font-size="16" font-weight="700" text-anchor="start" fill="#24292f">and trust zones</text>
+<text x="382" y="290" font-size="10" font-weight="400" text-anchor="start" fill="#24292f">outside the mesh</text>
+<text x="10" y="420" font-size="12" font-weight="700" text-anchor="start" fill="#24292f">Legend</text>
+<text x="78" y="444" font-size="11" font-weight="400" text-anchor="start" fill="#24292f">HBONE mTLS</text>
+<text x="78" y="466" font-size="11" font-weight="400" text-anchor="start" fill="#24292f">plaintext</text>
+<text x="78" y="488" font-size="11" font-weight="400" text-anchor="start" fill="#24292f">control, telemetry</text>
+<text x="10" y="512" font-size="10" font-weight="400" text-anchor="start" fill="#24292f">Numbers give the hop order</text>
+<text x="10" y="526" font-size="10" font-weight="400" text-anchor="start" fill="#24292f">of one request. The trust</text>
+<text x="10" y="540" font-size="10" font-weight="400" text-anchor="start" fill="#24292f">zone is the namespace.</text>
+</svg>

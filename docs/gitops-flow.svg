@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 520" width="1000" height="520" role="img" aria-labelledby="t d" font-family="-apple-system, Helvetica, Arial, sans-serif">
+<title id="t">GitOps flow</title><desc id="d">You push to GitHub. The ArgoCD root Application polls the repository, creates five child Applications, and each applies manifests to the k3d cluster. The cluster reports drift back to the root.</desc>
+<defs>
+<marker id="a-mtls" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f6feb"/></marker>
+<marker id="a-plain" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#24292f"/></marker>
+<marker id="a-tele" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6e7781"/></marker>
+</defs>
+<rect width="1000" height="520" fill="#ffffff"/>
+<rect x="380" y="20" width="610" height="485" rx="8" fill="#f6f8fa" stroke="#8c959f" stroke-width="1.5"/>
+<text x="388" y="36" font-size="11" font-weight="700" fill="#24292f">k3d cluster k8s-lab</text>
+<rect x="395" y="195" width="160" height="110" rx="8" fill="#eef3fb" stroke="#1f6feb" stroke-width="1.5"/>
+<text x="403" y="211" font-size="11" font-weight="700" fill="#1f6feb">ns argocd</text>
+<rect x="10" y="330" width="350" height="160" rx="8" fill="#f1f3f5" stroke="#6e7781" stroke-width="1.5"/>
+<rect x="20" y="225" width="90" height="50" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="65.0" y="254.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">You</text>
+<rect x="170" y="215" width="130" height="70" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="235.0" y="240.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">GitHub</text>
+<text x="235.0" y="254.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">miekuskamil/</text>
+<text x="235.0" y="268.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">k8s_lab_macos, main</text>
+<rect x="415" y="230" width="130" height="50" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="480.0" y="252.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">Application root</text>
+<text x="480.0" y="266.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">manifests/argocd/apps</text>
+<rect x="660" y="40" width="170" height="56" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="745.0" y="65.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">shop-base</text>
+<text x="745.0" y="79.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">namespaces, RBAC, quotas</text>
+<rect x="660" y="128" width="170" height="56" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="745.0" y="153.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">shop-apps</text>
+<text x="745.0" y="167.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">frontend, backend, redis</text>
+<rect x="660" y="216" width="170" height="56" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="745.0" y="241.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">istio-config</text>
+<text x="745.0" y="255.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">gateway, waypoint, routes</text>
+<rect x="660" y="304" width="170" height="56" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="745.0" y="329.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">kube-prometheus-stack</text>
+<text x="745.0" y="343.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">Helm chart + helm/ values</text>
+<rect x="660" y="392" width="170" height="56" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="745.0" y="417.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">observability-config</text>
+<text x="745.0" y="431.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">Jaeger, monitors, dashboard</text>
+<rect x="895" y="215" width="85" height="70" rx="5" fill="#fff" stroke="#24292f" stroke-width="1.5"/>
+<text x="937.5" y="240.0" font-size="12" font-weight="700" text-anchor="middle" fill="#24292f">live</text>
+<text x="937.5" y="254.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">cluster</text>
+<text x="937.5" y="268.0" font-size="10.5" font-weight="400" text-anchor="middle" fill="#24292f">state</text>
+<polyline points="110,250 170,250" fill="none" stroke="#24292f" stroke-width="1.8" marker-end="url(#a-plain)"/>
+<text x="140" y="242" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">1 git push</text>
+<polyline points="415,255 300,255" fill="none" stroke="#24292f" stroke-width="1.8" marker-end="url(#a-plain)"/>
+<text x="357" y="247" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">2 poll repo</text>
+<polyline points="545,255 660,68" fill="none" stroke="#24292f" stroke-width="1.8" marker-end="url(#a-plain)"/>
+<polyline points="830,68 895,250" fill="none" stroke="#1f6feb" stroke-width="3.5" marker-end="url(#a-mtls)"/>
+<polyline points="545,255 660,156" fill="none" stroke="#24292f" stroke-width="1.8" marker-end="url(#a-plain)"/>
+<polyline points="830,156 895,250" fill="none" stroke="#1f6feb" stroke-width="3.5" marker-end="url(#a-mtls)"/>
+<polyline points="545,255 660,244" fill="none" stroke="#24292f" stroke-width="1.8" marker-end="url(#a-plain)"/>
+<polyline points="830,244 895,250" fill="none" stroke="#1f6feb" stroke-width="3.5" marker-end="url(#a-mtls)"/>
+<polyline points="545,255 660,332" fill="none" stroke="#24292f" stroke-width="1.8" marker-end="url(#a-plain)"/>
+<polyline points="830,332 895,250" fill="none" stroke="#1f6feb" stroke-width="3.5" marker-end="url(#a-mtls)"/>
+<polyline points="545,255 660,420" fill="none" stroke="#24292f" stroke-width="1.8" marker-end="url(#a-plain)"/>
+<polyline points="830,420 895,250" fill="none" stroke="#1f6feb" stroke-width="3.5" marker-end="url(#a-mtls)"/>
+<polyline points="937,285 937,485 480,485 480,280" fill="none" stroke="#6e7781" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a-tele)"/>
+<text x="710" y="477" font-size="10.5" text-anchor="middle" fill="#24292f" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">5 drift report</text>
+<polyline points="24,372 80,372" fill="none" stroke="#1f6feb" stroke-width="3.5" marker-end="url(#a-mtls)"/>
+<polyline points="24,396 80,396" fill="none" stroke="#24292f" stroke-width="1.8" marker-end="url(#a-plain)"/>
+<polyline points="24,420 80,420" fill="none" stroke="#6e7781" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a-tele)"/>
+<text x="470" y="325" font-size="11" font-weight="400" text-anchor="end" fill="#24292f">3 create child apps</text>
+<text x="862" y="226" font-size="11" font-weight="400" text-anchor="middle" fill="#24292f">4 apply</text>
+<text x="22" y="352" font-size="12" font-weight="700" text-anchor="start" fill="#24292f">Legend</text>
+<text x="90" y="376" font-size="11" font-weight="400" text-anchor="start" fill="#24292f">apply manifests to the cluster</text>
+<text x="90" y="400" font-size="11" font-weight="400" text-anchor="start" fill="#24292f">Git reads, Application creation</text>
+<text x="90" y="424" font-size="11" font-weight="400" text-anchor="start" fill="#24292f">drift report</text>
+<text x="22" y="452" font-size="10" font-weight="400" text-anchor="start" fill="#24292f">istio-config has no selfHeal. Other apps self-heal.</text>
+</svg>

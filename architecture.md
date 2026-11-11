@@ -5,14 +5,14 @@ This document describes the system in `k8s_lab_macos`: what runs, how a request 
 ## Goals and constraints
 
 - Run a realistic service mesh, GitOps pipeline and observability stack on one laptop.
-- Stay inside an OrbStack VM of about 8 GiB RAM and 4 CPUs. Quotas in `manifests/base/02-quotas.yaml` enforce the budget.
+- Stay inside the OrbStack VM budget of about 8 GiB RAM and 4 CPUs. The k3d node container shares that VM. Quotas in `manifests/base/02-quotas.yaml` enforce the budget.
 - Keep every change reproducible from Git. The only imperative steps are in `scripts/provision.sh`.
 
 ## Components
 
 | Layer | Component | Namespace | Role |
 |---|---|---|---|
-| Entry | Istio Gateway `shop-gateway` (Envoy) | shop-ingress | Accepts HTTP on port 8080, publishes it on `localhost:8080` through an OrbStack LoadBalancer |
+| Entry | Istio Gateway `shop-gateway` (Envoy) | shop-ingress | Accepts HTTP on port 8080, reaches `localhost:8080` through the k3d load balancer |
 | Application | `frontend` (Node.js, Express) | shop | Serves the traffic control UI, proxies `/api/*`, generates bursts |
 | Application | `backend-v1` (2 pods) and `backend-v2` (1 pod), FastAPI | shop | Orders API, one image, `APP_VERSION` selects the label |
 | Data | `redis` | shop | Order storage, password from a Secret |
@@ -93,84 +93,106 @@ k8s_lab_macos/
 
 ## Traffic flow and mTLS boundaries
 
-Thick arrows are mTLS tunnels (HBONE, port 15008). Thin arrows are plaintext. Dashed arrows are telemetry.
+The cluster is a k3d cluster named `k8s-lab`. OrbStack provides the Docker engine, k3d runs a k3s node and a load balancer as containers in it, and the pods run inside the k3s node container. OrbStack's built-in Kubernetes is not used, because it has no CNI config directory and `istio-cni` cannot install there.
 
 ```mermaid
 flowchart LR
-  browser["Browser on macOS<br/>http://localhost:8080"]
+  browser["Browser on macOS<br/>localhost:8080"]
 
-  subgraph orb["OrbStack VM, one Kubernetes node"]
-    subgraph ingress["namespace shop-ingress, outside the mesh"]
-      gw["shop-gateway Envoy<br/>listener :8080 HTTP"]
-    end
+  subgraph orb["OrbStack, Docker engine"]
+    subgraph k3d["k3d cluster k8s-lab"]
+      lb["k3d load balancer<br/>host :8080 to node :8080"]
 
-    subgraph shop["namespace shop, ambient mode"]
-      fe["frontend pod<br/>:3000"]
-      wp["waypoint Envoy<br/>L7 policy, routing, faults<br/>HBONE :15008"]
-      b1["backend-v1, 2 pods<br/>:8000"]
-      b2["backend-v2, 1 pod<br/>:8000"]
-      redis[("redis<br/>:6379")]
-    end
+      subgraph node["k3s node container"]
+        subgraph ingress["ns shop-ingress, outside mesh"]
+          gw["shop-gateway<br/>Envoy :8080"]
+        end
 
-    subgraph sys["namespace istio-system"]
-      zt["ztunnel on the node<br/>HBONE :15008, metrics :15020"]
-      istiod["istiod<br/>xDS :15012, metrics :15014"]
-    end
+        subgraph shop["ns shop, ambient"]
+          fe["frontend<br/>:3000"]
+          wp["waypoint Envoy<br/>HBONE :15008"]
+          b1["backend-v1 x2<br/>:8000"]
+          b2["backend-v2 x1<br/>:8000"]
+          redis[("redis<br/>:6379")]
+        end
 
-    subgraph obs["namespace observability, ambient mode"]
-      prom["Prometheus :9090"]
-      graf["Grafana :3000"]
-      jaeger["Jaeger<br/>UI :16686, OTLP :4317 and :4318"]
-    end
+        subgraph sys["ns istio-system"]
+          zt["ztunnel<br/>HBONE :15008<br/>metrics :15020"]
+          istiod["istiod<br/>xDS :15012"]
+        end
 
-    subgraph gitops["namespace argocd"]
-      argo["ArgoCD<br/>UI :8081 after port-forward"]
+        subgraph obs["ns observability, ambient"]
+          prom["Prometheus<br/>:9090"]
+          graf["Grafana<br/>:3000"]
+          jaeger["Jaeger<br/>UI :16686<br/>OTLP :4317, :4318"]
+        end
+
+        subgraph gitops["ns argocd"]
+          argo["ArgoCD<br/>:8081 by port-forward"]
+        end
+      end
     end
   end
 
   github["GitHub<br/>miekuskamil/k8s_lab_macos<br/>branch main"]
 
-  browser -->|"1 HTTP, plaintext"| gw
-  gw ==>|"2 HBONE mTLS to the frontend node"| zt
-  zt -->|"3 local delivery"| fe
-  fe -->|"4 HTTP :8000, captured by ztunnel"| zt
-  zt ==>|"5 HBONE mTLS to the waypoint"| wp
-  wp ==>|"6 HBONE mTLS, 90 percent v1, 10 percent v2"| zt
-  zt -->|"7 local delivery"| b1
-  zt -->|"7 local delivery"| b2
-  b1 ==>|"8 TCP :6379, L4 mTLS through ztunnel"| redis
-  b2 ==>|"8 TCP :6379, L4 mTLS through ztunnel"| redis
+  browser -->|"1 HTTP"| lb
+  lb -->|"2 TCP :8080"| gw
+  gw ==>|"3 HBONE"| zt
+  zt -->|"4 deliver"| fe
+  fe -->|"5 HTTP :8000, captured"| zt
+  zt ==>|"6 HBONE"| wp
+  wp ==>|"7 HBONE, 90 v1 / 10 v2"| zt
+  zt -->|"8 deliver"| b1
+  zt -->|"8 deliver"| b2
+  b1 ==>|"9 TCP :6379, L4 mTLS"| redis
+  b2 ==>|"9 TCP :6379, L4 mTLS"| redis
 
-  istiod -.->|"certificates and config"| zt
+  istiod -.->|"certs, config"| zt
   istiod -.->|"xDS"| wp
   istiod -.->|"xDS"| gw
-  wp -.->|"traces, OTLP gRPC :4317"| jaeger
-  b1 -.->|"traces, OTLP HTTP :4318"| jaeger
-  prom -.->|"scrape /metrics and /stats/prometheus"| wp
+  wp -.->|"OTLP gRPC :4317"| jaeger
+  b1 -.->|"OTLP HTTP :4318"| jaeger
+  prom -.->|"scrape"| wp
   prom -.->|"scrape"| b1
-  graf -->|"PromQL"| prom
-  graf -->|"trace lookup"| jaeger
-  argo -->|"git poll and sync"| github
+  graf -.->|"PromQL"| prom
+  graf -.->|"trace lookup"| jaeger
+  argo -->|"git poll, sync"| github
+
+  linkStyle 2,5,6,9,10 stroke:#1f6feb,stroke-width:4px
+  linkStyle 11,12,13,14,15,16,17,18,19 stroke:#8b949e,stroke-width:1.5px,stroke-dasharray:5 4
 ```
+
+The same diagram as a standalone SVG with trust zones, at `docs/traffic-flow.svg`:
+
+![Traffic flow with trust zones: browser, k3d load balancer, gateway, ztunnel, waypoint, backend, Redis](docs/traffic-flow.svg)
+
+Legend:
+
+- Thick blue arrow: HBONE mTLS tunnel on port 15008, or L4 mTLS for Redis.
+- Thin black arrow: plaintext.
+- Thin dashed gray arrow: control plane and telemetry (xDS, OTLP, scrapes, queries).
+- Numbers: order of hops for one request, from the browser to Redis.
 
 The numbered hops, in order:
 
-1. The browser sends plaintext HTTP to `localhost:8080`. OrbStack forwards it to the `shop-gateway-istio` LoadBalancer Service.
-2. The ingress gateway sits outside the mesh. Because the frontend is an ambient workload, the gateway wraps the request in an HBONE tunnel and authenticates with the gateway identity.
-3. ztunnel on the node terminates the tunnel and hands the request to the frontend pod. The check for `PeerAuthentication STRICT` happens here.
-4. The frontend calls `http://backend.shop.svc.cluster.local:8000`. The CNI redirect sends that connection to ztunnel.
-5. The `backend` Service carries `istio.io/use-waypoint: waypoint`, so ztunnel opens an HBONE tunnel to the waypoint and not to a backend pod.
-6. The waypoint terminates mTLS, evaluates `AuthorizationPolicy backend-allow-frontend`, applies the HTTPRoute or VirtualService, injects faults, enforces the connection pool, picks a backend, and opens a new HBONE tunnel.
-7. ztunnel on the destination node delivers the request to a backend pod over plaintext on the node.
-8. The backend connects to Redis. ztunnel upgrades that TCP stream to mTLS and enforces `AuthorizationPolicy redis-allow-backend` using the backend service account identity.
+1. The browser sends plaintext HTTP to `localhost:8080`. OrbStack publishes the port from the k3d load balancer container.
+2. The k3d load balancer forwards the TCP connection to port 8080 on the k3s node, where the `shop-gateway-istio` Service sends it to the gateway pod.
+3. The ingress gateway sits outside the mesh. Because the frontend is an ambient workload, the gateway wraps the request in an HBONE tunnel and authenticates with the gateway identity.
+4. ztunnel on the node terminates the tunnel and hands the request to the frontend pod. The check for `PeerAuthentication STRICT` happens here.
+5. The frontend calls `http://backend.shop.svc.cluster.local:8000`. The CNI redirect sends that connection to ztunnel.
+6. The `backend` Service carries `istio.io/use-waypoint: waypoint`, so ztunnel opens an HBONE tunnel to the waypoint and not to a backend pod.
+7. The waypoint terminates mTLS, evaluates `AuthorizationPolicy backend-allow-frontend`, applies the HTTPRoute or VirtualService, injects faults, enforces the connection pool, picks a backend, and opens a new HBONE tunnel.
+8. ztunnel on the destination node delivers the request to a backend pod over plaintext on the node.
+9. The backend connects to Redis. ztunnel upgrades that TCP stream to mTLS and enforces `AuthorizationPolicy redis-allow-backend` using the backend service account identity.
 
-Redis and the frontend have no waypoint, so their traffic stays on the cheaper L4 path.
+Redis and the frontend have no waypoint, so their traffic stays on the L4 path.
 
 ### mTLS boundaries
 
 | Hop | Encrypted | Peer identity checked |
 |---|---|---|
-| Browser to gateway | No | None |
+| Browser to k3d load balancer to gateway | No | None |
 | Gateway to frontend | Yes, HBONE | `shop-ingress` gateway service account |
 | Frontend to waypoint | Yes, HBONE | `ns/shop/sa/frontend` |
 | Waypoint to backend | Yes, HBONE | `ns/shop/sa/waypoint` |
@@ -178,26 +200,47 @@ Redis and the frontend have no waypoint, so their traffic stays on the cheaper L
 | Pod to local ztunnel | No, stays inside the node | Node-local only |
 | Prometheus to pods | Yes, both namespaces are ambient | `ns/observability/sa/kube-prometheus-stack-prometheus` |
 
-Between a pod and the ztunnel on its own node, traffic is plaintext. That hop never leaves the node network namespace boundary of the VM, which is the trust model Istio ambient uses.
+Between a pod and the ztunnel on its own node, traffic is plaintext. That hop never leaves the k3s node container, which is the trust model Istio ambient uses.
 
 ## GitOps flow
 
 ```mermaid
 flowchart TD
-  dev["You commit and push to main"] --> repo["GitHub repository"]
-  repo --> root["Application root<br/>path manifests/argocd/apps"]
-  root --> base["shop-base<br/>namespaces, RBAC, quotas"]
-  root --> apps["shop-apps<br/>frontend, backend, redis"]
-  root --> istio["istio-config<br/>gateway, waypoint, routes, policies<br/>no selfHeal"]
-  root --> kps["kube-prometheus-stack<br/>Helm chart plus helm/ values"]
-  root --> obs["observability-config<br/>Jaeger, monitors, dashboard"]
-  base --> cluster["OrbStack cluster"]
-  apps --> cluster
-  istio --> cluster
-  kps --> cluster
-  obs --> cluster
-  cluster -.->|"drift report"| root
+  dev["You"] -->|"1 git push to main"| repo["GitHub repository"]
+
+  subgraph k3d["k3d cluster k8s-lab"]
+    subgraph argocd["ns argocd"]
+      root["Application root<br/>path manifests/argocd/apps"]
+    end
+    base["shop-base<br/>namespaces, RBAC, quotas"]
+    apps["shop-apps<br/>frontend, backend, redis"]
+    istio["istio-config<br/>gateway, waypoint, routes<br/>no selfHeal"]
+    kps["kube-prometheus-stack<br/>Helm chart plus helm/ values"]
+    obs["observability-config<br/>Jaeger, monitors, dashboard"]
+    live["live cluster state"]
+  end
+
+  root -->|"2 poll repo"| repo
+  root -->|"3 create child apps"| base
+  root --> apps
+  root --> istio
+  root --> kps
+  root --> obs
+  base -->|"4 apply"| live
+  apps -->|"4 apply"| live
+  istio -->|"4 apply"| live
+  kps -->|"4 apply"| live
+  obs -->|"4 apply"| live
+  live -.->|"5 drift report"| root
+
+  linkStyle 3,4,5,6 stroke:#8b949e,stroke-width:1.5px
+  linkStyle 7,8,9,10,11 stroke:#1f6feb,stroke-width:3px
+  linkStyle 12 stroke:#8b949e,stroke-width:1.5px,stroke-dasharray:5 4
 ```
+
+Legend: thick blue arrows apply manifests to the cluster, thin arrows are Git reads and Application creation, the dashed arrow is the drift report. Numbers give the order.
+
+![GitOps flow: push, poll, create child Applications, apply, drift report](docs/gitops-flow.svg)
 
 `provision.sh` installs Istio and ArgoCD itself because both must exist before ArgoCD can sync anything that depends on them. After that, Git is the source of truth for everything in `manifests/`.
 
@@ -221,6 +264,8 @@ A LimitRange in each quota-controlled namespace gives containers default request
 
 ## Import and export with draw.io or Excalidraw
 
+The repo keeps each diagram in three forms. The Mermaid blocks in this file are the source of truth for structure. `docs/traffic-flow.svg` and `docs/gitops-flow.svg` are standalone SVGs with no external fonts, scripts or images. `docs/traffic-flow.excalidraw` is an editable Excalidraw scene of the traffic flow.
+
 ### draw.io (diagrams.net)
 
 Import the Mermaid diagram:
@@ -229,7 +274,9 @@ Import the Mermaid diagram:
 2. Open https://app.diagrams.net or the desktop app and create a blank diagram.
 3. Choose Arrange, Insert, Advanced, Mermaid.
 4. Paste the text and select Insert. draw.io converts the diagram into editable shapes.
-5. Move shapes, restyle the mTLS edges, and add the draw.io network icons from the shape library on the left.
+5. Re-apply the edge styles from the legend (thick blue for mTLS, dashed gray for telemetry), because the import may not keep `linkStyle`. Then move shapes and add the draw.io network icons from the shape library on the left.
+
+Import an SVG: File, Import from, Device, then pick `docs/traffic-flow.svg`. draw.io places it as one image. To edit shapes, use the Mermaid import or the Excalidraw route below.
 
 Export:
 
@@ -239,17 +286,19 @@ Export:
 
 ### Excalidraw
 
-Import the Mermaid diagram:
+Open the editable scene: Menu, Open, then pick `docs/traffic-flow.excalidraw`. Boxes, zones and arrows are separate elements you can move and restyle.
+
+Import a Mermaid diagram:
 
 1. Open https://excalidraw.com.
 2. Select the library icon, or press `/`, and choose Mermaid to Excalidraw. In the menu this entry is under More tools.
 3. Paste the Mermaid text. The preview updates as you type.
-4. Select Insert. The diagram appears as hand-drawn shapes you can edit.
+4. Select Insert. The diagram appears as hand-drawn shapes you can edit. Re-apply the edge colors and dashes from the legend, because the converter may not keep `linkStyle`.
 
 Export:
 
 1. Menu, Export image, then PNG or SVG. Enable "Embed scene" to keep the file editable.
-2. Menu, Save to, then `.excalidraw` for the editable source.
+2. Menu, Save to, then `.excalidraw` for the editable source. Save over `docs/traffic-flow.excalidraw` to update the repo copy.
 3. To share a read-only link, use Menu, Shareable link.
 
 ### Command line rendering
@@ -259,10 +308,10 @@ npm install --global @mermaid-js/mermaid-cli
 mmdc -i architecture.md -o docs/architecture.svg
 ```
 
-`mmdc` renders every Mermaid block in a Markdown file and writes one SVG per block with a numeric suffix.
+`mmdc` renders every Mermaid block in a Markdown file and writes one SVG per block with a numeric suffix, such as `architecture-1.svg` and `architecture-2.svg`.
 
 ## Known limits
 
-- OrbStack runs one node, so cross-node HBONE traffic and ztunnel failover are not exercised.
+- The k3d cluster has one k3s node, so cross-node HBONE traffic and ztunnel failover are not exercised.
 - The waypoint does not accept `EnvoyFilter`, so global rate limiting needs an external rate limit service. The lab limits rate inside the backend.
 - Istio VirtualService support on waypoints and the exact metric labels vary between Istio releases. After changing `ISTIO_VERSION`, re-check Scenario B and the dashboard queries.

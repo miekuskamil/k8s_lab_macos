@@ -1,10 +1,10 @@
 # k8s_lab_macos
 
-A local Kubernetes reference architecture for macOS with OrbStack. It runs Istio ambient mode, ArgoCD, Prometheus, Grafana, Jaeger and a three-tier shop (Node.js frontend, Python FastAPI backend, Redis).
+A local Kubernetes reference architecture for macOS. OrbStack provides the Docker engine and k3d runs a cluster named `k8s-lab` on it. It runs Istio ambient mode, ArgoCD, Prometheus, Grafana, Jaeger and a three-tier shop (Node.js frontend, Python FastAPI backend, Redis).
 
 ## Quick start
 
-Requirements: macOS, OrbStack with Kubernetes enabled, `kubectl`, `helm`, `git`, `docker`, `openssl`. Give the OrbStack VM at least 8 GiB of RAM.
+Requirements: macOS, OrbStack (its built-in Kubernetes can stay off), `k3d`, `kubectl`, `helm`, `git`, `docker`, `openssl`. Give the OrbStack VM at least 8 GiB of RAM.
 
 ```bash
 git clone https://github.com/miekuskamil/k8s_lab_macos.git

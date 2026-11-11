@@ -16,9 +16,9 @@ A sidecar mesh puts one Envoy in every pod. An ambient mesh splits the work in t
 | Per-pod overhead | An Envoy, typically 50 to 150 MiB | None |
 | Application containers see | Iptables rules from an init container | Traffic redirected by `istio-cni` outside the pod |
 
-### Why ztunnel saves RAM on OrbStack
+### Why ztunnel saves RAM on a k3d node
 
-OrbStack gives the Kubernetes node one shared VM. Every sidecar costs memory in that VM whether the pod needs HTTP features or not.
+The k3s node runs as one container in the OrbStack VM, so all pods share that VM. Every sidecar costs memory in that VM whether the pod needs HTTP features or not.
 
 - This lab runs 6 pods in `shop` and about 8 in `observability`. With sidecars that is 14 Envoy processes. At roughly 60 MiB each, that is about 840 MiB.
 - With ambient mode there is one ztunnel (set to request 64 MiB) plus one waypoint for the namespace (default request 64 MiB). The total is roughly 130 MiB.
@@ -136,7 +136,7 @@ Status 429 responses show the in-app limiter at work. Note that `kubectl set env
 Example, a `payments` service in `shop`.
 
 1. Create `apps/payments/` with a `Dockerfile` and the code. Use the backend as a template.
-2. Build the image into the OrbStack Docker daemon: `docker build -t k8s-lab/payments:1.0.0 apps/payments`.
+2. Build the image with `docker build -t k8s-lab/payments:1.0.0 apps/payments`, then load it into the cluster with `k3d image import k8s-lab/payments:1.0.0 -c k8s-lab`.
 3. Create `manifests/apps/payments.yaml` with a ServiceAccount, a Deployment and a Service. Copy the security context, probes and resource blocks from `backend.yaml`. Give the Service a port named `http` and the label `metrics: scrape` so Prometheus finds it.
 4. To get L7 features, add the label `istio.io/use-waypoint: waypoint` to the Service. Leave it off for plain TCP services.
 5. Add an `AuthorizationPolicy` in `manifests/istio/security.yaml` that names the callers by service account.
@@ -234,7 +234,7 @@ Work from the outside in.
    istioctl admin log ztunnel --level info
    ```
 
-Common causes, in the order they happen: namespace label missing, pod started before the label, STRICT mode with a client outside the mesh, an AuthorizationPolicy that names the wrong service account, a waypoint pod that is not Ready, and a time skew between the OrbStack VM and the host after a laptop sleep (restart the VM with `orb restart`).
+Common causes, in the order they happen: namespace label missing, pod started before the label, STRICT mode with a client outside the mesh, an AuthorizationPolicy that names the wrong service account, a waypoint pod that is not Ready, and a time skew between the OrbStack VM and the host after a laptop sleep (restart the VM with `orb restart`, then run `k3d cluster start k8s-lab`).
 
 ## 4. Production practices
 
