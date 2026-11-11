@@ -4,6 +4,11 @@ global:
 configs:
   params:
     server.insecure: true
+  secret:
+    # bcrypt hash of the lab default password "k8s-lab-admin" for user "admin".
+    # Make a new one with: htpasswd -nbBC 10 "" 'new-password' | tr -d ':\n' | sed 's/$2y/$2a/'
+    argocdServerAdminPassword: "$2a$10$MrnRhbV0j5vAWc48O0jOwu9OsymBFqdnWDEKnKWNvaSEwwluG3koe"
+    argocdServerAdminPasswordMtime: "2026-11-11T00:00:00Z"
 
 dex:
   enabled: false

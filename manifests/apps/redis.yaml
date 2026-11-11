@@ -1,4 +1,4 @@
-# The Secret "redis-auth" is created by scripts/provision.sh and never stored in git.
+# The Secret "redis-auth" holds a lab default password. It lives in manifests/base/03-lab-credentials.yaml.
 apiVersion: v1
 kind: ServiceAccount
 metadata:

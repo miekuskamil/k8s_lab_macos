@@ -64,6 +64,9 @@ grafana:
     userKey: admin-user
     passwordKey: admin-password
   defaultDashboardsEnabled: false
+  serviceMonitor:
+    # The chart default of 30s is longer than the 15s scrape interval, and Prometheus rejects that.
+    scrapeTimeout: 10s
   resources:
     requests:
       cpu: 50m

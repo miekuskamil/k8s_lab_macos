@@ -81,6 +81,15 @@ def configure_logging() -> logging.Logger:
 log = configure_logging()
 
 
+class DropProbeSpans(BatchSpanProcessor):
+    """Skip root-level Redis PING spans. The readiness probe produces one every 5 seconds."""
+
+    def on_end(self, span) -> None:
+        if span.parent is None and span.name == "PING":
+            return
+        super().on_end(span)
+
+
 def configure_tracing() -> None:
     resource = Resource.create(
         {
@@ -90,7 +99,7 @@ def configure_tracing() -> None:
         }
     )
     provider = TracerProvider(resource=resource)
-    provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+    provider.add_span_processor(DropProbeSpans(OTLPSpanExporter()))
     trace.set_tracer_provider(provider)
     RedisInstrumentor().instrument()
 

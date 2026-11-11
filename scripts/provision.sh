@@ -22,7 +22,7 @@ CLUSTER_NAME="${CLUSTER_NAME:-k8s-lab}"
 # Istio 1.24 supports Kubernetes 1.28 to 1.31, and ArgoCD 7.7 does not know newer API schemas.
 K3S_IMAGE="${K3S_IMAGE:-rancher/k3s:v1.31.5-k3s1}"
 KUBE_CONTEXT="k3d-${CLUSTER_NAME}"
-IMAGE_TAG="1.0.0"
+IMAGE_TAG="1.0.1"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -40,7 +40,7 @@ die()  { printf '%sfail%s  %s\n' "$RED" "$RESET" "$*" >&2; exit 1; }
 check_prerequisites() {
   step "Checking prerequisites"
   local missing=0
-  for cmd in kubectl helm orb k3d git docker curl openssl; do
+  for cmd in kubectl helm orb k3d git docker curl; do
     if command -v "$cmd" >/dev/null 2>&1; then
       ok "$cmd found at $(command -v "$cmd")"
     else
@@ -49,7 +49,7 @@ check_prerequisites() {
     fi
   done
   if [[ "$missing" -eq 1 ]]; then
-    die "Install the missing tools first. Example: brew install kubectl helm k3d git openssl and install OrbStack from https://orbstack.dev"
+    die "Install the missing tools first. Example: brew install kubectl helm k3d git and install OrbStack from https://orbstack.dev"
   fi
 }
 
@@ -194,26 +194,13 @@ install_istio_ambient() {
 }
 
 create_namespaces_and_secrets() {
-  step "Creating namespaces and secrets"
-  kubectl apply -f "$ROOT_DIR/manifests/base/00-namespaces.yaml" >/dev/null
+  step "Creating namespaces and the default lab credentials"
+  # ArgoCD manages both files later through shop-base. Applying them here lets pods
+  # that need the Secrets start on their first try.
+  kubectl apply -f "$ROOT_DIR/manifests/base/00-namespaces.yaml" \
+                -f "$ROOT_DIR/manifests/base/03-lab-credentials.yaml" >/dev/null
   ok "namespaces shop, shop-ingress, observability"
-
-  if kubectl -n shop get secret redis-auth >/dev/null 2>&1; then
-    ok "secret shop/redis-auth already exists"
-  else
-    kubectl -n shop create secret generic redis-auth \
-      --from-literal=password="$(openssl rand -hex 16)" >/dev/null
-    ok "secret shop/redis-auth created"
-  fi
-
-  if kubectl -n observability get secret grafana-admin >/dev/null 2>&1; then
-    ok "secret observability/grafana-admin already exists"
-  else
-    kubectl -n observability create secret generic grafana-admin \
-      --from-literal=admin-user=admin \
-      --from-literal=admin-password="$(openssl rand -hex 12)" >/dev/null
-    ok "secret observability/grafana-admin created"
-  fi
+  ok "secrets shop/redis-auth and observability/grafana-admin (defaults from Git)"
 }
 
 install_argocd() {
@@ -282,31 +269,34 @@ health_checks() {
   check "prometheus ready" kubectl -n observability wait --for=condition=Ready pod -l app.kubernetes.io/name=prometheus --timeout=60s
   check "grafana ready" kubectl -n observability wait --for=condition=Ready pod -l app.kubernetes.io/name=grafana --timeout=60s
   check "jaeger ready" kubectl -n observability rollout status deploy/jaeger --timeout=60s
+  local tries=0
+  until curl -fsS --max-time 5 http://localhost:8080/healthz >/dev/null 2>&1 || (( tries >= 24 )); do
+    tries=$((tries + 1))
+    sleep 5
+  done
   if curl -fsS --max-time 5 http://localhost:8080/healthz >/dev/null 2>&1; then
     ok "http://localhost:8080/healthz answers through the ingress gateway"
   else
-    warn "localhost:8080 does not answer yet. Use ./scripts/port-forward.sh or wait for the LoadBalancer."
+    warn "localhost:8080 did not answer within 2 minutes. Check: kubectl -n shop-ingress get pods"
     failed=1
   fi
   return "$failed"
 }
 
 print_summary() {
-  local argocd_password grafana_password
-  argocd_password="$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' 2>/dev/null | base64 --decode || true)"
-  grafana_password="$(kubectl -n observability get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 --decode)"
-
   step "Access"
-  cat <<EOF
+  cat <<SUMMARY
 
 Shop UI via the ingress gateway   http://localhost:8080
-  (fallback) kubectl -n shop-ingress port-forward svc/shop-gateway-istio 8080:8080
 
 Run ./scripts/port-forward.sh to open these local ports:
-  ArgoCD      http://localhost:8081    user admin, password ${argocd_password:-<secret already deleted>}
-  Grafana     http://localhost:3000    user admin, password ${grafana_password}
-  Prometheus  http://localhost:9090
-  Jaeger      http://localhost:16686
+  ArgoCD      http://localhost:8081    user admin, password k8s-lab-admin
+  Grafana     http://localhost:3000    user admin, password k8s-lab-admin
+  Prometheus  http://localhost:9090    no login
+  Jaeger      http://localhost:16686   no login
+
+Redis has no local port. Its password is k8s-lab-redis.
+These are lab defaults stored in Git. See README.md, section "Default logins".
 
 Cluster ports
   ingress gateway 8080, frontend 3000, backend 8000, redis 6379,
@@ -317,7 +307,7 @@ Next steps
   kubectl apply -f manifests/scenarios/a-canary-httproute.yaml
   see learning.md for scenarios B and C
 
-EOF
+SUMMARY
 }
 
 main() {
