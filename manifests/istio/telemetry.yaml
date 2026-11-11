@@ -1,0 +1,13 @@
+# Sends 100% of waypoint and gateway traces to Jaeger. The provider name must match
+# meshConfig.extensionProviders in helm/istiod-values.yaml. Lower the sampling
+# percentage for anything beyond a lab.
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: mesh-default
+  namespace: istio-system
+spec:
+  tracing:
+    - providers:
+        - name: jaeger-otlp
+      randomSamplingPercentage: 100

@@ -1,0 +1,23 @@
+profile: ambient
+
+pilot:
+  autoscaleEnabled: false
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+meshConfig:
+  enableTracing: true
+  accessLogFile: ""
+  defaultConfig:
+    holdApplicationUntilProxyStarts: false
+  extensionProviders:
+    - name: jaeger-otlp
+      opentelemetry:
+        service: jaeger-collector.observability.svc.cluster.local
+        port: 4317

@@ -1,0 +1,306 @@
+#!/usr/bin/env bash
+# Provision the k8s_lab_macos reference architecture on OrbStack.
+# Safe to run repeatedly. Every step checks current state or uses an upsert command.
+#
+# Usage: ./scripts/provision.sh
+# Optional environment overrides:
+#   ISTIO_VERSION, GATEWAY_API_VERSION, ARGOCD_CHART_VERSION, SYNC_TIMEOUT_SECONDS,
+#   SKIP_IMAGE_BUILD=1, ISTIO_PLATFORM (for example "k3s", detected when unset)
+
+set -euo pipefail
+
+REPO_URL="https://github.com/miekuskamil/k8s_lab_macos"
+REPO_BRANCH="main"
+ISTIO_VERSION="${ISTIO_VERSION:-1.24.2}"
+GATEWAY_API_VERSION="${GATEWAY_API_VERSION:-v1.2.1}"
+ARGOCD_CHART_VERSION="${ARGOCD_CHART_VERSION:-7.7.11}"
+SYNC_TIMEOUT_SECONDS="${SYNC_TIMEOUT_SECONDS:-900}"
+KUBE_CONTEXT="orbstack"
+IMAGE_TAG="1.0.0"
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [[ -t 1 ]]; then
+  BOLD=$'\033[1m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; RED=$'\033[31m'; RESET=$'\033[0m'
+else
+  BOLD=""; GREEN=""; YELLOW=""; RED=""; RESET=""
+fi
+
+step() { printf '\n%s==> %s%s\n' "$BOLD" "$*" "$RESET"; }
+ok()   { printf '%s ok%s  %s\n' "$GREEN" "$RESET" "$*"; }
+warn() { printf '%swarn%s  %s\n' "$YELLOW" "$RESET" "$*" >&2; }
+die()  { printf '%sfail%s  %s\n' "$RED" "$RESET" "$*" >&2; exit 1; }
+
+check_prerequisites() {
+  step "Checking prerequisites"
+  local missing=0
+  for cmd in kubectl helm orb git docker curl openssl; do
+    if command -v "$cmd" >/dev/null 2>&1; then
+      ok "$cmd found at $(command -v "$cmd")"
+    else
+      warn "$cmd is not installed"
+      missing=1
+    fi
+  done
+  if [[ "$missing" -eq 1 ]]; then
+    die "Install the missing tools first. Example: brew install kubectl helm git openssl and install OrbStack from https://orbstack.dev"
+  fi
+}
+
+ensure_orbstack_cluster() {
+  step "Checking OrbStack and its Kubernetes cluster"
+  if ! orb status >/dev/null 2>&1; then
+    warn "OrbStack is not running, starting it"
+    orb start
+  fi
+  ok "OrbStack is running"
+
+  if ! kubectl config get-contexts -o name | grep -qx "$KUBE_CONTEXT"; then
+    die "kubectl context '$KUBE_CONTEXT' does not exist. Open OrbStack, go to Settings, Kubernetes, and enable the cluster."
+  fi
+  kubectl config use-context "$KUBE_CONTEXT" >/dev/null
+  if ! kubectl get nodes >/dev/null 2>&1; then
+    die "The Kubernetes API does not answer. Enable Kubernetes in OrbStack settings and wait for the node to become Ready."
+  fi
+  kubectl wait --for=condition=Ready node --all --timeout=120s >/dev/null
+  ok "context $KUBE_CONTEXT is ready: $(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}')"
+}
+
+check_repository() {
+  step "Checking the Git repository that ArgoCD will sync"
+  if ! git -C "$ROOT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    die "$ROOT_DIR is not a Git working tree. Clone $REPO_URL and run the script from the clone."
+  fi
+  if ! git ls-remote --exit-code "$REPO_URL" "refs/heads/$REPO_BRANCH" >/dev/null 2>&1; then
+    die "Cannot read branch $REPO_BRANCH of $REPO_URL. ArgoCD needs a public repo, or you must add repository credentials to ArgoCD."
+  fi
+  ok "$REPO_URL ($REPO_BRANCH) is reachable"
+  if [[ -n "$(git -C "$ROOT_DIR" status --porcelain)" ]]; then
+    warn "You have uncommitted changes. ArgoCD syncs the pushed state of $REPO_BRANCH, not your working tree."
+  fi
+  if [[ -n "$(git -C "$ROOT_DIR" log "origin/$REPO_BRANCH..HEAD" --oneline 2>/dev/null || true)" ]]; then
+    warn "You have local commits that are not pushed to origin/$REPO_BRANCH."
+  fi
+}
+
+build_images() {
+  step "Building application images with the OrbStack Docker daemon"
+  if [[ "${SKIP_IMAGE_BUILD:-0}" == "1" ]]; then
+    warn "SKIP_IMAGE_BUILD=1, skipping"
+    return
+  fi
+  docker build --quiet -t "k8s-lab/backend:${IMAGE_TAG}" "$ROOT_DIR/apps/backend" >/dev/null
+  ok "k8s-lab/backend:${IMAGE_TAG}"
+  docker build --quiet -t "k8s-lab/frontend:${IMAGE_TAG}" "$ROOT_DIR/apps/frontend" >/dev/null
+  ok "k8s-lab/frontend:${IMAGE_TAG}"
+  ok "OrbStack shares the Docker image store with Kubernetes, so no registry push is needed"
+}
+
+install_gateway_api_crds() {
+  step "Installing Gateway API CRDs ${GATEWAY_API_VERSION}"
+  if kubectl get crd gateways.gateway.networking.k8s.io >/dev/null 2>&1; then
+    ok "Gateway API CRDs already present"
+    return
+  fi
+  kubectl apply --server-side -f \
+    "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml" >/dev/null
+  ok "Gateway API CRDs installed"
+}
+
+detect_platform_args() {
+  PLATFORM_ARGS=()
+  local platform="${ISTIO_PLATFORM:-}"
+  if [[ -z "$platform" ]]; then
+    local kubelet_version
+    kubelet_version="$(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}')"
+    if [[ "$kubelet_version" == *k3s* ]]; then
+      platform="k3s"
+    fi
+  fi
+  if [[ -n "$platform" ]]; then
+    PLATFORM_ARGS=(--set "global.platform=${platform}")
+    ok "Using Istio platform profile: ${platform}"
+  fi
+}
+
+install_istio_ambient() {
+  step "Installing Istio ${ISTIO_VERSION} in ambient mode with Helm"
+  helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update >/dev/null
+  helm repo update istio >/dev/null
+  detect_platform_args
+
+  helm upgrade --install istio-base istio/base \
+    --namespace istio-system --create-namespace \
+    --version "$ISTIO_VERSION" \
+    -f "$ROOT_DIR/helm/istio-base-values.yaml" --wait >/dev/null
+  ok "istio-base"
+
+  helm upgrade --install istiod istio/istiod \
+    --namespace istio-system \
+    --version "$ISTIO_VERSION" \
+    -f "$ROOT_DIR/helm/istiod-values.yaml" \
+    ${PLATFORM_ARGS[@]+"${PLATFORM_ARGS[@]}"} --wait --timeout 5m >/dev/null
+  ok "istiod (control plane)"
+
+  helm upgrade --install istio-cni istio/cni \
+    --namespace istio-system \
+    --version "$ISTIO_VERSION" \
+    -f "$ROOT_DIR/helm/istio-cni-values.yaml" \
+    ${PLATFORM_ARGS[@]+"${PLATFORM_ARGS[@]}"} --wait --timeout 5m >/dev/null
+  ok "istio-cni (traffic redirection)"
+
+  helm upgrade --install ztunnel istio/ztunnel \
+    --namespace istio-system \
+    --version "$ISTIO_VERSION" \
+    -f "$ROOT_DIR/helm/ztunnel-values.yaml" --wait --timeout 5m >/dev/null
+  ok "ztunnel (node proxy)"
+}
+
+create_namespaces_and_secrets() {
+  step "Creating namespaces and secrets"
+  kubectl apply -f "$ROOT_DIR/manifests/base/00-namespaces.yaml" >/dev/null
+  ok "namespaces shop, shop-ingress, observability"
+
+  if kubectl -n shop get secret redis-auth >/dev/null 2>&1; then
+    ok "secret shop/redis-auth already exists"
+  else
+    kubectl -n shop create secret generic redis-auth \
+      --from-literal=password="$(openssl rand -hex 16)" >/dev/null
+    ok "secret shop/redis-auth created"
+  fi
+
+  if kubectl -n observability get secret grafana-admin >/dev/null 2>&1; then
+    ok "secret observability/grafana-admin already exists"
+  else
+    kubectl -n observability create secret generic grafana-admin \
+      --from-literal=admin-user=admin \
+      --from-literal=admin-password="$(openssl rand -hex 12)" >/dev/null
+    ok "secret observability/grafana-admin created"
+  fi
+}
+
+install_argocd() {
+  step "Installing ArgoCD chart ${ARGOCD_CHART_VERSION}"
+  helm repo add argo https://argoproj.github.io/argo-helm --force-update >/dev/null
+  helm repo update argo >/dev/null
+  helm upgrade --install argocd argo/argo-cd \
+    --namespace argocd --create-namespace \
+    --version "$ARGOCD_CHART_VERSION" \
+    -f "$ROOT_DIR/helm/argocd-values.yaml" --wait --timeout 8m >/dev/null
+  ok "ArgoCD is running"
+}
+
+bootstrap_gitops() {
+  step "Registering the root Application"
+  kubectl apply -f "$ROOT_DIR/manifests/argocd/project.yaml" >/dev/null
+  kubectl apply -f "$ROOT_DIR/manifests/argocd/root-app.yaml" >/dev/null
+  ok "AppProject k8s-lab and Application root applied, ArgoCD now syncs $REPO_URL@$REPO_BRANCH"
+}
+
+app_table() {
+  kubectl -n argocd get applications.argoproj.io \
+    -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.sync.status}{"\t"}{.status.health.status}{"\n"}{end}' 2>/dev/null
+}
+
+wait_for_sync() {
+  step "Waiting for ArgoCD applications to become Synced and Healthy (timeout ${SYNC_TIMEOUT_SECONDS}s)"
+  local deadline=$((SECONDS + SYNC_TIMEOUT_SECONDS))
+  local expected=6
+  while (( SECONDS < deadline )); do
+    local table total good
+    table="$(app_table || true)"
+    total="$(printf '%s\n' "$table" | grep -c . || true)"
+    good="$(printf '%s\n' "$table" | awk -F'\t' '$2=="Synced" && $3=="Healthy"' | grep -c . || true)"
+    printf '  %s of %s applications ready (%s found)\r' "$good" "$expected" "$total"
+    if (( total >= expected && good >= expected )); then
+      printf '\n'
+      ok "all applications are Synced and Healthy"
+      return 0
+    fi
+    sleep 10
+  done
+  printf '\n'
+  warn "Timed out. Current state:"
+  app_table | column -t -s $'\t' >&2 || true
+  warn "Inspect with: kubectl -n argocd get applications, then kubectl -n argocd describe application <name>"
+  return 1
+}
+
+health_checks() {
+  step "Health checks"
+  local failed=0
+  check() {
+    local label="$1"; shift
+    if "$@" >/dev/null 2>&1; then ok "$label"; else warn "$label"; failed=1; fi
+  }
+  check "istiod available" kubectl -n istio-system wait --for=condition=Available deploy/istiod --timeout=30s
+  check "ztunnel ready on every node" kubectl -n istio-system rollout status ds/ztunnel --timeout=30s
+  check "istio-cni ready on every node" kubectl -n istio-system rollout status ds/istio-cni-node --timeout=30s
+  check "waypoint Gateway programmed" kubectl -n shop wait --for=condition=Programmed gateway/waypoint --timeout=60s
+  check "ingress Gateway programmed" kubectl -n shop-ingress wait --for=condition=Programmed gateway/shop-gateway --timeout=60s
+  check "redis ready" kubectl -n shop rollout status deploy/redis --timeout=60s
+  check "backend-v1 ready" kubectl -n shop rollout status deploy/backend-v1 --timeout=60s
+  check "backend-v2 ready" kubectl -n shop rollout status deploy/backend-v2 --timeout=60s
+  check "frontend ready" kubectl -n shop rollout status deploy/frontend --timeout=60s
+  check "prometheus ready" kubectl -n observability wait --for=condition=Ready pod -l app.kubernetes.io/name=prometheus --timeout=60s
+  check "grafana ready" kubectl -n observability wait --for=condition=Ready pod -l app.kubernetes.io/name=grafana --timeout=60s
+  check "jaeger ready" kubectl -n observability rollout status deploy/jaeger --timeout=60s
+  if curl -fsS --max-time 5 http://localhost:8080/healthz >/dev/null 2>&1; then
+    ok "http://localhost:8080/healthz answers through the ingress gateway"
+  else
+    warn "localhost:8080 does not answer yet. Use ./scripts/port-forward.sh or wait for the LoadBalancer."
+    failed=1
+  fi
+  return "$failed"
+}
+
+print_summary() {
+  local argocd_password grafana_password
+  argocd_password="$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' 2>/dev/null | base64 --decode || true)"
+  grafana_password="$(kubectl -n observability get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 --decode)"
+
+  step "Access"
+  cat <<EOF
+
+Shop UI via the ingress gateway   http://localhost:8080
+  (fallback) kubectl -n shop-ingress port-forward svc/shop-gateway-istio 8080:8080
+
+Run ./scripts/port-forward.sh to open these local ports:
+  ArgoCD      http://localhost:8081    user admin, password ${argocd_password:-<secret already deleted>}
+  Grafana     http://localhost:3000    user admin, password ${grafana_password}
+  Prometheus  http://localhost:9090
+  Jaeger      http://localhost:16686
+
+Cluster ports
+  ingress gateway 8080, frontend 3000, backend 8000, redis 6379,
+  HBONE tunnel 15008, ztunnel metrics 15020, istiod xDS 15012, istiod metrics 15014
+
+Next steps
+  ./scripts/traffic-test.sh 200                 send 200 requests and print the version split
+  kubectl apply -f manifests/scenarios/a-canary-httproute.yaml
+  see learning.md for scenarios B and C
+
+EOF
+}
+
+main() {
+  check_prerequisites
+  ensure_orbstack_cluster
+  check_repository
+  build_images
+  install_gateway_api_crds
+  install_istio_ambient
+  create_namespaces_and_secrets
+  install_argocd
+  bootstrap_gitops
+  local sync_status=0
+  wait_for_sync || sync_status=$?
+  local health_status=0
+  health_checks || health_status=$?
+  print_summary
+  if (( sync_status != 0 || health_status != 0 )); then
+    exit 1
+  fi
+}
+
+main "$@"

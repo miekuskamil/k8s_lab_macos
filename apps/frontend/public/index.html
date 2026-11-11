@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shop traffic controls</title>
+  <style>
+    :root {
+      --bg: #f6f7f9; --card: #ffffff; --text: #1b1f24; --muted: #5b6573;
+      --line: #d8dde4; --accent: #2f6fed; --ok: #1a7f37; --bad: #cf222e; --warn: #9a6700;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1318; --card: #171c23; --text: #e6e9ee; --muted: #9aa4b2;
+        --line: #2a323d; --accent: #6b9bff; --ok: #3fb950; --bad: #ff7b72; --warn: #d29922;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, sans-serif; }
+    main { max-width: 960px; margin: 0 auto; display: grid; gap: 16px; }
+    h1 { font-size: 22px; margin: 0; }
+    h2 { font-size: 16px; margin: 0 0 12px; }
+    p.sub { margin: 4px 0 0; color: var(--muted); }
+    section { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+    label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+    input, select { padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
+    button { padding: 8px 14px; border: 0; border-radius: 6px; background: var(--accent); color: #fff; font: inherit; cursor: pointer; }
+    button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+    button:disabled { opacity: .5; cursor: progress; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+    .stat { border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
+    .stat b { display: block; font-size: 20px; }
+    .stat span { color: var(--muted); font-size: 12px; }
+    .bar { display: flex; height: 22px; border-radius: 4px; overflow: hidden; background: var(--line); margin-top: 8px; }
+    .bar div { display: grid; place-items: center; color: #fff; font-size: 12px; min-width: 0; }
+    pre { margin: 0; padding: 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; max-height: 220px; overflow: auto; font-size: 12px; }
+    .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Shop traffic controls</h1>
+    <p class="sub">Send requests through the mesh and watch which backend version answers and which status codes come back.</p>
+  </header>
+
+  <section aria-labelledby="single">
+    <h2 id="single">Single requests</h2>
+    <div class="row">
+      <label>Item<input id="item" value="keyboard" maxlength="64"></label>
+      <label>Quantity<input id="quantity" type="number" value="1" min="1" max="100"></label>
+      <button id="create">Create order</button>
+      <button id="list" class="secondary">List orders</button>
+      <button id="version" class="secondary">Which version?</button>
+    </div>
+    <pre id="single-out" aria-live="polite">No request sent yet.</pre>
+  </section>
+
+  <section aria-labelledby="burst">
+    <h2 id="burst">Burst traffic</h2>
+    <div class="row">
+      <label>Endpoint
+        <select id="burst-path">
+          <option value="/api/orders">/api/orders</option>
+          <option value="/api/version">/api/version</option>
+          <option value="/api/slow?ms=300">/api/slow?ms=300</option>
+        </select>
+      </label>
+      <label>Requests<input id="burst-count" type="number" value="100" min="1" max="500"></label>
+      <label>Concurrency<input id="burst-concurrency" type="number" value="5" min="1" max="100"></label>
+      <button id="burst-run">Run burst</button>
+    </div>
+    <div class="grid" style="margin-top:16px">
+      <div class="stat"><b id="s-total">0</b><span>requests sent</span></div>
+      <div class="stat"><b id="s-ok">0</b><span>2xx responses</span></div>
+      <div class="stat"><b id="s-fail">0</b><span>non-2xx or timeouts</span></div>
+      <div class="stat"><b id="s-p50">0 ms</b><span>p50 latency</span></div>
+      <div class="stat"><b id="s-p95">0 ms</b><span>p95 latency</span></div>
+    </div>
+    <h2 style="margin-top:16px">Backend version split</h2>
+    <div class="bar" id="version-bar" role="img" aria-label="Share of responses per backend version"></div>
+    <h2 style="margin-top:16px">Status codes</h2>
+    <pre id="status-out">No burst run yet.</pre>
+  </section>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const colors = { v1: "#2f6fed", v2: "#9a6700", unknown: "#cf222e" };
+
+  async function call(path, options) {
+    const started = performance.now();
+    const response = await fetch(path, options);
+    const body = await response.text();
+    return {
+      status: response.status,
+      version: response.headers.get("x-app-version"),
+      ms: Math.round(performance.now() - started),
+      body,
+    };
+  }
+
+  function show(result) {
+    let text = result.body;
+    try { text = JSON.stringify(JSON.parse(result.body), null, 2); } catch (_) { /* keep raw text */ }
+    $("single-out").textContent = `HTTP ${result.status}  version=${result.version || "n/a"}  ${result.ms} ms\n\n${text}`;
+  }
+
+  $("create").onclick = async () => {
+    show(await call("/api/orders", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ item: $("item").value, quantity: Number($("quantity").value) }),
+    }));
+  };
+  $("list").onclick = async () => show(await call("/api/orders"));
+  $("version").onclick = async () => show(await call("/api/version"));
+
+  function renderBurst(result) {
+    const okCount = Object.entries(result.statuses).filter(([code]) => code.startsWith("2")).reduce((sum, [, n]) => sum + n, 0);
+    $("s-total").textContent = result.count;
+    $("s-ok").textContent = okCount;
+    $("s-fail").textContent = result.count - okCount;
+    $("s-p50").textContent = `${result.latencyMs.p50} ms`;
+    $("s-p95").textContent = `${result.latencyMs.p95} ms`;
+
+    const bar = $("version-bar");
+    bar.replaceChildren();
+    for (const [version, n] of Object.entries(result.versions)) {
+      const slice = document.createElement("div");
+      slice.style.flex = String(n);
+      slice.style.background = colors[version] || "#6e7781";
+      slice.textContent = `${version} ${Math.round((n / result.count) * 100)}%`;
+      bar.appendChild(slice);
+    }
+    $("status-out").textContent = Object.entries(result.statuses)
+      .map(([code, n]) => `${code}: ${n}`).join("\n") + `\n\nfinished in ${result.durationMs} ms`;
+  }
+
+  $("burst-run").onclick = async () => {
+    const button = $("burst-run");
+    button.disabled = true;
+    $("status-out").textContent = "Running...";
+    try {
+      const response = await fetch("/burst", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          path: $("burst-path").value,
+          count: Number($("burst-count").value),
+          concurrency: Number($("burst-concurrency").value),
+        }),
+      });
+      renderBurst(await response.json());
+    } catch (err) {
+      $("status-out").textContent = `Burst failed: ${err.message}`;
+    } finally {
+      button.disabled = false;
+    }
+  };
+</script>
+</body>
+</html>

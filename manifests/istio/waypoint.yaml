@@ -1,0 +1,15 @@
+# L7 proxy for the "shop" namespace. Services labeled istio.io/use-waypoint: waypoint
+# send their traffic here. The Gateway listens for HBONE tunnels on port 15008.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: waypoint
+  namespace: shop
+  labels:
+    istio.io/waypoint-for: service
+spec:
+  gatewayClassName: istio-waypoint
+  listeners:
+    - name: mesh
+      port: 15008
+      protocol: HBONE

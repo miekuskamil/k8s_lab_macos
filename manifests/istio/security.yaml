@@ -1,0 +1,54 @@
+# Require mTLS for every workload in the shop namespace. ztunnel enforces this.
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: shop
+spec:
+  mtls:
+    mode: STRICT
+---
+# L4 policy enforced by ztunnel. Only the backend identity may open connections to Redis.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: redis-allow-backend
+  namespace: shop
+spec:
+  selector:
+    matchLabels:
+      app: redis
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/shop/sa/backend
+---
+# L7 policy enforced by the waypoint. Only the frontend may call the backend Services.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: backend-allow-frontend
+  namespace: shop
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: backend
+    - group: ""
+      kind: Service
+      name: backend-v1
+    - group: ""
+      kind: Service
+      name: backend-v2
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/shop/sa/frontend
+      to:
+        - operation:
+            methods: ["GET", "POST"]
+            paths: ["/api/*"]

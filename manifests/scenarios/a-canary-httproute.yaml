@@ -1,0 +1,23 @@
+# Scenario A: canary traffic shift, 90% to v1 and 10% to v2.
+# Apply:   kubectl apply -f manifests/scenarios/a-canary-httproute.yaml
+# Observe: ./scripts/traffic-test.sh 200
+# Revert:  kubectl apply -f manifests/istio/backend-route.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend-route
+  namespace: shop
+spec:
+  parentRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 8000
+  rules:
+    - backendRefs:
+        - name: backend-v1
+          port: 8000
+          weight: 90
+        - name: backend-v2
+          port: 8000
+          weight: 10

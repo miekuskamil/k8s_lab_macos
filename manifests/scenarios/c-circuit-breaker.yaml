@@ -1,0 +1,93 @@
+# Scenario C: circuit breaking on the Python backend.
+# The pool allows 5 concurrent TCP connections, 5 queued HTTP requests and 5
+# requests per connection. Outlier detection ejects a pod for 30 s after 3
+# consecutive 5xx responses. Anything over the limits gets an immediate 503.
+#
+# The same policy goes on the three hosts that routes can name, because the
+# baseline HTTPRoute sends traffic to backend-v1 and backend-v2 directly.
+#
+# Apply:   kubectl apply -f manifests/scenarios/c-circuit-breaker.yaml
+# Observe: run a burst of 200 requests at concurrency 50 against /api/slow?ms=300
+#          in the UI at http://localhost:8080, or run
+#          ./scripts/traffic-test.sh 200 50 "/api/slow?ms=300"
+# Revert:  kubectl delete -f manifests/scenarios/c-circuit-breaker.yaml
+#
+# Rate limiting is separate. A waypoint does not accept EnvoyFilter, so the lab
+# uses the backend's own token bucket:
+#   kubectl -n shop set env deploy/backend-v1 deploy/backend-v2 RATE_LIMIT_RPS=20
+# Remove it with RATE_LIMIT_RPS=0.
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: backend
+  namespace: shop
+spec:
+  host: backend.shop.svc.cluster.local
+  subsets:
+    - name: v1
+      labels:
+        version: v1
+    - name: v2
+      labels:
+        version: v2
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 5
+        connectTimeout: 2s
+      http:
+        http1MaxPendingRequests: 5
+        http2MaxRequests: 20
+        maxRequestsPerConnection: 5
+        maxRetries: 1
+    outlierDetection:
+      consecutive5xxErrors: 3
+      interval: 5s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: backend-v1
+  namespace: shop
+spec:
+  host: backend-v1.shop.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 5
+        connectTimeout: 2s
+      http:
+        http1MaxPendingRequests: 5
+        http2MaxRequests: 20
+        maxRequestsPerConnection: 5
+        maxRetries: 1
+    outlierDetection:
+      consecutive5xxErrors: 3
+      interval: 5s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: backend-v2
+  namespace: shop
+spec:
+  host: backend-v2.shop.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 5
+        connectTimeout: 2s
+      http:
+        http1MaxPendingRequests: 5
+        http2MaxRequests: 20
+        maxRequestsPerConnection: 5
+        maxRetries: 1
+    outlierDetection:
+      consecutive5xxErrors: 3
+      interval: 5s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50

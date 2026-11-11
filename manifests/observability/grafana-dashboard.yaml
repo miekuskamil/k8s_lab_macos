@@ -1,0 +1,158 @@
+# Picked up by the Grafana sidecar through the label grafana_dashboard=1.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-shop-mesh
+  namespace: observability
+  labels:
+    grafana_dashboard: "1"
+data:
+  shop-mesh.json: |
+    {
+      "uid": "shop-mesh",
+      "title": "Shop mesh and traffic experiments",
+      "tags": ["istio", "ambient", "k8s-lab"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "10s",
+      "time": { "from": "now-15m", "to": "now" },
+      "panels": [
+        {
+          "id": 1,
+          "type": "timeseries",
+          "title": "Backend request rate by workload (canary split)",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "stacking": { "mode": "normal" }, "fillOpacity": 30 } }, "overrides": [] },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (destination_workload) (rate(istio_requests_total{reporter=\"waypoint\", destination_service_name=~\"backend.*\"}[1m]))",
+              "legendFormat": "{{destination_workload}}"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "type": "timeseries",
+          "title": "Backend responses by status code (fault injection)",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "stacking": { "mode": "normal" }, "fillOpacity": 30 } }, "overrides": [] },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (response_code) (rate(istio_requests_total{reporter=\"waypoint\", destination_service_name=~\"backend.*\"}[1m]))",
+              "legendFormat": "{{response_code}}"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "timeseries",
+          "title": "Backend p95 latency at the waypoint",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum by (le, destination_workload) (rate(istio_request_duration_milliseconds_bucket{reporter=\"waypoint\", destination_service_name=~\"backend.*\"}[1m])))",
+              "legendFormat": "{{destination_workload}}"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "Backend 5xx ratio",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 6, "x": 12, "y": 8 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 0.05 }, { "color": "red", "value": 0.2 } ] }
+            },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(istio_requests_total{reporter=\"waypoint\", destination_service_name=~\"backend.*\", response_code=~\"5..\"}[1m])) / sum(rate(istio_requests_total{reporter=\"waypoint\", destination_service_name=~\"backend.*\"}[1m]))"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "Requests rejected by the backend rate limiter",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 6, "x": 18, "y": 8 },
+          "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+          "targets": [
+            { "refId": "A", "expr": "sum(rate(backend_rate_limited_total[1m]))" }
+          ]
+        },
+        {
+          "id": 6,
+          "type": "timeseries",
+          "title": "Orders created per version",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+          "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (version) (rate(backend_orders_created_total[1m]))",
+              "legendFormat": "{{version}}"
+            }
+          ]
+        },
+        {
+          "id": 7,
+          "type": "timeseries",
+          "title": "Backend p95 latency measured in the app",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+          "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum by (le, version) (rate(backend_http_request_duration_seconds_bucket[1m])))",
+              "legendFormat": "{{version}}"
+            }
+          ]
+        },
+        {
+          "id": 8,
+          "type": "timeseries",
+          "title": "ztunnel TCP connections opened per second",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+          "fieldConfig": { "defaults": { "unit": "cps" }, "overrides": [] },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (destination_workload) (rate(istio_tcp_connections_opened_total[1m]))",
+              "legendFormat": "{{destination_workload}}"
+            }
+          ]
+        },
+        {
+          "id": 9,
+          "type": "timeseries",
+          "title": "ztunnel memory per node (compare with sidecar cost)",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+          "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"istio-system\", pod=~\"ztunnel.*\", container!=\"\"})",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        }
+      ]
+    }

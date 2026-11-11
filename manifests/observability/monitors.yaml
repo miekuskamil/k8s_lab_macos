@@ -1,0 +1,92 @@
+# Prometheus is configured with *SelectorNilUsesHelmValues=false, so it picks up
+# every ServiceMonitor and PodMonitor in the cluster. All monitors live in
+# "observability" and reach other namespaces through namespaceSelector.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: shop-apps
+  namespace: observability
+  labels:
+    app.kubernetes.io/part-of: k8s-lab
+spec:
+  namespaceSelector:
+    matchNames: ["shop"]
+  selector:
+    matchLabels:
+      metrics: scrape
+  podTargetLabels: ["version"]
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: istiod
+  namespace: observability
+  labels:
+    app.kubernetes.io/part-of: k8s-lab
+spec:
+  namespaceSelector:
+    matchNames: ["istio-system"]
+  selector:
+    matchLabels:
+      istio: pilot
+  endpoints:
+    - port: http-monitoring
+      interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: ztunnel
+  namespace: observability
+  labels:
+    app.kubernetes.io/part-of: k8s-lab
+spec:
+  namespaceSelector:
+    matchNames: ["istio-system"]
+  selector:
+    matchLabels:
+      app: ztunnel
+  podMetricsEndpoints:
+    - port: ztunnel-stats
+      path: /metrics
+      interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: waypoint
+  namespace: observability
+  labels:
+    app.kubernetes.io/part-of: k8s-lab
+spec:
+  namespaceSelector:
+    matchNames: ["shop"]
+  selector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: waypoint
+  podMetricsEndpoints:
+    - port: http-envoy-prom
+      path: /stats/prometheus
+      interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: shop-gateway
+  namespace: observability
+  labels:
+    app.kubernetes.io/part-of: k8s-lab
+spec:
+  namespaceSelector:
+    matchNames: ["shop-ingress"]
+  selector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: shop-gateway
+  podMetricsEndpoints:
+    - port: http-envoy-prom
+      path: /stats/prometheus
+      interval: 15s
