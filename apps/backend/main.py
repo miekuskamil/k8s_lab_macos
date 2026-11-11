@@ -167,9 +167,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="orders-backend", version=APP_VERSION, lifespan=lifespan)
 
-if OTEL_ENABLED:
-    configure_tracing()
-    FastAPIInstrumentor.instrument_app(app, excluded_urls=",".join(p.lstrip("/") for p in UNTRACED_PATHS))
 
 
 @app.middleware("http")
@@ -285,3 +282,11 @@ async def slow(ms: int = 200) -> dict:
     ms = max(0, min(ms, 10000))
     await asyncio.sleep(ms / 1000)
     return {"version": APP_VERSION, "pod": POD_NAME, "slept_ms": ms}
+
+
+# Instrument last. Starlette runs the most recently added middleware first, so this puts
+# the tracing middleware outside "observe" and the request span is still open when
+# "observe" writes its log line. That is what puts trace_id into the request logs.
+if OTEL_ENABLED:
+    configure_tracing()
+    FastAPIInstrumentor.instrument_app(app, excluded_urls=",".join(p.lstrip("/") for p in UNTRACED_PATHS))

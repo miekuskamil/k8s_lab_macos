@@ -195,7 +195,7 @@ This section describes the lab as it runs after `./scripts/provision.sh`, measur
 | Grafana | 11.3.0 |
 | Jaeger all-in-one | 1.62.0 |
 | Redis | 7.4 |
-| Shop images | `k8s-lab/backend:1.0.1`, `k8s-lab/frontend:1.0.1` |
+| Shop images | `k8s-lab/backend:1.0.2`, `k8s-lab/frontend:1.0.2` |
 
 Istio 1.24 supports Kubernetes up to 1.31, which is why `provision.sh` pins the k3s image.
 
