@@ -179,6 +179,66 @@ Five ArgoCD Applications deploy everything else:
 
 `istio-config` does not self-heal so you can apply a scenario by hand and watch ArgoCD report the drift without undoing your experiment. The files in `manifests/scenarios/` are not synced at all.
 
+## The running system
+
+This section describes the lab as it runs after `./scripts/provision.sh`, measured on 11 November 2026 on a clean rebuild. Your numbers will differ a little.
+
+### Versions
+
+| Component | Version |
+|---|---|
+| Kubernetes (k3s in k3d) | v1.31.5+k3s1 |
+| Istio (istiod, ztunnel, istio-cni, proxies) | 1.24.2 |
+| Gateway API CRDs | v1.2.1 |
+| ArgoCD | v2.13.2 (chart 7.7.11) |
+| Prometheus | v2.55.1 (kube-prometheus-stack 66.2.1) |
+| Grafana | 11.3.0 |
+| Jaeger all-in-one | 1.62.0 |
+| Redis | 7.4 |
+| Shop images | `k8s-lab/backend:1.0.1`, `k8s-lab/frontend:1.0.1` |
+
+Istio 1.24 supports Kubernetes up to 1.31, which is why `provision.sh` pins the k3s image.
+
+### What is running
+
+24 pods on one node, and six ArgoCD Applications that all report Synced and Healthy.
+
+| Namespace | Pods | Memory in use |
+|---|---|---|
+| `shop` | frontend, backend-v1 x2, backend-v2, redis, waypoint | 250 MiB |
+| `shop-ingress` | shop-gateway | 39 MiB |
+| `istio-system` | istiod, ztunnel, istio-cni | 81 MiB |
+| `observability` | Prometheus, Grafana, Jaeger, operator, kube-state-metrics | 599 MiB |
+| `argocd` | controller, server, repo server, applicationset, redis | 327 MiB |
+| `kube-system` | coredns, metrics-server, local-path, load balancer | 58 MiB |
+
+The node used 2.8 GiB in total, including k3s itself. The whole mesh data plane is small: ztunnel used 13 MiB and the waypoint 38 MiB. Check your own numbers with `kubectl top pods -A` and `kubectl top node`.
+
+### What was verified, and how to repeat it
+
+| Claim | Evidence | Command |
+|---|---|---|
+| A rebuild from nothing works in one run | `provision.sh` exited 0 with all 13 health checks passing, in under 2 minutes with cached images. A second run on the same cluster also exited 0. | `./scripts/teardown.sh --yes && ./scripts/provision.sh` |
+| Traffic enters through the gateway | 300 of 300 requests returned 200 | `./scripts/traffic-test.sh 300` |
+| Gateway to frontend uses mTLS | ztunnel logged the connection on port 15008 with source identity `spiffe://cluster.local/ns/shop-ingress/sa/shop-gateway-istio` | `kubectl -n istio-system logs ds/ztunnel \| grep 'src.workload="shop-gateway'` |
+| Backend calls go through the waypoint | ztunnel logged frontend to waypoint, then waypoint to backend, both on port 15008 | `kubectl -n istio-system logs ds/ztunnel \| grep waypoint` |
+| Only the backend may reach Redis | A pod with the `default` service account got its Redis connection cut, and ztunnel logged the denial | see [learning.md](learning.md#5-debugging-mtls-drops), step 5 |
+| Only the frontend may call the backend | The same pod got `403 Forbidden` from the waypoint | same |
+| Scenario A splits 90/10 | 273 responses from v1, 27 from v2 | `kubectl apply -f manifests/scenarios/a-canary-httproute.yaml` |
+| Scenario B injects faults | 15 of 200 returned 503, average latency 526 ms, `/api/version` unaffected at 23 ms | see `manifests/scenarios/b-fault-injection.yaml` |
+| Scenario C breaks the circuit | 175 of 200 returned 503 with the policy, 0 of 200 without | see `manifests/scenarios/c-circuit-breaker.yaml` |
+| The rate limiter works and survives ArgoCD | 304 of 400 returned 429, and `shop-apps` stayed Synced | `kubectl -n shop set env deploy/backend-v1 deploy/backend-v2 RATE_LIMIT_RPS=20` |
+| Prometheus scrapes everything | 18 of 18 targets up, including ztunnel, the waypoint and the gateway | http://localhost:9090/targets |
+| The Grafana dashboard has data | All nine panel queries return series when run through Grafana | open the dashboard "Shop mesh and traffic experiments" |
+| Traces join across the mesh | 200 of 200 recent backend traces start at the gateway, most with 7 spans across gateway, waypoint and backend | http://localhost:16686, service `backend` |
+| The default logins work | ArgoCD issued a session token, Grafana accepted the password and rejected a wrong one, Redis answered `PONG` | see the [README](README.md#default-logins) |
+
+### What was not verified
+
+- The panels were checked through Grafana's query API, not by looking at them in a browser.
+- `docs/traffic-flow.excalidraw` passed a structure check (valid JSON, every element has the fields Excalidraw requires, no duplicate ids). It was not opened in Excalidraw. Its arrows are not bound to the boxes, so they stay in place when you move a box.
+- Importing the Mermaid diagrams into draw.io and Excalidraw follows their documented menus and was not tested.
+
 ## Resource limits
 
 The lab targets an OrbStack VM with 8 GiB of RAM. Every namespace has a quota, and a LimitRange gives containers default requests and limits (a quota rejects pods that declare none).
@@ -193,7 +253,12 @@ The lab targets an OrbStack VM with 8 GiB of RAM. Every namespace has a quota, a
 
 ## Secrets
 
-Two Secrets exist and neither is in Git. `provision.sh` creates `shop/redis-auth` and `observability/grafana-admin` with random values from `openssl rand`. ArgoCD generates its own admin password. [learning.md](learning.md#secrets) explains what to use instead of this when more than one person shares a cluster.
+The lab has three credentials, and all three are fixed defaults stored in Git:
+
+- `shop/redis-auth` and `observability/grafana-admin` are Secrets in `manifests/base/03-lab-credentials.yaml`. ArgoCD manages them through `shop-base`.
+- The ArgoCD admin password is a bcrypt hash in `helm/argocd-values.yaml`.
+
+The [README](README.md#default-logins) lists the values. Committing them keeps the lab reproducible and is safe only because nothing listens outside your Mac. [learning.md](learning.md#secrets) covers what to use on a shared cluster.
 
 ## Editing the diagrams
 
@@ -201,7 +266,7 @@ Each diagram exists in three forms:
 
 - The Mermaid blocks on this page. Treat them as the source.
 - `docs/traffic-flow.svg` and `docs/gitops-flow.svg`, standalone images with no external fonts or scripts.
-- `docs/traffic-flow.excalidraw`, an editable scene of the traffic flow.
+- `docs/traffic-flow.excalidraw`, an editable scene of the traffic flow. Its arrows are not attached to the boxes, so move them together.
 
 **draw.io.** Choose Arrange, Insert, Advanced, Mermaid, paste a diagram's text without the code fence, and select Insert. The import may drop the edge colors set by `linkStyle`, so recolor the encrypted edges by hand. To export, use File, Export as (tick "Include a copy of my diagram" so the PNG or SVG stays editable) or File, Save as `.drawio`. There is no way back to Mermaid.
 
@@ -220,4 +285,4 @@ This writes `architecture-1.svg` and `architecture-2.svg` in `docs/`.
 
 - There is one node, so traffic between nodes and ztunnel failover are never exercised.
 - A waypoint does not accept `EnvoyFilter`. Global rate limiting would need a separate rate limit service, so the lab limits requests inside the backend instead.
-- VirtualService support on waypoints and some metric labels change between Istio releases. After changing `ISTIO_VERSION`, re-run scenario B and check the dashboard queries.
+- VirtualService support on waypoints and some metric labels change between Istio releases. Scenario B and the dashboard queries are verified on Istio 1.24.2 only. Re-run them after changing `ISTIO_VERSION`.

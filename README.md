@@ -7,8 +7,8 @@ The shop is a Node.js frontend, a Python FastAPI backend (two versions) and Redi
 ## What you need
 
 - A Mac with [OrbStack](https://orbstack.dev) installed, and at least 8 GiB of RAM given to it.
-- `kubectl`, `helm`, `k3d`, `git`, `docker` and `openssl`. With Homebrew: `brew install kubectl helm k3d git openssl`.
-- About 15 minutes for the first run, mostly image pulls.
+- `kubectl`, `helm`, `k3d`, `git` and `docker`. With Homebrew: `brew install kubectl helm k3d git`. OrbStack supplies `docker` and `orb`.
+- About 10 minutes for the first run, mostly image pulls. A rebuild with the images cached takes about 2 minutes.
 
 OrbStack's own Kubernetes can stay switched off. The lab creates a k3d cluster named `k8s-lab` and uses OrbStack only as the Docker engine. See [why k3d](#why-k3d-and-not-orbstacks-kubernetes) below.
 
@@ -20,7 +20,7 @@ cd k8s_lab_macos
 ./scripts/provision.sh
 ```
 
-The script builds the images, creates the cluster, installs Istio and ArgoCD, and waits until everything is healthy. It is safe to run again if it stops halfway. At the end it prints the generated passwords.
+The script builds the images, creates the cluster, installs Istio and ArgoCD, and waits until everything is healthy. It is safe to run again at any time. At the end it prints the URLs and logins.
 
 ArgoCD deploys from the `main` branch on GitHub, not from your working copy. If you edit a manifest, push it before you expect the cluster to change.
 
@@ -34,12 +34,21 @@ ArgoCD deploys from the `main` branch on GitHub, not from your working copy. If 
 | Prometheus | http://localhost:9090 |
 | Jaeger | http://localhost:16686 |
 
-Only the shop is reachable on its own. For the other four, run `./scripts/port-forward.sh` in a spare terminal and leave it running. Log in to ArgoCD and Grafana as `admin` with the passwords the provision script printed. To print them again:
+Only the shop is reachable on its own. For the other four, run `./scripts/port-forward.sh` in a spare terminal and leave it running.
 
-```bash
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 --decode; echo
-kubectl -n observability get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 --decode; echo
-```
+## Default logins
+
+| Service | User | Password | Defined in |
+|---|---|---|---|
+| ArgoCD | `admin` | `k8s-lab-admin` | `helm/argocd-values.yaml` (bcrypt hash) |
+| Grafana | `admin` | `k8s-lab-admin` | `manifests/base/03-lab-credentials.yaml` |
+| Redis | none | `k8s-lab-redis` | `manifests/base/03-lab-credentials.yaml` |
+| Prometheus, Jaeger, the shop | no login | | |
+
+These are fixed defaults stored in Git, so every clone of the lab behaves the same. That is acceptable only because nothing here is reachable from outside your Mac. To change one:
+
+- Grafana or Redis: edit the Secret in `manifests/base/03-lab-credentials.yaml`, push, then restart the pods that read it (`kubectl -n observability rollout restart deploy/kube-prometheus-stack-grafana`, or `kubectl -n shop rollout restart deploy`).
+- ArgoCD: make a new hash with the `htpasswd` command in the comment in `helm/argocd-values.yaml`, replace the value, and run `./scripts/provision.sh` again.
 
 ## Try it
 
@@ -70,8 +79,9 @@ You should see roughly 180 answers from v1 and 20 from v2. The Grafana dashboard
 
 Two more documents:
 
-- [architecture.md](architecture.md) explains how a request travels through the mesh and where mTLS applies.
+- [architecture.md](architecture.md) explains how a request travels through the mesh, where mTLS applies, and what the running system measures.
 - [learning.md](learning.md) is the hands-on guide: ambient mode concepts, the three experiments, `istioctl` debugging and notes for production.
+- [docs/troubleshooting.md](docs/troubleshooting.md) records the ten problems hit while building the lab, with the command that exposed each one.
 
 ## When something goes wrong
 
@@ -81,7 +91,9 @@ Two more documents:
 
 **ArgoCD shows an app as OutOfSync after an experiment.** That is expected. The `istio-config` app does not self-heal, so your manual change stays in place and ArgoCD reports the difference. Press Sync in the UI to return to the Git state.
 
-**A pod is stuck in Pending.** The namespaces have resource quotas sized for an 8 GiB machine. Run `kubectl describe resourcequota -A` to see what is used.
+**A pod is stuck in Pending, or never appears.** The namespaces have resource quotas sized for an 8 GiB machine. Run `kubectl describe resourcequota -A` to see what is used, and `kubectl get events -A --field-selector type=Warning` to see what Kubernetes refused.
+
+For anything else, start with the three commands at the top of [docs/troubleshooting.md](docs/troubleshooting.md).
 
 ## Why k3d and not OrbStack's Kubernetes
 

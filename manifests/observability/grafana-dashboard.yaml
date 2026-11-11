@@ -79,7 +79,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "sum(rate(istio_requests_total{reporter=\"waypoint\", destination_service_name=~\"backend.*\", response_code=~\"5..\"}[1m])) / sum(rate(istio_requests_total{reporter=\"waypoint\", destination_service_name=~\"backend.*\"}[1m]))"
+              "expr": "(sum(rate(istio_requests_total{reporter=\"waypoint\", destination_service_name=~\"backend.*\", response_code=~\"5..\"}[1m])) or vector(0)) / sum(rate(istio_requests_total{reporter=\"waypoint\", destination_service_name=~\"backend.*\"}[1m]))"
             }
           ]
         },
@@ -91,7 +91,7 @@ data:
           "gridPos": { "h": 8, "w": 6, "x": 18, "y": 8 },
           "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
           "targets": [
-            { "refId": "A", "expr": "sum(rate(backend_rate_limited_total[1m]))" }
+            { "refId": "A", "expr": "sum(rate(backend_rate_limited_total[1m])) or vector(0)" }
           ]
         },
         {

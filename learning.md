@@ -82,7 +82,7 @@ git push origin canary-20
 
 ## 3. Three traffic experiments
 
-Each experiment lists what to run, what you should see, and how to undo it. Use the shop UI at http://localhost:8080 (the "Burst traffic" box) or `./scripts/traffic-test.sh [requests] [concurrency] [path]`.
+Each experiment lists what to run, what you should see, and how to undo it. Wait a few seconds after you apply or remove a rule before you send traffic. While the waypoint loads the new config, a handful of requests can return 503. Use the shop UI at http://localhost:8080 (the "Burst traffic" box) or `./scripts/traffic-test.sh [requests] [concurrency] [path]`.
 
 ### A. Canary release, 90% to v1 and 10% to v2
 
@@ -211,14 +211,19 @@ kubectl -n istio-system logs ds/ztunnel --tail=100 | grep -iE "denied|error|rbac
 
 A line about a policy rejection points to an AuthorizationPolicy. A handshake error usually means a client outside the mesh is talking to a workload that requires mTLS.
 
-**5. Test the policy from a pod that should be refused.**
+**5. Test the policies from a pod that should be refused.**
 
 ```bash
-kubectl -n shop run probe --rm -it --restart=Never --image=curlimages/curl:8.11.1 -- \
-  curl -sv http://backend:8000/api/version
+kubectl -n shop run probe --rm -i --restart=Never --quiet --image=redis:7.4-alpine --command -- sh -c '
+  echo "redis:";   timeout 5 redis-cli --no-auth-warning -h redis -a k8s-lab-redis ping
+  echo "backend:"; wget -T 5 -qO- http://backend:8000/api/version'
 ```
 
-The `backend-allow-frontend` policy makes the waypoint answer `403 RBAC: access denied`, because the probe pod is not the frontend. A connection reset instead of a 403 means the layer-4 policy refused it first.
+The probe pod runs as the `default` service account, so both policies refuse it. Redis prints `I/O error`, because ztunnel cuts the connection at layer 4 (`redis-allow-backend`). The backend prints `403 Forbidden`, because the waypoint rejects the request at layer 7 (`backend-allow-frontend`). Kubernetes also prints a PodSecurity warning for the probe pod, which is harmless. Then read the denial in the ztunnel log:
+
+```bash
+kubectl -n istio-system logs ds/ztunnel --tail=200 | grep -iE "denied|reject"
+```
 
 **6. Inspect the waypoint when routing looks wrong.**
 
@@ -267,11 +272,13 @@ The backend and frontend use all three kinds:
 
 ### Secrets
 
-- Never commit a Secret. The lab creates them in `provision.sh` from `openssl rand`.
-- A Kubernetes Secret is base64, not encryption. Turn on encryption at rest for the API server in a real cluster.
-- To keep secrets in a GitOps workflow, use External Secrets Operator (reads from a cloud secret manager), Sealed Secrets (encrypted blobs in Git) or SOPS with age keys.
-- Read a secret from a mounted file if it rotates. An environment variable is fixed at container start.
-- The `shop-developer` Role in `manifests/base/01-rbac.yaml` has no access to Secrets.
+This lab commits its credentials to Git: two Secrets in `manifests/base/03-lab-credentials.yaml` and a password hash in `helm/argocd-values.yaml`. That choice makes the lab reproducible and lets the README list the logins. It is acceptable only for a cluster that never leaves your laptop. On any shared cluster:
+
+- Keep secret values out of Git. Use External Secrets Operator (reads from a cloud secret manager), Sealed Secrets (encrypted blobs in Git) or SOPS with age keys.
+- Remember that a Kubernetes Secret is base64, not encryption. Turn on encryption at rest for the API server.
+- Read a secret from a mounted file if it rotates. An environment variable is fixed at container start, which is why changing the Redis password here needs a pod restart.
+- Limit who can read them. The `shop-developer` Role in `manifests/base/01-rbac.yaml` has no access to Secrets.
+- Rotate anything that was ever committed. Git history keeps the old value.
 
 ### Pod hardening in this lab
 
@@ -282,6 +289,7 @@ Containers run as a non-root user with a read-only root filesystem, no Linux cap
 - Alert on symptoms such as error ratio and latency before causes such as CPU.
 - The lab samples 100% of traces. Use 1 to 5% in production, plus tail sampling to keep error traces.
 - The backend writes the trace id into every log line. Search your logs by `trace_id` and open the matching trace in Jaeger.
+- Keep probes out of your traces. The backend excludes `/healthz`, `/readyz` and `/metrics` from tracing and drops the Redis `PING` spans its readiness probe would create.
 
 ## 7. Things to try next
 
