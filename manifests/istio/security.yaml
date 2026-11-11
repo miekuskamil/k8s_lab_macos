@@ -52,3 +52,24 @@ spec:
         - operation:
             methods: ["GET", "POST"]
             paths: ["/api/*"]
+---
+# L4 policy enforced by ztunnel on the backend pods. Without it, a client that does not
+# use the waypoint (a sidecar workload, or anything that dials a pod IP) reaches the
+# backend directly and skips the L7 policy above. Only the waypoint may open connections
+# to the backend, plus Prometheus for the /metrics scrape.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: backend-only-from-waypoint
+  namespace: shop
+spec:
+  selector:
+    matchLabels:
+      app: backend
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/shop/sa/waypoint
+              - cluster.local/ns/observability/sa/kube-prometheus-stack-prometheus
