@@ -10,8 +10,8 @@ spec:
   hard:
     requests.cpu: "2"
     requests.memory: 2Gi
-    limits.cpu: "4"
-    limits.memory: 3Gi
+    limits.cpu: "6"
+    limits.memory: 4Gi
     pods: "30"
     services: "15"
     persistentvolumeclaims: "0"
@@ -31,10 +31,13 @@ spec:
       default:
         cpu: 250m
         memory: 192Mi
+      # Istio's waypoint proxy defaults to a limit of 2 CPU and 1Gi.
       max:
-        cpu: "1"
-        memory: 512Mi
+        cpu: "2"
+        memory: 1Gi
 ---
+# The Istio gateway proxy defaults to a limit of 2 CPU and 1Gi. The quota leaves room
+# for two gateway pods so a rolling update can start the new pod before the old one stops.
 apiVersion: v1
 kind: ResourceQuota
 metadata:
@@ -44,8 +47,8 @@ spec:
   hard:
     requests.cpu: 500m
     requests.memory: 512Mi
-    limits.cpu: "1"
-    limits.memory: 1Gi
+    limits.cpu: "4"
+    limits.memory: 2Gi
     pods: "5"
 ---
 apiVersion: v1

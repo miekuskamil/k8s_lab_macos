@@ -185,8 +185,8 @@ The lab targets an OrbStack VM with 8 GiB of RAM. Every namespace has a quota, a
 
 | Namespace | CPU requests | Memory requests | Memory limits |
 |---|---|---|---|
-| `shop` | 2 cores | 2 GiB | 3 GiB |
-| `shop-ingress` | 0.5 cores | 512 MiB | 1 GiB |
+| `shop` | 2 cores | 2 GiB | 4 GiB |
+| `shop-ingress` | 0.5 cores | 512 MiB | 2 GiB |
 | `observability` | 1.5 cores | 2.5 GiB | 6 GiB |
 
 `istio-system` and `argocd` have no quota. Their limits are set in `helm/`. Run `kubectl top pods -A` to see what the cluster really uses.
