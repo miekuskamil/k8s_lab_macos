@@ -1,104 +1,103 @@
-# Learning guide
+# Lab guide
 
-Concepts first, then a hands-on playbook, then production practices. Every command assumes you ran `./scripts/provision.sh` and you are in the repository root.
+This guide assumes `./scripts/provision.sh` finished and you can open http://localhost:8080. Run all commands from the repository root. Start `./scripts/port-forward.sh` in a spare terminal so Grafana, Jaeger and ArgoCD are open while you work.
 
-## 1. Istio ambient mode and sidecars
+Contents:
 
-### The difference in one picture
+1. [Ambient mode in two minutes](#1-ambient-mode-in-two-minutes)
+2. [GitOps in practice](#2-gitops-in-practice)
+3. [Three traffic experiments](#3-three-traffic-experiments)
+4. [Recipes](#4-recipes)
+5. [Debugging mTLS drops](#5-debugging-mtls-drops)
+6. [Notes for production](#6-notes-for-production)
+7. [Things to try next](#7-things-to-try-next)
 
-A sidecar mesh puts one Envoy in every pod. An ambient mesh splits the work in two layers.
+## 1. Ambient mode in two minutes
 
-| | Sidecar mode | Ambient mode |
-|---|---|---|
-| L4 (mTLS, identity, TCP policy) | Envoy in each pod | `ztunnel`, one per node |
-| L7 (HTTP routing, retries, faults) | Envoy in each pod | `waypoint`, only where you ask for it |
-| Pod restart to join the mesh | Yes, to inject the sidecar | No, label the namespace |
-| Per-pod overhead | An Envoy, typically 50 to 150 MiB | None |
-| Application containers see | Iptables rules from an init container | Traffic redirected by `istio-cni` outside the pod |
+A classic Istio mesh injects an Envoy proxy sidecar into every pod. Ambient mode removes the sidecars and splits the work into two layers:
 
-### Why ztunnel saves RAM on a k3d node
+- **ztunnel** runs once per node. It handles identity and mTLS for every pod on that node and enforces simple TCP-level policy. It never reads HTTP.
+- **A waypoint** is an Envoy proxy you add for a namespace or a single Service when you need HTTP features: weighted routing, fault injection, retries, HTTP-aware policy.
 
-The k3s node runs as one container in the OrbStack VM, so all pods share that VM. Every sidecar costs memory in that VM whether the pod needs HTTP features or not.
+You enroll a namespace by labeling it, and no pod restarts. In this lab the `shop` namespace carries `istio.io/dataplane-mode: ambient`, and only the three backend Services carry `istio.io/use-waypoint: waypoint`. Redis and the frontend get mTLS from ztunnel and nothing more.
 
-- This lab runs 6 pods in `shop` and about 8 in `observability`. With sidecars that is 14 Envoy processes. At roughly 60 MiB each, that is about 840 MiB.
-- With ambient mode there is one ztunnel (set to request 64 MiB) plus one waypoint for the namespace (default request 64 MiB). The total is roughly 130 MiB.
-- The saving grows with every pod you add, because ztunnel does not scale with pod count.
-- Sidecars also add startup time, which matters when you recreate the cluster often.
+### Why it matters on a laptop
 
-You can measure it. The dashboard panel "ztunnel memory per node" shows the real number. Compare it with `kubectl top pods -A`.
+A sidecar costs memory in every pod, whether or not the pod needs HTTP features. The lab has about 14 mesh pods across `shop` and `observability`, so sidecars would mean 14 extra Envoy processes. In ambient mode the whole cluster has one ztunnel and one waypoint. Sidecar Envoys commonly use tens of megabytes each, but the exact number depends on your traffic and config, so measure it:
 
-### What each layer does here
+```bash
+kubectl top pods -n istio-system
+kubectl top pods -n shop
+```
 
-- ztunnel handles identity (SPIFFE certificates per service account), mTLS between pods, `PeerAuthentication` and L4 `AuthorizationPolicy`. Redis traffic stops at this layer.
-- The waypoint handles everything that reads HTTP. The backend Services carry the label `istio.io/use-waypoint: waypoint`, so only they pay for L7.
-- Traffic between ztunnel and a waypoint uses HBONE, an HTTP/2 CONNECT tunnel on port 15008 with mTLS inside.
+The Grafana panel "ztunnel memory per node" shows the same number over time.
 
 ### Trade-offs
 
-- A waypoint is a shared proxy. A noisy backend can slow a neighbor behind the same waypoint. Give busy services their own waypoint.
-- L7 policy applies only to Services bound to a waypoint. A policy aimed at a Service without a waypoint does nothing.
-- Some Envoy extensions (`EnvoyFilter`, Wasm) have limited support on waypoints. Check the Istio docs for your version.
+- Pods that share a waypoint share its capacity. A very busy service should get its own waypoint.
+- L7 policy and routing only apply to Services bound to a waypoint. A policy aimed at a Service without one does nothing.
+- Waypoints support fewer Envoy extensions than sidecars. `EnvoyFilter` is not available, which is why the lab does rate limiting inside the backend.
 
-## 2. GitOps with ArgoCD
+## 2. GitOps in practice
 
-### Declarative state
+With GitOps, Git holds the state you want and ArgoCD makes the cluster match it. You do not run `kubectl apply` for the managed parts. You commit.
 
-You describe the desired cluster state in Git. ArgoCD compares Git with the live cluster and reports the difference. You never run `kubectl apply` for the managed parts. You commit.
+`manifests/argocd/root-app.yaml` is the entry point. It points at the folder `manifests/argocd/apps/`, which holds one ArgoCD Application per area of the lab. Add a file there and ArgoCD creates a new Application on its next sync (it checks Git about every three minutes).
 
-This repository uses the app-of-apps pattern. `manifests/argocd/root-app.yaml` points at a folder of Application objects. Adding a file to `manifests/argocd/apps/` creates a new Application on the next sync.
+### See drift being corrected
 
-### Drift detection
-
-Drift means the live state no longer matches Git. Try it:
+Scale the frontend by hand:
 
 ```bash
 kubectl -n shop scale deploy/frontend --replicas=3
-kubectl -n argocd get application shop-apps
+kubectl -n shop get pods -l app=frontend --watch
 ```
 
-`shop-apps` has `selfHeal: true`, so ArgoCD resets the replica count to 1 within a few seconds. The `istio-config` Application has `selfHeal: false`. Apply a scenario by hand and the Application turns `OutOfSync` but keeps your experiment. See the difference:
+Within a few seconds ArgoCD notices the cluster no longer matches Git and scales back to one replica, because `shop-apps` has self-heal on. Open the ArgoCD UI to see the sync event.
+
+### See drift being reported but not corrected
+
+The `istio-config` Application has self-heal off. Apply an experiment by hand:
 
 ```bash
 kubectl apply -f manifests/scenarios/a-canary-httproute.yaml
 kubectl -n argocd get application istio-config
 ```
 
-Return to the Git state with `kubectl -n argocd patch application istio-config --type merge -p '{"operation":{"sync":{}}}'`, or press Sync in the UI.
+The Application shows `OutOfSync` and the 90/10 split stays active. Sync it from the UI, or run the command below, and the route returns to the 100/0 state stored in Git:
 
-### Sync options used here
+```bash
+kubectl -n argocd patch application istio-config --type merge -p '{"operation":{"sync":{}}}'
+```
 
-- `automated.prune` deletes cluster objects that you removed from Git. It is off for `shop-base` so a bad commit cannot delete a namespace.
-- `ServerSideApply=true` is required for the large CRDs in kube-prometheus-stack.
-- `SkipDryRunOnMissingResource=true` lets `observability-config` apply ServiceMonitors before the CRDs exist, then retry.
-- Sync waves order the Applications. Namespaces first (wave 0), workloads and the monitoring chart next (wave 1), Istio config and monitors last (wave 2).
-
-### Changing the lab through Git
+### Change the lab through Git
 
 ```bash
 git checkout -b canary-20
-# edit manifests/istio/backend-route.yaml and set weights 80 and 20
+# edit manifests/istio/backend-route.yaml and set the weights to 80 and 20
 git commit -am "Send 20 percent of backend traffic to v2"
 git push origin canary-20
-# open a pull request, merge to main
-argocd app sync istio-config   # or wait for the poll, about 3 minutes
+# merge to main, then wait for ArgoCD or press Sync on istio-config
 ```
 
-## 3. Playbook
+## 3. Three traffic experiments
 
-### 3.1 Run the three scenarios
+Each experiment lists what to run, what you should see, and how to undo it. Use the shop UI at http://localhost:8080 (the "Burst traffic" box) or `./scripts/traffic-test.sh [requests] [concurrency] [path]`.
 
-Open the UI at http://localhost:8080 or use the script. Start the port-forwards in another terminal with `./scripts/port-forward.sh` so Grafana is available.
-
-Scenario A, canary 90/10:
+### A. Canary release, 90% to v1 and 10% to v2
 
 ```bash
 kubectl apply -f manifests/scenarios/a-canary-httproute.yaml
 ./scripts/traffic-test.sh 200
 ```
 
-Expect about 180 responses from `v1` and 20 from `v2`. Grafana panel "Backend request rate by workload" shows the split.
+**What you should see.** About 180 responses from v1 and 20 from v2. Each run varies a little, because the split is random per request. In Grafana, the panel "Backend request rate by workload" shows two bands, one roughly nine times the other.
 
-Scenario B, fault injection on `/api/orders`:
+**Undo.** `kubectl apply -f manifests/istio/backend-route.yaml`
+
+### B. Fault injection on /api/orders
+
+Gateway API routes cannot inject faults, so this experiment uses an Istio VirtualService. A route and a VirtualService for the same host conflict, so remove the route first.
 
 ```bash
 kubectl -n shop delete httproute backend-route
@@ -106,46 +105,60 @@ kubectl apply -f manifests/scenarios/b-fault-injection.yaml
 ./scripts/traffic-test.sh 200
 ```
 
-Expect about 20 responses with status 503 and an average latency above 500 ms. The 503 responses carry no `x-app-version` header because the waypoint answers them. Find a delayed request in Jaeger under the `backend` service. Revert with:
+**What you should see.** Every request to `/api/orders` takes at least 500 ms, and about 10% return HTTP 503. The 503 responses have no `x-app-version` header because the waypoint generates them and the backend never sees the request. In Jaeger, pick the `backend` service and look at a slow trace to see where the half second went.
+
+**Undo.**
 
 ```bash
 kubectl delete -f manifests/scenarios/b-fault-injection.yaml
 kubectl apply -f manifests/istio/backend-route.yaml
 ```
 
-Scenario C, circuit breaking and rate limiting:
+### C. Circuit breaking and rate limiting
+
+The first half limits connections at the waypoint. Fifty parallel requests to a slow endpoint overflow a pool of 5 connections plus 5 queued requests.
 
 ```bash
 kubectl apply -f manifests/scenarios/c-circuit-breaker.yaml
 ./scripts/traffic-test.sh 200 50 "/api/slow?ms=300"
 ```
 
-With 50 concurrent requests against a limit of 5 connections plus 5 queued requests, most responses are 503 and come back fast. Then try the rate limiter:
+**What you should see.** Most responses are 503 and return in a few milliseconds. The waypoint rejects the overflow immediately and does not queue it. Compare with the same command after you remove the policy, where every request succeeds but takes longer.
+
+**Undo.** `kubectl delete -f manifests/scenarios/c-circuit-breaker.yaml`
+
+The second half limits request rate. A waypoint cannot do this, so the backend has its own token bucket, controlled by an environment variable:
 
 ```bash
-kubectl delete -f manifests/scenarios/c-circuit-breaker.yaml
 kubectl -n shop set env deploy/backend-v1 deploy/backend-v2 RATE_LIMIT_RPS=20
 ./scripts/traffic-test.sh 200 20
-kubectl -n shop set env deploy/backend-v1 deploy/backend-v2 RATE_LIMIT_RPS=0
 ```
 
-Status 429 responses show the in-app limiter at work. Note that `kubectl set env` changes the Deployment, so `shop-apps` (self-heal on) reverts it on its own. That is the drift detection from section 2 applied to your own experiment.
+**What you should see.** Status 429 for most requests above the limit. The Grafana stat "Requests rejected by the backend rate limiter" goes up.
 
-### 3.2 Add a new service
+**Undo.** `kubectl -n shop set env deploy/backend-v1 deploy/backend-v2 RATE_LIMIT_RPS=0`. If you do nothing, ArgoCD reverts the change within a few seconds, because `shop-apps` self-heals. That is the drift correction from section 2, applied to your own experiment.
 
-Example, a `payments` service in `shop`.
+## 4. Recipes
 
-1. Create `apps/payments/` with a `Dockerfile` and the code. Use the backend as a template.
-2. Build the image with `docker build -t k8s-lab/payments:1.0.0 apps/payments`, then load it into the cluster with `k3d image import k8s-lab/payments:1.0.0 -c k8s-lab`.
-3. Create `manifests/apps/payments.yaml` with a ServiceAccount, a Deployment and a Service. Copy the security context, probes and resource blocks from `backend.yaml`. Give the Service a port named `http` and the label `metrics: scrape` so Prometheus finds it.
-4. To get L7 features, add the label `istio.io/use-waypoint: waypoint` to the Service. Leave it off for plain TCP services.
-5. Add an `AuthorizationPolicy` in `manifests/istio/security.yaml` that names the callers by service account.
-6. Check that the namespace quota has room: `kubectl -n shop describe resourcequota shop-quota`.
-7. Commit and push. `shop-apps` picks up the new file on the next poll.
+### Add a new service
 
-### 3.3 Change the canary percentage
+This example adds a `payments` service in the `shop` namespace.
 
-Live, for an experiment:
+1. Create `apps/payments/` with code and a Dockerfile. Copy the backend as a starting point.
+2. Build the image and load it into the cluster:
+   ```bash
+   docker build -t k8s-lab/payments:1.0.0 apps/payments
+   k3d image import k8s-lab/payments:1.0.0 -c k8s-lab
+   ```
+3. Create `manifests/apps/payments.yaml` with a ServiceAccount, a Deployment and a Service. Copy the probes, resource block and security context from `manifests/apps/backend.yaml`. Name the Service port `http` and add the label `metrics: scrape` so Prometheus finds it.
+4. If the service needs HTTP routing or HTTP-aware policy, add the label `istio.io/use-waypoint: waypoint` to the Service. Leave it off for plain TCP.
+5. Add an AuthorizationPolicy to `manifests/istio/security.yaml` that names the allowed callers by service account.
+6. Check there is quota left: `kubectl -n shop describe resourcequota shop-quota`.
+7. Commit and push. ArgoCD picks the file up on its next sync.
+
+### Change the canary percentage
+
+For a quick experiment, patch the live route:
 
 ```bash
 kubectl -n shop patch httproute backend-route --type json -p '[
@@ -154,134 +167,122 @@ kubectl -n shop patch httproute backend-route --type json -p '[
 ]'
 ```
 
-Through Git, for a change you keep: edit the two `weight` values in `manifests/istio/backend-route.yaml`, commit and push. Weights are relative, so `1` and `1` also gives 50/50. A weight of `0` keeps the route defined but sends no traffic, which is how the baseline parks v2.
+For a change you want to keep, edit the two `weight` values in `manifests/istio/backend-route.yaml`, commit and push. Weights are relative, so 1 and 1 also means 50/50. A weight of 0 keeps the backend in the route but sends it nothing, which is how the baseline parks v2.
 
-### 3.4 Debug mTLS connection drops with istioctl
+## 5. Debugging mTLS drops
 
-Install the CLI matching your control plane:
+Install the CLI with `brew install istioctl`. Its version should match the control plane (`istioctl version`). Work from the outside in.
+
+**1. Is the pod in the mesh?**
 
 ```bash
-brew install istioctl
-istioctl version
+kubectl get ns shop --show-labels | grep dataplane-mode
+istioctl ztunnel-config workloads | grep -E "NAMESPACE|shop"
 ```
 
-Work from the outside in.
+The PROTOCOL column must say `HBONE`. `TCP` means the pod is not enrolled. A pod that started before you labeled the namespace needs a restart.
 
-1. Confirm the namespace and pods are in the mesh.
+**2. Is the waypoint attached?**
 
-   ```bash
-   kubectl get ns shop --show-labels | grep dataplane-mode
-   istioctl ztunnel-config workloads | grep -E 'shop|NAMESPACE'
-   ```
+```bash
+istioctl waypoint list -n shop
+istioctl ztunnel-config services | grep -E "NAMESPACE|backend"
+```
 
-   The PROTOCOL column must say `HBONE`. `TCP` means the pod is not enrolled. Restart the pod after labeling the namespace if a pod predates the label.
+The WAYPOINT column for `backend` should show `waypoint`. If it is empty, check that the Gateway is programmed with `kubectl -n shop get gateway waypoint`.
 
-2. Check that the waypoint is attached and programmed.
+**3. Does the workload have a certificate?**
 
-   ```bash
-   istioctl waypoint list -n shop
-   kubectl -n shop get gateway waypoint
-   istioctl ztunnel-config services | grep backend
-   ```
+```bash
+istioctl ztunnel-config certificates
+```
 
-   The WAYPOINT column for `backend` must show `waypoint`.
+Look for `spiffe://cluster.local/ns/shop/sa/backend`. If a certificate is missing or expired, check that istiod is running.
 
-3. Look at the identity and certificate of a workload.
+**4. What does ztunnel say about the dropped connection?**
 
-   ```bash
-   istioctl ztunnel-config certificates
-   ```
+```bash
+kubectl -n istio-system logs ds/ztunnel --tail=100 | grep -iE "denied|error|rbac|tls"
+```
 
-   Look for an expired or missing certificate for `spiffe://cluster.local/ns/shop/sa/backend`. If `istiod` is down, certificates stop renewing.
+A line about a policy rejection points to an AuthorizationPolicy. A handshake error usually means a client outside the mesh is talking to a workload that requires mTLS.
 
-4. Read ztunnel logs. A dropped connection shows a reason.
+**5. Test the policy from a pod that should be refused.**
 
-   ```bash
-   kubectl -n istio-system logs ds/ztunnel --tail=100 | grep -iE 'denied|error|rbac|tls'
-   ```
+```bash
+kubectl -n shop run probe --rm -it --restart=Never --image=curlimages/curl:8.11.1 -- \
+  curl -sv http://backend:8000/api/version
+```
 
-   `connection closed due to policy rejection` points at an AuthorizationPolicy. `unknown source` or a handshake error points at a non-enrolled client talking to a STRICT workload.
+The `backend-allow-frontend` policy makes the waypoint answer `403 RBAC: access denied`, because the probe pod is not the frontend. A connection reset instead of a 403 means the layer-4 policy refused it first.
 
-5. Test the policy directly. From a pod that is not the frontend:
+**6. Inspect the waypoint when routing looks wrong.**
 
-   ```bash
-   kubectl -n shop run probe --rm -it --restart=Never --image=curlimages/curl:8.11.1 -- \
-     curl -sv http://backend:8000/api/version
-   ```
+```bash
+istioctl proxy-config routes deploy/waypoint -n shop
+istioctl proxy-config clusters deploy/waypoint -n shop | grep backend
+kubectl -n shop logs deploy/waypoint --tail=50
+```
 
-   The `backend-allow-frontend` policy must return `403 RBAC: access denied` from the waypoint. A plain connection reset means the L4 layer rejected it first.
+**7. Let Istio check the configuration.**
 
-6. Inspect the waypoint config when routing looks wrong.
+```bash
+istioctl analyze -n shop
+```
 
-   ```bash
-   istioctl proxy-config routes deploy/waypoint -n shop
-   istioctl proxy-config clusters deploy/waypoint -n shop | grep backend
-   kubectl -n shop logs deploy/waypoint --tail=50
-   ```
+This finds, among other things, an HTTPRoute and a VirtualService fighting over the same host.
 
-7. Validate the whole config for the namespace.
+**8. Raise the log level for a short time.**
 
-   ```bash
-   istioctl analyze -n shop
-   ```
+```bash
+POD=$(kubectl -n istio-system get pod -l app=ztunnel -o name | head -1 | cut -d/ -f2)
+istioctl ztunnel-config log "$POD" --level debug
+istioctl ztunnel-config log "$POD" --level info
+```
 
-   A conflict between an `HTTPRoute` and a `VirtualService` for the same host shows up here.
+The usual causes, roughly in the order they happen: the namespace label is missing, the pod started before the label, a client outside the mesh is calling a workload that requires mTLS, an AuthorizationPolicy names the wrong service account, or the waypoint pod is not Ready.
 
-8. Turn on debug logging for a short time, then turn it off.
+## 6. Notes for production
 
-   ```bash
-   istioctl admin log ztunnel --level debug
-   istioctl admin log ztunnel --level info
-   ```
+This lab runs on one laptop. These are the habits worth carrying to a real cluster, and what the lab does about each.
 
-Common causes, in the order they happen: namespace label missing, pod started before the label, STRICT mode with a client outside the mesh, an AuthorizationPolicy that names the wrong service account, a waypoint pod that is not Ready, and a time skew between the OrbStack VM and the host after a laptop sleep (restart the VM with `orb restart`, then run `k3d cluster start k8s-lab`).
+### Resources
 
-## 4. Production practices
-
-### Resource constraints
-
-- Set requests and limits on every container. Quotas reject pods without them, and the LimitRange fills in the gaps for third-party charts.
-- Requests drive scheduling. Limits drive throttling and OOM kills. Keep memory limit close to the request, because memory is not compressible.
-- Python and Node processes stay near their steady size, so a limit 2 times the request is plenty. Redis uses `--maxmemory` below its container limit so it evicts keys and does not get OOM-killed.
-- Do not set a CPU limit lower than what the startup needs. A throttled startup fails its probe and loops.
+- Give every container a request and a limit. The quotas in `manifests/base/02-quotas.yaml` reject pods without them, and a LimitRange fills the gap for third-party charts.
+- Requests decide scheduling. Limits decide throttling and out-of-memory kills. Memory cannot be squeezed, so keep the memory limit close to the request.
+- Do not set a CPU limit so low that startup gets throttled. A throttled startup fails its probe and restarts in a loop.
+- Redis runs with `--maxmemory` below the container limit, so it evicts keys and does not get killed.
 
 ### Probes
 
-The backend and frontend use all three:
+The backend and frontend use all three kinds:
 
-- `startupProbe` gives the app up to 40 seconds to boot and disables the other two while it runs.
-- `readinessProbe` removes a pod from Service endpoints when a dependency fails. The backend checks Redis on `/readyz`, so a Redis outage drains backends instead of serving errors.
-- `livenessProbe` restarts a stuck process. It checks only the process (`/healthz`) and never a dependency. A liveness probe on Redis health would restart every backend during a Redis outage and make it worse.
-
-Probe endpoints are excluded from tracing and request metrics, so they do not flood Jaeger.
+- The startup probe gives the app up to 40 seconds to boot. The other probes wait until it passes.
+- The readiness probe takes a pod out of the Service when it cannot do its job. The backend checks Redis on `/readyz`, so a Redis outage drains the backends instead of returning errors.
+- The liveness probe restarts a stuck process. It only checks the process itself (`/healthz`), never a dependency. If liveness checked Redis, a Redis outage would restart every backend and make things worse.
 
 ### Secrets
 
 - Never commit a Secret. The lab creates them in `provision.sh` from `openssl rand`.
-- Secrets in Kubernetes are base64, not encrypted. Enable encryption at rest on the API server in a real cluster.
-- For GitOps with secrets, use one of these:
-  - External Secrets Operator, which reads from a cloud secret manager and creates the Secret in the cluster.
-  - Sealed Secrets, which stores an encrypted blob in Git that only the cluster can decrypt.
-  - SOPS with age keys and the ArgoCD SOPS plugin.
-- Mount secrets as environment variables only for values read once at boot. Use a mounted file for anything that rotates.
-- Restrict who can read them. The `shop-developer` Role in `01-rbac.yaml` has no access to `secrets`.
+- A Kubernetes Secret is base64, not encryption. Turn on encryption at rest for the API server in a real cluster.
+- To keep secrets in a GitOps workflow, use External Secrets Operator (reads from a cloud secret manager), Sealed Secrets (encrypted blobs in Git) or SOPS with age keys.
+- Read a secret from a mounted file if it rotates. An environment variable is fixed at container start.
+- The `shop-developer` Role in `manifests/base/01-rbac.yaml` has no access to Secrets.
 
-### Pod hardening used here
+### Pod hardening in this lab
 
-- Non-root user, read-only root filesystem, all capabilities dropped, `RuntimeDefault` seccomp profile.
-- `automountServiceAccountToken: false`, since none of the apps call the Kubernetes API.
-- Pod Security Admission at `baseline` enforce and `restricted` warn on `shop`.
+Containers run as a non-root user with a read-only root filesystem, no Linux capabilities and the default seccomp profile. None of the apps call the Kubernetes API, so service account tokens are not mounted. The `shop` namespace enforces the Pod Security `baseline` level and warns on `restricted`.
 
-### Observability habits
+### Observability
 
-- Alert on symptoms (error ratio, latency) before causes (CPU).
-- Keep trace sampling at 100% only in a lab. In production, use 1 to 5% and tail sampling for errors.
-- Put the trace id in every log line. The backend does this already. In Grafana, search logs by `trace_id` and open the trace in Jaeger.
+- Alert on symptoms such as error ratio and latency before causes such as CPU.
+- The lab samples 100% of traces. Use 1 to 5% in production, plus tail sampling to keep error traces.
+- The backend writes the trace id into every log line. Search your logs by `trace_id` and open the matching trace in Jaeger.
 
-## 5. Exercises
+## 7. Things to try next
 
-1. Raise the v2 weight to 50 and compare p95 latency per version in Grafana. Both versions run the same code, so the numbers should match until you set `EXTRA_LATENCY_MS` on one of them.
-2. Set `EXTRA_LATENCY_MS=200` on `backend-v2`, run Scenario A, and find the slow traces in Jaeger.
-3. Delete the `redis-allow-backend` policy, then apply a copy that allows only the `frontend` service account. Observe what the backend `/readyz` returns.
-4. Add a second waypoint for `frontend` and measure the extra memory with `kubectl top pods -n shop`.
-5. Break the `main` branch on purpose with an invalid manifest and read how ArgoCD reports the failed sync.
+1. Set `EXTRA_LATENCY_MS=200` on `backend-v2` (`kubectl -n shop set env deploy/backend-v2 EXTRA_LATENCY_MS=200`), run experiment A and compare p95 latency per version in Grafana. Then find a slow v2 trace in Jaeger.
+2. Move the canary to 50/50, then to 0/100, and watch the dashboard follow.
+3. Change `redis-allow-backend` in `manifests/istio/security.yaml` so it allows only the `frontend` service account. Push, wait for the sync and see what the backend's `/readyz` returns.
+4. Add a second waypoint for the frontend and measure its memory with `kubectl top pods -n shop`.
+5. Push a manifest with a deliberate typo to `main` and read how ArgoCD reports the failed sync.

@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Provision the k8s_lab_macos reference architecture on OrbStack.
+# Provision the k8s_lab_macos reference architecture on macOS.
+# OrbStack supplies the Docker engine and a k3d cluster runs on it. OrbStack's built-in
+# Kubernetes cluster has no CNI config directory for Istio CNI to chain onto, so ambient
+# mode cannot start there. k3d uses k3s with flannel, which Istio ambient supports.
 # Safe to run repeatedly. Every step checks current state or uses an upsert command.
 #
 # Usage: ./scripts/provision.sh
@@ -15,7 +18,8 @@ ISTIO_VERSION="${ISTIO_VERSION:-1.24.2}"
 GATEWAY_API_VERSION="${GATEWAY_API_VERSION:-v1.2.1}"
 ARGOCD_CHART_VERSION="${ARGOCD_CHART_VERSION:-7.7.11}"
 SYNC_TIMEOUT_SECONDS="${SYNC_TIMEOUT_SECONDS:-900}"
-KUBE_CONTEXT="orbstack"
+CLUSTER_NAME="${CLUSTER_NAME:-k8s-lab}"
+KUBE_CONTEXT="k3d-${CLUSTER_NAME}"
 IMAGE_TAG="1.0.0"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -34,7 +38,7 @@ die()  { printf '%sfail%s  %s\n' "$RED" "$RESET" "$*" >&2; exit 1; }
 check_prerequisites() {
   step "Checking prerequisites"
   local missing=0
-  for cmd in kubectl helm orb git docker curl openssl; do
+  for cmd in kubectl helm orb k3d git docker curl openssl; do
     if command -v "$cmd" >/dev/null 2>&1; then
       ok "$cmd found at $(command -v "$cmd")"
     else
@@ -43,25 +47,31 @@ check_prerequisites() {
     fi
   done
   if [[ "$missing" -eq 1 ]]; then
-    die "Install the missing tools first. Example: brew install kubectl helm git openssl and install OrbStack from https://orbstack.dev"
+    die "Install the missing tools first. Example: brew install kubectl helm k3d git openssl and install OrbStack from https://orbstack.dev"
   fi
 }
 
-ensure_orbstack_cluster() {
-  step "Checking OrbStack and its Kubernetes cluster"
+ensure_cluster() {
+  step "Checking OrbStack and the k3d cluster ${CLUSTER_NAME}"
   if ! orb status >/dev/null 2>&1; then
     warn "OrbStack is not running, starting it"
     orb start
   fi
-  ok "OrbStack is running"
+  docker info >/dev/null 2>&1 || die "The Docker engine does not answer. Start OrbStack and retry."
+  ok "OrbStack and Docker are running"
 
-  if ! kubectl config get-contexts -o name | grep -qx "$KUBE_CONTEXT"; then
-    die "kubectl context '$KUBE_CONTEXT' does not exist. Open OrbStack, go to Settings, Kubernetes, and enable the cluster."
+  if k3d cluster list --no-headers 2>/dev/null | awk '{print $1}' | grep -qx "$CLUSTER_NAME"; then
+    ok "k3d cluster $CLUSTER_NAME already exists"
+    k3d cluster start "$CLUSTER_NAME" >/dev/null 2>&1 || true
+  else
+    k3d cluster create "$CLUSTER_NAME" \
+      --servers 1 --agents 0 \
+      --port "8080:8080@loadbalancer" \
+      --k3s-arg "--disable=traefik@server:0" \
+      --wait --timeout 180s >/dev/null
+    ok "k3d cluster $CLUSTER_NAME created, host port 8080 maps to the cluster load balancer"
   fi
   kubectl config use-context "$KUBE_CONTEXT" >/dev/null
-  if ! kubectl get nodes >/dev/null 2>&1; then
-    die "The Kubernetes API does not answer. Enable Kubernetes in OrbStack settings and wait for the node to become Ready."
-  fi
   kubectl wait --for=condition=Ready node --all --timeout=120s >/dev/null
   ok "context $KUBE_CONTEXT is ready: $(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}')"
 }
@@ -84,16 +94,17 @@ check_repository() {
 }
 
 build_images() {
-  step "Building application images with the OrbStack Docker daemon"
+  step "Building application images and loading them into the cluster"
   if [[ "${SKIP_IMAGE_BUILD:-0}" == "1" ]]; then
-    warn "SKIP_IMAGE_BUILD=1, skipping"
-    return
+    warn "SKIP_IMAGE_BUILD=1, skipping the build"
+  else
+    docker build --quiet -t "k8s-lab/backend:${IMAGE_TAG}" "$ROOT_DIR/apps/backend" >/dev/null
+    ok "built k8s-lab/backend:${IMAGE_TAG}"
+    docker build --quiet -t "k8s-lab/frontend:${IMAGE_TAG}" "$ROOT_DIR/apps/frontend" >/dev/null
+    ok "built k8s-lab/frontend:${IMAGE_TAG}"
   fi
-  docker build --quiet -t "k8s-lab/backend:${IMAGE_TAG}" "$ROOT_DIR/apps/backend" >/dev/null
-  ok "k8s-lab/backend:${IMAGE_TAG}"
-  docker build --quiet -t "k8s-lab/frontend:${IMAGE_TAG}" "$ROOT_DIR/apps/frontend" >/dev/null
-  ok "k8s-lab/frontend:${IMAGE_TAG}"
-  ok "OrbStack shares the Docker image store with Kubernetes, so no registry push is needed"
+  k3d image import "k8s-lab/backend:${IMAGE_TAG}" "k8s-lab/frontend:${IMAGE_TAG}" -c "$CLUSTER_NAME" >/dev/null
+  ok "images imported into k3d cluster $CLUSTER_NAME, no registry needed"
 }
 
 install_gateway_api_crds() {
@@ -109,6 +120,7 @@ install_gateway_api_crds() {
 
 detect_platform_args() {
   PLATFORM_ARGS=()
+  CNI_EXTRA_ARGS=()
   local platform="${ISTIO_PLATFORM:-}"
   if [[ -z "$platform" ]]; then
     local kubelet_version
@@ -119,6 +131,11 @@ detect_platform_args() {
   fi
   if [[ -n "$platform" ]]; then
     PLATFORM_ARGS=(--set "global.platform=${platform}")
+    if [[ "$platform" == "k3s" ]]; then
+      # Recent k3s versions load CNI plugins from data/cni. The chart's k3s profile
+      # installs the istio-cni binary into data/current/bin, where containerd never looks.
+      CNI_EXTRA_ARGS=(--set "cni.cniBinDir=/var/lib/rancher/k3s/data/cni")
+    fi
     ok "Using Istio platform profile: ${platform}"
   fi
 }
@@ -129,30 +146,42 @@ install_istio_ambient() {
   helm repo update istio >/dev/null
   detect_platform_args
 
+  # Helm 4 applies charts server-side. istiod edits a field of the validating webhook that
+  # istio-base also sets, so upgrades need --force-conflicts. Helm 3 has no such flag.
+  local base_args=()
+  if helm upgrade --help 2>/dev/null | grep -q -- "--force-conflicts"; then
+    base_args=(--force-conflicts)
+  fi
+  # The same flag applies to every Istio chart below.
   helm upgrade --install istio-base istio/base \
     --namespace istio-system --create-namespace \
     --version "$ISTIO_VERSION" \
-    -f "$ROOT_DIR/helm/istio-base-values.yaml" --wait >/dev/null
+    -f "$ROOT_DIR/helm/istio-base-values.yaml" \
+    ${base_args[@]+"${base_args[@]}"} --wait >/dev/null
   ok "istio-base"
 
   helm upgrade --install istiod istio/istiod \
     --namespace istio-system \
     --version "$ISTIO_VERSION" \
     -f "$ROOT_DIR/helm/istiod-values.yaml" \
-    ${PLATFORM_ARGS[@]+"${PLATFORM_ARGS[@]}"} --wait --timeout 5m >/dev/null
+    ${PLATFORM_ARGS[@]+"${PLATFORM_ARGS[@]}"} \
+    ${base_args[@]+"${base_args[@]}"} --wait --timeout 5m >/dev/null
   ok "istiod (control plane)"
 
   helm upgrade --install istio-cni istio/cni \
     --namespace istio-system \
     --version "$ISTIO_VERSION" \
     -f "$ROOT_DIR/helm/istio-cni-values.yaml" \
-    ${PLATFORM_ARGS[@]+"${PLATFORM_ARGS[@]}"} --wait --timeout 5m >/dev/null
+    ${PLATFORM_ARGS[@]+"${PLATFORM_ARGS[@]}"} \
+    ${CNI_EXTRA_ARGS[@]+"${CNI_EXTRA_ARGS[@]}"} \
+    ${base_args[@]+"${base_args[@]}"} --wait --timeout 5m >/dev/null
   ok "istio-cni (traffic redirection)"
 
   helm upgrade --install ztunnel istio/ztunnel \
     --namespace istio-system \
     --version "$ISTIO_VERSION" \
-    -f "$ROOT_DIR/helm/ztunnel-values.yaml" --wait --timeout 5m >/dev/null
+    -f "$ROOT_DIR/helm/ztunnel-values.yaml" \
+    ${base_args[@]+"${base_args[@]}"} --wait --timeout 5m >/dev/null
   ok "ztunnel (node proxy)"
 }
 
@@ -285,7 +314,7 @@ EOF
 
 main() {
   check_prerequisites
-  ensure_orbstack_cluster
+  ensure_cluster
   check_repository
   build_images
   install_gateway_api_crds
