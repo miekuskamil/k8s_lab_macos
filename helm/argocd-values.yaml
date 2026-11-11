@@ -21,9 +21,11 @@ controller:
     requests:
       cpu: 100m
       memory: 256Mi
+    # 512Mi was too low. The controller was OOM-killed while it compared the
+    # kube-prometheus-stack chart on first sync.
     limits:
       cpu: "1"
-      memory: 512Mi
+      memory: 1Gi
 
 server:
   resources:
