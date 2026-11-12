@@ -16,6 +16,8 @@ All ten Applications should show `Synced` and `Healthy`. Then open the UIs in a 
 ./scripts/port-forward.sh
 ```
 
+The [course README](README.md#before-you-start) lists every UI. One tip: keep Headlamp (http://localhost:4466) open in a tab. It shows every pod, its logs and its events in one place, and it needs no login.
+
 ## Install istioctl
 
 `istioctl` is to Istio what `kubectl` is to Kubernetes: it reads the mesh's state and explains it. Install it with Homebrew on macOS, or from the [Istio releases page](https://github.com/istio/istio/releases) on Linux.

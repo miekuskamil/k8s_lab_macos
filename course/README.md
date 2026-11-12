@@ -23,6 +23,7 @@ Each module takes 30 to 60 minutes. Do them in order, because each one builds on
 Every module has the same parts:
 
 - **Concept.** What problem the feature solves, with a diagram.
+- **The bigger picture.** Where the idea comes from and how teams use it in real life, in modules 1 to 7.
 - **Why this way.** The design choice and the alternatives Istio did not take.
 - **Do it.** Commands to run, each followed by what you should see.
 - **Investigate.** Questions you answer with the UIs, not with the manifests.

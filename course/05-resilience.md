@@ -42,6 +42,21 @@ sequenceDiagram
 
 **Why does fault injection need a VirtualService?** Gateway API has no fault injection field. Istio still supports its own API for features the standard lacks. An HTTPRoute and a VirtualService must not both target the same Service, or the result is undefined, so you delete the route first.
 
+## The bigger picture: how one slow service takes down ten
+
+Failures in distributed systems rarely stay where they start. Picture the backend slowing from 50 ms to 5 seconds per request. The frontend keeps sending at the same rate, so requests pile up. Each one holds a connection, a thread or a slice of memory in every hop in front of the backend. Soon the frontend runs out of those as well, and users see the frontend fail, not just the backend. Engineers call this a cascading failure.
+
+Careless retries make it worse. Say the gateway, the frontend and the waypoint each make up to 3 attempts. One click turns into as many as 27 requests at the backend, at the exact moment it struggles most. That's a retry storm. The rule of thumb: retry in one layer only, and only for errors where a second try makes sense, like a reset connection. Never blindly retry a POST that creates an order.
+
+Timeouts need the same care. The outer layer has to wait longer than the inner one. Imagine the frontend gives up after 1 second while the waypoint waits 3 seconds for the backend. The frontend has already shown the user an error, and the backend keeps working on a request nobody wants. Think of it as a budget. Each layer spends part of the time its caller gave it.
+
+Istio puts two different features under the name "circuit breaking", and people mix them up:
+
+- **Connection pool limits** (`connectionPool` in a DestinationRule) cap how many connections and waiting requests go to a service. Above the limit, Envoy rejects the request at once with the `UO` flag. The exercise below uses this one.
+- **Outlier detection** (`outlierDetection`) watches each backend pod separately. When a pod returns several 5xx errors in a row, Envoy takes it out of the load-balancing pool for a while. Each time Envoy ejects the same pod again, the break grows longer.
+
+The first protects a service from too much traffic. The second protects callers from one bad pod.
+
 ## Do it
 
 Turn on the waypoint's access log for this module. It is off by default because it is verbose:

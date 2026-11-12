@@ -63,6 +63,23 @@ flowchart TB
 
 **Why does ambient still use Envoy at all?** The waypoint is Envoy because Envoy already has the HTTP features: routing, retries, faults, outlier detection, telemetry. Istio reuses it where those features are needed.
 
+## The bigger picture: why meshes exist
+
+Picture a company around 2012. It breaks one big application into fifty small services. Suddenly every service talks to ten others over the network, and the network fails in ways a function call never did. Calls hang. Servers die halfway through a response. One slow service drags down everything that depends on it.
+
+The first answer came as libraries. Twitter wrote Finagle, and Netflix wrote Hystrix and Ribbon. Each library handled retries, timeouts and load balancing inside the application. They worked well, with one catch: each one served a single language. A Python team got nothing from a Java library, and every fix meant rebuilding and redeploying every service.
+
+So people moved that logic out of the application and into a proxy next to it. Lyft open-sourced Envoy in 2016 for exactly this job. In 2017 Google, IBM and Lyft launched Istio to manage whole fleets of those proxies. The app stays ignorant of the network, and the proxy speaks for it. That idea is the service mesh.
+
+Every mesh has two halves, and the split matters for everything that follows:
+
+- The **data plane** touches your traffic: ztunnel, waypoints and sidecars. If it stops, requests stop.
+- The **control plane** only gives orders. That's istiod. It watches the Kubernetes API, turns your YAML into proxy configuration and pushes it out over xDS, Envoy's configuration protocol. It also signs certificates. If istiod dies for a minute, traffic keeps flowing with the last configuration the proxies received. Nothing new reaches them until istiod returns.
+
+You know this pattern already. The API server and the kubelet split their work the same way: one side decides, the other side does the work.
+
+Ambient mode arrived much later. Istio announced it in September 2022, after years of users complaining about the cost of sidecars, and declared it stable in Istio 1.24 in November 2024. That's the version this lab runs. Older blog posts show sidecars everywhere. Most of their ideas still apply; only the plumbing differs.
+
 ## Do it: see the data plane
 
 **1. Count the containers in a shop pod.**

@@ -57,6 +57,16 @@ The application still speaks plain HTTP. ztunnel captures it on the way out, enc
 
 **Why STRICT in `shop`?** Istio's default is PERMISSIVE: accept both mTLS and plaintext, so you can enroll workloads one at a time without breaking callers. Once everything is enrolled, STRICT closes the plaintext door. The lab sets STRICT in `shop` with a `PeerAuthentication` in `manifests/istio/security.yaml`.
 
+## The bigger picture: what mTLS actually proves
+
+You use TLS every day. When your browser opens your bank's website, the server sends a certificate, and the browser checks two things: a trusted authority signed it, and the name inside matches the site. Then both sides agree on keys and encrypt everything after that. Notice what's missing. The bank learns nothing about you from TLS. You prove who you are later, with a password.
+
+Mutual TLS runs the same check in both directions. The caller shows a certificate too. So when the backend's ztunnel accepts a connection, it knows two facts for certain: nobody read or changed the bytes on the way, and the caller holds the private key for `sa/frontend`. No password, no API key in an environment variable, nothing for the app to manage.
+
+Why bother inside your own cluster? Old-style network security drew a line around the data centre: outside means danger, inside means trust. That model collapses the moment an attacker takes over one pod, because they land inside the trusted zone and talk to everything. The newer approach, which people call zero trust, throws away the idea of a safe inside. Every connection proves where it comes from, every time, and policy decides on that proof, not on the packet's source address.
+
+One more detail. Every certificate traces back to a root, and in this lab istiod owns that root. It generated a self-signed root CA at install and keeps it in the `istio-ca-secret` Secret in `istio-system`. Whoever steals that key mints any identity they like. Production teams plug in their own root, or an intermediate from the company CA, and guard it like a database password. For a laptop lab, the self-signed root does the job.
+
 ## Do it
 
 **1. See the certificates ztunnel holds.**

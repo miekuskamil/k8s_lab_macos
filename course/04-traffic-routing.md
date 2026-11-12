@@ -50,6 +50,20 @@ spec:
 
 **Why does the route attach to a Service and not to a Gateway?** In the mesh, the "gateway" is the waypoint, and the waypoint serves many Services. Attaching to the Service means the rule follows the destination, whoever the caller is.
 
+## The bigger picture: deploy is not release
+
+Teams used to treat "deploy" and "release" as one step. New code went out, and every user got it at once. If it broke, everybody saw it break. A mesh pulls those two steps apart. You deploy v2 so it runs next to v1, and then you decide, separately, who sees it.
+
+Three common patterns use the tools you're about to try:
+
+- **Canary.** Send a small share, say 10%, to v2. Watch its error rate and latency, then raise the share step by step. A bad release hurts 10% of users for a few minutes instead of everyone.
+- **Blue-green.** Run two full copies and move all traffic at once, with one weight change from 100/0 to 0/100. Rolling back takes one more change.
+- **Header routing, or dark launch.** Send only requests with a header like `x-version: v2` to the new version. Your testers use v2 in production while real users notice nothing.
+
+One detail surprises people. A weighted route picks a backend for every request on its own. With a 90/10 split, one user might hit v1, then v2, then v1 again within a single page load. An API rarely minds. A website whose layout changed in v2 suddenly feels broken. Teams fix this by routing on something stable, like a cookie or a user id header, so each user sticks to one version.
+
+Also keep the two directions of traffic apart in your head. North-south traffic enters the cluster from outside, through the ingress gateway on port 8080 in this lab. East-west traffic moves between services inside the cluster, through the waypoint. The canary route in this module sits on the east-west path. It splits the frontend's calls to the backend, no matter who started the request.
+
 ## Do it
 
 Start steady traffic in a second terminal and leave it running during the module:

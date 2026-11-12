@@ -72,6 +72,16 @@ So one ALLOW policy for a workload turns it into "deny unless allowed", and ALLO
 
 **Why does Redis need only an L4 rule?** Redis speaks its own protocol, not HTTP, so there is nothing for a waypoint to inspect. "Only the backend may connect" is the whole rule.
 
+## The bigger picture: two questions, not one
+
+Security people separate two questions, and Istio does the same. Authentication asks "who are you?" Authorization asks "now that I know who you are, may you do this?" Module 2 answered the first question with certificates. This module deals with the second.
+
+The two layers of the mesh see different things, and that decides what each rule checks. ztunnel works at layer 4. It sees a connection, the caller's identity from the certificate and the destination port. That's all. It never looks inside the bytes. The waypoint works at layer 7. It reads the HTTP request, so it knows the method, the path and the headers. A rule like "only GET on /api/*" only makes sense where something reads HTTP.
+
+Istio checks policies in a fixed order: CUSTOM first (an external authorizer, which this lab skips), then DENY, then ALLOW. A matching DENY always wins, whatever the ALLOW rules say. That gives you a handy emergency brake. Block one misbehaving caller with a small DENY policy and leave your carefully built ALLOW rules alone.
+
+The habit that pays off most is "deny by default". Start from nothing allowed, then add one rule for each caller that really needs access. It feels slow at first. Six months later, though, someone asks "who talks to Redis?", and you answer by reading one file instead of tracing traffic for a week. And if an attacker takes over the `course-client` pod, they find closed doors instead of an open network.
+
 ## Do it
 
 **1. Deploy a client with its own identity.**

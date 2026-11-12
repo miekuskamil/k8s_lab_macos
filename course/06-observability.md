@@ -81,6 +81,22 @@ traceparent: 00-261b80c9d5032cc2619778fe9c1881c4-4f834e4ebc2759f7-01
 
 **Why 100% sampling here?** So every request you send is in Jaeger. In production you would trace 1 to 5% of requests, because storing every trace is expensive.
 
+## The bigger picture: what to measure first
+
+Three signal types and four tools make it easy to drown. Start with three numbers per service. People call them the RED method: **R**ate (requests per second), **E**rrors (how many fail) and **D**uration (how long they take). The mesh gives you all three for every service without a line of code, through `istio_requests_total` and `istio_request_duration_milliseconds`.
+
+Look at percentiles, not averages. Say 99 requests take 10 ms and one takes 5 seconds. The average comes out at about 60 ms and hides the problem completely. The 99th percentile, p99, shows the 5 seconds. Real users remember the slow requests, so p95 and p99 tell you far more than the mean.
+
+Each signal answers a different question:
+
+- **Metrics** tell you *that* something is wrong. They cost little, so you keep them for weeks.
+- **Traces** tell you *where* in the chain the time went. They cost more, so you sample them.
+- **Logs** tell you *why*: the error message, the stack trace, the order id.
+
+A good investigation moves in that order. A dashboard turns red, a trace points at one service, and that service's logs explain the failure. The exercises in this module follow the same path.
+
+Watch out for one trap: labels with too many values. Prometheus stores one time series for every unique combination of label values. Add a label like `user_id` or the full URL, and one metric explodes into millions of series until Prometheus runs out of memory. Istio avoids this on purpose. Its metrics carry labels for the source and destination workloads, the response code and the response flags, but never the request path. Check it yourself in Prometheus: no label on `istio_requests_total` holds a path.
+
 ## Do it
 
 ### 1. Follow one request from trace to log and back

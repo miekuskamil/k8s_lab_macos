@@ -71,6 +71,20 @@ You know mutating admission webhooks from CKA. This is one: istiod rewrites ever
 
 **Why does `course-sidecar` not enforce Pod Security `baseline`?** The `istio-init` container needs the `NET_ADMIN` and `NET_RAW` capabilities, which `baseline` forbids. Ambient needs neither, because the CNI agent does the redirection from outside the pod. Istio can also run sidecars with its CNI plugin to drop that requirement. The lab keeps the classic setup so you see it.
 
+## The bigger picture: what living with sidecars feels like
+
+On paper, a sidecar is one more container. In practice, it brings a handful of everyday headaches, and those headaches pushed the Istio team towards ambient.
+
+**Start order.** Kubernetes starts a pod's containers without waiting for each other. If your app starts first and makes a network call before Envoy is ready, the call fails. Istio added a setting, `holdApplicationUntilProxyStarts`, that makes the app wait. Shutdown has the mirror problem: Envoy sometimes stops before the app finishes its last requests.
+
+**Jobs that never finish.** A Job completes when all its containers exit. The app exits, the sidecar keeps running, and the Job hangs forever. For years people worked around it with scripts that called Envoy's `/quitquitquit` endpoint. Kubernetes finally fixed it with native sidecars: an init container with `restartPolicy: Always`, beta and on by default since Kubernetes 1.29. Kubernetes starts that container before the app and stops it after.
+
+**Upgrades.** A new Istio version brings a new Envoy, and the only way into a running pod is a restart. In a big cluster, every Istio upgrade turns into a rolling restart of every workload.
+
+**Cost at scale.** Every sidecar reserves CPU and memory, holds configuration for every service in the mesh by default, and takes updates from istiod. A thousand pods mean a thousand Envoys to feed.
+
+Ambient swaps these problems for different ones. ztunnel runs once per node, so a ztunnel crash hits every mesh pod on that node at the same time, while a sidecar crash hits one pod. And a noisy workload shares ztunnel with its neighbours. Neither model wins everywhere. That's why Istio keeps both, and why this lab runs them side by side.
+
 ## Do it
 
 ### 1. Create a sidecar namespace
