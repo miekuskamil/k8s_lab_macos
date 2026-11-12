@@ -14,6 +14,8 @@ The shop is a Node.js frontend, a Python FastAPI backend in two versions, and Re
 
 The first run takes about 10 minutes, mostly image downloads. A rebuild with cached images takes about 2.
 
+Both platforms are tested. On macOS (OrbStack) and on Ubuntu 24.04 (Docker Engine 29.1 from Ubuntu's packages, curl 8.5), a single `./scripts/provision.sh` from nothing passed every health check, and `./course/verify.sh` passed all 54 checks. Other Linux distributions should work if they meet the table above.
+
 OrbStack's own Kubernetes can stay switched off. The lab runs its own k3d cluster on the Docker engine. [docs/build-from-scratch.md](docs/build-from-scratch.md#step-1-the-cluster) explains why.
 
 ## Start it

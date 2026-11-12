@@ -244,7 +244,8 @@ The node used 3.3 GiB in total, including k3s itself. Loki took 84 MiB, Alloy 57
 | The Grafana dashboard has data | All nine panel queries return series when run through Grafana | open the dashboard "Shop mesh and traffic experiments" |
 | Logs reach Loki and link to traces | Loki held logs from all 7 namespaces. Searching Loki for a Jaeger trace id returned the backend's log line for that request. | Grafana, Explore, Loki: `{namespace="shop"} \|= "<trace id>"` |
 | Kiali sees the mesh | Kiali 2.4 found Prometheus, Grafana and Jaeger, drew every edge with 100% mTLS, and reported 0 errors in `shop`'s 7 Istio objects | http://localhost:20001 |
-| The Istio course works | `./course/verify.sh`: every module's key exercise passed | `./course/verify.sh` |
+| The Istio course works | On a cluster built from nothing, `./course/verify.sh` passed 54 of 54 checks | `./course/verify.sh` |
+| The lab runs on Linux | On Ubuntu 24.04.5 with Docker Engine 29.1.3 from Ubuntu's packages, a fresh clone ran `provision.sh` to exit 0 in 195 s with all 16 health checks passing, and the course verification passed every module. The Ubuntu machine ran in OrbStack, so it shared OrbStack's kernel (7.2), whose inotify limits are already high. | `./scripts/provision.sh` on Linux |
 | Traces join across the mesh | 200 of 200 recent backend traces start at the gateway, most with 7 spans across gateway, waypoint and backend | http://localhost:16686, service `backend` |
 | The default logins work | ArgoCD issued a session token, Grafana accepted the password and rejected a wrong one, Redis answered `PONG` | see the [README](../README.md#open-it) |
 
@@ -252,7 +253,8 @@ The node used 3.3 GiB in total, including k3s itself. Loki took 84 MiB, Alloy 57
 
 - The panels were checked through Grafana's query API, not by looking at them in a browser.
 - `docs/diagrams/traffic-flow.excalidraw` passed a structure check (valid JSON, every element has the fields Excalidraw requires, no duplicate ids). It was not opened in Excalidraw. Its arrows are not bound to the boxes, so they stay in place when you move a box.
-- Importing the Mermaid diagrams into draw.io and Excalidraw follows their documented menus and was not tested.
+- Importing the Mermaid diagrams into draw.io and Excalidraw follows their documented menus and was not tested. All 14 Mermaid diagrams in the docs and course were checked with Mermaid's own parser (version 11.4) but not rendered.
+- Linux was tested on one distribution (Ubuntu 24.04) on one kernel. The inotify check in `provision.sh` was not triggered, because that kernel's limits were already above it.
 
 ## Resource limits
 
