@@ -192,7 +192,13 @@ module_8() {
   out="$(burst 100 10 /api/orders)"
   between "incident 3 returns no errors" "$(echo "$out" | count_matching '^200')" 100 100
   between "incident 3 sends most traffic to v2" "$(echo "$out" | count_matching ' v2$')" 50 90
-  expect "incident 3 makes v2 slow" "$(curl -s -m 10 -o /dev/null -w '%{time_total} %header{x-app-version}\n' "$BASE/api/orders" "$BASE/api/orders" "$BASE/api/orders" "$BASE/api/orders" "$BASE/api/orders" "$BASE/api/orders" | grep -c '^0\.[7-9].* v2')" '^[1-9]'
+  # One URL per curl call: with several URLs, "-o /dev/null" only applies to the first one.
+  local slow_v2=0 line
+  for _ in 1 2 3 4 5 6 7 8; do
+    line="$(curl -s -m 10 -o /dev/null -w '%{time_total} %header{x-app-version}' "$BASE/api/orders")"
+    awk -v l="$line" 'BEGIN {split(l, f, " "); exit !(f[1] >= 0.6 && f[2] == "v2")}' && slow_v2=$((slow_v2 + 1))
+  done
+  expect "incident 3 makes v2 slow (v2 answers take 0.6 s or more)" "$slow_v2" '^[1-9]'
   baseline
   "$ROOT/course/incident.sh" 4 >/dev/null; settle 8
   expect "incident 4 shows 502" "$(code "$BASE/api/orders")" '^502$'
