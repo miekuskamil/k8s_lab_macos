@@ -1,0 +1,21 @@
+# Let Prometheus scrape the sidecars in course-sidecar. The lab's own PodMonitors
+# only cover the gateway, the waypoint and ztunnel, so without this one the sidecars'
+# istio_requests_total never reaches Prometheus, Grafana or Kiali.
+# It lives in course-sidecar, so deleting the namespace removes it too.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: sidecars
+  namespace: course-sidecar
+  labels:
+    app.kubernetes.io/part-of: istio-course
+spec:
+  selector:
+    matchExpressions:
+      - key: security.istio.io/tlsMode
+        operator: In
+        values: ["istio"]
+  podMetricsEndpoints:
+    - port: http-envoy-prom
+      path: /stats/prometheus
+      interval: 15s

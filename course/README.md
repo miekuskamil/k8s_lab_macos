@@ -26,8 +26,47 @@ Each module takes 30 to 60 minutes. Do them in order, because each one builds on
 | [17. An LLM as a mesh service](17-llm-in-the-mesh.md) | AI: a shop assistant calling your local Ollama; identity, a locked-down model API, token metrics and GenAI traces, LLM timeouts | `curl`, Jaeger, Prometheus |
 | [18. Serving models in the cluster](18-serving-models.md) | AI: two small models on llama.cpp; startup and readiness, why LLM load balancing is hard (measured), routing between models, the Inference Extension | `llm-load.sh`, Prometheus |
 | [19. AI agents and their tools](19-ai-agents.md) | AI: kagent with your Ollama, MCP and A2A, an intruder calling tools directly, mesh policy and RBAC around agents, agents that misreport | `agent-ask.sh`, `kubectl auth can-i` |
+| [20. Nodes, drains and cleanup](20-nodes-and-cleanup.md) | Ops: a second node, drains under traffic, PodDisruptionBudgets that protect and block, Jobs, ReplicaSets and images that pile up | `kubectl drain`, `crictl` |
+| [21. k3s certificates, backups, upgrades](21-k3s-lifecycle.md) | Ops: certificate checks and rotation, a datastore backup and restore, a k3s patch upgrade that breaks the mesh. The upgrade is one-way | `k3s certificate`, system-upgrade-controller |
 
 **New to Istio? Read [Start here: Istio in one picture](start-here.md) first.** It takes 15 minutes, needs no cluster, and shows every resource the course uses on one diagram. Every term also has a plain explanation in the [glossary](glossary.md). Keep it open in a tab.
+
+## Three routes through the course
+
+```mermaid
+flowchart LR
+  s["Start here<br/>Istio in one picture"] --> m0["0 Setup"]
+  m0 --> core["1 to 8<br/>Istio core"]
+  core --> adv["11 to 16<br/>edge TLS, egress, JWT,<br/>upgrades, resilience, Istio API"]
+  adv --> ai["17 to 19<br/>AI: LLMs, model serving, agents"]
+  m0 --> ops["20 and 21<br/>k3s operations"]
+  core -.-> ref["9 Command reference<br/>10 eBPF and Cilium"]
+```
+
+- **Istio:** modules 0 to 8, then 11 to 16. Module 9 is a reference, and 10 is theory you read any time after module 7.
+- **AI on Kubernetes:** modules 17 to 19 build on the Istio route, mainly modules 3 to 6 and 12. Each module lists what it needs at the top.
+- **Kubernetes operations:** modules 20 and 21 need only module 0. As a CKA, you could take them first.
+
+## Recommended order
+
+1. [Start here](start-here.md), then module 0.
+2. Modules 1 to 7, then 8 to test yourself.
+3. Modules 11, 12, 13, 15 and 16.
+4. Modules 17 to 19, the AI track.
+5. Module 20.
+6. Module 14, then rebuild the lab: `./scripts/teardown.sh --yes && ./scripts/provision.sh`.
+7. Module 21, then rebuild again.
+
+Module 9 is a reference to keep open, and module 10 is reading for any time after module 7. Modules 14 and 21 come last because they upgrade the lab and there's no way back except a rebuild.
+
+## Versions
+
+| | Course baseline | After module 14 | After module 21 |
+|---|---|---|---|
+| k3s (Kubernetes) | v1.31.5 | v1.31.5 | **v1.31.14** |
+| Istio | 1.24.2 | **1.25.5** | 1.24.2 |
+
+Every module except 14 and 21 runs on the baseline. Neither module downgrades anything: to get back, you rebuild. The test runs covered each upgrade on its own, never both on one lab, so rebuild between them.
 
 ## How the exercises work
 
@@ -75,6 +114,7 @@ The course changes Istio resources by hand, with `kubectl apply`. ArgoCD manages
 ./course/verify.sh 4      # one module
 ./course/verify.sh 14     # the Istio upgrade, one-way, not part of the full run
 ./course/verify.sh 17 18 19  # the AI modules: 17 and 19 need Ollama on your machine, 18 downloads about 900 MB
+./course/verify.sh 21     # the k3s upgrade, one-way, not part of the full run
 ```
 
 The script applies each module's manifests, checks the results and restores the baseline. It was run against this lab before the course was published. The [last section of module 0](00-setup.md#what-the-verification-run-showed) has the results.

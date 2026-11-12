@@ -2,7 +2,9 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
 
-mTLS tells the receiver who is calling. Authorization decides whether that caller is allowed. This module writes rules at both layers of the mesh and shows a gap you get if you only write one of them.
+**Before this module:** module 2.
+
+mTLS tells the receiver who is calling. Authorization decides whether to let that caller in. This module writes rules at both layers of the mesh and shows a gap you get if you only write one of them.
 
 ## Concept: AuthorizationPolicy compared with NetworkPolicy
 
@@ -11,11 +13,11 @@ You know NetworkPolicy. It allows or blocks connections by pod labels, namespace
 | | NetworkPolicy | Istio AuthorizationPolicy |
 |---|---|---|
 | Who is the caller | Pod labels, namespace, IP | Cryptographic identity from mTLS (service account) |
-| What can it match | Ports | Ports, and at L7 also HTTP methods, paths, headers |
+| What it matches | Ports | Ports, and at L7 also HTTP methods, paths, headers |
 | Who enforces it | The CNI plugin | ztunnel (L4 rules) or a waypoint (L7 rules) |
-| Can it be spoofed | A pod that gets the right labels or IP passes | Only a pod running as that service account holds the certificate |
+| Spoofing | A pod with the right labels or IP passes | Only a pod running as that service account holds the certificate |
 
-Both can be used together. This lab uses only AuthorizationPolicy.
+Both work side by side. This lab uses only AuthorizationPolicy.
 
 ## Concept: two enforcement points
 
@@ -33,10 +35,10 @@ flowchart LR
   zb --> be
 ```
 
-A policy is enforced where it is attached:
+Where you attach a policy decides who enforces it:
 
-- **`selector`** (pod labels) attaches it to the pods. ztunnel enforces it, so it can only use L4 facts: the caller's identity, namespace and the port.
-- **`targetRefs`** to a Service attaches it to that Service's waypoint. The waypoint understands HTTP, so the rule can also match methods and paths.
+- **`selector`** (pod labels) attaches it to the pods. ztunnel enforces it, so it only sees L4 facts: the caller's identity, namespace and the port.
+- **`targetRefs`** to a Service attaches it to that Service's waypoint. The waypoint understands HTTP, so the rule also matches methods and paths.
 
 The lab has one of each for the backend:
 
@@ -58,11 +60,11 @@ rules:
 
 ## Concept: how ALLOW rules combine
 
-1. If any `DENY` policy matches the request, it is denied.
-2. If there are no `ALLOW` policies for the target, it is allowed.
-3. If there are `ALLOW` policies, the request must match at least one of them.
+1. If any `DENY` policy matches the request, the proxy denies it.
+2. If no `ALLOW` policy exists for the target, the proxy lets it through.
+3. If `ALLOW` policies exist, the request must match at least one of them.
 
-So one ALLOW policy for a workload turns it into "deny unless allowed", and ALLOW policies add up. You can grant a new client access by adding a policy, without editing the existing one.
+So one ALLOW policy for a workload turns it into "deny unless allowed", and ALLOW policies add up. To grant a new client access, you add a policy and leave the existing one alone.
 
 ## Why this way
 
@@ -94,21 +96,23 @@ kubectl apply -f course/manifests/03-course-client.yaml
 kubectl -n shop rollout status deploy/course-client
 ```
 
-It runs in `shop` as service account `course-client`.
+**What you should see.** The manifest, then `serviceaccount/course-client created`, `deployment.apps/course-client created` and `successfully rolled out`. The pod runs in `shop` as service account `course-client`. The namespace is in ambient mode, so ztunnel gives it the identity `spiffe://cluster.local/ns/shop/sa/course-client` with no extra step.
 
-**2. It is refused at L7.**
+**2. The waypoint refuses it at L7.**
 
 ```bash
 kubectl -n shop exec deploy/course-client -- curl -s -w " [%{http_code}]\n" http://backend:8000/api/version
 kubectl -n shop exec deploy/course-client -- curl -s -o /dev/null -w "frontend [%{http_code}]\n" http://frontend:3000/healthz
 ```
 
+**What you should see.**
+
 ```text
 RBAC: access denied [403]
 frontend [200]
 ```
 
-The waypoint refused it with HTTP 403. The frontend has no policy, so it answers.
+The waypoint refused the call with HTTP 403 and wrote the body `RBAC: access denied` itself. The backend never saw the request. The frontend has no policy, so it answers.
 
 **3. Allow exactly one call.**
 
@@ -120,7 +124,14 @@ kubectl -n shop exec deploy/course-client -- curl -s -w " [%{http_code}]\n" http
 kubectl -n shop exec deploy/course-client -- curl -s -w " [%{http_code}]\n" http://backend:8000/api/orders
 ```
 
-`/api/version` now returns `200`. `/api/orders` still returns `403`. The frontend still works too, because ALLOW policies add up.
+**What you should see.**
+
+```text
+{"version":"v1","pod":"backend-v1-54c86bf9b-wm5tn"} [200]
+RBAC: access denied [403]
+```
+
+`/api/version` now returns `200`. `/api/orders` still returns `403`, because the new rule names only `GET /api/version`. The shop on http://localhost:8080 keeps working too, because ALLOW policies add up: the frontend's rule still matches the frontend's calls.
 
 **4. Find the bypass.**
 
@@ -129,7 +140,7 @@ BACKEND_IP=$(kubectl -n shop get pod -l app=backend,version=v1 -o jsonpath='{.it
 kubectl -n shop exec deploy/course-client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://$BACKEND_IP:8000/api/orders
 ```
 
-`000`: connection reset. The L4 policy only admits the waypoint. Now remove it:
+**What you should see.** `000`, then `command terminated with exit code 56`: connection reset. The client dialled a pod IP, so no waypoint took part. The backend's ztunnel checked the L4 policy, which only admits the waypoint, and closed the connection. Now remove that policy:
 
 ```bash
 kubectl -n shop delete authorizationpolicy backend-only-from-waypoint
@@ -137,7 +148,7 @@ sleep 10
 kubectl -n shop exec deploy/course-client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://$BACKEND_IP:8000/api/orders
 ```
 
-`200`. `course-client` read the orders, which its L7 rule forbids. Without the L4 rule, the L7 rule protects only the front door.
+**What you should see.** `authorizationpolicy.security.istio.io "backend-only-from-waypoint" deleted`, then `200`. `course-client` read the orders, which its L7 rule forbids. Without the L4 rule, the L7 rule protects only the front door.
 
 **5. Close it again.**
 
@@ -147,7 +158,7 @@ sleep 10
 kubectl -n shop exec deploy/course-client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://$BACKEND_IP:8000/api/orders
 ```
 
-Back to `000`.
+**What you should see.** `authorizationpolicy.security.istio.io/backend-only-from-waypoint created` among the lines, then `000` and exit code 56 again. The other resources in the file report `configured`. The bypass is gone again.
 
 ## Investigate
 
@@ -157,17 +168,17 @@ Back to `000`.
    kubectl -n istio-system logs ds/ztunnel --tail=100 | grep course-client | tail -3
    ```
 
-   The line ends with `error="http status: 401 Unauthorized"`. The client's ztunnel sent an HBONE `CONNECT` request carrying `sa/course-client`, and the backend's ztunnel answered 401 because no policy allows that identity. Compare `src.identity` in the line with the principals in `backend-only-from-waypoint`.
+   Find the two `error` lines for the backend pod. Which side wrote `allow policies exist, but none allowed`, and which side wrote `http status: 401 Unauthorized`? Compare `src.identity` with the principals in `backend-only-from-waypoint`.
 
 2. **The waypoint's log.** Turn on access logs (`kubectl apply -f course/manifests/06-waypoint-access-logs.yaml`), repeat step 2 before step 3, and read `kubectl -n shop logs deploy/waypoint --tail=5`. Envoy logs the reason as `rbac_access_denied_matched_policy[none]`. What does `[none]` mean, given the ALLOW rules?
-3. **Kiali.** Open **Istio Config**, namespace `shop`. Kiali lists the three AuthorizationPolicies and validates their principals. In **Traffic Graph**, edges rejected by policy show as errors. Run `./course/load.sh 60` while `course-client` loops on `/api/orders`. Where does the 403 show up?
+3. **Kiali.** Open **Istio Config**, namespace `shop`. How many AuthorizationPolicies does Kiali list, and does it flag any? What happens if a principal has a typo? Then open **Traffic Graph** and loop `course-client` on `/api/orders` for a minute. On which edge does the 403 show up?
 4. **Grafana Explore, Prometheus.**
 
    ```promql
-   sum by (source_workload, response_code) (increase(istio_requests_total{reporter="waypoint", destination_service_name="backend"}[5m]))
+   sum by (source_workload, response_code) (increase(istio_requests_total{reporter="waypoint", destination_service_name=~"backend.*"}[5m]))
    ```
 
-   The 403s carry `source_workload="course-client"`. The waypoint knows the caller's name because it comes from the certificate. (`increase` over 5 minutes counts requests even when you sent them in one short burst. A `rate` over 1 minute shows nothing once the burst is older than a minute.)
+   Which `source_workload` carries the 403s? (`increase` over 5 minutes counts requests even when you sent them in one short burst. A `rate` over 1 minute shows nothing once the burst is older than a minute.)
 5. Is Redis reachable from `course-client`? Try a port check, then real data:
 
    ```bash
@@ -175,7 +186,18 @@ Back to `000`.
    kubectl -n shop exec deploy/course-client -- sh -c "printf 'PING\r\n' | nc -w 3 redis 6379"
    ```
 
-   The port check says `open`, but `PING` gets no `+PONG` back. Why? (Hint: which process accepted the TCP handshake? Look at the ztunnel log line for `dst.service="redis..."`.) What does this mean for port scans as a security test inside an ambient mesh?
+   The port check says `open`, but `PING` gets no `+PONG` back. Why? (Hint: which process accepted the TCP handshake? Look at the ztunnel log lines for `dst.service="redis..."`.) What does this mean for port scans as a security test inside an ambient mesh?
+
+<details>
+<summary>Answers</summary>
+
+1. Two lines for the same attempt, both with `src.identity="spiffe://cluster.local/ns/shop/sa/course-client"`. The `direction="inbound"` line comes from the backend's side: `error="connection closed due to policy rejection: allow policies exist, but none allowed"`. That identity isn't in the list, which only names `sa/waypoint` and Prometheus. The `direction="outbound"` line comes from the client's side: its HBONE `CONNECT` request got the answer `error="http status: 401 Unauthorized"`. One refusal, logged once by each end of the tunnel.
+2. `[none]` means no policy matched. The waypoint holds only ALLOW policies for the backend. Once ALLOW policies exist, a request must match one of them, and `course-client` matched none, so Envoy denied it by default. A matching DENY policy shows up by name instead: a test DENY rule for `course-client` produced `rbac_access_denied_matched_policy[ns[shop]-policy[deny-course-client-test]-rule[0]]`. The full line reads like `"GET /api/version HTTP/1.1" 403 - rbac_access_denied_matched_policy[none]`, with `curl/8.11.1` as the user agent.
+3. Four, once step 3 has run: `backend-allow-frontend`, `backend-only-from-waypoint`, `redis-allow-backend` and `backend-allow-course-client`. All four pass validation. Kiali checks that each principal belongs to a real service account. Apply a policy with `cluster.local/ns/shop/sa/course-clinet` and Kiali flags it at once: `KIA0106 Service Account not found for this principal`, severity error. Istio itself accepts the typo without complaint, which makes this check worth having. In the graph, the 403s sit on the HTTP edge from `course-client` to the `backend` service node: 100% of its requests count as 4xx errors, response code `403`. The edge stops at the service node, because the waypoint answered and no backend pod took part.
+4. `course-client`, with `response_code="403"`. The frontend's calls appear as `200`. The waypoint knows the caller's name because it comes from the certificate, not from anything the client sent. Note the regex: the waypoint labels these requests with the Service the route picked, `backend-v1`, not with `backend`, so a filter on `destination_service_name="backend"` finds nothing.
+5. The client's own ztunnel accepted the handshake. ztunnel captures every outgoing connection on the client's node and answers the TCP handshake locally, before it opens the HBONE tunnel to Redis. Then Redis's ztunnel checks `redis-allow-backend`, refuses with `allow policies exist, but none allowed`, the client's ztunnel logs `http status: 401 Unauthorized`, and it closes the connection without a byte of data. So `nc -z` reports `open` for any port inside the mesh: `nc -zv -w 3 redis 1234` and even an unused pod IP say `open` too. A port scan from an ambient pod tells you nothing. Test access with real requests, and read ztunnel's log for the verdict.
+
+</details>
 
 ## Clean up
 

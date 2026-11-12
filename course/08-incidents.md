@@ -2,6 +2,8 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
 
+**Before this module:** modules 1 to 7: the incidents mix everything.
+
 Four broken setups. For each one, `./course/incident.sh` changes something in the cluster and tells you only what the users see. Find the cause with the tools, prove it, then fix it. The answers are folded away at the end of each incident. Try for at least 15 minutes before you open one.
 
 ## How to investigate

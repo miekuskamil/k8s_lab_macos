@@ -2,6 +2,8 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
 
+**Before this module:** none; a reference to keep open while you work.
+
 Troubleshooting commands for this lab, grouped by layer. Work down the layers: a mesh problem is often a cluster problem underneath. Every command here was run against the lab.
 
 Set the context first. OrbStack switches it to `orbstack` when it restarts:

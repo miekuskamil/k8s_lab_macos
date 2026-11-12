@@ -1,0 +1,21 @@
+# A Job that cleans up after itself: 30 seconds after it finishes, Kubernetes
+# deletes the Job and its pod. Without ttlSecondsAfterFinished, finished Jobs and
+# their pods pile up until someone deletes them.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nightly-report
+  namespace: course-ops
+spec:
+  ttlSecondsAfterFinished: 30
+  template:
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      containers:
+        - name: report
+          image: curlimages/curl:8.11.1
+          command: ["sh", "-c", "echo report done"]
+          resources:
+            requests: {cpu: 10m, memory: 8Mi}
+            limits: {cpu: 50m, memory: 32Mi}

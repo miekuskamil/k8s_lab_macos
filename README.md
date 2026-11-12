@@ -14,7 +14,7 @@ The shop is a Node.js frontend, a Python FastAPI backend in two versions, and Re
 
 The first run takes about 10 minutes, mostly image downloads. A rebuild with cached images takes about 2.
 
-Both platforms are tested. On macOS (OrbStack) and on Ubuntu 24.04 (Docker Engine 29.1 from Ubuntu's packages, curl 8.5), a single `./scripts/provision.sh` from nothing passed every health check, and `./course/verify.sh` passed all 54 checks. Other Linux distributions should work if they meet the table above.
+Both platforms are tested. On macOS (OrbStack) and on Ubuntu 24.04 (Docker Engine 29.1 from Ubuntu's packages, curl 8.5), a single `./scripts/provision.sh` from nothing passed every health check, and `./course/verify.sh` passed all 54 checks it had at the time. The latest full run, on macOS only, is below. Other Linux distributions should work if they meet the table above.
 
 OrbStack's own Kubernetes can stay switched off. The lab runs its own k3d cluster on the Docker engine. [docs/build-from-scratch.md](docs/build-from-scratch.md#step-1-the-cluster) explains why.
 
@@ -92,7 +92,7 @@ k8s_lab_macos/
 │   └── scenarios/    canary, fault and circuit-breaker experiments, applied by hand
 ├── helm/             value files for every Helm chart the lab installs
 ├── scripts/          provision, start, port-forward, traffic-test, teardown
-├── course/           the Istio course: modules 0 to 19, their manifests and scripts
+├── course/           the course: modules 0 to 21, their manifests and scripts
 └── docs/             build guide, architecture, lab guide, troubleshooting, diagrams
 ```
 
@@ -133,4 +133,4 @@ kubectl -n argocd get applications
 
 It asks before deleting. Add `--yes` to skip the question, for example in a script. This deletes the k3d cluster. The built images stay in your local Docker store.
 
-To rebuild from nothing: `./scripts/teardown.sh --yes && ./scripts/provision.sh`. On 12 November 2026 that took 2 minutes 13 seconds with cached images, and `./course/verify.sh` then passed all 54 checks.
+To rebuild from nothing: `./scripts/teardown.sh --yes && ./scripts/provision.sh`. On 12 November 2026 that took 2 minutes 13 seconds with cached images. On a fresh rebuild the same evening, `./course/verify.sh` passed all 139 checks, and `./course/verify.sh 21`, the one-way k3s upgrade, passed all 9 of its own.

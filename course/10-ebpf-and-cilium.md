@@ -2,6 +2,8 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
 
+**Before this module:** modules 1 and 7, for the comparison.
+
 You will read claims like this one:
 
 > Tools built on eBPF, such as Cilium, dominate new deployments by handling networking, security policies and observability directly in the Linux kernel without sidecar proxies.

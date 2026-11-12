@@ -2,6 +2,8 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
 
+**Before this module:** modules 4 and 5.
+
 Most of this course routes traffic with the Gateway API: Gateway and HTTPRoute. Istio had its own API for years before that standard existed, and huge numbers of clusters, blog posts, Helm charts and the Istio Certified Associate exam still use it. This module builds two things from module 4 again, the Istio way: an ingress gateway and a canary. You'll finish able to read both styles and translate between them.
 
 Time: about 40 minutes.

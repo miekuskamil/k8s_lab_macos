@@ -106,7 +106,7 @@ grafana:
           spanStartTimeShift: "-5m"
           spanEndTimeShift: "5m"
           customQuery: true
-          query: '{namespace="shop"} |= "${__trace.traceId}"'
+          query: '{namespace="shop"} |= "$${__trace.traceId}"'
     # Loki: a trace_id inside a log line becomes a link that opens the trace in Jaeger.
     - name: Loki
       type: loki
@@ -120,5 +120,6 @@ grafana:
           - name: trace_id
             matcherRegex: '"trace_id":"(\w+)"'
             datasourceUid: jaeger
-            url: "${__value.raw}"
+            # $$ escapes the variable: Grafana's provisioning would expand ${...} as an env var.
+            url: "$${__value.raw}"
             urlDisplayLabel: Open trace in Jaeger

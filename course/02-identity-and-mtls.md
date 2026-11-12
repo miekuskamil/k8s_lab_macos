@@ -2,7 +2,9 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
 
-Every pod in the mesh gets a cryptographic identity, and every connection between mesh pods is encrypted and authenticated with it. This module shows where the identity comes from, what travels on the wire, and how a pod joins or leaves the mesh without a restart.
+**Before this module:** module 1.
+
+Every pod in the mesh gets a cryptographic identity, and every connection between mesh pods uses it to encrypt the traffic and prove who sends it. This module shows where the identity comes from, what travels on the wire, and how a pod joins or leaves the mesh without a restart.
 
 ## Concept: an identity per service account
 
@@ -49,15 +51,15 @@ The application still speaks plain HTTP. ztunnel captures it on the way out, enc
 
 ## Why this way
 
-**Why service accounts, not IPs or labels?** IPs change every time a pod is recreated. Labels can be set by anyone who can edit a Deployment. A service account is the identity Kubernetes already authenticates. Tying the certificate to it means a policy that says "allow `sa/frontend`" stays true no matter how many frontend pods run or where.
+**Why service accounts, not IPs or labels?** IPs change every time Kubernetes recreates a pod. Anyone who edits a Deployment sets its labels. A service account is the identity Kubernetes already authenticates. Tying the certificate to it means a policy that says "allow `sa/frontend`" stays true no matter how many frontend pods run or where.
 
 **Why short-lived certificates?** A 24 hour certificate that renews itself needs no revocation list. If a key leaks, it stops working within a day without anyone doing anything.
 
-**Why does ztunnel request certificates on behalf of pods?** In sidecar mode each sidecar requests its own. In ambient mode the pod has no proxy, so the node's ztunnel holds the certificates for every pod on its node. istiod checks with the API server that the pod really runs on that node, so one ztunnel cannot impersonate a pod on another node.
+**Why does ztunnel request certificates on behalf of pods?** In sidecar mode each sidecar requests its own. In ambient mode the pod has no proxy, so the node's ztunnel holds the certificates for every pod on its node. istiod checks with the API server that the pod really runs on that node, so one ztunnel never gets a certificate for a pod on another node.
 
 **Why one tunnel per node pair, not per pod?** Fewer TLS handshakes and fewer connections. HTTP/2 already knows how to carry many streams on one connection, so Istio did not need a new protocol.
 
-**Why STRICT in `shop`?** Istio's default is PERMISSIVE: accept both mTLS and plaintext, so you can enroll workloads one at a time without breaking callers. Once everything is enrolled, STRICT closes the plaintext door. The lab sets STRICT in `shop` with a `PeerAuthentication` in `manifests/istio/security.yaml`.
+**Why STRICT in `shop`?** Istio's default is PERMISSIVE: accept both mTLS and plaintext, so you enroll workloads one at a time without breaking callers. Once every workload has joined, STRICT closes the plaintext door. The lab sets STRICT in `shop` with a `PeerAuthentication` in `manifests/istio/security.yaml`.
 
 ## The bigger picture: what mTLS actually proves
 
@@ -77,13 +79,19 @@ One more detail. Every certificate traces back to a root, and in this lab istiod
 istioctl ztunnel-config certificates | grep -E "CERTIFICATE|ns/shop"
 ```
 
+**What you should see.** Three identities, one per service account in `shop`, each with a leaf and a root (columns trimmed here):
+
 ```text
-CERTIFICATE NAME                               TYPE  STATUS     VALID CERT  NOT AFTER             NOT BEFORE
-spiffe://cluster.local/ns/shop/sa/backend      Leaf  Available  true        2026-11-12T20:22:01Z  2026-11-11T20:20:01Z
-spiffe://cluster.local/ns/shop/sa/backend      Root  Available  true        2036-11-08T20:21:19Z  2026-11-11T20:21:19Z
+CERTIFICATE NAME                             TYPE  STATUS     VALID CERT  NOT AFTER             NOT BEFORE
+spiffe://cluster.local/ns/shop/sa/backend    Leaf  Available  true        2026-11-13T18:45:27Z  2026-11-12T18:43:27Z
+spiffe://cluster.local/ns/shop/sa/backend    Root  Available  true        2036-11-09T18:44:33Z  2026-11-12T18:44:33Z
+spiffe://cluster.local/ns/shop/sa/frontend   Leaf  Available  true        2026-11-13T18:45:26Z  2026-11-12T18:43:26Z
+...
+spiffe://cluster.local/ns/shop/sa/redis      Leaf  Available  true        2026-11-13T18:45:29Z  2026-11-12T18:43:29Z
+...
 ```
 
-The leaf certificate lives 24 hours. The root, istiod's own CA, lives 10 years.
+The leaf certificate lives 24 hours, plus two minutes: istiod backdates NOT BEFORE a little, so a node with a slightly slow clock still accepts it. The root, istiod's own CA, lives 10 years, and every root row shows the same serial number. Three backend pods (two v1, one v2) share one certificate, because they all run as `sa/backend`. The identity belongs to the service account, not to the pod.
 
 **2. See the identities on a real connection.** Send a request, then read ztunnel's access log:
 
@@ -92,14 +100,17 @@ curl -s -o /dev/null http://localhost:8080/api/orders
 kubectl -n istio-system logs ds/ztunnel --tail=50 | grep 'src.workload="shop-gateway' | tail -1
 ```
 
-Look for these fields:
+**What you should see.** One long `connection complete` line. Look for these fields:
 
 ```text
 src.identity="spiffe://cluster.local/ns/shop-ingress/sa/shop-gateway-istio"
 dst.addr=10.42.0.13:15008             <- the HBONE port, not the app port
 dst.hbone_addr=10.42.0.13:3000        <- the app port, carried inside the tunnel
+dst.identity="spiffe://cluster.local/ns/shop/sa/frontend"
 direction="inbound"
 ```
+
+Both identities sit in one line: the gateway proved `sa/shop-gateway-istio`, the frontend's side proved `sa/frontend`. The line may show a `duration` of many seconds. The gateway keeps the connection open and sends many requests through it, and ztunnel logs the connection once, when it closes.
 
 **3. Try to get in from outside the mesh.**
 
@@ -109,7 +120,15 @@ kubectl -n course-outside rollout status deploy/client
 kubectl -n course-outside exec deploy/client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://frontend.shop:3000/healthz
 ```
 
-You get `000` and "Connection reset by peer". The client sends plaintext, the frontend requires mTLS, and the destination ztunnel resets the connection.
+**What you should see.** `000`, then `command terminated with exit code 56` (curl's "connection reset by peer"). Now and then the exit code reads `52` instead, "empty reply from server": either way the connection died before any HTTP answer. The client sends plaintext, the frontend requires mTLS, and the destination ztunnel closes the connection.
+
+ztunnel's log names the rule that did it:
+
+```bash
+kubectl -n istio-system logs ds/ztunnel --since=1m | grep course-outside | tail -1
+```
+
+**What you should see.** A line with `error="connection closed due to policy rejection: explicitly denied by: istio-system/istio_converted_static_strict"`. istiod turned the STRICT `PeerAuthentication` in `shop` into an internal deny rule for plaintext, and ztunnel applied it. The line has no `src.identity`: a plaintext client has none.
 
 **4. Enroll the namespace, without restarting the pod.**
 
@@ -120,7 +139,7 @@ kubectl -n course-outside exec deploy/client -- curl -s -m 5 -o /dev/null -w "%{
 kubectl -n course-outside get pods     # same pod, RESTARTS 0
 ```
 
-Now you get `200`. The `istio-cni` agent saw the label, entered the running pod's network namespace and added the redirect rules. ztunnel requested a certificate for `ns/course-outside/sa/default`.
+**What you should see.** `200`, and the same pod as before with `RESTARTS 0` and its old AGE. The `istio-cni` agent saw the label, entered the running pod's network namespace and added the redirect rules. ztunnel requested a certificate for `ns/course-outside/sa/default`: run `istioctl ztunnel-config certificates | grep course-outside` and it's there, valid for 24 hours like the others.
 
 **5. Leave the mesh again.**
 
@@ -130,14 +149,24 @@ sleep 5
 kubectl -n course-outside exec deploy/client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://frontend.shop:3000/healthz
 ```
 
-Back to `000`.
+**What you should see.** Back to `000` with exit code 56, still with the same pod. istio-cni removed the redirect rules, so the client's traffic leaves as plaintext again, and the frontend's ztunnel refuses it as in step 3.
 
 ## Investigate
 
 1. With the namespace enrolled (step 4), run `istioctl ztunnel-config workloads | grep course-outside`. What does the PROTOCOL column say, and what does it say after step 5?
-2. In Kiali, open **Traffic Graph** for `shop` and `shop-ingress` with Display, Security on. Every edge shows a padlock. Which edge in the graph has no padlock if you include the `kube-system` namespace? Why does the mesh not cover it?
+2. In Kiali, open **Traffic Graph** for `shop`, `observability` and `istio-system`, with Display, Security on. Find the edge from `kiali` to Prometheus. Does it carry a padlock? Why does the mesh not cover it?
 3. In Kiali, open **Workloads**, `frontend`, tab **Logs**. Is there an `istio-proxy` container to choose? Where are the frontend's mesh logs instead?
 4. Kiali's **Overview** shows an mTLS badge per namespace. What does it show for `shop`, and why is it different for `course-outside`?
+
+<details>
+<summary>Answers</summary>
+
+1. `HBONE` while the namespace carries the label: ztunnel handles the pod's traffic. After step 5 it says `TCP`: ztunnel still knows the pod, but no longer captures its traffic. The pod name stays the same in both rows, which proves again that nothing restarted.
+2. No padlock. Kiali runs in `istio-system`, and that namespace has no `istio.io/dataplane-mode` label, so Kiali sends plain TCP. Prometheus runs in `observability`, which is in ambient mode but has no STRICT `PeerAuthentication`, so its ztunnel accepts plaintext. Prometheus records that connection with `reporter="destination"` and `connection_security_policy="unknown"`, and Kiali draws no padlock. Check it in Prometheus: `sum by (destination_workload, connection_security_policy) (istio_tcp_connections_opened_total{source_workload="kiali"})`. The mesh only encrypts what it captures at the sender. Leave a namespace out, and its traffic stays plain.
+3. No. The pod has one container, `frontend`. For an ambient pod, the Logs tab adds a `ztunnel` checkbox instead. It mixes in the lines from the node's ztunnel log that belong to this pod: every connection, with `src.identity`, `dst.identity` and `dst.hbone_addr`. Those are the frontend's mesh logs.
+4. `shop` shows a full lock, "mTLS is enabled for this namespace". `course-outside` shows no lock, and Kiali's API reports `MTLS_NOT_ENABLED` for it (`curl -s http://localhost:20001/api/namespaces/course-outside/tls`). The badge reads configuration, not traffic: `shop` has a STRICT `PeerAuthentication`, `course-outside` has none. Note that `observability` also reports `MTLS_NOT_ENABLED`, even though its pods talk mTLS through ztunnel. No badge means "plaintext still allowed", not "nothing encrypted".
+
+</details>
 
 ## Clean up
 

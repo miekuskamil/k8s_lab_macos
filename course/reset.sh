@@ -11,6 +11,15 @@ echo "Removing course rules from the shop namespace"
 "${K[@]}" -n shop delete telemetry waypoint-access-logs --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy backend-allow-course-client --ignore-not-found >/dev/null
 "${K[@]}" -n course-sidecar delete virtualservice,destinationrule,peerauthentication --all --ignore-not-found >/dev/null 2>&1 || true
+# Module 21: the backup markers. The k3s upgrade itself stays, like module 14's.
+"${K[@]}" -n default delete configmap before-backup after-backup --ignore-not-found >/dev/null
+# Module 20: the ops app and the extra node
+"${K[@]}" delete namespace course-ops --ignore-not-found >/dev/null
+if k3d node list 2>/dev/null | grep -q '^k3d-agent-0'; then
+  "${K[@]}" drain k3d-agent-0 --ignore-daemonsets --delete-emptydir-data --disable-eviction --timeout=120s >/dev/null 2>&1 || true
+  k3d node delete k3d-agent-0 >/dev/null 2>&1 || true
+fi
+"${K[@]}" delete node k3d-agent-0 --ignore-not-found >/dev/null
 # Module 19: kagent, its CRDs and the agent's test namespace
 if helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kagent status kagent >/dev/null 2>&1; then
   helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kagent uninstall kagent --wait >/dev/null 2>&1 || true

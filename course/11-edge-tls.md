@@ -2,6 +2,8 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
 
+**Before this module:** modules 1 to 4.
+
 So far the shop speaks plain HTTP on `localhost:8080`. Inside the mesh that's fine, because ztunnel wraps every hop in mTLS. But the first hop, from your browser to the ingress gateway, travels unencrypted. In this module you give the gateway an HTTPS listener, let cert-manager issue and renew its certificate, and send every HTTP visitor over to HTTPS.
 
 Time: about 45 minutes.

@@ -86,7 +86,8 @@ ensure_cluster() {
   step "Checking the k3d cluster ${CLUSTER_NAME}"
   if k3d cluster list --no-headers 2>/dev/null | awk '{print $1}' | grep -qx "$CLUSTER_NAME"; then
     ok "k3d cluster $CLUSTER_NAME already exists"
-    "$ROOT_DIR/scripts/start.sh" --quiet
+    # Some pods may be broken; repairing them is what the rest of this script is for.
+    "$ROOT_DIR/scripts/start.sh" --quiet || warn "some pods are not Ready yet; provisioning continues and may repair them"
   else
     k3d cluster create "$CLUSTER_NAME" \
       --image "$K3S_IMAGE" \
@@ -163,8 +164,10 @@ detect_platform_args() {
       # The CNI plugin directory differs between k3s versions, and the istio-cni binary must
       # land in the directory containerd searches. Read it from the node's containerd config.
       local bin_dir=""
+      # containerd 1.x writes bin_dir = "...", containerd 2.x (k3s 1.31.14 and later) bin_dirs = ["..."].
       bin_dir="$(docker exec "k3d-${CLUSTER_NAME}-server-0" \
-        sed -n 's/^[[:space:]]*bin_dir = "\(.*\)"/\1/p' /var/lib/rancher/k3s/agent/etc/containerd/config.toml 2>/dev/null | head -1 || true)"
+        sed -n -e 's/^[[:space:]]*bin_dir = "\(.*\)"/\1/p' -e 's/^[[:space:]]*bin_dirs = \["\([^"]*\)".*/\1/p' \
+        /var/lib/rancher/k3s/agent/etc/containerd/config.toml 2>/dev/null | head -1 || true)"
       bin_dir="${bin_dir:-/var/lib/rancher/k3s/data/cni}"
       CNI_EXTRA_ARGS=(--set "cni.cniBinDir=${bin_dir}")
       ok "containerd searches ${bin_dir} for CNI plugins"

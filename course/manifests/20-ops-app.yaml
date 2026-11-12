@@ -1,0 +1,59 @@
+# A small app for the node exercises in module 20: httpbin on two replicas, spread
+# over the nodes, in its own ambient namespace. ArgoCD doesn't manage it, so your
+# changes stay.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-ops
+  labels:
+    istio.io/dataplane-mode: ambient
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: course-ops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      automountServiceAccountToken: false
+      # Prefer one replica per node, so losing a node never takes both.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: web
+      containers:
+        - name: httpbin
+          image: mccutchen/go-httpbin:v2.15.0
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet: {path: /status/200, port: http}
+            periodSeconds: 3
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {cpu: 100m, memory: 64Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: course-ops
+spec:
+  selector:
+    app: web
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

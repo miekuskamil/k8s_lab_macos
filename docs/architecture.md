@@ -30,7 +30,7 @@ Both backend versions run the same image. The `APP_VERSION` environment variable
 
 ## How a request travels
 
-Follow one request from the browser to Redis. Thick blue arrows are encrypted mesh tunnels, thin arrows are plaintext, dashed arrows are control and telemetry traffic.
+Follow one request from the browser to Redis. Thick blue arrows are encrypted mesh tunnels, thin arrows are plaintext (outside the mesh, or inside a single pod), dashed arrows are control and telemetry traffic.
 
 ```mermaid
 flowchart LR
@@ -127,7 +127,7 @@ The frontend and Redis have no waypoint, so their traffic stays on the cheaper l
 | Pod to the ztunnel on its own node | No | Stays inside the node |
 | Prometheus to pods | Yes | `observability/kube-prometheus-stack-prometheus` |
 
-The hop between a pod and its local ztunnel is plaintext. It never leaves the node container, and that is the trust model ambient mode is built on.
+The hop between a pod and ztunnel is plaintext, but it never leaves the pod. In ambient's in-pod mode, istio-cni places ztunnel's listening socket inside each pod's own network namespace, so the app's plain HTTP turns into HBONE mTLS before it touches any network. Every hop between pods, frontend to waypoint to backend, is mTLS. The diagram draws ztunnel as one box per node for readability; the labels "(in pod)" mark the hops that happen inside a pod.
 
 ## How Git changes reach the cluster
 

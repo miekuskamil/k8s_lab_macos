@@ -11,6 +11,7 @@ Every Istio resource and term this course uses, in plain words. Each entry says 
 - [Envoy response flags](#envoy-response-flags)
 - [Around the mesh](#around-the-mesh)
 - [AI on Kubernetes](#ai-on-kubernetes)
+- [Kubernetes operations](#kubernetes-operations)
 
 ## Find the right resource
 
@@ -137,6 +138,18 @@ spec:
 
 **Telemetry.** `telemetry.istio.io/v1`. Turns tracing, metrics and access logs on or off and picks providers, for the mesh, a namespace or one proxy. The lab sends traces to Jaeger with it. Module 6.
 
+**Trace and span.** A trace follows one request through every service it touches. It's a tree of spans, and each span records one step: who did it, when it started, how long it took. All spans of a trace share one trace id, which travels in the `traceparent` header. Module 6.
+
+**Sampling.** Keeping only a share of traces, chosen at random when a request enters the mesh. The lab keeps 100%. Production systems often keep 1 to 5%, because storing every trace costs a lot. Module 6.
+
+**Access log.** One line per request, written by a proxy: method, path, status code, response flags, timings, upstream. Off by default in the lab; a Telemetry resource turns it on for the waypoint. Modules 3, 5, 6.
+
+**Reporter.** The label on Istio's request metrics that says which proxy recorded them: `source` (the calling side, here the ingress gateway or a client sidecar), `waypoint`, or `destination` (a sidecar on the receiving side). Modules 6, 7.
+
+**Percentile (p95, p99).** The value that 95% (or 99%) of measurements stay under. p95 latency of 200 ms means one request in twenty took longer. Prometheus estimates it from histogram buckets, counters of how many requests fell into each time range (0.5, 1, 5, 10, 25 ms and up for Istio), so the result often lands on a bucket edge. Modules 5, 6.
+
+**PodMonitor.** A prometheus-operator resource that tells Prometheus which pods to scrape, on which port and path. The lab ships PodMonitors for the gateway, the waypoint and ztunnel. Module 7 adds one for the sidecars.
+
 **istioctl.** Istio's command-line tool. The commands this course uses: `proxy-status` (which proxies use which control plane, and whether their config is current), `ztunnel-config` (what ztunnel knows), `proxy-config` (a sidecar or gateway's Envoy config), `analyze` (finds mistakes in your resources) and `x precheck` (checks a cluster before an upgrade). Module 9 lists them by layer.
 
 **Revision.** A name for one installed control plane, such as `1-25-5`. The original install without a name is `default`. Proxies choose a revision with the label `istio.io/rev`. Module 14.
@@ -161,6 +174,8 @@ spec:
 
 **TLS termination and origination.** Termination: a proxy ends a TLS session and reads the request inside (the ingress gateway in module 11). Origination: a proxy starts a TLS session on the app's behalf, so the app sends plain HTTP (the waypoint in module 12).
 
+**X-Forwarded-Client-Cert (XFCC).** A header a sidecar adds to requests it passes to its app. It names the caller (`URI=spiffe://...`) and the receiver (`By=...`) from the mTLS handshake, so the app learns who called without touching TLS. Module 7.
+
 **DNS capture.** In ambient mode, istio-cni redirects a pod's DNS queries to ztunnel, which answers for ServiceEntry hosts with their virtual IP. Module 12.
 
 ## Envoy response flags
@@ -177,10 +192,11 @@ Envoy writes a short flag into access logs and the `response_flags` metric label
 | `DI` | Delay injected | Fault injection added a delay |
 | `FI` | Fault injected | Fault injection returned an error |
 | `NR` | No route | No route matched the request |
+| `NC` | No cluster | The route points at a Service Envoy has no cluster for, for example a misspelled or deleted one (module 4) |
 | `DC` | Downstream connection termination | The caller hung up early |
 | `-` | No flag | Envoy passed the response on unchanged |
 
-Modules 5, 6, 8.
+Modules 4, 5, 6, 8.
 
 ## Around the mesh
 
@@ -191,6 +207,8 @@ Modules 5, 6, 8.
 **JWT and JWKS.** A JSON Web Token carries signed claims about a user. A JSON Web Key Set publishes the public keys that check those signatures. Module 13.
 
 **NetworkPolicy.** Plain Kubernetes resource that allows or blocks connections by pod labels, namespaces and IP ranges, enforced by the node's packet filter, below the mesh. Module 12 uses one to force traffic through the waypoint.
+
+**Idempotent request and idempotency key.** A request is idempotent when sending it twice has the same effect as sending it once, like a GET. A POST that creates an order is not. An idempotency key is a unique id the client sends with such a request, so the server spots a repeat and skips it. Safe retries depend on this. Module 5.
 
 **Kiali.** The Istio console: traffic graph, mTLS status and config checks. **Jaeger**: shows traces. **Prometheus**: stores metrics. **Grafana**: dashboards and queries over Prometheus, Loki and Jaeger. **Loki**: stores logs. Module 6.
 
@@ -233,4 +251,24 @@ Modules 5, 6, 8.
 **Prompt injection.** Text that reaches a model through data, like a log line, a web page or a pod annotation, and carries instructions the model may follow. No model resists it reliably. Module 19.
 
 **Excessive agency.** An agent holding more tools or permissions than its job needs, so a mistake, a prompt injection or a direct call to its tools does real damage. On the OWASP Top 10 for LLM applications. Module 19.
+
+## Kubernetes operations
+
+**Cordon, drain, uncordon.** Cordon marks a node unschedulable. Drain cordons it and evicts its pods, one by one, respecting PodDisruptionBudgets; DaemonSet pods stay. Uncordon makes it schedulable again, but moves nothing back. Module 20.
+
+**PodDisruptionBudget (PDB).** A rule like "keep at least one `web` pod running" that evictions must respect. Covers voluntary disruptions such as drains and upgrades, not crashes. Module 20.
+
+**DaemonSet.** A workload with one pod on every node, such as ztunnel, istio-cni or a log shipper. Drains leave them alone. Module 20.
+
+**`ttlSecondsAfterFinished` and `revisionHistoryLimit`.** The first deletes a finished Job after a delay. The second caps how many old ReplicaSets a Deployment keeps for `kubectl rollout undo` (default 10). Module 20.
+
+**ServiceLB (svclb).** k3s's built-in load balancer. For each Service of type LoadBalancer it runs a small `svclb-...` pod that forwards the node's port to the Service. In the lab, k3d's load balancer container maps port 8080 on your Mac to the node, and svclb passes it on to the ingress gateway. Module 1.
+
+**k3s.** A small Kubernetes distribution in one binary, with its own containerd, flannel and an SQLite or etcd datastore. The lab runs it inside Docker with k3d. Modules 20, 21.
+
+**system-upgrade-controller.** A controller that upgrades k3s (and RKE2) nodes from a `Plan` resource: target version, node selector, how many nodes at once, whether to cordon or drain. Module 21.
+
+**Certificate rotation and renewal.** Rotation replaces a certificate's key; renewal extends its expiry. k3s renews certificates within 120 days of expiry each time it starts; `k3s certificate rotate` rotates. Module 21.
+
+**CNI plugin directory.** The folder containerd searches for network plugins (`bin_dir` or `bin_dirs` in its config). istio-cni must place its plugin there; the k3s upgrade in module 21 moved it. Module 21.
 

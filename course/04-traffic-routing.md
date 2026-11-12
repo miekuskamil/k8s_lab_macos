@@ -2,6 +2,8 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
 
+**Before this module:** modules 1 to 3.
+
 A Kubernetes Service spreads requests evenly over its pods. This module makes the waypoint decide instead: send a percentage to a new version, or route by what the request contains.
 
 ## Concept: who decides where a request goes
@@ -48,7 +50,7 @@ spec:
 
 **Why one Service per version?** `backendRefs` points at Services, not label selectors. `backend-v1` and `backend-v2` each select one version. Istio's VirtualService uses "subsets" defined by labels in a DestinationRule instead. Both approaches end at the same pods.
 
-**Why weights in a route and not replica counts?** Replica count is a capacity decision, traffic share is a release decision. Mixing them means you cannot scale v1 for load without changing the canary percentage.
+**Why weights in a route and not replica counts?** Replica count is a capacity decision, traffic share is a release decision. Mix them, and every time you scale v1 for load, the canary percentage moves too.
 
 **Why does the route attach to a Service and not to a Gateway?** In the mesh, the "gateway" is the waypoint, and the waypoint serves many Services. Attaching to the Service means the rule follows the destination, whoever the caller is.
 
@@ -74,6 +76,8 @@ Start steady traffic in a second terminal and leave it running during the module
 ./course/load.sh 900 /api/version 5
 ```
 
+**What you should see.** `Sending about 5 requests per second to http://localhost:8080/api/version for 900s. Press Ctrl-C to stop.` Then nothing until it ends, when it prints the status codes and backend versions it counted. It runs in the background of your work, so Prometheus and Kiali always have fresh numbers.
+
 Open Kiali **Traffic Graph**, namespace `shop`, graph type "Versioned app", Display: "Traffic Distribution" and "Traffic Animation". At first, all traffic goes to `backend v1`.
 
 **1. Canary: 90% to v1, 10% to v2.**
@@ -83,7 +87,18 @@ kubectl apply -f manifests/scenarios/a-canary-httproute.yaml
 ./scripts/traffic-test.sh 300 10 /api/version
 ```
 
-About 270 v1, 30 v2. In Kiali, after a minute, the edge to `v2` shows about 10%.
+**What you should see.** `httproute.gateway.networking.k8s.io/backend-route configured`, then:
+
+```text
+Status codes
+  200  300  (100%)
+
+Backend versions
+  v1  271  (90%)
+  v2  29  (10%)
+```
+
+Your numbers wobble around 270 and 30, because the waypoint rolls the dice for each request. The route already existed with 100% to v1, so `kubectl apply` changed it in place, and the waypoint uses the new weights within a few seconds. In Kiali the `v2` edge starts to carry traffic after about a minute, once its one minute rate window has data.
 
 **2. Half and half.**
 
@@ -92,7 +107,7 @@ kubectl apply -f course/manifests/04-route-50-50.yaml
 ./scripts/traffic-test.sh 300 10 /api/version
 ```
 
-About 150 each. This is the step where you would watch v2's error rate and latency before going further.
+**What you should see.** About 150 each: the lab got `v1 151` and `v2 149`. A minute later, Kiali's two edges from the `backend` service node carry about the same rate, close to 2.5 requests per second each from the load script. This is the step where you would watch v2's error rate and latency before going further.
 
 **3. Route by path, not by chance.**
 
@@ -103,13 +118,17 @@ kubectl apply -f course/manifests/04-route-by-path.yaml
 ./scripts/traffic-test.sh 50 5 /api/orders      # 50 of 50 to v1
 ```
 
-The route has two rules. The first matches the path prefix `/api/version` and sends it to v2. The second has no match, so it catches everything else. You could match on a header instead (`matches: - headers: - name: x-canary, value: "true"`) to let testers opt in to v2.
+**What you should see.** The first test reports `v2  50  (100%)`, the second `v1  50  (100%)`. No dice this time: the path decides.
+
+The route has two rules. The first matches the path prefix `/api/version` and sends it to v2. The second has no match, so it catches everything else. A route also matches on a header (`matches: - headers: - name: x-canary, value: "true"`) to let testers opt in to v2.
 
 **4. See what the waypoint received.**
 
 ```bash
 istioctl proxy-config routes deploy/waypoint -n shop | grep -E "MATCH|backend.shop"
 ```
+
+**What you should see.** Rows like these, and probably a few more:
 
 ```text
 NAME                                                  VHOST NAME          DOMAINS  MATCH                    VIRTUAL SERVICE
@@ -119,14 +138,14 @@ inbound-vip|8000|http|backend.shop.svc.cluster.local  inbound|http|8000   *     
 
 Two things to notice:
 
-- The two rows are your two rules, in the order Envoy tries them: the path match first, then the catch-all.
+- `PathPrefix:/api/version` followed by `/*` are your two rules, in the order Envoy tries them: the path match first, then the catch-all.
 - The VIRTUAL SERVICE column says `backend-route-0-istio-autogenerated-k8s-gateway`. istiod translates every HTTPRoute into its own internal VirtualService form before it builds Envoy config. Gateway API is the interface, Istio's older API is still the engine.
 
-The table can list a route more than once: istioctl prints every route configuration Envoy holds, including copies for each Service name. Only the MATCH and VIRTUAL SERVICE columns matter here.
+The extra rows, often lone `/*` lines, come from older versions of the route. When istiod sends a new listener, Envoy keeps the previous one around in a draining state until its open connections finish, and istioctl prints the routes of both. The waypoint's config dump shows it: the listener `main_internal` has an `active_state` with the rules `/api/version` and `/`, and a `draining_state` with the old `/` only. Only the MATCH and VIRTUAL SERVICE columns matter here.
 
 ## Investigate
 
-1. In Grafana, open the dashboard **Shop mesh and traffic experiments**, panel "Backend request rate by workload". Watch it while you move from step 1 to step 3. How long after `kubectl apply` does the graph change? Most of the delay is Prometheus scraping every 15 seconds and the `rate(...[1m])` window, not the mesh.
+1. In Grafana, open the dashboard **Shop mesh and traffic experiments**, panel "Backend request rate by workload". Watch it while you move from step 1 to step 3. How long after `kubectl apply` does the graph change, and why does it take that long?
 2. Break the route on purpose and find it two ways:
 
    ```bash
@@ -139,8 +158,17 @@ The table can list a route more than once: istioctl prints every route configura
    kubectl -n shop get httproute backend-route -o jsonpath='{range .status.parents[0].conditions[*]}{.type}={.status} {.reason}{"\n"}{end}'
    ```
 
-   `Accepted=True` (the YAML is valid) but `ResolvedRefs=False BackendNotFound`. What happens to requests for `/api/version` meanwhile? Try it, then run `./course/reset.sh`.
+   `Accepted=True` (the YAML is valid) but `ResolvedRefs=False BackendNotFound`. What happens to requests for `/api/version` meanwhile, and to `/api/orders`? Try it, then run `./course/reset.sh`.
 3. Why does `/api/orders` in step 3 still create orders correctly when v2 serves `/api/version`? What would go wrong if v1 and v2 used different Redis schemas?
+
+<details>
+<summary>Answers</summary>
+
+1. The panel moves in steps of 15 seconds and settles about one minute after the apply. The lab switched from step 3 (all `/api/version` traffic on v2) to 50/50 and polled the panel's query: the lines moved in jumps every 15 seconds, made their first clear move after about 40 seconds, and met at the same rate after about 55 seconds. The waypoint switched at once. The delay comes from Prometheus, which scrapes every 15 seconds, and from the `rate(...[1m])` window, which still averages in old samples for a full minute.
+2. `/api/version` fails with `500 Internal Server Error` on every request. `/api/orders` keeps answering `200` from v1, because its rule still points at a real Service. With access logs on, the waypoint explains it: `"GET /api/version HTTP/1.1" 500 NC cluster_not_found`. The `NC` flag means Envoy has no cluster (upstream service) for the route's target. A broken reference fails only the rule that uses it, not the whole route, so the damage stays hidden until someone calls that path.
+3. Both versions read and write the same Redis: their Deployments set the same `REDIS_HOST=redis.shop.svc.cluster.local`. Create an order through v1, and v2 lists it right away. The lab checked this with the 50/50 route: one `POST` handled by v1, then every `GET /api/orders` from v1 and from v2 returned `count` 1 with the same order. If v2 changed the data format, say a new field type or a different key name, then data written by one version would break or confuse the other. A canary for a schema change needs a format both versions understand, or a migration done in steps, before you split traffic.
+
+</details>
 
 ## Clean up
 

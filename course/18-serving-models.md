@@ -2,6 +2,8 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
 
+**Before this module:** modules 1, 4 and 5, and 17 for the AI basics.
+
 Module 17 called a model that ran outside the cluster. Plenty of teams run models inside Kubernetes instead: for privacy, for cost, or because a GPU cluster is what they have. This module puts two small model servers into the lab and shows three problems that make model serving different from serving a normal API. One of them has driven a whole new Kubernetes standard.
 
 Time: about 50 minutes. Second of three AI modules. It downloads about 900 MB of models, once per run.

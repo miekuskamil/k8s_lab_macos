@@ -2,6 +2,8 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
 
+**Before this module:** modules 1 to 3, and 11 helps.
+
 Modules 2 to 5 controlled traffic between your own services. This module looks the other way: calls from your pods out to the internet. You find out what the mesh knows about them by default (almost nothing), register an external host so the mesh treats it like one of its own services, put L7 rules on it, and lock a pod in so the mesh is its only way out.
 
 Time: about 45 minutes. You need internet access, because the exercises call `example.com` and `httpbin.org`.

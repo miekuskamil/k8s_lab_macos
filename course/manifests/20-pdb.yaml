@@ -1,0 +1,12 @@
+# Keep at least one web pod running during voluntary disruptions, such as a drain.
+# A drain evicts pods one at a time and waits whenever an eviction would break this.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web
+  namespace: course-ops
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: web

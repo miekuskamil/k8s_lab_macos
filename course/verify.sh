@@ -54,6 +54,15 @@ module_1() {
   expect "shop pods have no sidecar (one container each)" "$("${K[@]}" -n shop get pods -l app=backend -o jsonpath='{.items[0].spec.containers[*].name}')" '^backend$'
   expect "ztunnel lists the backend as an HBONE workload" "$("${I[@]}" ztunnel-config workloads 2>/dev/null | grep -c 'backend-v1.*HBONE')" '^[1-9]'
   expect "responses pass through Envoy" "$(curl -s -m 10 -D - -o /dev/null "$BASE/api/version" | tr -d '\r' | grep -i '^server:')" 'istio-envoy'
+  local services
+  services="$("${I[@]}" ztunnel-config services 2>/dev/null)"
+  expect "the backend Service uses the waypoint" "$(echo "$services" | awk '$1=="shop" && $2=="backend" {print $4}')" '^waypoint$'
+  expect "the frontend Service has no waypoint" "$(echo "$services" | awk '$1=="shop" && $2=="frontend" {print $4}')" '^None$'
+  expect "the backend Service carries the use-waypoint label" "$("${K[@]}" -n shop get svc backend -o jsonpath='{.metadata.labels.istio\.io/use-waypoint}')" '^waypoint$'
+  local proxies
+  proxies="$("${I[@]}" proxy-status 2>/dev/null)"
+  expect "istiod manages the gateway, the waypoint and ztunnel" "$(echo "$proxies" | grep -cE '^(shop-gateway-istio|waypoint|ztunnel)-')" '^3$'
+  expect "no shop app pod has a proxy of its own" "$(echo "$proxies" | grep -cE '^(backend|frontend|redis)-')" '^0$'
 }
 
 module_2() {
@@ -63,8 +72,16 @@ module_2() {
   "${K[@]}" label ns course-outside istio.io/dataplane-mode- >/dev/null 2>&1; settle 3
   expect "ztunnel holds a certificate for the backend identity" "$("${I[@]}" ztunnel-config certificates 2>/dev/null | grep -c 'ns/shop/sa/backend.*Leaf')" '^[1-9]'
   expect "a client outside the mesh cannot reach the frontend" "$(in_outside curl -s -m 5 -o /dev/null -w '%{http_code}' http://frontend.shop:3000/healthz)" '^000$'
+  settle 2
+  expect "ztunnel logs the STRICT policy as the reason" "$("${K[@]}" -n istio-system logs ds/ztunnel --since=1m 2>/dev/null | grep 'src.namespace="course-outside"' | grep -c 'istio_converted_static_strict')" '^[1-9]'
+  local client_pod
+  client_pod="$("${K[@]}" -n course-outside get pod -l app=client -o jsonpath='{.items[0].metadata.name}')"
+  expect "outside the mesh, ztunnel lists the client as TCP" "$("${I[@]}" ztunnel-config workloads 2>/dev/null | awk -v p="$client_pod" '$2==p {print $NF}')" '^TCP$'
   "${K[@]}" label ns course-outside istio.io/dataplane-mode=ambient --overwrite >/dev/null; settle 6
   expect "after labeling its namespace, the same pod gets in without a restart" "$(in_outside curl -s -m 5 -o /dev/null -w '%{http_code}' http://frontend.shop:3000/healthz)" '^200$'
+  expect "enrolled, ztunnel lists the same client pod as HBONE" "$("${I[@]}" ztunnel-config workloads 2>/dev/null | awk -v p="$client_pod" '$2==p {print $NF}')" '^HBONE$'
+  expect "ztunnel holds a certificate for the client's service account" "$("${I[@]}" ztunnel-config certificates 2>/dev/null | grep -c 'ns/course-outside/sa/default.*Leaf')" '^[1-9]'
+  expect "the client pod never restarted" "$("${K[@]}" -n course-outside get pod "$client_pod" -o jsonpath='{.status.containerStatuses[0].restartCount}')" '^0$'
   "${K[@]}" label ns course-outside istio.io/dataplane-mode- >/dev/null; settle 6
   expect "after removing the label, it is locked out again" "$(in_outside curl -s -m 5 -o /dev/null -w '%{http_code}' http://frontend.shop:3000/healthz)" '^000$'
 }
@@ -77,10 +94,15 @@ module_3() {
   local pod_ip
   pod_ip="$("${K[@]}" -n shop get pod -l app=backend,version=v1 -o jsonpath='{.items[0].status.podIP}')"
   expect "course-client is refused by the waypoint (L7)" "$(in_shop curl -s -m 5 -o /dev/null -w '%{http_code}' http://backend:8000/api/version)" '^403$'
+  expect "the waypoint writes the refusal body itself" "$(in_shop curl -s -m 5 http://backend:8000/api/version)" '^RBAC: access denied$'
+  expect "the frontend has no policy and answers course-client" "$(in_shop curl -s -m 5 -o /dev/null -w '%{http_code}' http://frontend:3000/healthz)" '^200$'
   "${K[@]}" apply -f "$M/03-allow-course-client.yaml" >/dev/null; settle 4
   expect "with its own rule, GET /api/version is allowed" "$(in_shop curl -s -m 5 -o /dev/null -w '%{http_code}' http://backend:8000/api/version)" '^200$'
   expect "the rule does not cover /api/orders" "$(in_shop curl -s -m 5 -o /dev/null -w '%{http_code}' http://backend:8000/api/orders)" '^403$'
   expect "dialing a backend pod IP is refused by ztunnel (L4)" "$(in_shop curl -s -m 5 -o /dev/null -w '%{http_code}' "http://${pod_ip}:8000/api/orders")" '^000$'
+  settle 2
+  expect "ztunnel logs the L4 policy rejection" "$("${K[@]}" -n istio-system logs ds/ztunnel --since=1m 2>/dev/null | grep 'sa/course-client' | grep -c 'allow policies exist, but none allowed')" '^[1-9]'
+  expect "the shop itself keeps working (ALLOW policies add up)" "$(code "$BASE/api/orders")" '^200$'
   # Policy changes reach ztunnel within a few seconds. Wait long enough to be sure.
   "${K[@]}" -n shop delete authorizationpolicy backend-only-from-waypoint >/dev/null; settle 10
   expect "without the L4 policy, the pod IP bypasses the waypoint rules" "$(in_shop curl -s -m 5 -o /dev/null -w '%{http_code}' "http://${pod_ip}:8000/api/orders")" '^200$'
@@ -104,32 +126,46 @@ module_4() {
   "${K[@]}" apply -f "$M/04-route-by-path.yaml" >/dev/null; settle 5
   between "path rule: /api/version always reaches v2" "$(burst 50 5 /api/version | count_matching ' v2$')" 50 50
   between "path rule: /api/orders always reaches v1" "$(burst 50 5 /api/orders | count_matching ' v1$')" 50 50
+  expect "the waypoint holds the path match from the HTTPRoute" "$("${I[@]}" proxy-config routes deploy/waypoint -n shop 2>/dev/null | grep 'backend.shop' | grep -c 'PathPrefix:/api/version.*backend-route-0-istio-autogenerated-k8s-gateway')" '^[1-9]'
+  sed 's/name: backend-v2/name: backend-v3/' "$M/04-route-by-path.yaml" | "${K[@]}" apply -f - >/dev/null; settle 5
+  expect "a broken backendRef reports ResolvedRefs=False BackendNotFound" "$("${K[@]}" -n shop get httproute backend-route -o jsonpath='{.status.parents[0].conditions[?(@.type=="ResolvedRefs")].status} {.status.parents[0].conditions[?(@.type=="ResolvedRefs")].reason}')" '^False BackendNotFound$'
+  expect "the broken rule fails /api/version" "$(code "$BASE/api/version")" '^500$'
+  expect "the other rule keeps /api/orders working" "$(code "$BASE/api/orders")" '^200$'
   baseline
 }
 
 module_5() {
   section "5: resilience"
   baseline
+  # waypoint_log <regex>: how many recent waypoint access log lines match
+  waypoint_log() { settle 2; "${K[@]}" -n shop logs deploy/waypoint --since=2m 2>/dev/null | grep -cE "$1" || true; }
   "${K[@]}" -n shop delete httproute backend-route >/dev/null
-  "${K[@]}" apply -f "$ROOT/manifests/scenarios/b-fault-injection.yaml" >/dev/null; settle 6
+  "${K[@]}" apply -f "$ROOT/manifests/scenarios/b-fault-injection.yaml" -f "$M/06-waypoint-access-logs.yaml" >/dev/null; settle 6
   local out started elapsed
   out="$(burst 200 10 /api/orders)"
   between "fault injection: about 10% of 200 return 503" "$(echo "$out" | count_matching '^503')" 5 45
+  expect "fault injection: the waypoint logs the 503s with DI,FI" "$(waypoint_log '"GET /api/orders HTTP/1.1" 503 DI,FI')" '^[1-9]'
+  between "fault injection: /api/version stays clean" "$(burst 40 5 /api/version | count_matching '^200')" 40 40
   started=$(date +%s); curl -s -o /dev/null -m 10 "$BASE/api/orders"; curl -s -o /dev/null -m 10 "$BASE/api/orders"; elapsed=$(( $(date +%s) - started ))
   between "fault injection: two requests take at least 1 second" "$elapsed" 1 5
   baseline
-  "${K[@]}" apply -f "$M/05-timeout.yaml" >/dev/null; settle 5
+  "${K[@]}" apply -f "$M/05-timeout.yaml" -f "$M/06-waypoint-access-logs.yaml" >/dev/null; settle 5
   expect "timeout: a 300 ms request still succeeds" "$(code "$BASE/api/slow?ms=300")" '^200$'
   expect "timeout: a 3 s request is cut off with 504" "$(code "$BASE/api/slow?ms=3000")" '^504$'
+  expect "timeout: the waypoint wrote the body" "$(curl -s -m 10 "$BASE/api/slow?ms=3000")" '^upstream request timeout$'
+  expect "timeout: the access log shows UT response_timeout" "$(waypoint_log '504 UT response_timeout')" '^[1-9]'
   baseline
   between "no circuit breaker: 50 parallel slow requests all succeed" "$(burst 200 50 '/api/slow?ms=300' | count_matching '^200')" 195 200
-  "${K[@]}" apply -f "$ROOT/manifests/scenarios/c-circuit-breaker.yaml" >/dev/null; settle 6
+  "${K[@]}" apply -f "$ROOT/manifests/scenarios/c-circuit-breaker.yaml" -f "$M/06-waypoint-access-logs.yaml" >/dev/null; settle 6
   between "circuit breaker: most of 200 parallel requests get 503" "$(burst 200 50 '/api/slow?ms=300' | count_matching '^503')" 100 200
+  expect "circuit breaker: the access log shows UO overflow" "$(waypoint_log '503 UO upstream_reset_before_response_started\{overflow\}')" '^[1-9]'
   baseline
+  "${K[@]}" apply -f "$M/06-waypoint-access-logs.yaml" >/dev/null
   "${K[@]}" -n shop set env deploy/backend-v1 deploy/backend-v2 RATE_LIMIT_RPS=20 >/dev/null
   "${K[@]}" -n shop rollout status deploy/backend-v1 --timeout=180s >/dev/null
   "${K[@]}" -n shop rollout status deploy/backend-v2 --timeout=180s >/dev/null; settle 20
   between "rate limit: some of 400 requests get 429" "$(burst 400 40 /api/orders | count_matching '^429')" 50 400
+  expect "rate limit: the 429s come from the backend (via_upstream, no flag)" "$(waypoint_log '"GET /api/orders HTTP/1.1" 429 - via_upstream')" '^[1-9]'
   expect "rate limit: ArgoCD left the setting alone" "$("${K[@]}" -n shop get deploy backend-v1 -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="RATE_LIMIT_RPS")].value}')" '^20$'
   baseline
 }
@@ -148,23 +184,51 @@ module_6() {
   curl -s -o /dev/null -m 10 "$BASE/api/version"; settle 2
   expect "the waypoint writes access logs after the Telemetry rule" "$("${K[@]}" -n shop logs deploy/waypoint --tail=20 2>/dev/null | grep -c 'GET /api/version')" '^[1-9]'
   expect "Prometheus has waypoint request metrics" "$("${K[@]}" get --raw '/api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/query?query=count(istio_requests_total%7Breporter%3D%22waypoint%22%7D)' 2>/dev/null | python3 -c 'import json,sys; r=json.load(sys.stdin)["data"]["result"]; print(r[0]["value"][1] if r else 0)' 2>/dev/null)" '^[1-9]'
+  # Loki: the backend's log line for that trace arrives through Alloy within a few seconds.
+  local loki_lines=0 now
+  for _ in 1 2 3 4 5 6; do
+    now=$(date +%s)
+    loki_lines="$("${K[@]}" get --raw "/api/v1/namespaces/observability/services/loki:3100/proxy/loki/api/v1/query_range?query=%7Bnamespace%3D%22shop%22%2Capp%3D%22backend%22%7D%20%7C%3D%20%22${trace_id}%22&start=$((now - 600))000000000&end=${now}000000000&limit=100" 2>/dev/null | python3 -c 'import json,sys; print(sum(len(s["values"]) for s in json.load(sys.stdin)["data"]["result"]))' 2>/dev/null || echo 0)"
+    [[ "$loki_lines" =~ ^[1-9] ]] && break
+    settle 5
+  done
+  expect "Loki finds the backend log line by trace id" "$loki_lines" '^[1-9]'
+  "${K[@]}" -n istio-system patch telemetry mesh-default --type merge \
+    -p '{"spec":{"tracing":[{"providers":[{"name":"jaeger-otlp"}],"randomSamplingPercentage":10}]}}' >/dev/null; settle 8
+  local t0; t0=$(date +%s)
+  burst 200 10 /api/version >/dev/null; settle 12
+  between "10% sampling: Jaeger keeps about 20 of 200 traces" "$("${K[@]}" get --raw "/api/v1/namespaces/observability/services/jaeger-query:16686/proxy/api/traces?service=shop-gateway-istio.shop-ingress&limit=500&start=${t0}000000&end=$(date +%s)000000" 2>/dev/null | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["data"]))' 2>/dev/null || echo 0)" 4 60
   baseline
+  expect "reset.sh puts sampling back to 100%" "$("${K[@]}" -n istio-system get telemetry mesh-default -o jsonpath='{.spec.tracing[0].randomSamplingPercentage}')" '^100$'
 }
 
 module_7() {
   section "7: sidecar mode"
-  "${K[@]}" apply -f "$M/07-sidecar-namespace.yaml" -f "$M/07-sidecar-apps.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/07-sidecar-namespace.yaml" -f "$M/07-sidecar-apps.yaml" -f "$M/07-sidecar-podmonitor.yaml" >/dev/null
   "${K[@]}" -n course-sidecar rollout status deploy/httpbin --timeout=240s >/dev/null
   "${K[@]}" -n course-sidecar rollout status deploy/client --timeout=240s >/dev/null
   "${K[@]}" apply -f "$M/02-outside-client.yaml" >/dev/null
   "${K[@]}" -n course-outside rollout status deploy/client --timeout=180s >/dev/null
   "${K[@]}" -n course-sidecar delete peerauthentication,virtualservice --all --ignore-not-found >/dev/null 2>&1; settle 4
   expect "injected pods run two containers" "$("${K[@]}" -n course-sidecar get pod -l app=httpbin -o jsonpath='{.items[0].spec.containers[*].name}')" 'httpbin istio-proxy'
+  expect "the injector added the istio-init container" "$("${K[@]}" -n course-sidecar get pod -l app=httpbin -o jsonpath='{.items[0].spec.initContainers[*].name}')" '^istio-init$'
+  local httpbin_pod
+  httpbin_pod="$("${K[@]}" -n course-sidecar get pod -l app=httpbin -o jsonpath='{.items[0].metadata.name}')"
+  expect "istioctl describe reports PERMISSIVE by default" "$("${I[@]}" x describe pod -n course-sidecar "$httpbin_pod" 2>/dev/null | grep 'Workload mTLS mode')" 'PERMISSIVE'
+  # The Prometheus operator turns the PodMonitor into a scrape job within seconds.
+  local scrape_jobs=0
+  for _ in 1 2 3 4 5 6; do
+    scrape_jobs="$("${K[@]}" -n observability get secret prometheus-kube-prometheus-stack-prometheus -o jsonpath='{.data.prometheus\.yaml\.gz}' | base64 -d | gunzip 2>/dev/null | grep -c 'podMonitor/course-sidecar/sidecars' || true)"
+    [[ "$scrape_jobs" =~ ^[1-9] ]] && break
+    settle 5
+  done
+  expect "the operator added the sidecar PodMonitor to Prometheus's config" "$scrape_jobs" '^[1-9]'
   expect "httpbin sees the client certificate identity" "$(in_sidecar curl -s -m 5 http://httpbin:8000/headers | grep -c 'spiffe://cluster.local/ns/course-sidecar/sa/client')" '^[1-9]'
   expect "PERMISSIVE: a plaintext client gets in" "$(in_outside curl -s -m 5 -o /dev/null -w '%{http_code}' http://httpbin.course-sidecar:8000/status/200)" '^200$'
   "${K[@]}" apply -f "$M/07-sidecar-strict-mtls.yaml" >/dev/null; settle 5
   expect "STRICT: the plaintext client is refused" "$(in_outside curl -s -m 5 -o /dev/null -w '%{http_code}' http://httpbin.course-sidecar:8000/status/200)" '^000$'
   expect "STRICT: the sidecar client still works" "$(in_sidecar curl -s -m 5 -o /dev/null -w '%{http_code}' http://httpbin:8000/status/200)" '^200$'
+  expect "istioctl describe now reports STRICT" "$("${I[@]}" x describe pod -n course-sidecar "$httpbin_pod" 2>/dev/null | grep 'Workload mTLS mode')" 'STRICT'
   local plain retried
   plain="$(in_sidecar sh -c 'ok=0; for i in $(seq 1 80); do c=$(curl -s -o /dev/null -w "%{http_code}" "http://httpbin:8000/unstable?failure_rate=0.5"); [ "$c" = 200 ] && ok=$((ok+1)); done; echo $ok')"
   "${K[@]}" apply -f "$M/07-sidecar-retries.yaml" >/dev/null; settle 5
@@ -175,6 +239,8 @@ module_7() {
   "${K[@]}" -n course-sidecar delete virtualservice httpbin >/dev/null
   expect "cross-mode: the sidecar client reaches the ambient frontend" "$(in_sidecar curl -s -m 5 -o /dev/null -w '%{http_code}' http://frontend.shop:3000/healthz)" '^200$'
   expect "cross-mode: the sidecar client cannot reach the backend" "$(in_sidecar curl -s -m 5 -o /dev/null -w '%{http_code}' http://backend.shop:8000/api/version)" '^(503|000)$'
+  settle 2
+  expect "cross-mode: the backend's ztunnel rejects the sidecar's identity" "$("${K[@]}" -n istio-system logs ds/ztunnel --since=1m 2>/dev/null | grep 'ns/course-sidecar/sa/client' | grep -c 'allow policies exist, but none allowed')" '^[1-9]'
   expect "istioctl sees the sidecar proxies" "$("${I[@]}" proxy-status 2>/dev/null | grep -c 'course-sidecar')" '^2$'
 }
 
@@ -447,6 +513,100 @@ module_19() {
   expect "after the reset kagent is gone" "$("${K[@]}" get ns kagent 2>&1 | grep -c NotFound)" '^1$'
 }
 
+module_20() {
+  section "20: nodes, drains and cleanup"
+  baseline
+  local node=k3d-agent-0 log="${TMPDIR:-/tmp}/k8s-lab-drain.log"
+  k3d node create agent --cluster "${CLUSTER_NAME:-k8s-lab}" --role agent --wait >/dev/null 2>&1
+  "${K[@]}" wait --for=condition=Ready "node/$node" --timeout=120s >/dev/null 2>&1
+  k3d image import "k8s-lab/backend:1.0.3" "k8s-lab/frontend:1.0.3" "k8s-lab/assistant:1.0.3" -c "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
+  "${K[@]}" -n istio-system rollout status ds/ztunnel --timeout=180s >/dev/null 2>&1
+  expect "a second node joins, and ztunnel starts on it" "$("${K[@]}" -n istio-system get pods -l app=ztunnel --field-selector spec.nodeName=$node -o jsonpath='{.items[0].status.phase}')" '^Running$'
+  "${K[@]}" apply -f "$M/20-ops-app.yaml" -f "$M/03-course-client.yaml" >/dev/null
+  "${K[@]}" -n course-ops rollout status deploy/web --timeout=180s >/dev/null 2>&1
+  "${K[@]}" -n shop rollout status deploy/course-client --timeout=120s >/dev/null 2>&1; settle 5
+  expect "the two web replicas land on different nodes" "$("${K[@]}" -n course-ops get pods -l app=web -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' | sort -u | wc -l | tr -d ' ')" '^2$'
+  expect "traffic crosses nodes through the mesh" "$(in_shop sh -c 'for i in $(seq 1 20); do curl -s -o /dev/null -w "%{http_code}\n" http://web.course-ops:8000/status/200; done' | grep -c 200)" '^20$'
+  "${K[@]}" apply -f "$M/20-pdb.yaml" >/dev/null
+  in_shop sh -c 'end=$(( $(date +%s)+40 )); while [ $(date +%s) -lt $end ]; do curl -s -o /dev/null -m 3 -w "%{http_code}\n" http://web.course-ops:8000/status/200; sleep 0.1; done' > "$log" &
+  local loader=$!
+  settle 5
+  "${K[@]}" drain "$node" --ignore-daemonsets --delete-emptydir-data --timeout=120s >/dev/null 2>&1
+  wait "$loader" 2>/dev/null
+  between "a drain with a PodDisruptionBudget fails no requests ($(wc -l < "$log" | tr -d ' ') sent)" "$(grep -vc '^200$' "$log" || true)" 0 2
+  "${K[@]}" uncordon "$node" >/dev/null
+  "${K[@]}" -n course-ops rollout restart deploy/web >/dev/null
+  "${K[@]}" -n course-ops rollout status deploy/web --timeout=120s >/dev/null 2>&1; settle 5
+  "${K[@]}" apply -f "$M/20-pdb-too-strict.yaml" >/dev/null
+  if [[ -n "$("${K[@]}" -n course-ops get pods -l app=web --field-selector spec.nodeName=$node -o name)" ]]; then
+    expect "a budget that can never be met blocks the drain" "$("${K[@]}" drain "$node" --ignore-daemonsets --delete-emptydir-data --timeout=20s 2>&1 | grep -c "violate the pod's disruption budget")" '^[1-9]'
+  else
+    pass "a budget that can never be met blocks the drain (skipped: no web pod on $node this time)"
+  fi
+  "${K[@]}" apply -f "$M/20-pdb.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/20-job-ttl.yaml" >/dev/null
+  "${K[@]}" -n course-ops wait --for=condition=Complete job/nightly-report --timeout=60s >/dev/null 2>&1; settle 40
+  expect "a finished Job with ttlSecondsAfterFinished deletes itself" "$("${K[@]}" -n course-ops get job nightly-report 2>&1 | grep -c NotFound)" '^1$'
+  local before; before="$(docker exec "$node" crictl images -q 2>/dev/null | wc -l | tr -d ' ')"
+  docker exec "$node" crictl rmi --prune >/dev/null 2>&1
+  between "pruning removes images no container uses ($before before)" "$(docker exec "$node" crictl images -q 2>/dev/null | wc -l | tr -d ' ')" 0 "$(( before - 1 ))"
+  "${K[@]}" drain "$node" --ignore-daemonsets --delete-emptydir-data --timeout=120s >/dev/null 2>&1
+  k3d node delete "$node" >/dev/null 2>&1
+  expect "after k3d deletes the node, Kubernetes still lists it" "$("${K[@]}" get node "$node" --no-headers 2>&1 | grep -c "$node")" '^1$'
+  "${K[@]}" delete node "$node" >/dev/null
+  expect "kubectl delete node removes it" "$("${K[@]}" get nodes --no-headers | wc -l | tr -d ' ')" '^1$'
+  baseline
+  expect "after the reset course-ops is gone" "$("${K[@]}" get ns course-ops 2>&1 | grep -c NotFound)" '^1$'
+  rm -f "$log"
+}
+
+# Module 21 upgrades k3s for real, so it is not in the default run: ./course/verify.sh 21
+module_21() {
+  section "21: k3s certificates, backups and upgrades (the upgrade is one-way)"
+  local N="k3d-${CLUSTER_NAME:-k8s-lab}-server-0" B="${TMPDIR:-/tmp}/k8s-lab-k3s-backup" target=v1.31.14+k3s1
+  local suc=https://github.com/rancher/system-upgrade-controller/releases/download/v0.20.2
+  if [[ "$("${K[@]}" get node "$N" -o jsonpath='{.status.nodeInfo.kubeletVersion}')" == "$target" ]]; then
+    fail "the lab runs the course version of k3s" "already $target; run ./scripts/teardown.sh --yes && ./scripts/provision.sh first"
+    return
+  fi
+  baseline
+  # The table's columns differ between k3s versions, so check the certificate file itself.
+  expect "k3s lists its certificates, including the admin client certificate" "$(docker exec "$N" k3s certificate check --output table 2>/dev/null | grep -c 'client-admin.crt')" '^[1-9]'
+  expect "client certificates live for one year" "$(docker exec "$N" cat /var/lib/rancher/k3s/server/tls/client-admin.crt | openssl x509 -noout -enddate | grep -c "$(( $(date -u +%Y) + 1 ))")" '^1$'
+  local key_before; key_before="$(docker exec "$N" cat /var/lib/rancher/k3s/server/tls/client-admin.crt | openssl x509 -noout -pubkey | openssl sha256)"
+  docker exec "$N" k3s certificate rotate >/dev/null 2>&1
+  docker restart "$N" >/dev/null; "$ROOT/scripts/start.sh" --quiet >/dev/null 2>&1
+  expect "certificate rotate gives the admin certificate a new key" "$(docker exec "$N" cat /var/lib/rancher/k3s/server/tls/client-admin.crt | openssl x509 -noout -pubkey | openssl sha256 | grep -c "$key_before")" '^0$'
+  expect "kubectl still works: the CA stayed the same" "$("${K[@]}" get nodes --no-headers | awk '{print $2}')" '^Ready$'
+  rm -rf "$B"; mkdir -p "$B"
+  "${K[@]}" -n default create configmap before-backup --from-literal=note="made before the backup" >/dev/null
+  k3d cluster stop "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
+  docker cp "$N:/var/lib/rancher/k3s/server/db" "$B/" && docker cp "$N:/var/lib/rancher/k3s/server/token" "$B/token"
+  k3d cluster start "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1; "$ROOT/scripts/start.sh" --quiet >/dev/null 2>&1
+  "${K[@]}" -n default create configmap after-backup --from-literal=note="made after the backup" >/dev/null
+  "${K[@]}" -n default delete configmap before-backup >/dev/null
+  k3d cluster stop "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
+  docker cp "$B/db/." "$N:/var/lib/rancher/k3s/server/db/" && docker cp "$B/token" "$N:/var/lib/rancher/k3s/server/token"
+  k3d cluster start "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1; "$ROOT/scripts/start.sh" --quiet >/dev/null 2>&1
+  expect "the restore brings back the state of the backup" "$("${K[@]}" -n default get cm --no-headers | awk '{print $1}' | grep backup | paste -sd' ' -)" '^before-backup$'
+  "${K[@]}" -n default delete configmap before-backup after-backup --ignore-not-found >/dev/null
+  rm -rf "$B"
+  "${K[@]}" apply -f "$suc/crd.yaml" -f "$suc/system-upgrade-controller.yaml" >/dev/null
+  "${K[@]}" -n system-upgrade rollout status deploy/system-upgrade-controller --timeout=180s >/dev/null 2>&1
+  "${K[@]}" apply -f "$M/21-upgrade-plan.yaml" >/dev/null
+  local v=""
+  for _ in $(seq 1 60); do v="$("${K[@]}" get node "$N" -o jsonpath='{.status.nodeInfo.kubeletVersion}' 2>/dev/null)"; [[ "$v" == "$target" ]] && break; settle 10; done
+  expect "the system-upgrade-controller upgrades k3s to $target" "$v" "^${target//+/\\+}$"
+  for _ in $(seq 1 30); do [[ "$("${K[@]}" -n system-upgrade get plan server-plan -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}')" == True ]] && break; settle 10; done
+  settle 30
+  expect "after the upgrade, containerd looks for CNI plugins in a new place" "$(docker exec "$N" grep -c 'bin_dirs = \["/var/lib/rancher/k3s/data/cni"\]' /var/lib/rancher/k3s/agent/etc/containerd/config.toml)" '^1$'
+  "$ROOT/scripts/provision.sh" >/dev/null 2>&1
+  "$ROOT/course/fix-ip-leases.sh" >/dev/null 2>&1
+  "$ROOT/scripts/start.sh" --quiet >/dev/null 2>&1; settle 10
+  expect "provision.sh moves istio-cni to the new directory" "$(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n istio-system get values istio-cni -o json | grep -o '"cniBinDir":"[^"]*"')" 'k3s/data/cni'
+  expect "after the repair the shop answers 200" "$(code "$BASE/api/orders")" '^200$'
+}
+
 # Module 14 upgrades Istio for real and cannot be undone, so it is not in the default
 # run. Use it on a lab that runs the course version: ./course/verify.sh 14
 module_14() {
@@ -457,7 +617,7 @@ module_14() {
     return
   fi
   baseline
-  "${K[@]}" apply -f "$M/07-sidecar-namespace.yaml" -f "$M/07-sidecar-apps.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/07-sidecar-namespace.yaml" -f "$M/07-sidecar-apps.yaml" -f "$M/07-sidecar-podmonitor.yaml" >/dev/null
   "${K[@]}" -n course-sidecar rollout status deploy/httpbin --timeout=120s >/dev/null 2>&1
   "${K[@]}" -n course-sidecar rollout status deploy/client --timeout=120s >/dev/null 2>&1
   local log="${TMPDIR:-/tmp}/k8s-lab-upgrade-traffic.log"; : > "$log"
@@ -508,7 +668,7 @@ module_14() {
 }
 
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16); fi
+if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16 20); fi
 # Start from the Git baseline, in case an exercise is still applied.
 printf 'Restoring the baseline before the checks\n'
 "$ROOT/course/reset.sh" >/dev/null 2>&1

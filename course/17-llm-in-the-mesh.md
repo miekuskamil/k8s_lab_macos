@@ -2,6 +2,8 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
 
+**Before this module:** modules 3, 5, 6 and 12.
+
 AI features are the fastest-growing kind of traffic on Kubernetes right now, and most of them follow one pattern: a normal service gathers some data, sends it to a language model with a question, and returns the answer. This module adds exactly that to the shop: an **assistant** that answers questions about orders. The model runs in Ollama on your own machine. Then you use the mesh to do what platform teams do with AI traffic in production: give it identity, lock it down, watch it, and size its timeouts.
 
 Time: about 50 minutes. First of three AI modules.

@@ -2,6 +2,8 @@
 
 > Haven't read [Start here: Istio in one picture](start-here.md) yet? Do that first. New to a term, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
 
+**Before this module:** none. Read [Istio in one picture](start-here.md) first.
+
 Check that the lab works, install `istioctl`, and learn where each tool fits. Takes 15 minutes.
 
 ## Check the lab

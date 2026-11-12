@@ -2,6 +2,8 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
 
+**Before this module:** modules 3, 17 and 18.
+
 An AI agent is a language model that doesn't just answer: it acts. You ask "are all pods in shop healthy?", and the agent decides to call a tool that lists pods, reads the result, and replies. Agents that operate Kubernetes are one of the most talked-about topics in the cloud-native world right now. This module installs **kagent**, a CNCF Sandbox project for running agents on Kubernetes, connects it to Ollama on your machine, and then does what a platform team must do before anyone trusts it: find out what the agent is able to do, and fence it in with the mesh and with RBAC.
 
 Time: about 60 minutes. Third of three AI modules. Needs Ollama on your machine with a model that supports tool calling (the Qwen 2.5 family does), as in module 17.

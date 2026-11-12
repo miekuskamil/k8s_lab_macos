@@ -2,6 +2,8 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
 
+**Before this module:** modules 4 and 5.
+
 Module 5 broke the whole backend at once: a delay, a fault, a full connection pool. Real outages often look different. One pod out of three goes bad: a full disk, a broken config after a node problem, a memory leak. The Service keeps sending it its share of traffic, and a third of your users see errors. This module adds a misbehaving pod and fixes the damage two ways, then compares them.
 
 Time: about 40 minutes.

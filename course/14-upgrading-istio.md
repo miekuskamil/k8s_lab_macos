@@ -2,6 +2,8 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
 
+**Before this module:** modules 1, 2 and 7.
+
 Every Istio release gets security fixes for about six months. After that you're on your own, so a team that runs Istio upgrades it two or three times a year. This module walks through a real upgrade of the lab from Istio 1.24.2 to 1.25.5, the way Istio recommends for ambient mode, while a stream of requests checks that the shop keeps answering.
 
 **This module is one-way.** Istio has no clean downgrade, so after it your lab runs 1.25.5. The rest of the course still works on it. To return to the course version, rebuild: `./scripts/teardown.sh --yes && ./scripts/provision.sh`. `provision.sh` notices an upgraded mesh and leaves it alone rather than mixing two versions.

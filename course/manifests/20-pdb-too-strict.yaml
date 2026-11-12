@@ -1,0 +1,12 @@
+# A budget that can never be met during a drain: both replicas must stay up, so
+# Kubernetes refuses every eviction. A classic reason why node maintenance hangs.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web
+  namespace: course-ops
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: web
