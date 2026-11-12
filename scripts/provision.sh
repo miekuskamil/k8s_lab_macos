@@ -92,6 +92,7 @@ ensure_cluster() {
       --image "$K3S_IMAGE" \
       --servers 1 --agents 0 \
       --port "8080:8080@loadbalancer" \
+      --port "8443:8443@loadbalancer" \
       --k3s-arg "--disable=traefik@server:0" \
       --wait --timeout 180s >/dev/null
     ok "k3d cluster $CLUSTER_NAME created, host port 8080 maps to the cluster load balancer"
@@ -297,6 +298,8 @@ health_checks() {
   check "alloy ready" kubectl -n observability rollout status deploy/alloy --timeout=120s
   check "kiali ready" kubectl -n istio-system rollout status deploy/kiali --timeout=120s
   check "headlamp ready" kubectl -n headlamp rollout status deploy/headlamp --timeout=120s
+  check "cert-manager ready" kubectl -n cert-manager rollout status deploy/cert-manager-webhook --timeout=120s
+  check "lab CA issuer ready" kubectl wait --for=condition=Ready clusterissuer/lab-ca --timeout=120s
   local tries=0
   until curl -fsS --max-time 5 http://localhost:8080/healthz >/dev/null 2>&1 || (( tries >= 24 )); do
     tries=$((tries + 1))
