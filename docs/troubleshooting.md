@@ -234,6 +234,29 @@ A JSON trace means the data source works. In the browser, Explore with the Jaege
 
 **Fix.** `apps/backend/main.py` instruments the app at the very end of the file, which makes tracing the outer middleware. Image `1.0.2` and later write `trace_id` and `span_id` into every request log.
 
+## 15. One mesh pod never becomes Ready after a restart
+
+**Symptom.** After the cluster restarted, one pod in `shop` (here the frontend) loops in `CrashLoopBackOff`. Its own logs look healthy: it starts, says it is listening, then gets `SIGTERM` 30 seconds later. The shop returns 503.
+
+**Found with.**
+
+```bash
+kubectl -n shop describe pod -l app=frontend | tail -5
+kubectl -n istio-system logs ds/ztunnel --tail=300 | grep frontend | grep error | tail -3
+```
+
+The pod events say `Startup probe failed: ... EOF`. ztunnel logs inbound connections from `src.addr=10.42.0.1` (the node, where the kubelet runs) to the frontend that fail with an error.
+
+**Cause.** In ambient mode, `istio-cni` sets up traffic redirection inside each pod's network namespace and makes sure the kubelet's health probes bypass it. When the node container restarts, containerd recreates every pod's sandbox. A sandbox that comes back before the `istio-cni` agent is running again can end up with incomplete rules: ztunnel then captures the kubelet's plain probe as if it were mesh traffic, and the probe fails. The race hit one pod out of about twenty, once in three restarts.
+
+**Fix.** Delete the pod. Its replacement is set up while `istio-cni` is running and becomes Ready at once:
+
+```bash
+kubectl -n shop delete pod -l app=frontend
+```
+
+`./scripts/start.sh` now does this by itself: if mesh pods are still not Ready after three minutes, it waits for `istio-cni` and ztunnel, recreates those pods once, and waits again.
+
 ## A note on watching long installs
 
 Two habits would have shortened this build:

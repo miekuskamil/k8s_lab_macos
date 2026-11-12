@@ -293,12 +293,14 @@ kubectl get pods -A | grep -vE "Running|Completed"          # no output
 
 ## Day 2: after a reboot
 
-When Docker restarts the k3d containers by itself, after a reboot or when OrbStack restarts, two things break:
+When Docker restarts the k3d containers by itself, after a reboot or when OrbStack restarts, up to three things break:
 
 - k3d did not get to re-add the `NodeHosts` key to the CoreDNS ConfigMap, so CoreDNS cannot start, cluster DNS stops, ztunnel cannot find istiod, and the mesh goes down. [Problem 11](troubleshooting.md#11-everything-breaks-after-a-reboot-or-docker-restart).
 - OrbStack switches the current kubectl context to its own cluster. [Problem 12](troubleshooting.md#12-kubectl-talks-to-the-wrong-cluster).
 
-`./scripts/start.sh` repairs both:
+- A pod whose sandbox came back before the Istio CNI agent can miss its probe exemption and never become Ready. [Problem 15](troubleshooting.md#15-one-mesh-pod-never-becomes-ready-after-a-restart).
+
+`./scripts/start.sh` repairs all three:
 
 ```bash
 ./scripts/start.sh

@@ -42,15 +42,43 @@ say "kubectl context is k3d-${CLUSTER_NAME}"
 "${K[@]}" wait --for=condition=Ready node --all --timeout=120s >/dev/null
 "${K[@]}" -n kube-system rollout status deploy/coredns --timeout=120s >/dev/null
 
-say "Waiting for every pod to become Ready (up to 5 minutes)"
-for _ in $(seq 1 60); do
-  not_ready="$("${K[@]}" get pods -A --no-headers 2>/dev/null | awk '{split($3,a,"/"); if ($4!="Completed" && (a[1]!=a[2] || $4!="Running")) n++} END {print n+0}')"
-  [[ "$not_ready" == "0" ]] && break
-  sleep 5
-done
-if [[ "$not_ready" != "0" ]]; then
+not_ready_pods() {
+  "${K[@]}" get pods -A --no-headers 2>/dev/null \
+    | awk '{split($3,a,"/"); if ($4!="Completed" && (a[1]!=a[2] || $4!="Running")) print $1"/"$2}'
+}
+
+wait_for_pods() {
+  local tries="$1"
+  for _ in $(seq 1 "$tries"); do
+    [[ -z "$(not_ready_pods)" ]] && return 0
+    sleep 5
+  done
+  return 1
+}
+
+say "Waiting for every pod to become Ready (up to 3 minutes)"
+if ! wait_for_pods 36; then
+  # After a node restart, pods whose sandboxes came back before istio-cni was running
+  # can end up with incomplete traffic redirection: ztunnel then captures the kubelet's
+  # health probes and the pod never becomes Ready. A new pod gets set up correctly,
+  # so recreate the stuck mesh pods once, after the CNI agent and ztunnel are Ready.
+  "${K[@]}" -n istio-system rollout status ds/istio-cni-node --timeout=120s >/dev/null
+  "${K[@]}" -n istio-system rollout status ds/ztunnel --timeout=120s >/dev/null
+  mesh_namespaces="$("${K[@]}" get ns -l istio.io/dataplane-mode=ambient -o jsonpath='{.items[*].metadata.name}')"
+  for pod in $(not_ready_pods); do
+    ns="${pod%%/*}"
+    if [[ " $mesh_namespaces " == *" $ns "* ]]; then
+      say "Recreating ${pod}, which did not become Ready after the restart"
+      "${K[@]}" -n "$ns" delete pod "${pod#*/}" --wait=false >/dev/null
+    fi
+  done
+  say "Waiting again (up to 3 minutes)"
+  wait_for_pods 36 || true
+fi
+
+if [[ -n "$(not_ready_pods)" ]]; then
   echo "Still not ready:" >&2
-  "${K[@]}" get pods -A --no-headers | awk '{split($3,a,"/"); if ($4!="Completed" && (a[1]!=a[2] || $4!="Running")) print "  "$1"/"$2" "$3" "$4}' >&2
+  not_ready_pods | sed 's/^/  /' >&2
   exit 1
 fi
 say "All pods are Ready. The shop is at http://localhost:8080. Run ./scripts/port-forward.sh for the other UIs."
