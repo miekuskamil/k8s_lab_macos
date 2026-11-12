@@ -8,6 +8,7 @@ import asyncio
 import json
 import logging
 import os
+import random
 import socket
 import sys
 import time
@@ -36,6 +37,8 @@ REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
 OTEL_ENABLED = os.getenv("OTEL_ENABLED", "true").lower() == "true"
 RATE_LIMIT_RPS = float(os.getenv("RATE_LIMIT_RPS", "0"))
 EXTRA_LATENCY_MS = int(os.getenv("EXTRA_LATENCY_MS", "0"))
+# Share of /api/ requests that fail with 503, for course module 15 (0 = never, 1 = always).
+ERROR_RATE = float(os.getenv("ERROR_RATE", "0"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 UNTRACED_PATHS = ("/healthz", "/readyz", "/metrics")
 
@@ -176,6 +179,8 @@ async def observe(request: Request, call_next):
     if path.startswith("/api/") and not limiter.allow():
         RATE_LIMITED.labels(APP_VERSION).inc()
         response: Response = JSONResponse({"error": "rate limit exceeded"}, status_code=429)
+    elif ERROR_RATE and path.startswith("/api/") and random.random() < ERROR_RATE:
+        response = JSONResponse({"error": "failure injected by ERROR_RATE", "pod": POD_NAME}, status_code=503)
     else:
         if EXTRA_LATENCY_MS and path.startswith("/api/"):
             await asyncio.sleep(EXTRA_LATENCY_MS / 1000)

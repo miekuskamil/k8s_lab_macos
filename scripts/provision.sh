@@ -22,7 +22,7 @@ CLUSTER_NAME="${CLUSTER_NAME:-k8s-lab}"
 # Istio 1.24 supports Kubernetes 1.28 to 1.31, and ArgoCD 7.7 does not know newer API schemas.
 K3S_IMAGE="${K3S_IMAGE:-rancher/k3s:v1.31.5-k3s1}"
 KUBE_CONTEXT="k3d-${CLUSTER_NAME}"
-IMAGE_TAG="1.0.2"
+IMAGE_TAG="1.0.3"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
