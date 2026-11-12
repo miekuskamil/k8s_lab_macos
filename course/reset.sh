@@ -26,4 +26,7 @@ if [[ "${1:-}" == "--all" ]]; then
   "${K[@]}" delete namespace course-sidecar course-outside --ignore-not-found >/dev/null
   "${K[@]}" -n shop delete deployment/course-client serviceaccount/course-client --ignore-not-found >/dev/null
 fi
+# ArgoCD compares on its own every few minutes. Ask it now, so istio-config
+# shows Synced right away instead of the OutOfSync left over from the exercise.
+"${K[@]}" -n argocd annotate application istio-config argocd.argoproj.io/refresh=hard --overwrite >/dev/null 2>&1 || true
 echo "Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules."
