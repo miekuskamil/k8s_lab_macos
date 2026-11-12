@@ -1,0 +1,36 @@
+# Kiali, the Istio console: mesh graph, mTLS status, config validation.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kiali
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: k8s-lab
+  sources:
+    - repoURL: https://kiali.org/helm-charts
+      chart: kiali-server
+      targetRevision: 2.4.0
+      helm:
+        releaseName: kiali
+        valueFiles:
+          - $values/helm/kiali-values.yaml
+    - repoURL: https://github.com/miekuskamil/k8s_lab_macos
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: istio-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 3m

@@ -8,6 +8,8 @@ spec:
   sourceRepos:
     - https://github.com/miekuskamil/k8s_lab_macos
     - https://prometheus-community.github.io/helm-charts
+    - https://grafana.github.io/helm-charts
+    - https://kiali.org/helm-charts
   destinations:
     - server: https://kubernetes.default.svc
       namespace: "*"

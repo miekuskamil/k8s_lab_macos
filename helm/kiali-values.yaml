@@ -1,0 +1,39 @@
+# Kiali, the Istio console. Version 2.4 matches Istio 1.24.
+# Anonymous login: anyone who can reach localhost:20001 is an administrator. Lab only.
+auth:
+  strategy: anonymous
+
+istio_namespace: istio-system
+
+deployment:
+  cluster_wide_access: true
+  image_pull_policy: IfNotPresent
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+
+external_services:
+  prometheus:
+    url: http://kube-prometheus-stack-prometheus.observability.svc.cluster.local:9090
+  grafana:
+    enabled: true
+    internal_url: http://kube-prometheus-stack-grafana.observability.svc.cluster.local
+    external_url: http://localhost:3000
+    auth:
+      type: basic
+      username: admin
+      password: k8s-lab-admin
+  tracing:
+    enabled: true
+    provider: jaeger
+    use_grpc: false
+    internal_url: http://jaeger-query.observability.svc.cluster.local:16686
+    external_url: http://localhost:16686
+
+server:
+  port: 20001
+  web_root: /

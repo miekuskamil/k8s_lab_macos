@@ -90,9 +90,32 @@ grafana:
     datasources:
       defaultDatasourceEnabled: true
   additionalDataSources:
+    # Jaeger: "Logs for this span" opens the matching Loki lines, found by trace id.
     - name: Jaeger
       type: jaeger
       uid: jaeger
       access: proxy
       url: http://jaeger-query.observability.svc.cluster.local:16686
       editable: false
+      jsonData:
+        tracesToLogsV2:
+          datasourceUid: loki
+          spanStartTimeShift: "-5m"
+          spanEndTimeShift: "5m"
+          customQuery: true
+          query: '{namespace="shop"} |= "${__trace.traceId}"'
+    # Loki: a trace_id inside a log line becomes a link that opens the trace in Jaeger.
+    - name: Loki
+      type: loki
+      uid: loki
+      access: proxy
+      url: http://loki.observability.svc.cluster.local:3100
+      editable: false
+      jsonData:
+        maxLines: 1000
+        derivedFields:
+          - name: trace_id
+            matcherRegex: '"trace_id":"(\w+)"'
+            datasourceUid: jaeger
+            url: "${__value.raw}"
+            urlDisplayLabel: Open trace in Jaeger

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Provision the k8s_lab_macos reference architecture on macOS.
-# OrbStack supplies the Docker engine and a k3d cluster runs on it. OrbStack's built-in
+# Provision the k8s_lab_macos reference architecture on macOS or Linux.
+# A k3d cluster runs on the local Docker engine (OrbStack on macOS, Docker Engine on Linux). OrbStack's built-in
 # Kubernetes cluster has no CNI config directory for Istio CNI to chain onto, so ambient
 # mode cannot start there. k3d uses k3s with flannel, which Istio ambient supports.
 # Safe to run repeatedly. Every step checks current state or uses an upsert command.
@@ -40,7 +40,7 @@ die()  { printf '%sfail%s  %s\n' "$RED" "$RESET" "$*" >&2; exit 1; }
 check_prerequisites() {
   step "Checking prerequisites"
   local missing=0
-  for cmd in kubectl helm orb k3d git docker curl; do
+  for cmd in kubectl helm k3d git docker curl; do
     if command -v "$cmd" >/dev/null 2>&1; then
       ok "$cmd found at $(command -v "$cmd")"
     else
@@ -49,22 +49,44 @@ check_prerequisites() {
     fi
   done
   if [[ "$missing" -eq 1 ]]; then
-    die "Install the missing tools first. Example: brew install kubectl helm k3d git and install OrbStack from https://orbstack.dev"
+    die "Install the missing tools first. See README.md, section \"What you need\"."
+  fi
+
+  # The traffic scripts read response headers with curl -w '%header{...}', added in curl 7.84.
+  local curl_version
+  curl_version="$(curl --version | awk 'NR==1 {print $2}')"
+  if ! printf '%s\n%s\n' "7.84.0" "$curl_version" | sort -V -C; then
+    die "curl $curl_version is too old. The lab scripts need curl 7.84 or newer (Ubuntu 22.04 ships 7.81)."
+  fi
+  ok "curl $curl_version is new enough"
+
+  if [[ "$(uname -s)" == "Linux" ]]; then
+    # k3s, Istio and the monitoring stack each open inotify watchers. The kernel default
+    # of 128 instances per user runs out and pods fail with "too many open files".
+    local instances
+    instances="$(cat /proc/sys/fs/inotify/max_user_instances 2>/dev/null || echo 0)"
+    if (( instances < 512 )); then
+      die "fs.inotify.max_user_instances is ${instances}. Raise it first: sudo sysctl -w fs.inotify.max_user_instances=512 fs.inotify.max_user_watches=524288"
+    fi
+    ok "inotify limits are high enough (${instances} instances)"
   fi
 }
 
-ensure_cluster() {
-  step "Checking OrbStack and the k3d cluster ${CLUSTER_NAME}"
-  if ! orb status >/dev/null 2>&1; then
+ensure_docker() {
+  step "Checking the container engine"
+  if command -v orb >/dev/null 2>&1 && ! orb status >/dev/null 2>&1; then
     warn "OrbStack is not running, starting it"
     orb start
   fi
-  docker info >/dev/null 2>&1 || die "The Docker engine does not answer. Start OrbStack and retry."
-  ok "OrbStack and Docker are running"
+  docker info >/dev/null 2>&1 || die "The Docker engine does not answer. Start OrbStack or Docker. On Linux, check that your user is in the docker group."
+  ok "Docker answers: $(docker info --format '{{.OperatingSystem}}, {{.NCPU}} CPUs, {{.MemTotal}}' | awk -F', ' '{printf "%s, %s, %.1f GiB", $1, $2, $3/1073741824}')"
+}
 
+ensure_cluster() {
+  step "Checking the k3d cluster ${CLUSTER_NAME}"
   if k3d cluster list --no-headers 2>/dev/null | awk '{print $1}' | grep -qx "$CLUSTER_NAME"; then
     ok "k3d cluster $CLUSTER_NAME already exists"
-    k3d cluster start "$CLUSTER_NAME" >/dev/null 2>&1 || true
+    "$ROOT_DIR/scripts/start.sh" --quiet
   else
     k3d cluster create "$CLUSTER_NAME" \
       --image "$K3S_IMAGE" \
@@ -312,6 +334,7 @@ SUMMARY
 
 main() {
   check_prerequisites
+  ensure_docker
   ensure_cluster
   check_repository
   build_images

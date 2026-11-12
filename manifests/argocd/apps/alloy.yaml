@@ -1,0 +1,36 @@
+# Alloy reads pod logs through the Kubernetes API and pushes them to Loki.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alloy
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: k8s-lab
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: alloy
+      targetRevision: 1.14.4
+      helm:
+        releaseName: alloy
+        valueFiles:
+          - $values/helm/alloy-values.yaml
+    - repoURL: https://github.com/miekuskamil/k8s_lab_macos
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 3m
