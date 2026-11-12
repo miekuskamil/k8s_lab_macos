@@ -46,6 +46,31 @@ kubectl config use-context k3d-k8s-lab
 | Which resources in an app differ from Git? | `kubectl -n argocd get application <app> -o jsonpath='{range .status.resources[?(@.status=="OutOfSync")]}{.kind}/{.name}{"\n"}{end}'` |
 | Make ArgoCD re-read Git now | `kubectl -n argocd annotate application <app> argocd.argoproj.io/refresh=hard --overwrite` |
 | Sync an app now | `kubectl -n argocd patch application <app> --type merge -p '{"operation":{"sync":{}}}'` |
+| Is a sync stuck retrying? | `kubectl -n argocd get application <app> -o jsonpath='{.status.operationState.phase} {.status.operationState.retryCount} {.status.operationState.message}{"\n"}'` |
+| Stop a retrying sync, so a fix goes through (module 22) | `kubectl -n argocd patch application <app> --type merge -p '{"status":{"operationState":{"phase":"Terminating"}}}'` |
+| What did ArgoCD deploy, and when? | `kubectl -n argocd get application <app> -o jsonpath='{range .status.history[*]}{.id} {.deployedAt} {.revision}{"\n"}{end}'` |
+| Turn self-heal off for a manual fix | `kubectl -n argocd patch application <app> --type merge -p '{"spec":{"syncPolicy":{"automated":{"selfHeal":false}}}}'` |
+| Which Applications came from an ApplicationSet? | `kubectl -n argocd get applications -o 'custom-columns=APP:.metadata.name,OWNER:.metadata.ownerReferences[0].name'` |
+| Which projects exist, and what may they do? | `kubectl -n argocd get appprojects`, then `kubectl -n argocd get appproject <name> -o yaml` |
+
+## Layer 2b: alerting (modules 23 and 24)
+
+With `./scripts/port-forward.sh` running, Prometheus is on 9090, Alertmanager on 9093 and Grafana on 3000.
+
+| Question | Command |
+|---|---|
+| Does Prometheus reach Alertmanager? | `curl -s localhost:9090/api/v1/alertmanagers` (look for one entry in `activeAlertmanagers`) |
+| Which alerts are pending or firing? | `curl -s localhost:9090/api/v1/alerts`, or http://localhost:9090/alerts |
+| Did Prometheus load my rules? | `kubectl get prometheusrules -A`, then http://localhost:9090/rules (allow about a minute) |
+| What reached Alertmanager, and which receiver gets it? | `curl -s localhost:9093/api/v2/alerts` |
+| Show the routing tree, with team routes merged in | `kubectl -n observability exec alertmanager-kube-prometheus-stack-alertmanager-0 -c alertmanager -- amtool --alertmanager.url=http://localhost:9093 config routes` |
+| Silence an alert for a planned change | same `exec ... amtool --alertmanager.url=http://localhost:9093` prefix, then `silence add alertname=<name> --duration=1h --comment="why" --author=you` |
+| List or end silences | same prefix, then `silence query`, or `silence expire <id>` |
+| Which dashboards does Grafana load from ConfigMaps? | `kubectl get cm -A -l grafana_dashboard=1` |
+| Which dashboards exist in Grafana? | `curl -s -u admin:k8s-lab-admin 'localhost:3000/api/search?type=dash-db'` |
+| Where do Grafana-managed alerts go? | `curl -s -u admin:k8s-lab-admin localhost:3000/api/v1/provisioning/contact-points` |
+
+At the baseline, Prometheus has no alert rules: the lab turns the chart's default rules off. Module 23 adds the first ones.
 
 ## Layer 3: the Istio control plane
 
