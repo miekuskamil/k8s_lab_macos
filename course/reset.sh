@@ -26,7 +26,14 @@ if [[ "${1:-}" == "--all" ]]; then
   "${K[@]}" delete namespace course-sidecar course-outside --ignore-not-found >/dev/null
   "${K[@]}" -n shop delete deployment/course-client serviceaccount/course-client --ignore-not-found >/dev/null
 fi
-# ArgoCD compares on its own every few minutes. Ask it now, so istio-config
-# shows Synced right away instead of the OutOfSync left over from the exercise.
-"${K[@]}" -n argocd annotate application istio-config argocd.argoproj.io/refresh=hard --overwrite >/dev/null 2>&1 || true
+# kubectl apply removes the argocd.argoproj.io/instance label that ArgoCD uses to
+# track what it owns, because ArgoCD's own last apply included that label and the
+# files on disk do not. A sync puts the labels back, so istio-config ends Synced.
+echo "Asking ArgoCD to sync istio-config from Git"
+"${K[@]}" -n argocd patch application istio-config --type merge \
+  -p '{"operation":{"initiatedBy":{"username":"course-reset"},"sync":{}}}' >/dev/null 2>&1 || true
+for _ in $(seq 1 24); do
+  [[ "$("${K[@]}" -n argocd get application istio-config -o jsonpath='{.status.sync.status}' 2>/dev/null)" == "Synced" ]] && break
+  sleep 5
+done
 echo "Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules."

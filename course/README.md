@@ -53,7 +53,7 @@ The lab must be running (`./scripts/provision.sh`, or `./scripts/start.sh` after
 
 ## A note on ArgoCD
 
-The course changes Istio resources by hand, with `kubectl apply`. ArgoCD manages the same resources from Git. The `istio-config` Application does not self-heal, so your changes stay until you run `./course/reset.sh`. ArgoCD shows that Application as `OutOfSync` while an exercise is active. That is expected.
+The course changes Istio resources by hand, with `kubectl apply`. ArgoCD manages the same resources from Git. The `istio-config` Application does not self-heal, so your changes stay until you run `./course/reset.sh`. ArgoCD shows that Application as `OutOfSync` while an exercise is active. That is expected. `./course/reset.sh` restores the Git baseline and asks ArgoCD to sync, so it ends `Synced` again.
 
 ## Check that the course works
 
