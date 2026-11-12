@@ -21,7 +21,7 @@ OrbStack only provides Docker. k3d starts the cluster as containers, so deleting
 | `shop-ingress` | The `shop-gateway` Envoy | Entry point from your Mac, outside the mesh |
 | `shop` | frontend, backend-v1 (2 pods), backend-v2 (1 pod), redis, the waypoint | The application, enrolled in ambient mode |
 | `istio-system` | istiod, ztunnel, istio-cni, Kiali | The mesh itself, and its console |
-| `observability` | Prometheus, Grafana, Jaeger, Loki, Alloy | Metrics, dashboards, traces and logs |
+| `observability` | Prometheus, Alertmanager, Grafana, Jaeger, Loki, Alloy | Metrics, alerts, dashboards, traces and logs |
 | `headlamp` | Headlamp | A web UI for every namespace |
 | `cert-manager` | cert-manager controller, webhook, CA injector | Certificates for the edge |
 | `argocd` | ArgoCD | Applies the manifests in this repo |
@@ -60,6 +60,7 @@ flowchart LR
 
         subgraph obs["ns observability, ambient"]
           prom["Prometheus<br/>:9090"]
+          am["Alertmanager<br/>:9093"]
           graf["Grafana<br/>:3000"]
           jaeger["Jaeger<br/>UI :16686<br/>OTLP :4317, :4318"]
         end
@@ -92,6 +93,7 @@ flowchart LR
   b1 -.->|"OTLP HTTP :4318"| jaeger
   prom -.->|"scrape"| wp
   prom -.->|"scrape"| b1
+  prom -.->|"alerts"| am
   graf -.->|"PromQL"| prom
   graf -.->|"trace lookup"| jaeger
   argo -->|"git poll, sync"| github
@@ -181,7 +183,7 @@ Eleven ArgoCD Applications deploy everything else (twelve with `root`):
 | `shop-base` | Namespaces, RBAC, quotas | Yes |
 | `shop-apps` | frontend, backend, redis | Yes |
 | `istio-config` | Gateway, waypoint, routes, policies | No, on purpose |
-| `kube-prometheus-stack` | The Prometheus and Grafana Helm chart | Yes |
+| `kube-prometheus-stack` | The Prometheus, Alertmanager and Grafana Helm chart | Yes |
 | `observability-config` | Jaeger, monitors, the dashboard | Yes |
 | `loki` | Loki, the log store (Helm chart) | Yes |
 | `alloy` | Alloy, which ships pod logs to Loki (Helm chart) | Yes |
@@ -205,6 +207,7 @@ This section describes the lab as it runs after `./scripts/provision.sh`, measur
 | Gateway API CRDs | v1.2.1 |
 | ArgoCD | v2.13.2 (chart 7.7.11) |
 | Prometheus | v2.55.1 (kube-prometheus-stack 66.2.1) |
+| Alertmanager | v0.27.0 (kube-prometheus-stack 66.2.1) |
 | Grafana | 11.3.0 |
 | Jaeger all-in-one | 1.62.0 |
 | Loki | 3.6 (chart 6.55.0), single binary |
@@ -226,7 +229,7 @@ Measured on 12 November 2026 with the course workloads deployed: 31 pods on one 
 | `shop` | frontend, backend-v1 x2, backend-v2, redis, waypoint, course-client | 220 MiB |
 | `shop-ingress` | shop-gateway | 32 MiB |
 | `istio-system` | istiod, ztunnel, istio-cni, Kiali | 111 MiB |
-| `observability` | Prometheus, Grafana, Jaeger, Loki, Alloy, operator, kube-state-metrics | 864 MiB |
+| `observability` | Prometheus, Alertmanager, Grafana, Jaeger, Loki, Alloy, operator, kube-state-metrics | 1,362 MiB after a full course run on 12 November 2026; Prometheus alone 613 MiB, Alertmanager 32 MiB |
 | `argocd` | controller, server, repo server, applicationset, redis | 499 MiB |
 | `kube-system` | coredns, metrics-server, local-path, load balancer | 68 MiB |
 | `course-sidecar` | httpbin and client, each with a sidecar (course module 7) | 67 MiB |
@@ -247,7 +250,7 @@ The node used 3.3 GiB in total, including k3s itself. Loki took 84 MiB, Alloy 57
 | Scenario B injects faults | 15 of 200 returned 503, average latency 526 ms, `/api/version` unaffected at 23 ms | see `manifests/scenarios/b-fault-injection.yaml` |
 | Scenario C breaks the circuit | 175 of 200 returned 503 with the policy, 0 of 200 without | see `manifests/scenarios/c-circuit-breaker.yaml` |
 | The rate limiter works and survives ArgoCD | 304 of 400 returned 429, and `shop-apps` stayed Synced | `kubectl -n shop set env deploy/backend-v1 deploy/backend-v2 RATE_LIMIT_RPS=20` |
-| Prometheus scrapes everything | 18 of 18 targets up, including ztunnel, the waypoint and the gateway | http://localhost:9090/targets |
+| Prometheus scrapes everything | 22 of 22 targets up on 12 November 2026, including ztunnel, the waypoint, the gateway and Alertmanager | http://localhost:9090/targets |
 | The Grafana dashboard has data | All nine panel queries return series when run through Grafana | open the dashboard "Shop mesh and traffic experiments" |
 | Logs reach Loki and link to traces | Loki held logs from all 7 namespaces. Searching Loki for a Jaeger trace id returned the backend's log line for that request. | Grafana, Explore, Loki: `{namespace="shop"} \|= "<trace id>"` |
 | Kiali sees the mesh | Kiali 2.4 found Prometheus, Grafana and Jaeger, drew every edge with 100% mTLS, and reported 0 errors in `shop`'s 7 Istio objects | http://localhost:20001 |

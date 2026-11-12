@@ -128,6 +128,7 @@ The `id` counts up from earlier orders, because Redis keeps them across resets.
 
    **What you should see.** Exactly one line, the backend's "request handled" log line for that request, with `"method":"POST"`, `"path":"/api/orders"` and the same `trace_id`.
 5. To go back, copy the `trace_id` value from the log line, and paste it into the search box at the top of the Jaeger page (it looks up a trace by id). You land on the same trace.
+6. Grafana also does both jumps with one click. In Explore, pick the **Jaeger** data source, find the same trace, click a `backend` span and choose **Logs for this span**: Grafana runs the Loki query from step 4 for you. In a Loki result, the `trace_id` field carries an **Open trace in Jaeger** link back. Module 24 explains how these links are set up, and why they once came out empty.
 
 ### 2. Read the mesh's metrics
 
