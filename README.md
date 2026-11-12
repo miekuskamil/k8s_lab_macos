@@ -51,7 +51,16 @@ Run `./scripts/port-forward.sh` in a spare terminal and leave it running. The sh
 
 Redis has no local port. Its password is `k8s-lab-redis`.
 
-These logins are fixed defaults stored in Git (`manifests/base/03-lab-credentials.yaml`, and a bcrypt hash in `helm/argocd-values.yaml`), so every copy of the lab behaves the same. That is acceptable only because nothing listens outside your machine. Kiali uses anonymous login for the same reason.
+Every secret the lab uses is a fixed default stored in Git, so every copy of the lab behaves the same. That is acceptable only because nothing listens outside your machine. Kiali uses anonymous login for the same reason.
+
+| Secret | Value | Defined in | To change it |
+|---|---|---|---|
+| Grafana `admin` password | `k8s-lab-admin` | `manifests/base/03-lab-credentials.yaml` (Secret `observability/grafana-admin`) | Edit it there and in `helm/kiali-values.yaml` (`external_services.grafana.auth.password`), which Kiali uses to reach Grafana |
+| ArgoCD `admin` password | `k8s-lab-admin` | `helm/argocd-values.yaml`, as a bcrypt hash | Generate a hash with the command in that file's comment, and update `argocdServerAdminPasswordMtime` |
+| Redis password | `k8s-lab-redis` | `manifests/base/03-lab-credentials.yaml` (Secret `shop/redis-auth`) | Edit it there, then restart Redis and the backends |
+| Kiali token signing key | `k8s-lab-kiali-signing-key-32chrs` | `helm/kiali-values.yaml` (`login_token.signing_key`) | Any 16, 24 or 32 characters. It must be fixed, or Kiali restarts on every ArgoCD poll ([problem 16](docs/troubleshooting.md#16-kiali-restarts-every-few-minutes)) |
+
+ArgoCD applies all of these from Git, so push a change before you expect it in the cluster. `provision.sh` also applies the two Secrets before ArgoCD starts, so pods that need them start on the first try.
 
 ## Try it
 
