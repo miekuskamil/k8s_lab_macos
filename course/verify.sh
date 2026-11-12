@@ -236,8 +236,33 @@ module_11() {
   rm -f "$ca"
 }
 
+module_12() {
+  section "12: egress"
+  baseline
+  "${K[@]}" apply -f "$M/03-course-client.yaml" >/dev/null
+  # A fresh pod picks up DNS capture, which older labs turned on after the pod started.
+  "${K[@]}" -n shop rollout restart deploy/course-client >/dev/null
+  "${K[@]}" -n shop rollout status deploy/course-client --timeout=120s >/dev/null
+  ext() { in_shop curl -s -o /dev/null -m 10 -w '%{http_code}' "$@"; }
+  expect "by default a mesh pod reaches any website" "$(ext https://example.com)" '^200$'
+  "${K[@]}" apply -f "$M/12-serviceentry.yaml" >/dev/null; settle 8
+  expect "DNS answers httpbin.org with the ServiceEntry's virtual IP" "$(in_shop nslookup httpbin.org | grep -A1 'Name:' | grep -o '240\.240\.[0-9.]*' | head -1)" '^240\.240\.'
+  expect "the waypoint adds TLS (httpbin sees https)" "$(in_shop curl -s -m 15 http://httpbin.org/get | grep '"url"')" 'https://httpbin.org/get'
+  settle 2
+  expect "ztunnel sends the call to the waypoint" "$("${K[@]}" -n istio-system logs ds/ztunnel --since=30s | grep course-client | grep 'dst.service="httpbin.org"' | grep -c 'dst.workload="waypoint')" '^[1-9]'
+  "${K[@]}" apply -f "$M/12-egress-lockdown.yaml" >/dev/null; settle 5
+  expect "with the NetworkPolicy, other websites are blocked" "$(ext https://example.com)" '^000$'
+  expect "httpbin.org still works through the waypoint" "$(ext http://httpbin.org/get)" '^200$'
+  "${K[@]}" apply -f "$M/12-egress-policy.yaml" >/dev/null; settle 6
+  expect "the L7 rule allows GET /get" "$(ext http://httpbin.org/get)" '^200$'
+  expect "the L7 rule blocks GET /ip" "$(ext http://httpbin.org/ip)" '^403$'
+  expect "the L7 rule blocks POST /post" "$(ext -X POST http://httpbin.org/post)" '^403$'
+  baseline
+  expect "after the reset the course client reaches any website again" "$(ext https://example.com)" '^200$'
+}
+
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11); fi
+if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12); fi
 # Start from the Git baseline, in case an exercise is still applied.
 printf 'Restoring the baseline before the checks\n'
 "$ROOT/course/reset.sh" >/dev/null 2>&1

@@ -92,7 +92,7 @@ k8s_lab_macos/
 │   └── scenarios/    canary, fault and circuit-breaker experiments, applied by hand
 ├── helm/             value files for every Helm chart the lab installs
 ├── scripts/          provision, start, port-forward, traffic-test, teardown
-├── course/           the Istio course: modules 0 to 11, their manifests and scripts
+├── course/           the Istio course: modules 0 to 12, their manifests and scripts
 └── docs/             build guide, architecture, lab guide, troubleshooting, diagrams
 ```
 

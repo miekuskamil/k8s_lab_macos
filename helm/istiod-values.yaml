@@ -2,6 +2,10 @@ profile: ambient
 
 pilot:
   autoscaleEnabled: false
+  env:
+    # Give every ServiceEntry a virtual IP from 240.240.0.0/16. ztunnel matches traffic
+    # by IP, so an external host needs one to reach its waypoint (course module 12).
+    PILOT_ENABLE_IP_AUTOALLOCATE: "true"
   replicaCount: 1
   resources:
     requests:

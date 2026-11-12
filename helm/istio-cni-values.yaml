@@ -1,5 +1,11 @@
 profile: ambient
 
+ambient:
+  # Send pods' DNS queries to ztunnel, which answers for ServiceEntry hosts with
+  # their virtual IP. Without it, pods get the real IP and egress skips the
+  # waypoint (course module 12). Newer Istio releases turn this on by default.
+  dnsCapture: true
+
 resources:
   requests:
     cpu: 25m

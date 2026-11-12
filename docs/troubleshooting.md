@@ -287,6 +287,24 @@ Every ReplicaSet had a different `checksum/config` annotation, and nothing in Gi
 
 **Fix.** The lab no longer uses a token. `helm/headlamp-values.yaml` sets `config.unsafeUseServiceAccountToken: true`, so Headlamp makes every request as its own `cluster-admin` service account and shows no login page. The chart calls this unsafe because anyone who can reach Headlamp gets full control. Here only your machine can reach it, through `port-forward.sh`. If Headlamp still shows a login page, your browser kept the old session: reload the page, or clear the site data for `localhost:4466`.
 
+## 18. A ServiceEntry has no effect in ambient mode
+
+**Symptom.** You add a ServiceEntry for `httpbin.org` labelled `istio.io/use-waypoint: waypoint`. Calls from a pod still work, but the waypoint never sees them: no metrics with `destination_service="httpbin.org"`, and an AuthorizationPolicy on the ServiceEntry never blocks anything.
+
+**Found with.**
+
+```bash
+kubectl -n istio-system logs ds/ztunnel --since=1m | grep course-client | tail -1    # dst.addr is httpbin's real IP
+kubectl -n shop get serviceentry httpbin-org -o jsonpath='{.status.addresses}'         # empty: no virtual IP
+kubectl -n shop exec deploy/course-client -- nslookup httpbin.org                       # real IPs, not 240.240.x.x
+```
+
+**Cause.** ztunnel recognises a service by IP. A ServiceEntry with `resolution: DNS` and no `addresses` has no IP of its own, and the pod asks CoreDNS, which returns httpbin's real addresses. ztunnel sees an unknown IP and lets the traffic straight out. Two Istio 1.24 defaults cause this: istiod does not allocate virtual IPs, and istio-cni does not send pods' DNS queries to ztunnel.
+
+Turning the setting on in Helm was not enough at first. `helm upgrade` rewrote the `istio-cni-config` ConfigMap (`AMBIENT_DNS_CAPTURE: "true"`), but the istio-cni agent reads it only at startup and kept running with DNS capture off.
+
+**Fix.** Set `ambient.dnsCapture: true` for the istio-cni chart and `PILOT_ENABLE_IP_AUTOALLOCATE: "true"` for istiod (both in `helm/`), restart the `istio-cni-node` DaemonSet, then restart the pods that call out. `provision.sh` restarts istio-cni by itself when its config changed. After that, `nslookup httpbin.org` inside the pod returns `240.240.0.1`, and ztunnel logs `dst.workload="waypoint-..."`.
+
 ## A note on watching long installs
 
 Two habits would have shortened this build:

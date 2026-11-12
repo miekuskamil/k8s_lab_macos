@@ -1,0 +1,31 @@
+# Add httpbin.org to the mesh's service registry and send its traffic through the
+# shop waypoint. Apps call plain http://httpbin.org; the waypoint opens TLS to
+# port 443 itself (TLS origination), so it still sees every HTTP request.
+apiVersion: networking.istio.io/v1
+kind: ServiceEntry
+metadata:
+  name: httpbin-org
+  namespace: shop
+  labels:
+    istio.io/use-waypoint: waypoint
+spec:
+  hosts:
+    - httpbin.org
+  location: MESH_EXTERNAL
+  resolution: DNS
+  ports:
+    - number: 80
+      name: http
+      protocol: HTTP
+      targetPort: 443
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: httpbin-org-tls
+  namespace: shop
+spec:
+  host: httpbin.org
+  trafficPolicy:
+    tls:
+      mode: SIMPLE

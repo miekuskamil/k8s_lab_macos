@@ -206,6 +206,15 @@ install_istio_ambient() {
     ${PLATFORM_ARGS[@]+"${PLATFORM_ARGS[@]}"} \
     ${CNI_EXTRA_ARGS[@]+"${CNI_EXTRA_ARGS[@]}"} \
     ${base_args[@]+"${base_args[@]}"} --wait --timeout 5m >/dev/null
+  # Helm updates the istio-cni ConfigMap but does not restart the agent, which reads it
+  # only at startup. Restart it when the ConfigMap content changed since the last run.
+  local cni_hash
+  cni_hash="$(kubectl -n istio-system get configmap istio-cni-config -o jsonpath='{.data}' | shasum | cut -c1-16)"
+  if [[ "$(kubectl -n istio-system get ds istio-cni-node -o jsonpath='{.spec.template.metadata.annotations.k8s-lab/cni-config-hash}')" != "$cni_hash" ]]; then
+    kubectl -n istio-system patch ds istio-cni-node --type merge \
+      -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"k8s-lab/cni-config-hash\":\"${cni_hash}\"}}}}}" >/dev/null
+    kubectl -n istio-system rollout status ds/istio-cni-node --timeout=180s >/dev/null
+  fi
   ok "istio-cni (traffic redirection)"
 
   helm upgrade --install ztunnel istio/ztunnel \

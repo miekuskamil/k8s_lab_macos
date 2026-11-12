@@ -1,0 +1,21 @@
+# L7 rule on the waypoint for traffic to httpbin.org: only the course client,
+# only GET, only /get and /headers. Everything else to httpbin.org gets a 403.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: httpbin-org-read-only
+  namespace: shop
+spec:
+  targetRefs:
+    - group: networking.istio.io
+      kind: ServiceEntry
+      name: httpbin-org
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/shop/sa/course-client"]
+      to:
+        - operation:
+            methods: ["GET"]
+            paths: ["/get", "/headers"]
