@@ -234,28 +234,33 @@ A JSON trace means the data source works. In the browser, Explore with the Jaege
 
 **Fix.** `apps/backend/main.py` instruments the app at the very end of the file, which makes tracing the outer middleware. Image `1.0.2` and later write `trace_id` and `span_id` into every request log.
 
-## 15. One mesh pod never becomes Ready after a restart
+## 15. Mesh pods break after a restart
 
-**Symptom.** After the cluster restarted, one pod in `shop` (here the frontend) loops in `CrashLoopBackOff`. Its own logs look healthy: it starts, says it is listening, then gets `SIGTERM` 30 seconds later. The shop returns 503.
+This one shows up in two forms. Both come from the same race.
+
+**Symptom A: one pod never becomes Ready.** After the cluster restarted, one pod in `shop` (the frontend, the first time) loops in `CrashLoopBackOff`. Its own logs look healthy: it starts, says it is listening, then gets `SIGTERM` 30 seconds later. The pod events say `Startup probe failed: ... EOF`.
+
+**Symptom B: every pod looks fine, but traffic fails.** After OrbStack restarted its Docker engine, all pods showed Running and most showed Ready. Yet the shop's "Run burst" button failed, and both backend-v1 pods stayed not Ready, logging `redis not ready ... Timeout reading from redis`.
 
 **Found with.**
 
 ```bash
-kubectl -n shop describe pod -l app=frontend | tail -5
-kubectl -n istio-system logs ds/ztunnel --tail=300 | grep frontend | grep error | tail -3
+kubectl get pods -A | grep -v Running
+kubectl -n istio-system logs ds/ztunnel --since=3m | grep error | grep -o 'dst.workload="[^"]*"\|error=.*' | sort | uniq -c
 ```
 
-The pod events say `Startup probe failed: ... EOF`. ztunnel logs inbound connections from `src.addr=10.42.0.1` (the node, where the kubelet runs) to the frontend that fail with an error.
+ztunnel showed connections into Redis, the frontend and backend-v2 failing with `http status: 503 Service Unavailable` and `connection failed: deadline has elapsed`. Those were the pods that survived the restart. The not-Ready backend-v1 pods were fine themselves: they could not reach the broken Redis.
 
-**Cause.** In ambient mode, `istio-cni` sets up traffic redirection inside each pod's network namespace and makes sure the kubelet's health probes bypass it. When the node container restarts, containerd recreates every pod's sandbox. A sandbox that comes back before the `istio-cni` agent is running again can end up with incomplete rules: ztunnel then captures the kubelet's plain probe as if it were mesh traffic, and the probe fails. The race hit one pod out of about twenty, once in three restarts.
+**Cause.** In ambient mode, `istio-cni` sets up traffic redirection inside each pod's network namespace, and lets the kubelet's health probes bypass it. When the node restarts, containerd recreates every pod's network sandbox. A sandbox that comes back after the node booted but before `istio-cni` and ztunnel are Ready ends up with broken redirection. Sometimes the probes break too (symptom A). Sometimes the probes still pass, so the pod looks Ready while every mesh connection into it fails (symptom B). Readiness alone does not reveal the second form.
 
-**Fix.** Delete the pod. Its replacement is set up while `istio-cni` is running and becomes Ready at once:
+**Fix by hand.** Recreate the mesh workloads. New pods get set up while `istio-cni` runs:
 
 ```bash
-kubectl -n shop delete pod -l app=frontend
+kubectl -n shop rollout restart deploy
+kubectl -n observability rollout restart deploy,statefulset
 ```
 
-`./scripts/start.sh` now does this by itself: if mesh pods are still not Ready after three minutes, it waits for `istio-cni` and ztunnel, recreates those pods once, and waits again.
+**Fix in `./scripts/start.sh`.** Kubernetes records when each pod's sandbox was set up (the `PodReadyToStartContainers` condition). `start.sh` waits for `istio-cni` and ztunnel, takes the window from the moment the `istio-cni` pod's own sandbox came up to the moment `istio-cni` and ztunnel both became Ready, and recreates every pod in an ambient namespace whose sandbox falls inside that window, Ready or not. Tested with `docker restart k3d-k8s-lab-server-0`: it recreated 13 pods, and a 100-request burst then returned 100 times `200` with no ztunnel errors. On a healthy cluster it recreates nothing. As a second safety net, it still recreates any mesh pod that stays not Ready for three minutes.
 
 ## 16. Kiali restarts every few minutes
 

@@ -56,15 +56,34 @@ wait_for_pods() {
   return 1
 }
 
+# After a node restart, containerd recreates every pod's network sandbox. A mesh pod
+# whose sandbox came back after the node booted but before istio-cni and ztunnel were
+# Ready gets broken traffic redirection. Its health probes may still pass, so it looks
+# Ready while every mesh connection into it fails (troubleshooting problem 15).
+# Kubernetes records when each sandbox was set up, so find those pods and recreate them.
+# This lab has one node, so one istio-cni pod and one ztunnel pod mark the window.
+say "Waiting for istio-cni and ztunnel"
+"${K[@]}" -n istio-system rollout status ds/istio-cni-node --timeout=180s >/dev/null
+"${K[@]}" -n istio-system rollout status ds/ztunnel --timeout=180s >/dev/null
+cond_time() { "${K[@]}" -n istio-system get pods -l "$1" -o jsonpath="{.items[0].status.conditions[?(@.type==\"$2\")].lastTransitionTime}"; }
+window_start="$(cond_time k8s-app=istio-cni-node PodReadyToStartContainers)"
+window_end="$(cond_time k8s-app=istio-cni-node Ready)"
+ztunnel_ready="$(cond_time app=ztunnel Ready)"
+[[ "$ztunnel_ready" > "$window_end" ]] && window_end="$ztunnel_ready"
+mesh_namespaces="$("${K[@]}" get ns -l istio.io/dataplane-mode=ambient -o jsonpath='{.items[*].metadata.name}')"
+for ns in $mesh_namespaces; do
+  while read -r pod sandbox; do
+    [[ -z "$sandbox" ]] && continue
+    if [[ ! "$sandbox" < "$window_start" && ! "$sandbox" > "$window_end" ]]; then
+      say "Recreating ${ns}/${pod}: its network came up before the mesh was ready"
+      "${K[@]}" -n "$ns" delete pod "$pod" --wait=false >/dev/null
+    fi
+  done < <("${K[@]}" -n "$ns" get pods -o jsonpath='{range .items[*]}{.metadata.name} {.status.conditions[?(@.type=="PodReadyToStartContainers")].lastTransitionTime}{"\n"}{end}')
+done
+
 say "Waiting for every pod to become Ready (up to 3 minutes)"
 if ! wait_for_pods 36; then
-  # After a node restart, pods whose sandboxes came back before istio-cni was running
-  # can end up with incomplete traffic redirection: ztunnel then captures the kubelet's
-  # health probes and the pod never becomes Ready. A new pod gets set up correctly,
-  # so recreate the stuck mesh pods once, after the CNI agent and ztunnel are Ready.
-  "${K[@]}" -n istio-system rollout status ds/istio-cni-node --timeout=120s >/dev/null
-  "${K[@]}" -n istio-system rollout status ds/ztunnel --timeout=120s >/dev/null
-  mesh_namespaces="$("${K[@]}" get ns -l istio.io/dataplane-mode=ambient -o jsonpath='{.items[*].metadata.name}')"
+  # Second safety net: recreate any mesh pod that is still not Ready, once.
   for pod in $(not_ready_pods); do
     ns="${pod%%/*}"
     if [[ " $mesh_namespaces " == *" $ns "* ]]; then
