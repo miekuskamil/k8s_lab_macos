@@ -1,0 +1,23 @@
+# Retry failed requests to the backend on another pod. The waypoint tries up to
+# 2 more times when the answer is a 5xx or the connection fails, and gives each
+# try 2 seconds. Gateway API's HTTPRoute has no retry field in this version, so
+# this uses Istio's VirtualService. Delete the HTTPRoute backend-route first:
+# both on the same host would give undefined results.
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: backend-retries
+  namespace: shop
+spec:
+  hosts:
+    - backend.shop.svc.cluster.local
+  http:
+    - route:
+        - destination:
+            host: backend-v1.shop.svc.cluster.local
+            port:
+              number: 8000
+      retries:
+        attempts: 2
+        perTryTimeout: 2s
+        retryOn: 5xx,connect-failure,refused-stream

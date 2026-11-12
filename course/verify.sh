@@ -281,6 +281,35 @@ module_13() {
   expect "after the reset the API answers without a token" "$(code "$BASE/api/orders")" '^200$'
 }
 
+module_15() {
+  section "15: outlier detection and retries"
+  baseline
+  "${K[@]}" apply -f "$M/15-faulty-pod.yaml" >/dev/null
+  "${K[@]}" -n shop rollout status deploy/backend-v1-faulty --timeout=120s >/dev/null 2>&1; settle 5
+  faulty_calls() { "${K[@]}" -n shop logs deploy/backend-v1-faulty --since=30m 2>/dev/null | grep -c '/api/orders' || true; }
+  local out before
+  out="$(burst 90 3 /api/orders)"
+  between "a faulty pod makes about a third of requests fail" "$(echo "$out" | count_matching '^503')" 15 50
+  "${K[@]}" apply -f "$M/15-outlier-detection.yaml" >/dev/null; settle 6
+  burst 30 3 /api/orders >/dev/null; settle 2
+  between "outlier detection ejects it: no more failures" "$(burst 90 3 /api/orders | count_matching '^503')" 0 0
+  "${K[@]}" -n shop delete destinationrule backend-v1-outlier >/dev/null
+  "${K[@]}" -n shop delete httproute backend-route >/dev/null
+  "${K[@]}" apply -f "$M/15-retries.yaml" >/dev/null; settle 8
+  before="$(faulty_calls)"
+  between "retries alone hide every failure" "$(burst 90 3 /api/orders | count_matching '^200')" 90 90
+  settle 2
+  between "but the faulty pod still gets calls" "$(( $(faulty_calls) - before ))" 15 60
+  "${K[@]}" apply -f "$M/15-outlier-detection.yaml" >/dev/null; settle 6
+  before="$(faulty_calls)"
+  between "retries plus outlier detection: no failures" "$(burst 90 3 /api/orders | count_matching '^200')" 90 90
+  settle 2
+  between "and the faulty pod is left alone" "$(( $(faulty_calls) - before ))" 0 6
+  baseline
+  expect "after the reset the faulty pod is gone" "$("${K[@]}" -n shop get deploy backend-v1-faulty 2>&1 | grep -c NotFound)" '^1$'
+  expect "and the shop answers 200" "$(code "$BASE/api/orders")" '^200$'
+}
+
 # Module 14 upgrades Istio for real and cannot be undone, so it is not in the default
 # run. Use it on a lab that runs the course version: ./course/verify.sh 14
 module_14() {
@@ -342,7 +371,7 @@ module_14() {
 }
 
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13); fi
+if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15); fi
 # Start from the Git baseline, in case an exercise is still applied.
 printf 'Restoring the baseline before the checks\n'
 "$ROOT/course/reset.sh" >/dev/null 2>&1

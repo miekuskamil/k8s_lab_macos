@@ -21,6 +21,7 @@ Each module takes 30 to 60 minutes. Do them in order, because each one builds on
 | [12. Egress](12-egress.md) | ServiceEntry, TLS origination, L7 rules on outbound calls, locking a pod in | `curl`, Kiali, Prometheus |
 | [13. JWT](13-jwt.md) | End-user identity: RequestAuthentication, rules on token claims, 401 versus 403 | `curl`, Prometheus |
 | [14. Upgrading Istio](14-upgrading-istio.md) | Canary upgrade from 1.24 to 1.25: revisions, tags, rollback, measured downtime. One-way: rebuild the lab afterwards | `helm`, `istioctl`, `kubectl` |
+| [15. Outlier detection and retries](15-outlier-detection-and-retries.md) | One bad pod out of three: retries hide it, outlier detection removes it, zone failover in theory | `curl`, `kubectl logs` |
 
 **New to Istio? Read [Start here: Istio in one picture](start-here.md) first.** It takes 15 minutes, needs no cluster, and shows every resource the course uses on one diagram. Every term also has a plain explanation in the [glossary](glossary.md). Keep it open in a tab.
 

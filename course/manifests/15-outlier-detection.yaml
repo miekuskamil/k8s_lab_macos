@@ -1,0 +1,16 @@
+# Eject a backend v1 pod from load balancing after 3 errors in a row. The waypoint
+# checks every 5 seconds, keeps the pod out for 30 seconds (longer each time it
+# comes back and fails again), and never ejects more than half the pods.
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: backend-v1-outlier
+  namespace: shop
+spec:
+  host: backend-v1.shop.svc.cluster.local
+  trafficPolicy:
+    outlierDetection:
+      consecutive5xxErrors: 3
+      interval: 5s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50

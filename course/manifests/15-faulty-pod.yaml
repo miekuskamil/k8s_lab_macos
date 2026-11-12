@@ -1,0 +1,99 @@
+# A third backend v1 pod that fails every /api/ request with 503 (ERROR_RATE=1).
+# It carries the same app and version labels, so the backend-v1 Service sends it
+# about a third of the traffic, like a real pod with a broken disk or a bad config.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-v1-faulty
+  namespace: shop
+  labels:
+    app: backend
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+      version: v1
+      role: faulty
+  template:
+    metadata:
+      labels:
+        app: backend
+        version: v1
+        role: faulty
+    spec:
+      enableServiceLinks: false
+      serviceAccountName: backend
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: backend
+          image: k8s-lab/backend:1.0.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: APP_VERSION
+              value: v1
+            - name: REDIS_HOST
+              value: redis.shop.svc.cluster.local
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-auth
+                  key: password
+            - name: OTEL_SERVICE_NAME
+              value: backend
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://jaeger-collector.observability.svc.cluster.local:4318
+            - name: RATE_LIMIT_RPS
+              value: "0"
+            - name: EXTRA_LATENCY_MS
+              value: "0"
+            - name: ERROR_RATE
+              value: "1"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+            limits:
+              cpu: 250m
+              memory: 192Mi
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 2
+            failureThreshold: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi
