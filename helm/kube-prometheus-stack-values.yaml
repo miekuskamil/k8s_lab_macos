@@ -1,7 +1,24 @@
 fullnameOverride: kube-prometheus-stack
 
+# Alertmanager receives alerts from Prometheus, groups them and sends them on.
+# Course module 23 routes them to a receiver with an AlertmanagerConfig.
 alertmanager:
-  enabled: false
+  enabled: true
+  alertmanagerSpec:
+    # Pick up AlertmanagerConfig resources from every namespace...
+    alertmanagerConfigSelector: {}
+    alertmanagerConfigNamespaceSelector: {}
+    # ...and don't add a namespace matcher to their routes, so a team's route
+    # sees alerts about any namespace, not only its own.
+    alertmanagerConfigMatcherStrategy:
+      type: None
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 96Mi
 
 nodeExporter:
   enabled: false
@@ -89,9 +106,9 @@ grafana:
       searchNamespace: ALL
     datasources:
       defaultDatasourceEnabled: true
-      # Alertmanager is disabled above, so its datasource would only show errors.
+      # Grafana shows Alertmanager's alerts and silences (course module 24).
       alertmanager:
-        enabled: false
+        enabled: true
   additionalDataSources:
     # Jaeger: "Logs for this span" opens the matching Loki lines, found by trace id.
     - name: Jaeger
