@@ -184,7 +184,7 @@ Eleven ArgoCD Applications deploy everything else (twelve with `root`):
 | `shop-apps` | frontend, backend, redis | Yes |
 | `istio-config` | Gateway, waypoint, routes, policies | No, on purpose |
 | `kube-prometheus-stack` | The Prometheus, Alertmanager and Grafana Helm chart | Yes |
-| `observability-config` | Jaeger, monitors, the dashboard | Yes |
+| `observability-config` | Jaeger, monitors, the two dashboards (Shop mesh, Shop logs) | Yes |
 | `loki` | Loki, the log store (Helm chart) | Yes |
 | `alloy` | Alloy, which ships pod logs to Loki (Helm chart) | Yes |
 | `kiali` | Kiali, the Istio console (Helm chart) | Yes |

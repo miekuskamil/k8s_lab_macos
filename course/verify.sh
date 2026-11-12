@@ -193,6 +193,10 @@ module_6() {
     settle 5
   done
   expect "Loki finds the backend log line by trace id" "$loki_lines" '^[1-9]'
+  expect "Grafana loads the Shop logs dashboard" "$("${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- sh -c \
+    'curl -s -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" localhost:3000/api/dashboards/uid/shop-logs' 2>/dev/null | grep -o '"title":"Shop logs"' | head -1)" '^"title":"Shop logs"$'
+  local logql; logql="$(python3 -c 'import urllib.parse; print(urllib.parse.quote("sum by (status) (count_over_time({namespace=\"shop\", app=\"backend\"} | json | message=\"request handled\" [5m]))"))')"
+  expect "LogQL parses the backend's JSON and counts requests by status" "$("${K[@]}" get --raw "/api/v1/namespaces/observability/services/loki:3100/proxy/loki/api/v1/query?query=${logql}" 2>/dev/null | grep -o '"status":"2[0-9][0-9]"' | head -1)" '"status":"2'
   "${K[@]}" -n istio-system patch telemetry mesh-default --type merge \
     -p '{"spec":{"tracing":[{"providers":[{"name":"jaeger-otlp"}],"randomSamplingPercentage":10}]}}' >/dev/null; settle 8
   local t0; t0=$(date +%s)

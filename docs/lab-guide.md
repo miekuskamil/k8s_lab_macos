@@ -292,6 +292,7 @@ Containers run as a non-root user with a read-only root filesystem, no Linux cap
 - Keep dashboards in Git. The lab's dashboard is a ConfigMap that Grafana's sidecar loads, and Grafana refuses edits to it in the UI. [Course module 24](../course/24-grafana-as-code.md) builds an SLO dashboard the same way.
 - The lab samples 100% of traces. Use 1 to 5% in production, plus tail sampling to keep error traces.
 - The backend writes the trace id into every log line. Search your logs by `trace_id` and open the matching trace in Jaeger.
+- Log in JSON, and logs turn into data. The Grafana dashboard **Shop logs** counts the backend's requests by status and computes p95 latency per path from its JSON log lines with LogQL (course module 6, step 5).
 - Keep probes out of your traces. The backend excludes `/healthz`, `/readyz` and `/metrics` from tracing and drops the Redis `PING` spans its readiness probe would create.
 
 ## 7. Things to try next

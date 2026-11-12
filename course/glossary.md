@@ -210,6 +210,8 @@ Modules 4, 5, 6, 8.
 
 **Idempotent request and idempotency key.** A request is idempotent when sending it twice has the same effect as sending it once, like a GET. A POST that creates an order is not. An idempotency key is a unique id the client sends with such a request, so the server spots a repeat and skips it. Safe retries depend on this. Module 5.
 
+**Loki and LogQL.** Loki stores logs and indexes only a few labels per stream (namespace, app, pod), not the text, which keeps it cheap. LogQL queries it: `{app="backend"}` picks streams, `|= "text"` filters lines, `| json` turns JSON fields into labels, and `count_over_time`, `rate` and `unwrap` turn lines into numbers. Module 6.
+
 **Kiali.** The Istio console: traffic graph, mTLS status and config checks. **Jaeger**: shows traces. **Prometheus**: stores metrics. **Grafana**: dashboards and queries over Prometheus, Loki and Jaeger. **Loki**: stores logs. Module 6.
 
 ## AI on Kubernetes

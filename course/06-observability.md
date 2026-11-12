@@ -179,6 +179,33 @@ kubectl -n shop logs deploy/waypoint --tail=1
 
 The user agent reads `node`, because the frontend (a Node.js app) made the call, not your curl. `290` is the response size in bytes, and the two `4`s are the total time and the backend's time in milliseconds. A `Telemetry` resource with `targetRefs` changes one proxy. The mesh-wide one in `istio-system` changes all of them.
 
+### 5. Read the logs as data
+
+Loki stores every pod's output, collected by Alloy. It indexes only a few labels per stream (`namespace`, `app`, `pod`), never the text itself, which keeps it cheap. You filter the text at query time with **LogQL**. The backend writes one JSON line per request, so LogQL parses it and turns it into numbers.
+
+Send some traffic with errors in it, then open Grafana, Dashboards, **Shop logs**:
+
+```bash
+for i in $(seq 1 30); do curl -s -o /dev/null localhost:8080/api/orders; curl -s -o /dev/null localhost:8080/api/nope; done
+curl -s -o /dev/null "localhost:8080/api/slow?ms=400"
+```
+
+**What you should see.** Seven panels, all built from log lines:
+
+| Panel | LogQL behind it | What it teaches |
+|---|---|---|
+| Log lines per second, by app | `sum by (app) (rate({namespace="shop"}[1m]))` | `rate()` works on log streams too |
+| Backend responses by status | `count_over_time({...app="backend"} \| json \| message="request handled" [1m])` by `status` | `\| json` turns each JSON field into a label you group by |
+| Log lines by level | the same, by `level` | `INFO` from the backend, `error` from the frontend |
+| Backend p95 duration per path | `quantile_over_time(0.95, ... \| unwrap duration_ms ...) by (path)` | `unwrap` turns a field into a number: percentiles from text |
+| Top failing paths | `topk(10, ... \| json \| status >= 400 ...)` | `/api/nope` with `404` |
+| Errors in shop | `{namespace="shop"} \| json \| level=~"(?i)error\|warning" or status >= 500` | raw lines, filtered |
+| Live logs | `{namespace="shop", app=~"$app"} \|= "$search"` | pick apps at the top, type into **Search text**, like a `grep` across every pod |
+
+In the test run, the status panel showed `200`, `201`, `404`, `429` and `503`, the last two left over from the module 5 and 15 checks a few minutes earlier, and the p95 panel put `/api/slow` near 400 ms and `/api/nope` below 1 ms. Click any line in a logs panel to open its fields, including the `trace_id` link to Jaeger.
+
+Logs or metrics for the same question? The dashboard's status panel and Prometheus' `istio_requests_total` usually agree. When they don't, it tells you something: Investigate question 4 shows a case. Counting from logs reads every line, so it's slower and costs more at scale. Keep it for apps that have no metrics, or for questions metrics leave open, like "which order ids failed?".
+
 ## Investigate
 
 1. In Grafana Explore, run `sum by (reporter) (rate(istio_requests_total[5m]))`. Which reporters appear? Which do not, and why?

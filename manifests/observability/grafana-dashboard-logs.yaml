@@ -1,0 +1,320 @@
+# Logs from Loki for the shop namespace. Grafana's sidecar loads it through the label
+# grafana_dashboard=1, like dashboard-shop-mesh. Every panel uses LogQL: | json parses the
+# backend's JSON lines, and unwrap turns a field such as duration_ms into a number.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-shop-logs
+  namespace: observability
+  labels:
+    grafana_dashboard: "1"
+data:
+  shop-logs.json: |
+    {
+      "uid": "shop-logs",
+      "title": "Shop logs",
+      "tags": [
+        "loki",
+        "logs"
+      ],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "refresh": "10s",
+      "time": {
+        "from": "now-15m",
+        "to": "now"
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "app",
+            "type": "query",
+            "label": "App",
+            "datasource": {
+              "type": "loki",
+              "uid": "loki"
+            },
+            "refresh": 2,
+            "includeAll": true,
+            "multi": true,
+            "allValue": ".+",
+            "query": {
+              "label": "app",
+              "stream": "{namespace=\"shop\"}",
+              "type": 1,
+              "refId": "app"
+            },
+            "current": {
+              "text": [
+                "All"
+              ],
+              "value": [
+                "$__all"
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "type": "textbox",
+            "label": "Search text",
+            "query": "",
+            "current": {
+              "text": "",
+              "value": ""
+            }
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "timeseries",
+          "title": "Log lines per second, by app",
+          "description": "How chatty each app is. A sudden jump usually means errors or retries.",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 12,
+            "h": 8
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "expr": "sum by (app) (rate({namespace=\"shop\", app=~\"$app\"} |= \"$search\" [1m]))",
+              "legendFormat": "{{app}}",
+              "queryType": "range"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 2,
+          "type": "timeseries",
+          "title": "Backend responses by status, counted from logs",
+          "description": "The backend logs one line per request. Counting them by status gives the same picture as Prometheus, from text.",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 0,
+            "w": 12,
+            "h": 8
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "expr": "sum by (status) (count_over_time({namespace=\"shop\", app=\"backend\"} | json | message=\"request handled\" [1m]))",
+              "legendFormat": "{{status}}",
+              "queryType": "range"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 3,
+          "type": "timeseries",
+          "title": "Log lines by level",
+          "description": "Parsed from each line's JSON level field.",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 8,
+            "w": 12,
+            "h": 8
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "expr": "sum by (level) (count_over_time({namespace=\"shop\", app=~\"$app\"} | json | __error__=\"\" [1m]))",
+              "legendFormat": "{{level}}",
+              "queryType": "range"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 4,
+          "type": "timeseries",
+          "title": "Backend p95 duration per path, from logs",
+          "description": "unwrap turns a JSON field into a number, so Loki computes percentiles from log lines.",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 8,
+            "w": 12,
+            "h": 8
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "expr": "quantile_over_time(0.95, {namespace=\"shop\", app=\"backend\"} | json | message=\"request handled\" | unwrap duration_ms | __error__=\"\" [5m]) by (path)",
+              "legendFormat": "{{path}}",
+              "queryType": "range"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 5,
+          "type": "table",
+          "title": "Top failing paths (status 400 and above)",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 16,
+            "w": 12,
+            "h": 8
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "expr": "topk(10, sum by (path, status) (count_over_time({namespace=\"shop\", app=\"backend\"} | json | status >= 400 [$__range])))",
+              "queryType": "instant",
+              "legendFormat": ""
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": {
+                "mode": "columns"
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true
+                },
+                "renameByName": {
+                  "Value #A": "requests"
+                }
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          }
+        },
+        {
+          "id": 6,
+          "type": "logs",
+          "title": "Errors in shop",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 16,
+            "w": 12,
+            "h": 8
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "expr": "{namespace=\"shop\"} | json | level=~\"(?i)error|warning\" or status >= 500",
+              "queryType": "range"
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending",
+            "enableLogDetails": true
+          }
+        },
+        {
+          "id": 7,
+          "type": "logs",
+          "title": "Live logs: $app, containing \"$search\"",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 24,
+            "w": 24,
+            "h": 12
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "expr": "{namespace=\"shop\", app=~\"$app\"} |= \"$search\"",
+              "queryType": "range"
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending",
+            "enableLogDetails": true
+          }
+        }
+      ]
+    }
