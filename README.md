@@ -1,6 +1,6 @@
 # k8s_lab_macos
 
-A small shop running on your laptop, wrapped in the tooling a platform team uses: Istio ambient mesh, ArgoCD, Prometheus, Grafana, Jaeger, Loki, Kiali and Headlamp. It is a place to learn a service mesh and GitOps without a cloud account.
+A small shop running on your laptop, wrapped in the tooling a platform team uses: Istio ambient mesh, ArgoCD, cert-manager, Prometheus, Grafana, Jaeger, Loki, Kiali and Headlamp. It is a place to learn a service mesh and GitOps without a cloud account.
 
 The shop is a Node.js frontend, a Python FastAPI backend in two versions, and Redis. You break it on purpose (shift 10% of traffic to a new version, inject faults, trip a circuit breaker) and watch what happens in the UIs. An [Istio course](course/README.md) takes you from zero to debugging incidents.
 
@@ -42,7 +42,7 @@ Run `./scripts/port-forward.sh` in a spare terminal and leave it running. The sh
 
 | UI | URL | User | Password |
 |---|---|---|---|
-| The shop | http://localhost:8080 | | |
+| The shop | http://localhost:8080 (https://localhost:8443 during [course module 11](course/11-edge-tls.md)) | | |
 | Kiali, the Istio console | http://localhost:20001 | | |
 | Headlamp, a web UI for the whole cluster: pods, logs, shells, events, YAML | http://localhost:4466 | | |
 | Grafana, with Prometheus, Loki and Jaeger data sources | http://localhost:3000 | `admin` | `k8s-lab-admin` |
@@ -88,10 +88,11 @@ k8s_lab_macos/
 │   ├── apps/         the shop: frontend, backend v1 and v2, redis
 │   ├── istio/        gateway, waypoint, routes, security policies, tracing
 │   ├── observability/ Jaeger, Prometheus monitors, Grafana dashboard
+│   ├── cert-manager/ the lab certificate authority
 │   └── scenarios/    canary, fault and circuit-breaker experiments, applied by hand
 ├── helm/             value files for every Helm chart the lab installs
 ├── scripts/          provision, start, port-forward, traffic-test, teardown
-├── course/           the Istio course: modules 0 to 10, their manifests and scripts
+├── course/           the Istio course: modules 0 to 11, their manifests and scripts
 └── docs/             build guide, architecture, lab guide, troubleshooting, diagrams
 ```
 

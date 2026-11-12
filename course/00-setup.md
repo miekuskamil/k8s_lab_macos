@@ -10,7 +10,7 @@ kubectl config current-context   # k3d-k8s-lab
 kubectl -n argocd get applications
 ```
 
-All ten Applications should show `Synced` and `Healthy`. Then open the UIs in a spare terminal and leave it running:
+All twelve Applications should show `Synced` and `Healthy`. Then open the UIs in a spare terminal and leave it running:
 
 ```bash
 ./scripts/port-forward.sh

@@ -2,7 +2,7 @@
 # Replay the key exercise of every course module and check the result.
 # Use it to confirm the course works on your lab, or to check your own work.
 #
-#   ./course/verify.sh          run every module (about 10 minutes)
+#   ./course/verify.sh          run every module (about 12 minutes)
 #   ./course/verify.sh 4 5      run only modules 4 and 5
 #
 # The script changes routing and policies while it runs and restores the baseline at the end.
@@ -206,8 +206,41 @@ module_8() {
   expect "after the repair the shop answers 200" "$(code "$BASE/api/orders")" '^200$'
 }
 
+module_11() {
+  section "11: TLS at the edge"
+  baseline
+  local ca="${TMPDIR:-/tmp}/k8s-lab-ca.crt" before after
+  expect "the lab-ca issuer is Ready" "$("${K[@]}" get clusterissuer lab-ca -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}')" '^True$'
+  "${K[@]}" -n cert-manager get secret lab-root-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > "$ca"
+  "${K[@]}" apply -f "$M/11-certificate.yaml" >/dev/null
+  expect "cert-manager issues the shop certificate" "$("${K[@]}" -n shop-ingress wait --for=condition=Ready certificate/shop-tls --timeout=90s 2>&1)" 'condition met'
+  expect "the lab root CA signed it" "$("${K[@]}" -n shop-ingress get secret shop-tls -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -noout -issuer)" 'k8s-lab root CA'
+  "${K[@]}" apply -f "$M/11-gateway-https.yaml" >/dev/null
+  "${K[@]}" -n shop-ingress wait --for=condition=Programmed gateway/shop-gateway --timeout=60s >/dev/null 2>&1
+  local c=000
+  for _ in $(seq 1 12); do c="$(code --cacert "$ca" "https://localhost:8443/healthz")"; [[ "$c" == 200 ]] && break; settle 5; done
+  expect "HTTPS answers when curl trusts the lab CA" "$c" '^200$'
+  expect "HTTPS fails when curl does not trust the lab CA" "$(curl -s -o /dev/null -m 10 -w '%{exitcode}' https://localhost:8443/healthz 2>/dev/null)" '^60$'
+  "${K[@]}" apply -f "$M/11-redirect.yaml" >/dev/null; settle 8
+  expect "plain HTTP gets a 301 to HTTPS" "$(curl -s -o /dev/null -m 10 -w '%{http_code} %{redirect_url}' "$BASE/api/orders")" '^301 https://localhost:8443/api/orders$'
+  expect "following the redirect reaches the shop" "$(code -L --cacert "$ca" "$BASE/api/orders")" '^200$'
+  before="$(openssl s_client -connect 127.0.0.1:8443 -servername localhost </dev/null 2>/dev/null | openssl x509 -noout -serial 2>/dev/null)"
+  local restarts; restarts="$("${K[@]}" -n shop-ingress get pods -o jsonpath='{.items[0].status.containerStatuses[0].restartCount}')"
+  "${K[@]}" -n shop-ingress delete secret shop-tls >/dev/null
+  after="$before"
+  for _ in $(seq 1 20); do settle 3; after="$(openssl s_client -connect 127.0.0.1:8443 -servername localhost </dev/null 2>/dev/null | openssl x509 -noout -serial 2>/dev/null)"; [[ -n "$after" && "$after" != "$before" ]] && break; done
+  expect "a deleted Secret brings a new certificate (new serial)" "$([[ -n "$after" && "$after" != "$before" ]] && echo changed || echo "same: $after")" '^changed$'
+  expect "the gateway serves it without a restart" "$("${K[@]}" -n shop-ingress get pods -o jsonpath='{.items[0].status.containerStatuses[0].restartCount}')" "^${restarts}\$"
+  baseline
+  expect "after the reset plain HTTP serves the shop again" "$(code "$BASE/api/orders")" '^200$'
+  rm -f "$ca"
+}
+
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8); fi
+if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11); fi
+# Start from the Git baseline, in case an exercise is still applied.
+printf 'Restoring the baseline before the checks\n'
+"$ROOT/course/reset.sh" >/dev/null 2>&1
 for m in "${modules[@]}"; do
   if declare -F "module_$m" >/dev/null; then "module_$m"; else echo "No module $m"; fi
 done

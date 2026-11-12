@@ -17,6 +17,7 @@ Each module takes 30 to 60 minutes. Do them in order, because each one builds on
 | [8. Incidents](08-incidents.md) | Find and fix four broken setups without being told the cause | everything |
 | [9. Command reference](09-command-reference.md) | Troubleshooting commands for the cluster and for Istio | |
 | [10. eBPF and Cilium](10-ebpf-and-cilium.md) | The other sidecarless design, compared with ambient. Theory, no install. | `docker exec`, `kubectl top` |
+| [11. TLS at the edge](11-edge-tls.md) | HTTPS on the ingress gateway, cert-manager, redirects, renewal without downtime | `curl`, `openssl`, Grafana |
 
 ## How the exercises work
 
@@ -55,7 +56,7 @@ The lab must be running (`./scripts/provision.sh`, or `./scripts/start.sh` after
 
 ## A note on ArgoCD
 
-The course changes Istio resources by hand, with `kubectl apply`. ArgoCD manages the same resources from Git. The `istio-config` Application does not self-heal, so your changes stay until you run `./course/reset.sh`. ArgoCD shows that Application as `OutOfSync` while an exercise is active. That is expected. `./course/reset.sh` restores the Git baseline and asks ArgoCD to sync, so it ends `Synced` again.
+The course changes Istio resources by hand, with `kubectl apply`. ArgoCD manages the same resources from Git. The `istio-config` Application does not self-heal, so your changes stay until you run `./course/reset.sh`. ArgoCD shows that Application as `OutOfSync` while an exercise is active. That is expected. One catch: when a new commit lands on `main`, ArgoCD syncs `istio-config` once and wipes the exercise you're in the middle of. Re-apply the step's manifests if that happens. `./course/reset.sh` restores the Git baseline and asks ArgoCD to sync, so it ends `Synced` again.
 
 ## Check that the course works
 

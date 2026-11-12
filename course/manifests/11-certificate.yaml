@@ -1,0 +1,21 @@
+# Ask cert-manager for a certificate that the ingress gateway serves on HTTPS.
+# cert-manager signs it with the lab CA and stores it in the Secret shop-ingress/shop-tls.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: shop-tls
+  namespace: shop-ingress
+spec:
+  secretName: shop-tls
+  dnsNames:
+    - shop.local
+    - localhost
+  duration: 2160h       # 90 days, like Let's Encrypt
+  renewBefore: 720h     # renew 30 days before it expires
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    name: lab-ca
+    kind: ClusterIssuer

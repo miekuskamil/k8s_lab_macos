@@ -11,6 +11,10 @@ echo "Removing course rules from the shop namespace"
 "${K[@]}" -n shop delete telemetry waypoint-access-logs --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy backend-allow-course-client --ignore-not-found >/dev/null
 "${K[@]}" -n course-sidecar delete virtualservice,destinationrule,peerauthentication --all --ignore-not-found >/dev/null 2>&1 || true
+# Module 11: the HTTP to HTTPS redirect and the shop certificate
+"${K[@]}" -n shop delete httproute http-to-https --ignore-not-found >/dev/null
+"${K[@]}" -n shop-ingress delete certificate shop-tls --ignore-not-found >/dev/null 2>&1 || true
+"${K[@]}" -n shop-ingress delete secret shop-tls --ignore-not-found >/dev/null
 
 echo "Applying the baseline Istio config from manifests/istio"
 "${K[@]}" apply -f "$ROOT/manifests/istio/" >/dev/null
