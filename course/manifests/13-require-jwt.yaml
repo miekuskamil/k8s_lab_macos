@@ -1,0 +1,36 @@
+# Now make a valid token mandatory for the API, and keep writes for admins.
+# Rule 1: any request with a valid token may call GET on /api/*.
+# Rule 2: POST /api/orders needs a token whose "groups" claim contains "admin".
+# Anything else under /api/ gets a 403. The web page itself (/, /healthz) stays open.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: shop-require-jwt
+  namespace: shop-ingress
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: shop-gateway
+  action: ALLOW
+  rules:
+    - to:
+        - operation:
+            notPaths: ["/api/*"]
+    - from:
+        - source:
+            requestPrincipals: ["https://idp.k8s-lab.local/*"]
+      to:
+        - operation:
+            methods: ["GET"]
+            paths: ["/api/*"]
+    - from:
+        - source:
+            requestPrincipals: ["https://idp.k8s-lab.local/*"]
+      to:
+        - operation:
+            methods: ["POST"]
+            paths: ["/api/orders"]
+      when:
+        - key: request.auth.claims[groups]
+          values: ["admin"]

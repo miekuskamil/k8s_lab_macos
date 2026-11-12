@@ -1,0 +1,19 @@
+# Tell the ingress gateway which tokens to trust: issuer, audience and the public
+# key set (JWKS) that checks the signature. A real setup points jwksUri at the
+# identity provider; the lab keeps the key set inline so it works offline.
+# This resource only rejects BAD tokens. A request with no token still passes.
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: shop-jwt
+  namespace: shop-ingress
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: shop-gateway
+  jwtRules:
+    - issuer: https://idp.k8s-lab.local
+      audiences: ["shop"]
+      forwardOriginalToken: true
+      jwks: '{"keys":[{"kty":"RSA","alg":"RS256","use":"sig","kid":"k8s-lab-1","n":"zddSPh5NEwMmSSHXJ3VKd-bE0YLBkhVdGeZSLb7hZ7WbuWnm4tNuNidQJ7YVR_u4xL03sXDRcPdmueg0TX-YL1xDRH82NL8Lzox2FpwrcDFQDP8WP9JaR2mLSITjWbH1lD22o9l-5p4mbQJWcBoukkhWV-PhH_ZhbPhHV3YcLbKoFf15GC5vH0VWASCJmMlKE47VIaW1eUp4fwe-1SZW1ynGKRtl7yMM1TzF1CH0t88p3SsNTwI0Ff2o7DweA4-PyvlwJ9sflVOZXRWfpJnekxWxgjZsBA7WPWdp9kTrR1eTdXkGoXebZXmDM6qL1-keanBGjWCnth6JD-8fi9N8xw","e":"AQAB"}]}'

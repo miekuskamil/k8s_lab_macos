@@ -11,6 +11,9 @@ echo "Removing course rules from the shop namespace"
 "${K[@]}" -n shop delete telemetry waypoint-access-logs --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy backend-allow-course-client --ignore-not-found >/dev/null
 "${K[@]}" -n course-sidecar delete virtualservice,destinationrule,peerauthentication --all --ignore-not-found >/dev/null 2>&1 || true
+# Module 13: end-user authentication with JWT
+"${K[@]}" -n shop-ingress delete requestauthentication shop-jwt --ignore-not-found >/dev/null
+"${K[@]}" -n shop-ingress delete authorizationpolicy shop-require-jwt --ignore-not-found >/dev/null
 # Module 12: egress to httpbin.org
 "${K[@]}" -n shop delete serviceentry httpbin-org --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy httpbin-org-read-only --ignore-not-found >/dev/null

@@ -261,8 +261,28 @@ module_12() {
   expect "after the reset the course client reaches any website again" "$(ext https://example.com)" '^200$'
 }
 
+module_13() {
+  section "13: end-user authentication with JWT"
+  baseline
+  local J="$ROOT/course/jwt"
+  tok() { code -H "Authorization: Bearer $(cat "$J/$1.jwt")" "${@:2}"; }
+  "${K[@]}" apply -f "$M/13-request-authentication.yaml" >/dev/null; settle 6
+  expect "with RequestAuthentication only, no token still passes" "$(code "$BASE/api/orders")" '^200$'
+  expect "a valid token passes" "$(tok alice "$BASE/api/orders")" '^200$'
+  expect "an expired token gets 401" "$(tok expired "$BASE/api/orders")" '^401$'
+  expect "a token signed with an unknown key gets 401" "$(tok forged "$BASE/api/orders")" '^401$'
+  "${K[@]}" apply -f "$M/13-require-jwt.yaml" >/dev/null; settle 6
+  expect "the web page stays open without a token" "$(code "$BASE/")" '^200$'
+  expect "the API now needs a token (403 without one)" "$(code "$BASE/api/orders")" '^403$'
+  expect "alice reads orders" "$(tok alice "$BASE/api/orders")" '^200$'
+  expect "alice may not create orders" "$(tok alice -X POST -H 'Content-Type: application/json' -d '{"item":"book","quantity":1}' "$BASE/api/orders")" '^403$'
+  expect "an admin token creates an order" "$(tok admin -X POST -H 'Content-Type: application/json' -d '{"item":"book","quantity":1}' "$BASE/api/orders")" '^201$'
+  baseline
+  expect "after the reset the API answers without a token" "$(code "$BASE/api/orders")" '^200$'
+}
+
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12); fi
+if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13); fi
 # Start from the Git baseline, in case an exercise is still applied.
 printf 'Restoring the baseline before the checks\n'
 "$ROOT/course/reset.sh" >/dev/null 2>&1
