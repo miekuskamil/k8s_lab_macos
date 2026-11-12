@@ -23,6 +23,15 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: headlamp
+  # The chart sets hostUsers: true. Kubernetes 1.31 has user namespaces switched off
+  # (feature gate UserNamespacesSupport), so the API server drops the field and the
+  # Deployment would show OutOfSync forever.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: headlamp
+      jsonPointers:
+        - /spec/template/spec/hostUsers
   syncPolicy:
     automated:
       prune: true
@@ -30,6 +39,7 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
     retry:
       limit: 5
       backoff:
