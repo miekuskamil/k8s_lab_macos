@@ -212,3 +212,11 @@ Modules 5, 6, 8.
 
 **Inference.** Running a trained model to get an answer, as opposed to training it. A model server like Ollama or vLLM does inference. Module 18.
 
+**Model server.** The program that loads a model and answers requests over HTTP: Ollama, llama.cpp, vLLM, NVIDIA Triton. Module 18 runs llama.cpp.
+
+**GGUF.** The model file format llama.cpp and Ollama read. One file holds the whole model, often shrunk ("quantised", the `q4_k_m` in a file name) to fit in less memory. Module 18.
+
+**OpenAI-compatible API.** The request format OpenAI made popular, `POST /v1/chat/completions` with the model name in the JSON body. Most model servers and AI tools speak it. Module 18.
+
+**Gateway API Inference Extension.** A Kubernetes standard for routing to model servers. An **InferencePool** groups model server pods, and an **endpoint picker** chooses a pod by the servers' own metrics, such as queue length, instead of round robin. Istio supports it from 1.27. Module 18.
+

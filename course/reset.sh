@@ -11,6 +11,9 @@ echo "Removing course rules from the shop namespace"
 "${K[@]}" -n shop delete telemetry waypoint-access-logs --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy backend-allow-course-client --ignore-not-found >/dev/null
 "${K[@]}" -n course-sidecar delete virtualservice,destinationrule,peerauthentication --all --ignore-not-found >/dev/null 2>&1 || true
+# Module 18: the model servers. Deleting the namespace removes the downloaded models too.
+"${K[@]}" delete namespace ai --ignore-not-found >/dev/null
+"${K[@]}" -n observability delete servicemonitor ai-models --ignore-not-found >/dev/null
 # Module 17: the shop assistant and the Ollama ServiceEntry
 "${K[@]}" -n shop delete deployment,service,serviceaccount -l app=assistant --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete serviceaccount assistant --ignore-not-found >/dev/null

@@ -369,6 +369,36 @@ module_17() {
   expect "after the reset the assistant is gone" "$("${K[@]}" -n shop get deploy assistant 2>&1 | grep -c NotFound)" '^1$'
 }
 
+# Modules 17 and 18 are not in the default run: 17 needs Ollama on your machine, and
+# 18 downloads about 900 MB of models. Run them with: ./course/verify.sh 17 18
+module_18() {
+  section "18: serving models inside the cluster"
+  baseline
+  local prom='/api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/query'
+  "${K[@]}" apply -f "$M/18-namespace.yaml" >/dev/null && "${K[@]}" apply -f "$M/18-llm-qwen.yaml" -f "$M/03-course-client.yaml" >/dev/null
+  expect "two Qwen model servers download the model and become ready" "$("${K[@]}" -n ai rollout status deploy/llm-qwen --timeout=600s 2>&1 | tail -1)" 'successfully rolled out'
+  "${K[@]}" -n shop rollout status deploy/course-client --timeout=120s >/dev/null 2>&1; settle 5
+  expect "Qwen answers through the mesh" "$(in_shop curl -s -m 60 http://llm-qwen.ai.svc.cluster.local:8080/v1/chat/completions -H 'Content-Type: application/json' -d '{"messages":[{"role":"user","content":"Say hi."}],"max_tokens":5}' | grep -o '"model":"[^"]*"')" 'qwen2.5-0.5b'
+  local l4 l7=0 n
+  l4="$("$ROOT/course/llm-load.sh" | sed -n 's/.*it (over 2 s): \([0-9]*\) of 10/\1/p')"
+  between "with ztunnel alone, short questions get stuck behind a long one" "${l4:-0}" 2 10
+  "${K[@]}" apply -f "$M/18-waypoint.yaml" >/dev/null
+  "${K[@]}" label ns ai istio.io/use-waypoint=waypoint --overwrite >/dev/null
+  "${K[@]}" -n ai wait --for=condition=Programmed gateway/waypoint --timeout=120s >/dev/null 2>&1; settle 10
+  for _ in 1 2 3; do n="$("$ROOT/course/llm-load.sh" | sed -n 's/.*it (over 2 s): \([0-9]*\) of 10/\1/p')"; l7=$(( l7 + ${n:-10} )); done
+  between "with the waypoint's least-request balancing, fewer get stuck (3 runs, out of 30)" "$l7" 0 12
+  settle 20
+  expect "Prometheus collects the model servers' token counts" "$("${K[@]}" get --raw "${prom}?query=sum(llamacpp%3Atokens_predicted_total)" | grep -c '"value"')" '^1$'
+  "${K[@]}" apply -f "$M/18-llm-smol.yaml" >/dev/null
+  "${K[@]}" -n ai rollout status deploy/llm-smol --timeout=600s >/dev/null 2>&1
+  "${K[@]}" apply -f "$M/18-route-by-model.yaml" >/dev/null; settle 10
+  local llm='http://llm.ai.svc.cluster.local:8080/v1/chat/completions'
+  expect "the header x-model: smollm2 picks the second model" "$(in_shop curl -s -m 60 "$llm" -H 'Content-Type: application/json' -H 'x-model: smollm2' -d '{"messages":[{"role":"user","content":"Name a colour."}],"max_tokens":5}' | grep -o '"model":"[^"]*"')" 'smollm2-360m'
+  expect "a model named only in the JSON body is ignored by the route" "$(in_shop curl -s -m 60 "$llm" -H 'Content-Type: application/json' -d '{"model":"smollm2-360m","messages":[{"role":"user","content":"Name a colour."}],"max_tokens":5}' | grep -o '"model":"[^"]*"')" 'qwen2.5-0.5b'
+  baseline
+  expect "after the reset the ai namespace is gone" "$("${K[@]}" get ns ai 2>&1 | grep -c NotFound)" '^1$'
+}
+
 # Module 14 upgrades Istio for real and cannot be undone, so it is not in the default
 # run. Use it on a lab that runs the course version: ./course/verify.sh 14
 module_14() {
@@ -430,7 +460,7 @@ module_14() {
 }
 
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16 17); fi
+if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16); fi
 # Start from the Git baseline, in case an exercise is still applied.
 printf 'Restoring the baseline before the checks\n'
 "$ROOT/course/reset.sh" >/dev/null 2>&1

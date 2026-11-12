@@ -1,0 +1,38 @@
+# A namespace for model servers, enrolled in the ambient mesh, with a volume that
+# keeps downloaded models across pod restarts, and a monitor so Prometheus
+# scrapes the servers' llamacpp:* metrics.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai
+  labels:
+    istio.io/dataplane-mode: ambient
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: models
+  namespace: ai
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ai-models
+  namespace: observability
+spec:
+  namespaceSelector:
+    matchNames: ["ai"]
+  selector:
+    matchLabels:
+      metrics: scrape
+  podTargetLabels: ["model"]
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

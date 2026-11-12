@@ -1,0 +1,16 @@
+# A waypoint for the ai namespace. Its Envoy balances every request on its own,
+# using Istio's default LEAST_REQUEST policy: of two candidate pods, pick the one
+# with fewer requests in progress. ztunnel alone balances whole connections.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: waypoint
+  namespace: ai
+  labels:
+    istio.io/waypoint-for: service
+spec:
+  gatewayClassName: istio-waypoint
+  listeners:
+    - name: mesh
+      port: 15008
+      protocol: HBONE

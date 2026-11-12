@@ -1,0 +1,83 @@
+# SmolLM2 360M Instruct, about 390 MB: a second, smaller model for the A/B test.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-smol
+  namespace: ai
+  labels:
+    app: llm
+    model: smol
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm
+      model: smol
+  template:
+    metadata:
+      labels:
+        app: llm
+        model: smol
+    spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      initContainers:
+        # Download the model once into the shared volume. Each pod writes to its own
+        # temporary file and renames it, so two pods starting together don't clash.
+        - name: fetch-model
+          image: curlimages/curl:8.11.1
+          command: ["sh", "-c"]
+          args:
+            - f=/models/smollm2-360m-instruct-q8_0.gguf; [ -s "$f" ] || { curl -fsSL --retry 3 -o "$f.$HOSTNAME" "https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf" && mv "$f.$HOSTNAME" "$f"; }; ls -la /models
+          volumeMounts:
+            - name: models
+              mountPath: /models
+      containers:
+        - name: llama-server
+          image: ghcr.io/ggml-org/llama.cpp:server-b11889
+          args: ["-m", "/models/smollm2-360m-instruct-q8_0.gguf", "--alias", "smollm2-360m", "--host", "0.0.0.0", "--port", "8080",
+                 "--metrics", "-c", "4096", "--parallel", "1", "--threads", "2"]
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+          # /health answers 503 while the model loads, 200 once it can serve.
+          startupProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 5
+          volumeMounts:
+            - name: models
+              mountPath: /models
+              readOnly: true
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: models
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-smol
+  namespace: ai
+  labels:
+    app: llm
+    model: smol
+    metrics: scrape
+spec:
+  selector:
+    app: llm
+    model: smol
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
