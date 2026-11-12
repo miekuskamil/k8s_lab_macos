@@ -220,3 +220,17 @@ Modules 5, 6, 8.
 
 **Gateway API Inference Extension.** A Kubernetes standard for routing to model servers. An **InferencePool** groups model server pods, and an **endpoint picker** chooses a pod by the servers' own metrics, such as queue length, instead of round robin. Istio supports it from 1.27. Module 18.
 
+**AI agent.** A program that lets a model act: it sends the model a question plus a list of tools, runs the tool calls the model asks for, feeds back the results, and repeats until the model answers. Module 19.
+
+**Tool.** A function an agent offers its model, such as "list pods" or "delete a resource", with a description the model reads to decide when to use it. Module 19.
+
+**MCP (Model Context Protocol).** The standard way for agents to reach tools: JSON-RPC over HTTP, every call to one URL (`/mcp`), the tool name inside the JSON body. A tool server describes its tools and runs them. Module 19.
+
+**A2A (Agent2Agent).** A protocol for clients and agents to send tasks to an agent and get results back. kagent serves it on its controller, port 8083. Module 19.
+
+**kagent.** A CNCF Sandbox project that runs AI agents on Kubernetes. Agents, models (ModelConfig) and tool servers (RemoteMCPServer) are custom resources. Module 19.
+
+**Prompt injection.** Text that reaches a model through data, like a log line, a web page or a pod annotation, and carries instructions the model may follow. No model resists it reliably. Module 19.
+
+**Excessive agency.** An agent holding more tools or permissions than its job needs, so a mistake, a prompt injection or a direct call to its tools does real damage. On the OWASP Top 10 for LLM applications. Module 19.
+

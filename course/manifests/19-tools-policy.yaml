@@ -1,0 +1,21 @@
+# Only the agents and the kagent controller may open connections to the MCP tool
+# server. ztunnel enforces it (L4, by mTLS identity), so every other pod in the
+# cluster, including a compromised one, gets its connection reset.
+# Each kagent agent runs as its own service account, named after the agent.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: tools-only-from-agents
+  namespace: kagent
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kagent-tools
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/kagent/sa/k8s-agent
+              - cluster.local/ns/kagent/sa/istio-agent
+              - cluster.local/ns/kagent/sa/kagent-controller

@@ -399,6 +399,54 @@ module_18() {
   expect "after the reset the ai namespace is gone" "$("${K[@]}" get ns ai 2>&1 | grep -c NotFound)" '^1$'
 }
 
+# Module 19 also needs Ollama on your machine, and installs kagent: ./course/verify.sh 19
+module_19() {
+  section "19: AI agents and their tools"
+  baseline
+  local model H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kagent)
+  model="${LAB_OLLAMA_MODEL:-$(curl -s -m 5 http://localhost:11434/api/tags | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; print(m[0]["name"] if m else "")' 2>/dev/null)}"
+  if [[ -z "$model" ]]; then fail "Ollama runs on this machine with at least one model" "no answer from http://localhost:11434/api/tags"; return; fi
+  "${H[@]}" upgrade --install kagent-crds oci://ghcr.io/kagent-dev/kagent/helm/kagent-crds --version 0.10.6 --create-namespace --wait >/dev/null 2>&1
+  "${H[@]}" upgrade --install kagent oci://ghcr.io/kagent-dev/kagent/helm/kagent --version 0.10.6 \
+    -f "$M/19-kagent-values.yaml" --set providers.ollama.model="$model" --wait --timeout 10m >/dev/null 2>&1
+  "${K[@]}" apply -f "$M/03-course-client.yaml" -f "$M/19-agent-target.yaml" >/dev/null
+  "${K[@]}" -n shop rollout status deploy/course-client --timeout=120s >/dev/null 2>&1
+  "${K[@]}" -n kagent wait --for=condition=Ready agent/k8s-agent --timeout=180s >/dev/null 2>&1
+  local accepted=False
+  for _ in $(seq 1 12); do
+    "${K[@]}" -n kagent annotate remotemcpserver kagent-tool-server lab/retry="$(date +%s)" --overwrite >/dev/null 2>&1; settle 5
+    accepted="$("${K[@]}" -n kagent get remotemcpserver kagent-tool-server -o jsonpath='{.status.conditions[?(@.type=="Accepted")].status}')"
+    [[ "$accepted" == True ]] && break
+  done
+  expect "kagent runs, and its agents found their tools" "$accepted" '^True$'
+  agent() {
+    in_shop curl -s -m 300 -X POST http://kagent-controller.kagent:8083/api/a2a/kagent/k8s-agent/ -H 'Content-Type: application/json' \
+      -d "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"message/send\",\"params\":{\"message\":{\"role\":\"user\",\"messageId\":\"$RANDOM$RANDOM\",\"parts\":[{\"kind\":\"text\",\"text\":\"$1\"}]}}}"
+  }
+  expect "the agent answers by calling a Kubernetes tool" "$(agent 'How many pods run in the namespace course-agent? One sentence.' | grep -o '"name":"k8s_get_resources"' | head -1)" 'k8s_get_resources'
+  local mcp; mcp="$(cat "$ROOT/course/mcp-call.sh")"
+  expect "before the policy, any pod lists every Secret through the tool server" "$(in_shop sh -c "$mcp" | grep -c 'lab-root-ca')" '^[1-9]'
+  "${K[@]}" label ns kagent istio.io/dataplane-mode=ambient --overwrite >/dev/null
+  # Enrolling breaks connections that were open before (the controller's database pool), so restart.
+  "${K[@]}" -n kagent rollout restart deploy >/dev/null
+  for d in $("${K[@]}" -n kagent get deploy -o name); do "${K[@]}" -n kagent rollout status "$d" --timeout=180s >/dev/null 2>&1; done
+  "${K[@]}" apply -f "$M/19-tools-policy.yaml" >/dev/null; settle 15
+  expect "with the policy, that pod gets no session at all" "$(in_shop sh -c "$mcp" | grep -c 'lab-root-ca')" '^0$'
+  expect "the agent still uses its tools" "$(agent 'List the pods in the namespace course-agent. One line.' | grep -o '"name":"k8s_get_resources"' | head -1)" 'k8s_get_resources'
+  agent 'Delete the pod agent-target in the namespace course-agent with the k8s_delete_resource tool. Call the tool once. If it fails, do not retry: quote the error message.' >/dev/null
+  settle 3
+  expect "with cluster-admin rights, the agent deletes the pod" "$("${K[@]}" -n course-agent get pod agent-target 2>&1 | grep -c NotFound)" '^1$'
+  "${K[@]}" apply -f "$M/19-agent-target.yaml" >/dev/null
+  "${K[@]}" -n course-agent wait --for=condition=Ready pod/agent-target --timeout=90s >/dev/null 2>&1
+  "${K[@]}" delete clusterrolebinding kagent-tools-cluster-admin-rolebinding --ignore-not-found >/dev/null
+  "${K[@]}" apply -f "$M/19-tools-read-only.yaml" >/dev/null; settle 3
+  agent 'Delete the pod agent-target in the namespace course-agent with the k8s_delete_resource tool. Call the tool once. If it fails, do not retry: quote the error message.' >/dev/null
+  settle 3
+  expect "with the view role, the same request leaves the pod alone" "$("${K[@]}" -n course-agent get pod agent-target --no-headers 2>&1 | awk '{print $3}')" '^Running$'
+  baseline
+  expect "after the reset kagent is gone" "$("${K[@]}" get ns kagent 2>&1 | grep -c NotFound)" '^1$'
+}
+
 # Module 14 upgrades Istio for real and cannot be undone, so it is not in the default
 # run. Use it on a lab that runs the course version: ./course/verify.sh 14
 module_14() {

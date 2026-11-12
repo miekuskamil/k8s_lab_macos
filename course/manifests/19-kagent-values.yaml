@@ -1,0 +1,33 @@
+# kagent 0.10.6 for course module 19: Ollama on your machine as the model, and only
+# two of the ten built-in agents (Kubernetes and Istio), to keep the lab small.
+# Pass your model at install time: --set providers.ollama.model=<a name from "ollama list">
+providers:
+  default: ollama
+  ollama:
+    provider: Ollama
+    config:
+      host: host.docker.internal:11434
+      options:
+        num_ctx: "16384"      # the context window; 64000 by default, which needs far more memory
+k8s-agent:
+  enabled: true
+istio-agent:
+  enabled: true
+kgateway-agent:
+  enabled: false
+promql-agent:
+  enabled: false
+observability-agent:
+  enabled: false
+argo-rollouts-agent:
+  enabled: false
+helm-agent:
+  enabled: false
+cilium-policy-agent:
+  enabled: false
+cilium-manager-agent:
+  enabled: false
+cilium-debug-agent:
+  enabled: false
+grafana-mcp:
+  enabled: false

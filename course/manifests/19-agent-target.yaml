@@ -1,0 +1,22 @@
+# A disposable pod in its own namespace, for the agent to try to delete.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-agent
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: agent-target
+  namespace: course-agent
+  labels:
+    app: agent-target
+spec:
+  automountServiceAccountToken: false
+  containers:
+    - name: sleep
+      image: curlimages/curl:8.11.1
+      command: ["sleep", "infinity"]
+      resources:
+        requests: {cpu: 5m, memory: 8Mi}
+        limits: {cpu: 50m, memory: 32Mi}

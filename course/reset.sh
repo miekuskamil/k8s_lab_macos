@@ -11,6 +11,15 @@ echo "Removing course rules from the shop namespace"
 "${K[@]}" -n shop delete telemetry waypoint-access-logs --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy backend-allow-course-client --ignore-not-found >/dev/null
 "${K[@]}" -n course-sidecar delete virtualservice,destinationrule,peerauthentication --all --ignore-not-found >/dev/null 2>&1 || true
+# Module 19: kagent, its CRDs and the agent's test namespace
+if helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kagent status kagent >/dev/null 2>&1; then
+  helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kagent uninstall kagent --wait >/dev/null 2>&1 || true
+fi
+if helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kagent status kagent-crds >/dev/null 2>&1; then
+  helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kagent uninstall kagent-crds >/dev/null 2>&1 || true
+fi
+"${K[@]}" delete namespace kagent course-agent --ignore-not-found >/dev/null
+"${K[@]}" delete clusterrolebinding kagent-tools-view --ignore-not-found >/dev/null
 # Module 18: the model servers. Deleting the namespace removes the downloaded models too.
 "${K[@]}" delete namespace ai --ignore-not-found >/dev/null
 "${K[@]}" -n observability delete servicemonitor ai-models --ignore-not-found >/dev/null
