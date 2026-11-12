@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Open local ports for ArgoCD, Grafana, Prometheus and Jaeger. Press Ctrl-C to stop all of them.
+# Open local ports for ArgoCD, Grafana, Prometheus, Jaeger, Kiali and Headlamp. Press Ctrl-C to stop all of them.
 set -euo pipefail
 
 pids=()
@@ -26,6 +26,7 @@ forward observability svc/kube-prometheus-stack-grafana 3000:80 Grafana
 forward observability svc/kube-prometheus-stack-prometheus 9090:9090 Prometheus
 forward observability svc/jaeger-query 16686:16686 Jaeger
 forward istio-system svc/kiali 20001:20001 Kiali
+forward headlamp svc/headlamp 4466:80 Headlamp
 
 printf '\nPort-forwards are running. Press Ctrl-C to stop.\n'
 wait

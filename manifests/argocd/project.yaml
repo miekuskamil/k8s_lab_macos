@@ -10,6 +10,7 @@ spec:
     - https://prometheus-community.github.io/helm-charts
     - https://grafana.github.io/helm-charts
     - https://kiali.org/helm-charts
+    - https://kubernetes-sigs.github.io/headlamp/
   destinations:
     - server: https://kubernetes.default.svc
       namespace: "*"

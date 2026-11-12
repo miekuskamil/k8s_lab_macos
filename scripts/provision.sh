@@ -296,6 +296,7 @@ health_checks() {
   check "loki ready" kubectl -n observability rollout status statefulset/loki --timeout=120s
   check "alloy ready" kubectl -n observability rollout status deploy/alloy --timeout=120s
   check "kiali ready" kubectl -n istio-system rollout status deploy/kiali --timeout=120s
+  check "headlamp ready" kubectl -n headlamp rollout status deploy/headlamp --timeout=120s
   local tries=0
   until curl -fsS --max-time 5 http://localhost:8080/healthz >/dev/null 2>&1 || (( tries >= 24 )); do
     tries=$((tries + 1))
@@ -322,9 +323,13 @@ Run ./scripts/port-forward.sh to open these local ports:
   Prometheus  http://localhost:9090    no login
   Jaeger      http://localhost:16686   no login
   Kiali       http://localhost:20001   no login (anonymous, lab only)
+  Headlamp    http://localhost:4466    token from the command below (cluster-admin, lab only)
+
+Headlamp login token:
+  kubectl -n headlamp get secret headlamp-admin -o jsonpath='{.data.token}' | base64 -d
 
 Redis has no local port. Its password is k8s-lab-redis.
-These are lab defaults stored in Git. See README.md, section "Default logins".
+These are lab defaults stored in Git. See README.md, section "Open it".
 
 Cluster ports
   ingress gateway 8080, frontend 3000, backend 8000, redis 6379,

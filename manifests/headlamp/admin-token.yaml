@@ -1,0 +1,14 @@
+# A long-lived token for the headlamp service account, so the login stays the same
+# across restarts. Print it with:
+#   kubectl -n headlamp get secret headlamp-admin -o jsonpath='{.data.token}' | base64 -d
+# Wave 1 runs after the chart creates the service account. Kubernetes deletes a token
+# Secret whose service account does not exist yet.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: headlamp-admin
+  namespace: headlamp
+  annotations:
+    kubernetes.io/service-account.name: headlamp
+    argocd.argoproj.io/sync-wave: "1"
+type: kubernetes.io/service-account-token

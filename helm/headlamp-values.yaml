@@ -1,0 +1,20 @@
+# Headlamp, a general Kubernetes web UI: every namespace, pod logs, exec, events, YAML edits.
+# The service account is bound to cluster-admin, so the login token can change anything. Lab only.
+config:
+  inCluster: true
+
+serviceAccount:
+  create: true
+  name: headlamp
+
+clusterRoleBinding:
+  create: true
+  clusterRoleName: cluster-admin
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
