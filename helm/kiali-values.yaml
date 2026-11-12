@@ -3,6 +3,12 @@
 auth:
   strategy: anonymous
 
+# The chart generates a random signing key on every render when this is empty.
+# ArgoCD renders on every poll, so the config checksum changed and Kiali
+# restarted every few minutes. A fixed key (16, 24 or 32 characters) stops it.
+login_token:
+  signing_key: k8s-lab-kiali-signing-key-32chrs
+
 istio_namespace: istio-system
 
 deployment:

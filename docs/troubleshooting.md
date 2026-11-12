@@ -257,6 +257,23 @@ kubectl -n shop delete pod -l app=frontend
 
 `./scripts/start.sh` now does this by itself: if mesh pods are still not Ready after three minutes, it waits for `istio-cni` and ztunnel, recreates those pods once, and waits again.
 
+## 16. Kiali restarts every few minutes
+
+**Symptom.** `localhost:20001` stops answering while the other UIs still work. `port-forward.sh` lost its Kiali tunnel because the pod behind it was replaced. Kiali had six ReplicaSets after one hour.
+
+**Found with.**
+
+```bash
+kubectl -n istio-system get rs -l app.kubernetes.io/name=kiali
+kubectl -n istio-system get rs -o jsonpath='{range .items[*]}{.spec.template.metadata.annotations.checksum/config}{"\n"}{end}'
+```
+
+Every ReplicaSet had a different `checksum/config` annotation, and nothing in Git had changed.
+
+**Cause.** When `login_token.signing_key` is empty, the Kiali chart generates a random one each time it renders. Helm renders once at install. ArgoCD renders on every poll, so each poll produced a new ConfigMap, a new checksum, a new pod template and a rollout.
+
+**Fix.** `helm/kiali-values.yaml` sets a fixed 32-character `signing_key`. The same trap exists in any chart that calls `randAlphaNum` in a template: under ArgoCD, set the value yourself. After a rollout, restart `./scripts/port-forward.sh`.
+
 ## A note on watching long installs
 
 Two habits would have shortened this build:
