@@ -185,7 +185,7 @@ Nine ArgoCD Applications deploy everything else (ten with `root`):
 | `loki` | Loki, the log store (Helm chart) | Yes |
 | `alloy` | Alloy, which ships pod logs to Loki (Helm chart) | Yes |
 | `kiali` | Kiali, the Istio console (Helm chart) | Yes |
-| `headlamp` | Headlamp, a web UI for the whole cluster (Helm chart, plus its login token) | Yes |
+| `headlamp` | Headlamp, a web UI for the whole cluster (Helm chart, no login) | Yes |
 
 `istio-config` does not self-heal so you can apply a scenario by hand and watch ArgoCD report the drift without undoing your experiment. The files in `manifests/scenarios/` are not synced at all.
 

@@ -276,28 +276,11 @@ Every ReplicaSet had a different `checksum/config` annotation, and nothing in Gi
 
 ## 17. Headlamp login fails with an authentication error
 
-**Symptom.** You paste the token into http://localhost:4466 and Headlamp says it could not authenticate.
+**Symptom.** Headlamp first asked for a service account token. Pasting it into http://localhost:4466 gave an authentication error, even though the same token worked with `curl`.
 
-**Found with.**
+**Cause.** Two were seen. A token copied wrongly, for example with zsh's `%` end-of-line marker, or read from OrbStack's context instead of the lab's. And a one-off failure: after about 17 minutes idle, the API server closed Headlamp's HTTP/2 connection as the login request went out (`GOAWAY ... after Request.Body was written` in the Headlamp log), and Go cannot resend a request whose body was already sent.
 
-```bash
-kubectl -n headlamp logs deploy/headlamp --since=10m | grep -i "proxy error"
-./scripts/headlamp-token.sh >/dev/null
-TOKEN=$(pbpaste)
-curl -s -o /dev/null -w "%{http_code}\n" -X POST -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"kind":"SelfSubjectRulesReview","apiVersion":"authorization.k8s.io/v1","spec":{"namespace":"default"}}' \
-  http://localhost:4466/clusters/main/apis/authorization.k8s.io/v1/selfsubjectrulesreviews
-```
-
-The login check is that POST. `201` means the token is good; `401` means the token is wrong.
-
-**Causes.** Two were seen:
-
-- A wrong token. The `kubectl` command ran against OrbStack's own context and printed an error, or zsh's `%` end-of-line marker was copied with the token.
-- One failed request. Headlamp keeps an HTTP/2 connection to the API server. After about 17 minutes idle, the API server closed it at the moment the login POST went out. The Headlamp log shows `http2: Transport received Server's graceful shutdown GOAWAY ... after Request.Body was written`. Go cannot retry a request whose body was already sent, so that one login fails.
-
-**Fix.** Run `./scripts/headlamp-token.sh`, which always reads from the lab cluster and copies the token to the clipboard, then log in again. The next request opens a fresh connection and succeeds.
+**Fix.** The lab no longer uses a token. `helm/headlamp-values.yaml` sets `config.unsafeUseServiceAccountToken: true`, so Headlamp makes every request as its own `cluster-admin` service account and shows no login page. The chart calls this unsafe because anyone who can reach Headlamp gets full control. Here only your machine can reach it, through `port-forward.sh`. If Headlamp still shows a login page, your browser kept the old session: reload the page, or clear the site data for `localhost:4466`.
 
 ## A note on watching long installs
 

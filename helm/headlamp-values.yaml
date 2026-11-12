@@ -1,7 +1,10 @@
 # Headlamp, a general Kubernetes web UI: every namespace, pod logs, exec, events, YAML edits.
-# The service account is bound to cluster-admin, so the login token can change anything. Lab only.
+# No login: Headlamp uses its own service account, bound to cluster-admin, for every request.
+# Anyone who can open localhost:4466 can change anything. That is acceptable only because the
+# port-forward listens on your machine alone, the same reason Kiali uses anonymous login.
 config:
   inCluster: true
+  unsafeUseServiceAccountToken: true
 
 serviceAccount:
   create: true

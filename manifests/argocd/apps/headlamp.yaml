@@ -19,7 +19,6 @@ spec:
     - repoURL: https://github.com/miekuskamil/k8s_lab_macos
       targetRevision: main
       ref: values
-      path: manifests/headlamp
   destination:
     server: https://kubernetes.default.svc
     namespace: headlamp
