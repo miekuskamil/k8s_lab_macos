@@ -310,6 +310,29 @@ module_15() {
   expect "and the shop answers 200" "$(code "$BASE/api/orders")" '^200$'
 }
 
+module_16() {
+  section "16: the Istio API (Gateway and VirtualService)"
+  baseline
+  helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" install istio-ingress istio/gateway -n istio-ingress --create-namespace \
+    --version 1.24.2 --skip-schema-validation --set service.type=ClusterIP --wait --timeout 3m >/dev/null 2>&1
+  expect "the classic gateway runs, with a proxy injected" "$("${K[@]}" -n istio-ingress get pods -l istio=ingress -o jsonpath='{.items[0].spec.containers[0].image}')" 'proxyv2'
+  "${K[@]}" apply -f "$M/16-istio-gateway.yaml" -f "$M/16-ingress-virtualservice.yaml" >/dev/null
+  "${K[@]}" -n istio-ingress port-forward svc/istio-ingress 9080:80 >/dev/null 2>&1 &
+  local pf=$! c=000
+  for _ in $(seq 1 12); do settle 3; c="$(code http://localhost:9080/)"; [[ "$c" == 200 ]] && break; done
+  expect "the shop answers through the Istio Gateway and VirtualService" "$c" '^200$'
+  "${K[@]}" -n shop delete httproute backend-route >/dev/null
+  "${K[@]}" apply -f "$M/16-subsets.yaml" -f "$M/16-canary-virtualservice.yaml" >/dev/null; settle 8
+  local out; out="$(BASE=http://localhost:9080 burst 200 5 /api/orders)"
+  between "the VirtualService splits about 90/10 with subsets (v2 share of 200)" "$(echo "$out" | count_matching ' v2$')" 6 40
+  "${K[@]}" apply -f "$M/03-course-client.yaml" -f "$M/03-allow-course-client.yaml" >/dev/null
+  "${K[@]}" -n shop rollout status deploy/course-client --timeout=120s >/dev/null 2>&1; settle 5
+  expect "the header x-version: v2 always reaches v2" "$(in_shop sh -c 'for i in $(seq 1 10); do curl -s -o /dev/null -w "%header{x-app-version}\n" -H "x-version: v2" http://backend:8000/api/version; done' | sort -u | tr -d '\n')" '^v2$'
+  kill "$pf" 2>/dev/null; wait "$pf" 2>/dev/null
+  baseline
+  expect "after the reset the classic gateway is gone" "$("${K[@]}" get ns istio-ingress 2>&1 | grep -c NotFound)" '^1$'
+}
+
 # Module 14 upgrades Istio for real and cannot be undone, so it is not in the default
 # run. Use it on a lab that runs the course version: ./course/verify.sh 14
 module_14() {
@@ -371,7 +394,7 @@ module_14() {
 }
 
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15); fi
+if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16); fi
 # Start from the Git baseline, in case an exercise is still applied.
 printf 'Restoring the baseline before the checks\n'
 "$ROOT/course/reset.sh" >/dev/null 2>&1

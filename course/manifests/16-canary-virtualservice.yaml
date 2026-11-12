@@ -1,0 +1,29 @@
+# The canary from module 4, in Istio's API: testers who send the header
+# x-version: v2 always get v2; everyone else is split 90/10.
+# Rules run top to bottom, and the first match wins.
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: backend-canary
+  namespace: shop
+spec:
+  hosts:
+    - backend.shop.svc.cluster.local
+  http:
+    - match:
+        - headers:
+            x-version:
+              exact: v2
+      route:
+        - destination:
+            host: backend.shop.svc.cluster.local
+            subset: v2
+    - route:
+        - destination:
+            host: backend.shop.svc.cluster.local
+            subset: v1
+          weight: 90
+        - destination:
+            host: backend.shop.svc.cluster.local
+            subset: v2
+          weight: 10

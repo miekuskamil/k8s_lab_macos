@@ -11,6 +11,8 @@ echo "Removing course rules from the shop namespace"
 "${K[@]}" -n shop delete telemetry waypoint-access-logs --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy backend-allow-course-client --ignore-not-found >/dev/null
 "${K[@]}" -n course-sidecar delete virtualservice,destinationrule,peerauthentication --all --ignore-not-found >/dev/null 2>&1 || true
+# Module 16: the classic ingress gateway. Deleting its namespace removes the Helm release too.
+"${K[@]}" delete namespace istio-ingress --ignore-not-found >/dev/null
 # Module 15: the faulty backend pod
 "${K[@]}" -n shop delete deployment backend-v1-faulty --ignore-not-found >/dev/null
 # Module 13: end-user authentication with JWT

@@ -1,0 +1,19 @@
+# Route everything that arrives at the classic gateway to the frontend.
+# "gateways" binds this VirtualService to the Gateway above (namespace/name).
+# Without that field, a VirtualService applies to traffic inside the mesh instead.
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: shop-classic-ingress
+  namespace: shop
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - istio-ingress/shop-classic
+  http:
+    - route:
+        - destination:
+            host: frontend.shop.svc.cluster.local
+            port:
+              number: 3000

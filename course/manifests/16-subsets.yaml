@@ -1,0 +1,17 @@
+# Name the backend versions. A subset is a group of the backend Service's pods,
+# picked by label. VirtualServices route to subsets; HTTPRoutes use one Service
+# per version (backend-v1, backend-v2) instead.
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: backend-subsets
+  namespace: shop
+spec:
+  host: backend.shop.svc.cluster.local
+  subsets:
+    - name: v1
+      labels:
+        version: v1
+    - name: v2
+      labels:
+        version: v2

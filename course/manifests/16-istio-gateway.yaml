@@ -1,0 +1,19 @@
+# Istio's own Gateway resource (networking.istio.io). Unlike the Gateway API
+# version, it creates nothing: it configures gateway pods that already run, the
+# ones whose labels match the selector. Here: the istio-ingress pods that the
+# istio/gateway Helm chart deployed.
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: shop-classic
+  namespace: istio-ingress
+spec:
+  selector:
+    istio: ingress
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*"
