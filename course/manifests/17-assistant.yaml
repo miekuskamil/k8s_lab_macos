@@ -1,0 +1,117 @@
+# The shop assistant: answers questions about orders with a language model.
+# It reads orders from the backend, then calls Ollama on your machine through
+# host.docker.internal (OrbStack and Docker Desktop provide that name).
+# Set OLLAMA_MODEL to a model you have: run "ollama list" on your machine.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: assistant
+  namespace: shop
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: assistant
+  namespace: shop
+  labels:
+    app: assistant
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: assistant
+  template:
+    metadata:
+      labels:
+        app: assistant
+        version: v1
+    spec:
+      enableServiceLinks: false
+      serviceAccountName: assistant
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: assistant
+          image: k8s-lab/assistant:1.0.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: OLLAMA_URL
+              value: http://host.docker.internal:11434
+            - name: OLLAMA_MODEL
+              value: qwen2.5:3b
+            - name: MAX_TOKENS
+              value: "120"
+            - name: LLM_TIMEOUT_S
+              value: "120"
+            - name: OTEL_SERVICE_NAME
+              value: assistant
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://jaeger-collector.observability.svc.cluster.local:4318
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+            limits:
+              cpu: 250m
+              memory: 192Mi
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: assistant
+  namespace: shop
+  labels:
+    app: assistant
+    metrics: scrape        # picked up by the lab's ServiceMonitor shop-apps
+spec:
+  selector:
+    app: assistant
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+---
+# Send /api/ask and /api/model from the ingress gateway to the assistant.
+# A longer path prefix wins over the frontend route's "/".
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: assistant
+  namespace: shop
+spec:
+  parentRefs:
+    - name: shop-gateway
+      namespace: shop-ingress
+  rules:
+    - matches:
+        - path: {type: PathPrefix, value: /api/ask}
+        - path: {type: PathPrefix, value: /api/model}
+      backendRefs:
+        - name: assistant
+          port: 8000

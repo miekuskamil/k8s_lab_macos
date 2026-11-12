@@ -10,6 +10,7 @@ Every Istio resource and term this course uses, in plain words. Each entry says 
 - [Protocols and identity](#protocols-and-identity)
 - [Envoy response flags](#envoy-response-flags)
 - [Around the mesh](#around-the-mesh)
+- [AI on Kubernetes](#ai-on-kubernetes)
 
 ## Find the right resource
 
@@ -192,3 +193,22 @@ Modules 5, 6, 8.
 **NetworkPolicy.** Plain Kubernetes resource that allows or blocks connections by pod labels, namespaces and IP ranges, enforced by the node's packet filter, below the mesh. Module 12 uses one to force traffic through the waypoint.
 
 **Kiali.** The Istio console: traffic graph, mTLS status and config checks. **Jaeger**: shows traces. **Prometheus**: stores metrics. **Grafana**: dashboards and queries over Prometheus, Loki and Jaeger. **Loki**: stores logs. Module 6.
+
+## AI on Kubernetes
+
+**LLM (large language model).** A model that reads text and writes text, such as Qwen, Llama or Claude. "14B" in a model name means 14 billion parameters: bigger models answer better and run slower. Modules 17 to 19.
+
+**Ollama.** A tool that downloads open models and serves them over a small HTTP API (`/api/chat`, `/api/tags`, `/api/pull`, `/api/delete`) on port 11434. It has no authentication. Modules 17, 18.
+
+**Token.** The unit a model reads and writes: a piece of a word, about four characters of English. Hosted models bill per token, input and output separately, and token counts belong on every dashboard for AI traffic. Module 17.
+
+**Prompt.** Everything a model receives: instructions (the system prompt), data and the question. Module 17.
+
+**RAG (retrieval-augmented generation).** Fetch real data first, put it into the prompt, then ask the model, so it answers from your data instead of from memory. The shop assistant does this with orders. Module 17.
+
+**GenAI semantic conventions.** OpenTelemetry's standard attribute names for model calls: `gen_ai.system`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens` and others. Tools like Jaeger and Grafana read them the same way whatever the model. Module 17.
+
+**AI gateway.** A proxy built for model traffic: rate limits counted in tokens, switching between model providers, prompt caching, filtering what goes in and out. Examples: agentgateway, kgateway, Envoy AI Gateway. Module 17.
+
+**Inference.** Running a trained model to get an answer, as opposed to training it. A model server like Ollama or vLLM does inference. Module 18.
+

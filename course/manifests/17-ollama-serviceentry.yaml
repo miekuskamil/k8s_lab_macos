@@ -1,0 +1,19 @@
+# Put the Ollama server on your machine into the mesh's registry, and send its
+# traffic through the shop waypoint. From now on every model call shows up by
+# name in metrics, and L7 rules apply to it.
+apiVersion: networking.istio.io/v1
+kind: ServiceEntry
+metadata:
+  name: ollama
+  namespace: shop
+  labels:
+    istio.io/use-waypoint: waypoint
+spec:
+  hosts:
+    - host.docker.internal
+  location: MESH_EXTERNAL
+  resolution: DNS
+  ports:
+    - number: 11434
+      name: http
+      protocol: HTTP

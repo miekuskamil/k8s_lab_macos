@@ -128,8 +128,10 @@ build_images() {
     ok "built k8s-lab/backend:${IMAGE_TAG}"
     docker build --quiet -t "k8s-lab/frontend:${IMAGE_TAG}" "$ROOT_DIR/apps/frontend" >/dev/null
     ok "built k8s-lab/frontend:${IMAGE_TAG}"
+    docker build --quiet -t "k8s-lab/assistant:${IMAGE_TAG}" "$ROOT_DIR/apps/assistant" >/dev/null
+    ok "built k8s-lab/assistant:${IMAGE_TAG} (used by the AI lessons)"
   fi
-  k3d image import "k8s-lab/backend:${IMAGE_TAG}" "k8s-lab/frontend:${IMAGE_TAG}" -c "$CLUSTER_NAME" >/dev/null
+  k3d image import "k8s-lab/backend:${IMAGE_TAG}" "k8s-lab/frontend:${IMAGE_TAG}" "k8s-lab/assistant:${IMAGE_TAG}" -c "$CLUSTER_NAME" >/dev/null
   ok "images imported into k3d cluster $CLUSTER_NAME, no registry needed"
 }
 

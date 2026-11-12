@@ -1,0 +1,25 @@
+# Ollama has no authentication: anyone who reaches it may download, overwrite or
+# delete models. This rule on the waypoint lets only the assistant chat with the
+# model and list models. Every other call, from any workload, gets a 403.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: ollama-chat-only
+  namespace: shop
+spec:
+  targetRefs:
+    - group: networking.istio.io
+      kind: ServiceEntry
+      name: ollama
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/shop/sa/assistant"]
+      to:
+        - operation:
+            methods: ["POST"]
+            paths: ["/api/chat"]
+        - operation:
+            methods: ["GET"]
+            paths: ["/api/tags", "/api/version"]

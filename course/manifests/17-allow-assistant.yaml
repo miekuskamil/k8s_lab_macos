@@ -1,0 +1,22 @@
+# Let the assistant read orders from the backend: GET /api/orders only.
+# Without this, the backend's waypoint answers 403, because module 3's policy
+# allows only the frontend.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: backend-allow-assistant
+  namespace: shop
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: backend
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/shop/sa/assistant"]
+      to:
+        - operation:
+            methods: ["GET"]
+            paths: ["/api/orders"]

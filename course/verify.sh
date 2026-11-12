@@ -333,6 +333,42 @@ module_16() {
   expect "after the reset the classic gateway is gone" "$("${K[@]}" get ns istio-ingress 2>&1 | grep -c NotFound)" '^1$'
 }
 
+module_17() {
+  section "17: an LLM as a mesh service"
+  baseline
+  local model
+  model="${LAB_OLLAMA_MODEL:-$(curl -s -m 5 http://localhost:11434/api/tags | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; print(m[0]["name"] if m else "")' 2>/dev/null)}"
+  if [[ -z "$model" ]]; then
+    fail "Ollama runs on this machine with at least one model" "no answer from http://localhost:11434/api/tags"
+    return
+  fi
+  ask() { curl -s -m 180 -X POST "$BASE/api/ask" -H 'Content-Type: application/json' -d "{\"question\":\"$1\"}" 2>/dev/null; }
+  "${K[@]}" apply -f "$M/17-assistant.yaml" -f "$M/03-course-client.yaml" >/dev/null
+  "${K[@]}" -n shop set env deploy/assistant OLLAMA_MODEL="$model" >/dev/null
+  "${K[@]}" -n shop rollout status deploy/assistant --timeout=120s >/dev/null 2>&1
+  "${K[@]}" -n shop rollout status deploy/course-client --timeout=120s >/dev/null 2>&1; settle 5
+  expect "without permission the backend refuses the assistant (403)" "$(ask 'How many orders are there?')" '403 Forbidden'
+  "${K[@]}" apply -f "$M/17-allow-assistant.yaml" >/dev/null; settle 6
+  expect "with the allow policy the model answers ($model)" "$(ask 'How many orders are there?' | python3 -c 'import json,sys; d=json.load(sys.stdin); print("answered" if d.get("answer") and d.get("output_tokens",0)>0 else d)' 2>&1)" '^answered$'
+  "${K[@]}" apply -f "$M/17-ollama-serviceentry.yaml" >/dev/null; settle 4
+  "${K[@]}" -n shop rollout restart deploy/assistant >/dev/null
+  "${K[@]}" -n shop rollout status deploy/assistant --timeout=120s >/dev/null 2>&1; settle 4
+  expect "the ServiceEntry gets a virtual IP" "$("${K[@]}" -n shop get serviceentry ollama -o jsonpath='{.status.addresses[0].value}')" '^240\.240\.'
+  local trace_id; trace_id="$(ask 'Which item was ordered most?' | python3 -c 'import json,sys; print(json.load(sys.stdin).get("trace_id",""))' 2>/dev/null)"
+  settle 2
+  expect "model calls now go through the waypoint, by name" "$("${K[@]}" -n istio-system logs ds/ztunnel --since=1m | grep 'src.workload="assistant' | grep -c 'dst.service="host.docker.internal".*dst.workload="waypoint')" '^[1-9]'
+  "${K[@]}" apply -f "$M/17-ollama-policy.yaml" >/dev/null; settle 6
+  expect "other workloads may not list Ollama's models (403)" "$(in_shop curl -s -o /dev/null -m 20 -w '%{http_code}' http://host.docker.internal:11434/api/tags)" '^403$'
+  expect "nor delete one (403, before it reaches Ollama)" "$(in_shop curl -s -o /dev/null -m 20 -w '%{http_code}' -X DELETE -d '{"model":"lab-model-that-does-not-exist"}' http://host.docker.internal:11434/api/delete)" '^403$'
+  expect "the assistant still gets answers" "$(ask 'How many orders are there?' | grep -c '"answer"')" '^1$'
+  settle 10
+  expect "Jaeger shows the model call with its token counts" "$("${K[@]}" get --raw "/api/v1/namespaces/observability/services/jaeger-query:16686/proxy/api/traces/${trace_id}" 2>/dev/null | grep -c 'gen_ai.usage.output_tokens')" '^[1-9]'
+  "${K[@]}" apply -f "$M/17-llm-timeout.yaml" >/dev/null; settle 8
+  expect "a half-second route timeout cuts the model call off (504)" "$(ask 'How many orders are there?')" '504 Gateway Timeout'
+  baseline
+  expect "after the reset the assistant is gone" "$("${K[@]}" -n shop get deploy assistant 2>&1 | grep -c NotFound)" '^1$'
+}
+
 # Module 14 upgrades Istio for real and cannot be undone, so it is not in the default
 # run. Use it on a lab that runs the course version: ./course/verify.sh 14
 module_14() {
@@ -394,7 +430,7 @@ module_14() {
 }
 
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16); fi
+if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16 17); fi
 # Start from the Git baseline, in case an exercise is still applied.
 printf 'Restoring the baseline before the checks\n'
 "$ROOT/course/reset.sh" >/dev/null 2>&1

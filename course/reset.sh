@@ -11,6 +11,12 @@ echo "Removing course rules from the shop namespace"
 "${K[@]}" -n shop delete telemetry waypoint-access-logs --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy backend-allow-course-client --ignore-not-found >/dev/null
 "${K[@]}" -n course-sidecar delete virtualservice,destinationrule,peerauthentication --all --ignore-not-found >/dev/null 2>&1 || true
+# Module 17: the shop assistant and the Ollama ServiceEntry
+"${K[@]}" -n shop delete deployment,service,serviceaccount -l app=assistant --ignore-not-found >/dev/null
+"${K[@]}" -n shop delete serviceaccount assistant --ignore-not-found >/dev/null
+"${K[@]}" -n shop delete httproute assistant ollama-timeout --ignore-not-found >/dev/null
+"${K[@]}" -n shop delete serviceentry ollama --ignore-not-found >/dev/null
+"${K[@]}" -n shop delete authorizationpolicy backend-allow-assistant ollama-chat-only --ignore-not-found >/dev/null
 # Module 16: the classic ingress gateway. Deleting its namespace removes the Helm release too.
 "${K[@]}" delete namespace istio-ingress --ignore-not-found >/dev/null
 # Module 15: the faulty backend pod
