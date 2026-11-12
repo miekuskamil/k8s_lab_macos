@@ -327,7 +327,7 @@ Cluster ports
 Next steps
   ./scripts/traffic-test.sh 200                 send 200 requests and print the version split
   kubectl apply -f manifests/scenarios/a-canary-httproute.yaml
-  see learning.md for scenarios B and C
+  see docs/lab-guide.md for scenarios B and C, and course/README.md for the Istio course
 
 SUMMARY
 }

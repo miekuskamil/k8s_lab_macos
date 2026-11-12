@@ -1,0 +1,24 @@
+# Route by request content, not by chance: /api/version always goes to v2,
+# everything else stays on v1. Rules are matched most-specific first.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend-route
+  namespace: shop
+spec:
+  parentRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 8000
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/version
+      backendRefs:
+        - name: backend-v2
+          port: 8000
+    - backendRefs:
+        - name: backend-v1
+          port: 8000

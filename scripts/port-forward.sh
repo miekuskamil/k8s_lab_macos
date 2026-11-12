@@ -10,9 +10,13 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# Always target the lab cluster. OrbStack switches the current context to "orbstack"
+# when it restarts, and a bare "kubectl port-forward" would then look in the wrong cluster.
+CONTEXT="k3d-${CLUSTER_NAME:-k8s-lab}"
+
 forward() {
   local namespace="$1" target="$2" mapping="$3" label="$4"
-  kubectl -n "$namespace" port-forward "$target" "$mapping" >/dev/null &
+  kubectl --context "$CONTEXT" -n "$namespace" port-forward "$target" "$mapping" >/dev/null &
   pids+=("$!")
   printf '%-11s http://localhost:%s\n' "$label" "${mapping%%:*}"
 }

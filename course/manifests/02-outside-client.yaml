@@ -1,0 +1,35 @@
+# A namespace that is NOT in the mesh, with one curl pod. Use it to see what a
+# client without a mesh identity can and cannot reach.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-outside
+  labels:
+    app.kubernetes.io/part-of: istio-course
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+  namespace: course-outside
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client
+  template:
+    metadata:
+      labels:
+        app: client
+    spec:
+      containers:
+        - name: curl
+          image: curlimages/curl:8.11.1
+          command: ["sleep", "infinity"]
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi

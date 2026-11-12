@@ -1,0 +1,46 @@
+# A curl pod inside the mesh, in the "shop" namespace, with its own identity.
+# It is not the frontend, so the lab's policies refuse it until you write a rule for it.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: course-client
+  namespace: shop
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: course-client
+  namespace: shop
+  labels:
+    app: course-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: course-client
+  template:
+    metadata:
+      labels:
+        app: course-client
+    spec:
+      serviceAccountName: course-client
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: curl
+          image: curlimages/curl:8.11.1
+          command: ["sleep", "infinity"]
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]

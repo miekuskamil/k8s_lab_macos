@@ -1,0 +1,23 @@
+# L7 rule enforced by the waypoint: the course-client identity may call
+# GET /api/version on the backend, and nothing else.
+# ALLOW policies add up, so this works next to the lab's backend-allow-frontend policy.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: backend-allow-course-client
+  namespace: shop
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: backend
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/shop/sa/course-client
+      to:
+        - operation:
+            methods: ["GET"]
+            paths: ["/api/version"]

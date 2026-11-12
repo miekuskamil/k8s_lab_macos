@@ -1,0 +1,26 @@
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: backend-allow-frontend
+  namespace: shop
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: backend
+    - group: ""
+      kind: Service
+      name: backend-v1
+    - group: ""
+      kind: Service
+      name: backend-v2
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/shop/sa/front-end
+      to:
+        - operation:
+            methods: ["GET", "POST"]
+            paths: ["/api/*"]

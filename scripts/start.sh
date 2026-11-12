@@ -34,6 +34,11 @@ else
   k3d cluster start "$CLUSTER_NAME" >/dev/null
 fi
 
+# OrbStack switches the current context to "orbstack" when it restarts. Point kubectl back
+# at the lab so plain "kubectl" commands in the course reach the right cluster.
+kubectl config use-context "k3d-${CLUSTER_NAME}" >/dev/null
+say "kubectl context is k3d-${CLUSTER_NAME}"
+
 "${K[@]}" wait --for=condition=Ready node --all --timeout=120s >/dev/null
 "${K[@]}" -n kube-system rollout status deploy/coredns --timeout=120s >/dev/null
 

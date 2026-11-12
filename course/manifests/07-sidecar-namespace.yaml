@@ -1,0 +1,10 @@
+# A namespace that uses classic sidecar injection, next to the ambient "shop" namespace.
+# It has no Pod Security "baseline" label: the injected istio-init container needs the
+# NET_ADMIN and NET_RAW capabilities to set up traffic redirection, and baseline forbids them.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-sidecar
+  labels:
+    istio-injection: enabled
+    app.kubernetes.io/part-of: istio-course

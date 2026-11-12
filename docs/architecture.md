@@ -1,6 +1,6 @@
 # Architecture
 
-This page explains how the lab fits together: what runs where, how one request travels from your browser to Redis, and how Git changes reach the cluster. If you only want to run the lab, start with the [README](README.md).
+This page explains how the lab fits together: what runs where, how one request travels from your browser to Redis, and how Git changes reach the cluster. If you only want to run the lab, start with the [README](../README.md).
 
 ## The layers on your Mac
 
@@ -20,8 +20,8 @@ OrbStack only provides Docker. k3d starts the cluster as containers, so deleting
 |---|---|---|
 | `shop-ingress` | The `shop-gateway` Envoy | Entry point from your Mac, outside the mesh |
 | `shop` | frontend, backend-v1 (2 pods), backend-v2 (1 pod), redis, the waypoint | The application, enrolled in ambient mode |
-| `istio-system` | istiod, ztunnel, istio-cni | The mesh itself |
-| `observability` | Prometheus, Grafana, Jaeger | Metrics, dashboards and traces |
+| `istio-system` | istiod, ztunnel, istio-cni, Kiali | The mesh itself, and its console |
+| `observability` | Prometheus, Grafana, Jaeger, Loki, Alloy | Metrics, dashboards, traces and logs |
 | `argocd` | ArgoCD | Applies the manifests in this repo |
 
 Both backend versions run the same image. The `APP_VERSION` environment variable sets which version a pod reports, so the canary experiments change routing and not code.
@@ -100,7 +100,7 @@ flowchart LR
 
 The same flow as a standalone image, with the trust zones drawn in:
 
-![Traffic flow with trust zones: browser, k3d load balancer, gateway, ztunnel, waypoint, backend, Redis](docs/traffic-flow.svg)
+![Traffic flow with trust zones: browser, k3d load balancer, gateway, ztunnel, waypoint, backend, Redis](diagrams/traffic-flow.svg)
 
 In words:
 
@@ -142,6 +142,7 @@ flowchart TD
     istio["istio-config<br/>gateway, waypoint, routes<br/>no selfHeal"]
     kps["kube-prometheus-stack<br/>Helm chart plus helm/ values"]
     obs["observability-config<br/>Jaeger, monitors, dashboard"]
+    logs["loki, alloy, kiali<br/>three more Helm charts"]
     live["live cluster state"]
   end
 
@@ -151,23 +152,27 @@ flowchart TD
   root --> istio
   root --> kps
   root --> obs
+  root --> logs
   base -->|"4 apply"| live
   apps -->|"4 apply"| live
   istio -->|"4 apply"| live
   kps -->|"4 apply"| live
   obs -->|"4 apply"| live
+  logs -->|"4 apply"| live
   live -.->|"5 drift report"| root
 
-  linkStyle 3,4,5,6 stroke:#8b949e,stroke-width:1.5px
-  linkStyle 7,8,9,10,11 stroke:#1f6feb,stroke-width:3px
-  linkStyle 12 stroke:#8b949e,stroke-width:1.5px,stroke-dasharray:5 4
+  linkStyle 3,4,5,6,7 stroke:#8b949e,stroke-width:1.5px
+  linkStyle 8,9,10,11,12,13 stroke:#1f6feb,stroke-width:3px
+  linkStyle 14 stroke:#8b949e,stroke-width:1.5px,stroke-dasharray:5 4
 ```
 
-![GitOps flow: push, poll, create child Applications, apply, drift report](docs/gitops-flow.svg)
+![GitOps flow: push, poll, create child Applications, apply, drift report](diagrams/gitops-flow.svg)
+
+The SVG predates Loki, Alloy and Kiali and shows the first five Applications. The Mermaid diagram above is current.
 
 `provision.sh` installs Istio and ArgoCD with Helm, because ArgoCD cannot deploy things that need Istio before Istio exists. After that you change the cluster by pushing to `main`.
 
-Five ArgoCD Applications deploy everything else:
+Eight ArgoCD Applications deploy everything else (nine with `root`):
 
 | Application | Syncs | Self-heal |
 |---|---|---|
@@ -176,6 +181,9 @@ Five ArgoCD Applications deploy everything else:
 | `istio-config` | Gateway, waypoint, routes, policies | No, on purpose |
 | `kube-prometheus-stack` | The Prometheus and Grafana Helm chart | Yes |
 | `observability-config` | Jaeger, monitors, the dashboard | Yes |
+| `loki` | Loki, the log store (Helm chart) | Yes |
+| `alloy` | Alloy, which ships pod logs to Loki (Helm chart) | Yes |
+| `kiali` | Kiali, the Istio console (Helm chart) | Yes |
 
 `istio-config` does not self-heal so you can apply a scenario by hand and watch ArgoCD report the drift without undoing your experiment. The files in `manifests/scenarios/` are not synced at all.
 
@@ -194,6 +202,9 @@ This section describes the lab as it runs after `./scripts/provision.sh`, measur
 | Prometheus | v2.55.1 (kube-prometheus-stack 66.2.1) |
 | Grafana | 11.3.0 |
 | Jaeger all-in-one | 1.62.0 |
+| Loki | 3.6 (chart 6.55.0), single binary |
+| Grafana Alloy | 1.21 (chart 1.14.4) |
+| Kiali | 2.4.0 |
 | Redis | 7.4 |
 | Shop images | `k8s-lab/backend:1.0.2`, `k8s-lab/frontend:1.0.2` |
 
@@ -201,18 +212,19 @@ Istio 1.24 supports Kubernetes up to 1.31, which is why `provision.sh` pins the 
 
 ### What is running
 
-25 pods on one node (one is a finished ArgoCD setup job), and six ArgoCD Applications that all report Synced and Healthy.
+Measured on 12 November 2026 with the course workloads deployed: 31 pods on one node and nine ArgoCD Applications, all Synced and Healthy.
 
 | Namespace | Pods | Memory in use |
 |---|---|---|
-| `shop` | frontend, backend-v1 x2, backend-v2, redis, waypoint | 250 MiB |
-| `shop-ingress` | shop-gateway | 39 MiB |
-| `istio-system` | istiod, ztunnel, istio-cni | 81 MiB |
-| `observability` | Prometheus, Grafana, Jaeger, operator, kube-state-metrics | 599 MiB |
-| `argocd` | controller, server, repo server, applicationset, redis | 327 MiB |
-| `kube-system` | coredns, metrics-server, local-path, load balancer | 58 MiB |
+| `shop` | frontend, backend-v1 x2, backend-v2, redis, waypoint, course-client | 220 MiB |
+| `shop-ingress` | shop-gateway | 32 MiB |
+| `istio-system` | istiod, ztunnel, istio-cni, Kiali | 111 MiB |
+| `observability` | Prometheus, Grafana, Jaeger, Loki, Alloy, operator, kube-state-metrics | 864 MiB |
+| `argocd` | controller, server, repo server, applicationset, redis | 499 MiB |
+| `kube-system` | coredns, metrics-server, local-path, load balancer | 68 MiB |
+| `course-sidecar` | httpbin and client, each with a sidecar (course module 7) | 67 MiB |
 
-The node used 2.8 GiB in total, including k3s itself. The whole mesh data plane is small: ztunnel used 13 MiB and the waypoint 38 MiB. Check your own numbers with `kubectl top pods -A` and `kubectl top node`.
+The node used 3.3 GiB in total, including k3s itself. Loki took 84 MiB, Alloy 57 MiB and Kiali 33 MiB. The mesh data plane stays small: ztunnel used 10 MiB and the waypoint 29 MiB, while each sidecar in `course-sidecar` used 35 to 38 MiB. Check your own numbers with `kubectl top pods -A` and `kubectl top node`.
 
 ### What was verified, and how to repeat it
 
@@ -222,7 +234,7 @@ The node used 2.8 GiB in total, including k3s itself. The whole mesh data plane 
 | Traffic enters through the gateway | 300 of 300 requests returned 200 | `./scripts/traffic-test.sh 300` |
 | Gateway to frontend uses mTLS | ztunnel logged the connection on port 15008 with source identity `spiffe://cluster.local/ns/shop-ingress/sa/shop-gateway-istio` | `kubectl -n istio-system logs ds/ztunnel \| grep 'src.workload="shop-gateway'` |
 | Backend calls go through the waypoint | ztunnel logged frontend to waypoint, then waypoint to backend, both on port 15008 | `kubectl -n istio-system logs ds/ztunnel \| grep waypoint` |
-| Only the backend may reach Redis | A pod with the `default` service account got its Redis connection cut, and ztunnel logged the denial | see [learning.md](learning.md#5-debugging-mtls-drops), step 5 |
+| Only the backend may reach Redis | A pod with the `default` service account got its Redis connection cut, and ztunnel logged the denial | see [the lab guide](lab-guide.md#5-debugging-mtls-drops), step 5 |
 | Only the frontend may call the backend | The same pod got `403 Forbidden` from the waypoint | same |
 | Scenario A splits 90/10 | 273 responses from v1, 27 from v2 | `kubectl apply -f manifests/scenarios/a-canary-httproute.yaml` |
 | Scenario B injects faults | 15 of 200 returned 503, average latency 526 ms, `/api/version` unaffected at 23 ms | see `manifests/scenarios/b-fault-injection.yaml` |
@@ -230,13 +242,16 @@ The node used 2.8 GiB in total, including k3s itself. The whole mesh data plane 
 | The rate limiter works and survives ArgoCD | 304 of 400 returned 429, and `shop-apps` stayed Synced | `kubectl -n shop set env deploy/backend-v1 deploy/backend-v2 RATE_LIMIT_RPS=20` |
 | Prometheus scrapes everything | 18 of 18 targets up, including ztunnel, the waypoint and the gateway | http://localhost:9090/targets |
 | The Grafana dashboard has data | All nine panel queries return series when run through Grafana | open the dashboard "Shop mesh and traffic experiments" |
+| Logs reach Loki and link to traces | Loki held logs from all 7 namespaces. Searching Loki for a Jaeger trace id returned the backend's log line for that request. | Grafana, Explore, Loki: `{namespace="shop"} \|= "<trace id>"` |
+| Kiali sees the mesh | Kiali 2.4 found Prometheus, Grafana and Jaeger, drew every edge with 100% mTLS, and reported 0 errors in `shop`'s 7 Istio objects | http://localhost:20001 |
+| The Istio course works | `./course/verify.sh`: every module's key exercise passed | `./course/verify.sh` |
 | Traces join across the mesh | 200 of 200 recent backend traces start at the gateway, most with 7 spans across gateway, waypoint and backend | http://localhost:16686, service `backend` |
-| The default logins work | ArgoCD issued a session token, Grafana accepted the password and rejected a wrong one, Redis answered `PONG` | see the [README](README.md#default-logins) |
+| The default logins work | ArgoCD issued a session token, Grafana accepted the password and rejected a wrong one, Redis answered `PONG` | see the [README](../README.md#open-it) |
 
 ### What was not verified
 
 - The panels were checked through Grafana's query API, not by looking at them in a browser.
-- `docs/traffic-flow.excalidraw` passed a structure check (valid JSON, every element has the fields Excalidraw requires, no duplicate ids). It was not opened in Excalidraw. Its arrows are not bound to the boxes, so they stay in place when you move a box.
+- `docs/diagrams/traffic-flow.excalidraw` passed a structure check (valid JSON, every element has the fields Excalidraw requires, no duplicate ids). It was not opened in Excalidraw. Its arrows are not bound to the boxes, so they stay in place when you move a box.
 - Importing the Mermaid diagrams into draw.io and Excalidraw follows their documented menus and was not tested.
 
 ## Resource limits
@@ -258,28 +273,28 @@ The lab has three credentials, and all three are fixed defaults stored in Git:
 - `shop/redis-auth` and `observability/grafana-admin` are Secrets in `manifests/base/03-lab-credentials.yaml`. ArgoCD manages them through `shop-base`.
 - The ArgoCD admin password is a bcrypt hash in `helm/argocd-values.yaml`.
 
-The [README](README.md#default-logins) lists the values. Committing them keeps the lab reproducible and is safe only because nothing listens outside your Mac. [learning.md](learning.md#secrets) covers what to use on a shared cluster.
+The [README](../README.md#open-it) lists the values. Committing them keeps the lab reproducible and is safe only because nothing listens outside your Mac. [the lab guide](lab-guide.md#secrets) covers what to use on a shared cluster.
 
 ## Editing the diagrams
 
 Each diagram exists in three forms:
 
 - The Mermaid blocks on this page. Treat them as the source.
-- `docs/traffic-flow.svg` and `docs/gitops-flow.svg`, standalone images with no external fonts or scripts.
-- `docs/traffic-flow.excalidraw`, an editable scene of the traffic flow. Its arrows are not attached to the boxes, so move them together.
+- `docs/diagrams/traffic-flow.svg` and `docs/diagrams/gitops-flow.svg`, standalone images with no external fonts or scripts.
+- `docs/diagrams/traffic-flow.excalidraw`, an editable scene of the traffic flow. Its arrows are not attached to the boxes, so move them together.
 
 **draw.io.** Choose Arrange, Insert, Advanced, Mermaid, paste a diagram's text without the code fence, and select Insert. The import may drop the edge colors set by `linkStyle`, so recolor the encrypted edges by hand. To export, use File, Export as (tick "Include a copy of my diagram" so the PNG or SVG stays editable) or File, Save as `.drawio`. There is no way back to Mermaid.
 
-**Excalidraw.** Open `docs/traffic-flow.excalidraw` from Menu, Open. To start from Mermaid instead, open the library, choose Mermaid to Excalidraw, paste the text and select Insert. To export, use Menu, Export image with "Embed scene" ticked, or save the `.excalidraw` file.
+**Excalidraw.** Open `docs/diagrams/traffic-flow.excalidraw` from Menu, Open. To start from Mermaid instead, open the library, choose Mermaid to Excalidraw, paste the text and select Insert. To export, use Menu, Export image with "Embed scene" ticked, or save the `.excalidraw` file.
 
 **Command line.** To render the Mermaid blocks to SVG files:
 
 ```bash
 npm install --global @mermaid-js/mermaid-cli
-mmdc -i architecture.md -o docs/architecture.svg
+mmdc -i docs/architecture.md -o docs/diagrams/architecture.svg
 ```
 
-This writes `architecture-1.svg` and `architecture-2.svg` in `docs/`.
+This writes `architecture-1.svg` and `architecture-2.svg` in `docs/diagrams/`.
 
 ## What this setup does not cover
 

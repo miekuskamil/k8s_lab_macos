@@ -89,6 +89,9 @@ grafana:
       searchNamespace: ALL
     datasources:
       defaultDatasourceEnabled: true
+      # Alertmanager is disabled above, so its datasource would only show errors.
+      alertmanager:
+        enabled: false
   additionalDataSources:
     # Jaeger: "Logs for this span" opens the matching Loki lines, found by trace id.
     - name: Jaeger

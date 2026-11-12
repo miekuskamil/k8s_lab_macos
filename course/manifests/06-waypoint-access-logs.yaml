@@ -1,0 +1,15 @@
+# Turn on Envoy access logs for the waypoint only. Read them with:
+#   kubectl -n shop logs deploy/waypoint -f
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: waypoint-access-logs
+  namespace: shop
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: waypoint
+  accessLogging:
+    - providers:
+        - name: envoy

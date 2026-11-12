@@ -1,0 +1,21 @@
+# Add a 2 second delay to every call to httpbin. The client's sidecar injects it,
+# so httpbin itself never sees the delay.
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: httpbin
+  namespace: course-sidecar
+spec:
+  hosts:
+    - httpbin.course-sidecar.svc.cluster.local
+  http:
+    - fault:
+        delay:
+          fixedDelay: 2s
+          percentage:
+            value: 100
+      route:
+        - destination:
+            host: httpbin.course-sidecar.svc.cluster.local
+            port:
+              number: 8000

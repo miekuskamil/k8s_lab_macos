@@ -1,6 +1,6 @@
 # Troubleshooting record
 
-These are the ten problems hit while building this lab, in the order they appeared. Each entry gives the symptom, the command that exposed the cause, the cause and the fix that is now in the repo. If you change versions or move to another cluster type, expect to meet some of them again.
+These are the problems hit while building and running this lab, in the order they appeared. Each entry gives the symptom, the command that exposed the cause, the cause and the fix that is now in the repo. If you change versions or move to another cluster type, expect to meet some of them again.
 
 For the short list of common day-to-day issues, see the [README](../README.md#when-something-goes-wrong).
 
@@ -176,6 +176,63 @@ kubectl -n argocd get pod argocd-application-controller-0 \
 **Cause.** The controller's memory limit was 512 MiB. Comparing the kube-prometheus-stack chart, with its large CRDs, pushed it over the limit. It recovered after the restart, so the install still finished.
 
 **Fix.** `helm/argocd-values.yaml` sets the limit to 1 GiB. After the change the controller ran with zero restarts.
+
+## 11. Everything breaks after a reboot or Docker restart
+
+**Symptom.** After the Mac slept or rebooted, `localhost:8080` does not answer. Half the pods are not Ready: ztunnel, the gateway, the waypoint, the backends. CoreDNS shows `Unknown`.
+
+**Found with.**
+
+```bash
+docker ps --filter name=k3d-k8s-lab --format '{{.Names}} {{.Status}}'
+kubectl get events -A --field-selector type=Warning --sort-by=.lastTimestamp | tail
+kubectl -n istio-system logs ds/ztunnel --tail=3
+```
+
+The containers were "Up 48 seconds", so Docker had just restarted them. The events said `configmap references non-existent config key: NodeHosts` for CoreDNS. ztunnel logged `dns error` while connecting to `istiod.istio-system.svc`.
+
+**Cause.** When k3d starts a cluster, it adds a `NodeHosts` key to the CoreDNS ConfigMap. When Docker restarts the containers by itself, k3d is not involved, k3s rewrites the ConfigMap without that key, and the CoreDNS pod cannot mount it. With no cluster DNS, ztunnel cannot resolve istiod, gets no certificates or config, and every mesh pod fails its readiness check.
+
+**Fix.** `./scripts/start.sh`. It runs `k3d cluster stop` and `k3d cluster start` when the key is missing, which lets k3d add it back, then waits for every pod. `provision.sh` calls the same script when the cluster already exists.
+
+## 12. kubectl talks to the wrong cluster
+
+**Symptom.** `./scripts/port-forward.sh` prints `namespaces "argocd" not found`, and course commands report that resources do not exist.
+
+**Found with.**
+
+```bash
+kubectl config current-context
+```
+
+`orbstack`
+
+**Cause.** When OrbStack restarts, it sets the current kubectl context to its own cluster.
+
+**Fix.** `port-forward.sh` and the course scripts always pass `--context k3d-k8s-lab`. `start.sh` also switches the current context back, so plain `kubectl` commands you type reach the lab.
+
+## 13. Grafana says Jaeger "plugin unavailable"
+
+**Symptom.** The Jaeger data source's health check, and any query sent through Grafana's server API, fails with `[plugin.unavailable] plugin unavailable`.
+
+**Cause.** Not a fault. In Grafana 11.3 the Jaeger data source runs in the browser and calls Jaeger through Grafana's proxy. There is no server-side part to answer a health check.
+
+**Check it works.**
+
+```bash
+TRACE=$(curl -s "http://localhost:16686/api/traces?service=backend&limit=1&lookback=10m" | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["traceID"])')
+curl -s "http://admin:k8s-lab-admin@localhost:3000/api/datasources/proxy/uid/jaeger/api/traces/$TRACE" | head -c 200
+```
+
+A JSON trace means the data source works. In the browser, Explore with the Jaeger data source shows traces normally.
+
+## 14. Request logs have no trace_id
+
+**Symptom.** Jaeger has traces for the backend, but `kubectl -n shop logs deploy/backend-v1 | grep trace_id` finds nothing, so a trace cannot be matched to its logs.
+
+**Cause.** The backend has two HTTP middlewares: the OpenTelemetry one that opens a span, and its own that writes the request log line. Starlette runs the middleware added last first. The tracing middleware was added first, so it ran inside the logging one: the span had already closed when the log line was written.
+
+**Fix.** `apps/backend/main.py` instruments the app at the very end of the file, which makes tracing the outer middleware. Image `1.0.2` and later write `trace_id` and `span_id` into every request log.
 
 ## A note on watching long installs
 

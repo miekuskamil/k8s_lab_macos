@@ -1,0 +1,10 @@
+# Require mTLS for every workload in course-sidecar. Sidecars default to PERMISSIVE,
+# which accepts both mTLS and plaintext so that you can migrate without downtime.
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: course-sidecar
+spec:
+  mtls:
+    mode: STRICT
