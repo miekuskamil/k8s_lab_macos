@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 1080" width="1640" height="1080" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a8250df" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8250df"/></marker>
+<marker id="a24292f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#24292f"/></marker>
+<marker id="a9a6700" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9a6700"/></marker>
+</defs>
+<rect width="1640" height="1080" fill="#ffffff"/>
+<rect x="190" y="100" width="1240" height="960" rx="10" fill="#ffffff" stroke="#8c959f" stroke-width="2" stroke-dasharray="8 6"/>
+<rect x="520" y="120" width="520" height="82" rx="10" fill="#fbefff" stroke="#8250df" stroke-width="2"/>
+<text x="532" y="144" font-size="16" font-weight="700" fill="#24292f">istiod (control plane)</text>
+<text x="532" y="166" font-size="14" fill="#57606a">turns your resources into proxy config and sends it over xDS; signs</text>
+<text x="532" y="185" font-size="14" fill="#57606a">every workload&#x27;s mTLS certificate (SPIFFE ID)</text>
+<rect x="1070" y="120" width="340" height="82" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+<text x="1082" y="144" font-size="16" font-weight="700" fill="#24292f">Telemetry</text>
+<text x="1082" y="166" font-size="14" fill="#57606a">where proxies send traces (Jaeger), access</text>
+<text x="1082" y="185" font-size="14" fill="#57606a">logs and metrics settings</text>
+<rect x="20" y="320" width="150" height="101" rx="10" fill="#fff8c5" stroke="#9a6700" stroke-width="2"/>
+<text x="32" y="344" font-size="16" font-weight="700" fill="#24292f">Browser or curl</text>
+<text x="32" y="366" font-size="14" fill="#57606a">outside the</text>
+<text x="32" y="385" font-size="14" fill="#57606a">cluster, sends</text>
+<text x="32" y="404" font-size="14" fill="#57606a">HTTP or HTTPS</text>
+<rect x="220" y="310" width="210" height="101" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+<text x="232" y="334" font-size="16" font-weight="700" fill="#24292f">Ingress gateway</text>
+<text x="232" y="356" font-size="14" fill="#57606a">Envoy in shop-ingress;</text>
+<text x="232" y="375" font-size="14" fill="#57606a">traffic entering the</text>
+<text x="232" y="394" font-size="14" fill="#57606a">cluster (north-south)</text>
+<rect x="500" y="330" width="160" height="82" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<text x="512" y="354" font-size="16" font-weight="700" fill="#24292f">frontend pod</text>
+<text x="512" y="376" font-size="14" fill="#57606a">no sidecar</text>
+<text x="512" y="395" font-size="14" fill="#57606a">(ambient)</text>
+<rect x="730" y="300" width="240" height="120" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+<text x="742" y="324" font-size="16" font-weight="700" fill="#24292f">Waypoint</text>
+<text x="742" y="346" font-size="14" fill="#57606a">Envoy in front of the</text>
+<text x="742" y="365" font-size="14" fill="#57606a">backend; reads HTTP (L7);</text>
+<text x="742" y="384" font-size="14" fill="#57606a">traffic between services</text>
+<text x="742" y="403" font-size="14" fill="#57606a">(east-west)</text>
+<rect x="1040" y="290" width="160" height="82" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<text x="1052" y="314" font-size="16" font-weight="700" fill="#24292f">backend v1</text>
+<text x="1052" y="336" font-size="14" fill="#57606a">2 pods, version:</text>
+<text x="1052" y="355" font-size="14" fill="#57606a">v1</text>
+<rect x="1040" y="400" width="160" height="63" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<text x="1052" y="424" font-size="16" font-weight="700" fill="#24292f">backend v2</text>
+<text x="1052" y="446" font-size="14" fill="#57606a">1 pod, version: v2</text>
+<rect x="1260" y="340" width="150" height="63" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<text x="1272" y="364" font-size="16" font-weight="700" fill="#24292f">redis pod</text>
+<text x="1272" y="386" font-size="14" fill="#57606a">only the backend</text>
+<rect x="470" y="500" width="940" height="63" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+<text x="482" y="524" font-size="16" font-weight="700" fill="#24292f">ztunnel (one per node)</text>
+<text x="482" y="546" font-size="14" fill="#57606a">every hop between mesh pods passes through it: mTLS tunnel (HBONE, port 15008), L4 checks, never reads HTTP</text>
+<rect x="1460" y="270" width="150" height="82" rx="10" fill="#fff8c5" stroke="#9a6700" stroke-width="2"/>
+<text x="1472" y="294" font-size="16" font-weight="700" fill="#24292f">httpbin.org</text>
+<text x="1472" y="316" font-size="14" fill="#57606a">outside the</text>
+<text x="1472" y="335" font-size="14" fill="#57606a">cluster</text>
+<rect x="210" y="612" width="270" height="101" rx="10" fill="#dbeafe" stroke="#0969da" stroke-width="2"/>
+<text x="222" y="636" font-size="16" font-weight="700" fill="#24292f">Gateway</text>
+<text x="222" y="658" font-size="14" fill="#57606a">opens ports 8080 and 8443 and</text>
+<text x="222" y="677" font-size="14" fill="#57606a">holds the TLS certificate (module</text>
+<text x="222" y="696" font-size="14" fill="#57606a">11)</text>
+<rect x="210" y="723" width="270" height="101" rx="10" fill="#dbeafe" stroke="#0969da" stroke-width="2"/>
+<text x="222" y="747" font-size="16" font-weight="700" fill="#24292f">HTTPRoute</text>
+<text x="222" y="769" font-size="14" fill="#57606a">path / goes to the frontend; the</text>
+<text x="222" y="788" font-size="14" fill="#57606a">Istio API uses Gateway +</text>
+<text x="222" y="807" font-size="14" fill="#57606a">VirtualService instead</text>
+<rect x="210" y="834" width="270" height="82" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
+<text x="222" y="858" font-size="16" font-weight="700" fill="#24292f">RequestAuthentication</text>
+<text x="222" y="880" font-size="14" fill="#57606a">checks end-user tokens, JWT</text>
+<text x="222" y="899" font-size="14" fill="#57606a">(module 13)</text>
+<rect x="210" y="926" width="270" height="82" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
+<text x="222" y="950" font-size="16" font-weight="700" fill="#24292f">AuthorizationPolicy</text>
+<text x="222" y="972" font-size="14" fill="#57606a">a valid token is required for</text>
+<text x="222" y="991" font-size="14" fill="#57606a">/api/* (module 13)</text>
+<rect x="510" y="612" width="300" height="101" rx="10" fill="#dbeafe" stroke="#0969da" stroke-width="2"/>
+<text x="522" y="636" font-size="16" font-weight="700" fill="#24292f">HTTPRoute or VirtualService</text>
+<text x="522" y="658" font-size="14" fill="#57606a">WHERE a request goes: 90% v1 and 10%</text>
+<text x="522" y="677" font-size="14" fill="#57606a">v2, by path or header; timeouts,</text>
+<text x="522" y="696" font-size="14" fill="#57606a">retries, faults (modules 4, 5)</text>
+<rect x="510" y="723" width="300" height="101" rx="10" fill="#dbeafe" stroke="#0969da" stroke-width="2"/>
+<text x="522" y="747" font-size="16" font-weight="700" fill="#24292f">DestinationRule</text>
+<text x="522" y="769" font-size="14" fill="#57606a">HOW to talk to it: connection pool,</text>
+<text x="522" y="788" font-size="14" fill="#57606a">eject failing pods, subsets, TLS</text>
+<text x="522" y="807" font-size="14" fill="#57606a">(modules 5, 12)</text>
+<rect x="510" y="834" width="300" height="82" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
+<text x="522" y="858" font-size="16" font-weight="700" fill="#24292f">AuthorizationPolicy (L7)</text>
+<text x="522" y="880" font-size="14" fill="#57606a">only sa/frontend may call GET or POST</text>
+<text x="522" y="899" font-size="14" fill="#57606a">/api/* (module 3)</text>
+<rect x="840" y="612" width="290" height="82" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
+<text x="852" y="636" font-size="16" font-weight="700" fill="#24292f">PeerAuthentication</text>
+<text x="852" y="658" font-size="14" fill="#57606a">STRICT: accept mTLS only, no plain</text>
+<text x="852" y="677" font-size="14" fill="#57606a">text (module 2)</text>
+<rect x="840" y="704" width="290" height="101" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
+<text x="852" y="728" font-size="16" font-weight="700" fill="#24292f">AuthorizationPolicy (L4)</text>
+<text x="852" y="750" font-size="14" fill="#57606a">only the waypoint may open</text>
+<text x="852" y="769" font-size="14" fill="#57606a">connections to the backend (module</text>
+<text x="852" y="788" font-size="14" fill="#57606a">3)</text>
+<rect x="1160" y="612" width="250" height="101" rx="10" fill="#dbeafe" stroke="#0969da" stroke-width="2"/>
+<text x="1172" y="636" font-size="16" font-weight="700" fill="#24292f">ServiceEntry</text>
+<text x="1172" y="658" font-size="14" fill="#57606a">puts httpbin.org in the mesh&#x27;s</text>
+<text x="1172" y="677" font-size="14" fill="#57606a">registry, so routes, rules and</text>
+<text x="1172" y="696" font-size="14" fill="#57606a">metrics apply (module 12)</text>
+<rect x="1460" y="436" width="26" height="26" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+<rect x="1460" y="472" width="26" height="26" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<rect x="1460" y="508" width="26" height="26" rx="10" fill="#dbeafe" stroke="#0969da" stroke-width="2"/>
+<rect x="1460" y="544" width="26" height="26" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
+<rect x="1460" y="580" width="26" height="26" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+<rect x="1460" y="616" width="26" height="26" rx="10" fill="#fbefff" stroke="#8250df" stroke-width="2"/>
+<rect x="1460" y="652" width="26" height="26" rx="10" fill="#fff8c5" stroke="#9a6700" stroke-width="2"/>
+<polyline points="170,365 220,365" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
+<polyline points="430,365 500,365" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
+<polyline points="660,365 730,365" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
+<polyline points="970,330 1040,322" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
+<text x="990" y="312" font-size="13" fill="#24292f">90%</text>
+<polyline points="970,400 1040,432" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
+<text x="990" y="440" font-size="13" fill="#24292f">10%</text>
+<polyline points="1200,322 1260,365" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
+<polyline points="950,300 950,255 1535,255 1535,270" fill="none" stroke="#9a6700" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#a9a6700)"/>
+<text x="1180" y="248" font-size="13" fill="#9a6700">egress (module 12)</text>
+<polyline points="600,197 330,310" fill="none" stroke="#8250df" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#a8250df)"/>
+<polyline points="850,197 850,300" fill="none" stroke="#8250df" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#a8250df)"/>
+<polyline points="1010,197 1010,230 1300,230 1300,500" fill="none" stroke="#8250df" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#a8250df)"/>
+<text x="30" y="42" font-size="28" font-weight="700" fill="#24292f">Istio in one picture: which resource acts where</text>
+<text x="30" y="74" font-size="15" fill="#57606a">The lab&#x27;s request path. Grey: your pods. Blue: proxies. Coloured notes: the resources you write, grouped by the proxy that enforces them.</text>
+<text x="205" y="126" font-size="15" font-weight="700" fill="#57606a">Kubernetes cluster</text>
+<text x="440" y="240" font-size="14" fill="#8250df">xDS config and certificates</text>
+<text x="210" y="600" font-size="15" font-weight="700" fill="#57606a">At the ingress gateway</text>
+<text x="510" y="600" font-size="15" font-weight="700" fill="#57606a">At the waypoint</text>
+<text x="840" y="600" font-size="15" font-weight="700" fill="#57606a">At ztunnel</text>
+<text x="1160" y="600" font-size="15" font-weight="700" fill="#57606a">For traffic leaving the mesh</text>
+<text x="1460" y="420" font-size="15" font-weight="700" fill="#24292f">Legend</text>
+<text x="1496" y="455" font-size="14" fill="#24292f">proxy</text>
+<text x="1496" y="491" font-size="14" fill="#24292f">your pod</text>
+<text x="1496" y="527" font-size="14" fill="#24292f">traffic resource</text>
+<text x="1496" y="563" font-size="14" fill="#24292f">security resource</text>
+<text x="1496" y="599" font-size="14" fill="#24292f">observability</text>
+<text x="1496" y="635" font-size="14" fill="#24292f">control plane</text>
+<text x="1496" y="671" font-size="14" fill="#24292f">outside</text>
+</svg>

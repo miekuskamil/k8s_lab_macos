@@ -1,5 +1,7 @@
 # Module 10: eBPF and Cilium, the other sidecarless design
 
+> New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
+
 You will read claims like this one:
 
 > Tools built on eBPF, such as Cilium, dominate new deployments by handling networking, security policies and observability directly in the Linux kernel without sidecar proxies.

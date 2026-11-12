@@ -20,6 +20,9 @@ Each module takes 30 to 60 minutes. Do them in order, because each one builds on
 | [11. TLS at the edge](11-edge-tls.md) | HTTPS on the ingress gateway, cert-manager, redirects, renewal without downtime | `curl`, `openssl`, Grafana |
 | [12. Egress](12-egress.md) | ServiceEntry, TLS origination, L7 rules on outbound calls, locking a pod in | `curl`, Kiali, Prometheus |
 | [13. JWT](13-jwt.md) | End-user identity: RequestAuthentication, rules on token claims, 401 versus 403 | `curl`, Prometheus |
+| [14. Upgrading Istio](14-upgrading-istio.md) | Canary upgrade from 1.24 to 1.25: revisions, tags, rollback, measured downtime. One-way: rebuild the lab afterwards | `helm`, `istioctl`, `kubectl` |
+
+**New to Istio? Read [Start here: Istio in one picture](start-here.md) first.** It takes 15 minutes, needs no cluster, and shows every resource the course uses on one diagram. Every term also has a plain explanation in the [glossary](glossary.md). Keep it open in a tab.
 
 ## How the exercises work
 
@@ -65,6 +68,7 @@ The course changes Istio resources by hand, with `kubectl apply`. ArgoCD manages
 ```bash
 ./course/verify.sh        # every module, about 10 minutes
 ./course/verify.sh 4      # one module
+./course/verify.sh 14     # the Istio upgrade, one-way, not part of the full run
 ```
 
 The script applies each module's manifests, checks the results and restores the baseline. It was run against this lab before the course was published. The [last section of module 0](00-setup.md#what-the-verification-run-showed) has the results.

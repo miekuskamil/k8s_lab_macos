@@ -1,5 +1,7 @@
 # Module 5: resilience
 
+> New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
+
 Networks fail and services slow down. This module adds timeouts, fault injection, circuit breaking and rate limiting, and uses Grafana, Jaeger and the waypoint's access log to see each one act.
 
 ## Concept: four tools for four failure modes

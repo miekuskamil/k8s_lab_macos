@@ -1,5 +1,7 @@
 # Module 4: traffic routing
 
+> New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
+
 A Kubernetes Service spreads requests evenly over its pods. This module makes the waypoint decide instead: send a percentage to a new version, or route by what the request contains.
 
 ## Concept: who decides where a request goes

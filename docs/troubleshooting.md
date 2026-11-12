@@ -305,6 +305,30 @@ Turning the setting on in Helm was not enough at first. `helm upgrade` rewrote t
 
 **Fix.** Set `ambient.dnsCapture: true` for the istio-cni chart and `PILOT_ENABLE_IP_AUTOALLOCATE: "true"` for istiod (both in `helm/`), restart the `istio-cni-node` DaemonSet, then restart the pods that call out. `provision.sh` restarts istio-cni by itself when its config changed. After that, `nslookup httpbin.org` inside the pod returns `240.240.0.1`, and ztunnel logs `dst.workload="waypoint-..."`.
 
+## 19. Istio resources fail validation after an upgrade
+
+**Symptom.** After the old control plane was removed during an upgrade (course module 14), `kubectl apply` of any Istio resource, a ServiceEntry or a VirtualService for example, fails:
+
+```text
+Internal error occurred: failed calling webhook "validation.istio.io": failed to call webhook:
+Post "https://istiod.istio-system.svc:443/validate?timeout=10s": service "istiod" not found
+```
+
+Gateway API resources such as HTTPRoute still apply, which makes the problem look random.
+
+**Found with.**
+
+```bash
+kubectl get validatingwebhookconfiguration istiod-default-validator \
+  -o jsonpath='{.webhooks[0].clientConfig.service.name} {.webhooks[0].failurePolicy}{"\n"}'
+```
+
+It printed `istiod Fail`: the webhook still sent every Istio resource to the Service of the removed control plane, and refused the request when that call failed.
+
+**Cause.** The `istio-base` chart owns `istiod-default-validator` and points it at the `default` revision's Service, `istiod`. Installing a revisioned control plane and deleting the old one doesn't move it.
+
+**Fix.** Before deleting the old istiod, point the base chart at the new revision: `helm upgrade istio-base istio/base -n istio-system --version 1.25.5 -f helm/istio-base-values.yaml --set defaultRevision=1-25-5 --force-conflicts`. Module 14 does this in step 8.
+
 ## A note on watching long installs
 
 Two habits would have shortened this build:

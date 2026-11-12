@@ -281,6 +281,66 @@ module_13() {
   expect "after the reset the API answers without a token" "$(code "$BASE/api/orders")" '^200$'
 }
 
+# Module 14 upgrades Istio for real and cannot be undone, so it is not in the default
+# run. Use it on a lab that runs the course version: ./course/verify.sh 14
+module_14() {
+  section "14: upgrading Istio (one-way: rebuild the lab to return)"
+  local NEW=1.25.5 REV=1-25-5 H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n istio-system)
+  if "${H[@]}" list -q | grep -q '^istiod-'; then
+    fail "the lab runs the course version of Istio" "already upgraded; run ./scripts/teardown.sh --yes && ./scripts/provision.sh first"
+    return
+  fi
+  baseline
+  "${K[@]}" apply -f "$M/07-sidecar-namespace.yaml" -f "$M/07-sidecar-apps.yaml" >/dev/null
+  "${K[@]}" -n course-sidecar rollout status deploy/httpbin --timeout=120s >/dev/null 2>&1
+  "${K[@]}" -n course-sidecar rollout status deploy/client --timeout=120s >/dev/null 2>&1
+  local log="${TMPDIR:-/tmp}/k8s-lab-upgrade-traffic.log"; : > "$log"
+  ( while true; do curl -s -o /dev/null -m 3 -w '%{http_code}\n' "$BASE/api/orders" >> "$log"; sleep 0.1; done ) &
+  local loader=$!
+  helm repo update istio >/dev/null 2>&1
+  "${H[@]}" upgrade istio-base istio/base --version "$NEW" -f "$ROOT/helm/istio-base-values.yaml" --force-conflicts --wait >/dev/null 2>&1
+  expect "1. the CRDs come from the new base chart" "$("${H[@]}" list -o json | grep -o '"chart":"base-[0-9.]*"')" "base-${NEW}"
+  "${H[@]}" install "istiod-${REV}" istio/istiod --version "$NEW" --set revision="$REV" --set profile=ambient \
+    --set global.platform=k3s -f "$ROOT/helm/istiod-values.yaml" --wait --timeout 5m >/dev/null 2>&1
+  expect "2. the canary control plane runs next to the old one" "$("${K[@]}" -n istio-system get deploy -l app=istiod --no-headers | wc -l | tr -d ' ')" '^2$'
+  expect "2. the waypoint still talks to the old control plane" "$("${I[@]}" proxy-status 2>/dev/null | grep -c '^waypoint')" '^1$'
+  local bin; bin="$("${H[@]}" get values istio-cni -o json | sed -n 's/.*"cniBinDir":"\([^"]*\)".*/\1/p')"
+  "${H[@]}" upgrade istio-cni istio/cni --version "$NEW" -f "$ROOT/helm/istio-cni-values.yaml" --set global.platform=k3s \
+    --set cni.cniBinDir="$bin" --force-conflicts --wait --timeout 5m >/dev/null 2>&1
+  expect "3. istio-cni runs the new version" "$("${K[@]}" -n istio-system get ds istio-cni-node -o jsonpath='{.spec.template.spec.containers[0].image}')" ":${NEW}"
+  "${H[@]}" upgrade ztunnel istio/ztunnel --version "$NEW" -f "$ROOT/helm/ztunnel-values.yaml" --set revision="$REV" --force-conflicts --wait --timeout 5m >/dev/null 2>&1
+  expect "4. ztunnel runs the new version" "$("${K[@]}" -n istio-system get ds ztunnel -o jsonpath='{.spec.template.spec.containers[0].image}')" ":${NEW}"
+  "${K[@]}" -n shop label gateway waypoint istio.io/rev="$REV" --overwrite >/dev/null
+  "${K[@]}" -n shop rollout status deploy/waypoint --timeout=180s >/dev/null 2>&1; settle 5
+  expect "5. the waypoint moved to the new control plane" "$("${I[@]}" proxy-status --revision "$REV" 2>/dev/null | grep '^waypoint' | grep -c "$NEW")" '^1$'
+  "${K[@]}" -n shop label gateway waypoint istio.io/rev=default --overwrite >/dev/null
+  "${K[@]}" -n shop rollout status deploy/waypoint --timeout=180s >/dev/null 2>&1; settle 8
+  expect "5. rollback: relabelled to default, the waypoint is back on the old version" "$("${I[@]}" proxy-status 2>/dev/null | grep '^waypoint' | grep -vc "$NEW")" '^1$'
+  "${K[@]}" -n shop label gateway waypoint istio.io/rev="$REV" --overwrite >/dev/null
+  "${K[@]}" -n shop rollout status deploy/waypoint --timeout=180s >/dev/null 2>&1; settle 8
+  "${K[@]}" -n shop-ingress label gateway shop-gateway istio.io/rev="$REV" --overwrite >/dev/null
+  "${K[@]}" -n shop-ingress rollout status deploy/shop-gateway-istio --timeout=180s >/dev/null 2>&1; settle 5
+  expect "6. the ingress gateway moved too" "$("${I[@]}" proxy-status --revision "$REV" 2>/dev/null | grep '^shop-gateway' | grep -c "$NEW")" '^1$'
+  "${K[@]}" label ns course-sidecar istio-injection- istio.io/rev="$REV" --overwrite >/dev/null
+  "${K[@]}" -n course-sidecar rollout restart deploy >/dev/null
+  "${K[@]}" -n course-sidecar rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1
+  "${K[@]}" -n course-sidecar rollout status deploy/client --timeout=180s >/dev/null 2>&1; settle 15
+  expect "7. restarted sidecars carry the new proxy" "$("${K[@]}" -n course-sidecar get pods -l app=httpbin -o jsonpath='{.items[*].spec.containers[*].image}')" "proxyv2:${NEW}"
+  expect "7. nothing uses the old control plane any more" "$("${I[@]}" proxy-status 2>/dev/null | tail -n +2 | wc -l | tr -d ' ')" '^0$'
+  helm template istiod istio/istiod --version "$NEW" -s templates/revision-tags.yaml --set revisionTags="{default}" \
+    --set revision="$REV" -n istio-system | "${K[@]}" apply -f - >/dev/null
+  "${H[@]}" upgrade istio-base istio/base --version "$NEW" -f "$ROOT/helm/istio-base-values.yaml" --set defaultRevision="$REV" --force-conflicts --wait >/dev/null 2>&1
+  expect "8. the default validator points at the new control plane" "$("${K[@]}" get validatingwebhookconfiguration istiod-default-validator -o jsonpath='{.webhooks[0].clientConfig.service.name}')" "^istiod-${REV}$"
+  "${H[@]}" delete istiod >/dev/null 2>&1; settle 10
+  expect "9. only the new control plane is left" "$("${K[@]}" -n istio-system get deploy -l app=istiod -o name)" "istiod-${REV}$"
+  expect "9. Istio still validates new resources" "$("${K[@]}" apply --dry-run=server -f "$M/12-serviceentry.yaml" 2>&1 | grep -c 'created (server dry run)')" '^2$'
+  kill "$loader" 2>/dev/null; wait "$loader" 2>/dev/null
+  local total failed; total="$(wc -l < "$log" | tr -d ' ')"; failed="$(grep -vc '^200$' "$log" || true)"
+  expect "the shop kept answering during the upgrade ($failed of $total requests failed)" "$(( failed * 100 <= total * 5 ))" '^1$'
+  expect "after the upgrade the shop answers 200" "$(code "$BASE/api/orders")" '^200$'
+  rm -f "$log"
+}
+
 modules=("$@")
 if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13); fi
 # Start from the Git baseline, in case an exercise is still applied.

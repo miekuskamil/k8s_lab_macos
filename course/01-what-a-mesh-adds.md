@@ -1,5 +1,7 @@
 # Module 1: what a mesh adds
 
+> New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
+
 You know how Kubernetes moves a packet from one pod to another. This module shows what that path leaves out, and the two ways Istio fills the gap.
 
 ## Concept: what Kubernetes networking does not do

@@ -74,7 +74,7 @@ kubectl apply -f manifests/scenarios/a-canary-httproute.yaml   # send 10% to v2
 ./course/reset.sh                                              # back to the baseline
 ```
 
-Then start the [Istio course](course/README.md), or the shorter [lab guide](docs/lab-guide.md).
+Then start the [Istio course](course/README.md) with its 15-minute pre-reading, [Istio in one picture](course/start-here.md), or the shorter [lab guide](docs/lab-guide.md).
 
 ## Where things are
 
@@ -92,7 +92,7 @@ k8s_lab_macos/
 │   └── scenarios/    canary, fault and circuit-breaker experiments, applied by hand
 ├── helm/             value files for every Helm chart the lab installs
 ├── scripts/          provision, start, port-forward, traffic-test, teardown
-├── course/           the Istio course: modules 0 to 13, their manifests and scripts
+├── course/           the Istio course: modules 0 to 14, their manifests and scripts
 └── docs/             build guide, architecture, lab guide, troubleshooting, diagrams
 ```
 

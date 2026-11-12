@@ -1,5 +1,7 @@
 # Module 3: authorization
 
+> New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
+
 mTLS tells the receiver who is calling. Authorization decides whether that caller is allowed. This module writes rules at both layers of the mesh and shows a gap you get if you only write one of them.
 
 ## Concept: AuthorizationPolicy compared with NetworkPolicy

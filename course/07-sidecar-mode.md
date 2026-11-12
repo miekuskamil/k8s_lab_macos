@@ -1,5 +1,7 @@
 # Module 7: sidecar mode
 
+> New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
+
 Most Istio installations in production still use sidecars, and most Istio documentation assumes them. This module runs sidecar mode next to ambient in the same cluster, with the same istiod, so you can compare them directly.
 
 ## Concept: both modes, one control plane

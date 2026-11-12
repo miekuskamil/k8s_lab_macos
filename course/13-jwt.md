@@ -1,5 +1,7 @@
 # Module 13: end-user authentication with JWT
 
+> New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
+
 Modules 2 and 3 answered "which workload is calling?" with certificates. That's enough between services, but a shop also has people: Alice browsing orders, Bob the admin creating them. Their identity doesn't live in a certificate. It arrives in each request as a token. This module teaches the ingress gateway to check those tokens and to decide on what they say.
 
 Time: about 40 minutes.

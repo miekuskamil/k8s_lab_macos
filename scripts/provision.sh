@@ -173,6 +173,16 @@ detect_platform_args() {
 
 install_istio_ambient() {
   step "Installing Istio ${ISTIO_VERSION} in ambient mode with Helm"
+  # Course module 14 upgrades Istio to a revisioned control plane (a Helm release named
+  # istiod-<revision>). Installing the course version on top would downgrade the CRDs and
+  # start a second control plane, so leave an upgraded mesh alone.
+  local upgraded
+  upgraded="$(helm -n istio-system list -q 2>/dev/null | grep '^istiod-' || true)"
+  if [[ -n "$upgraded" ]]; then
+    warn "Istio was upgraded in course module 14 (Helm release ${upgraded}). Leaving it as it is."
+    warn "To return to Istio ${ISTIO_VERSION}: ./scripts/teardown.sh --yes && ./scripts/provision.sh"
+    return 0
+  fi
   helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update >/dev/null
   helm repo update istio >/dev/null
   detect_platform_args
@@ -291,7 +301,7 @@ health_checks() {
     local label="$1"; shift
     if "$@" >/dev/null 2>&1; then ok "$label"; else warn "$label"; failed=1; fi
   }
-  check "istiod available" kubectl -n istio-system wait --for=condition=Available deploy/istiod --timeout=30s
+  check "istiod available" kubectl -n istio-system wait --for=condition=Available deploy -l app=istiod --timeout=30s
   check "ztunnel ready on every node" kubectl -n istio-system rollout status ds/ztunnel --timeout=30s
   check "istio-cni ready on every node" kubectl -n istio-system rollout status ds/istio-cni-node --timeout=30s
   check "waypoint Gateway programmed" kubectl -n shop wait --for=condition=Programmed gateway/waypoint --timeout=60s

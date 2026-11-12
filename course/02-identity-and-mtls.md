@@ -1,5 +1,7 @@
 # Module 2: identity and mTLS
 
+> New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
+
 Every pod in the mesh gets a cryptographic identity, and every connection between mesh pods is encrypted and authenticated with it. This module shows where the identity comes from, what travels on the wire, and how a pod joins or leaves the mesh without a restart.
 
 ## Concept: an identity per service account

@@ -1,5 +1,7 @@
 # Module 6: observability
 
+> New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
+
 The mesh measures every request it carries, with no code in the application. This module shows what it records, where each signal lives, and how to follow a single request across metrics, traces and logs.
 
 ## Concept: three signals, four tools
