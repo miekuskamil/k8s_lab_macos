@@ -325,8 +325,8 @@ Run ./scripts/port-forward.sh to open these local ports:
   Kiali       http://localhost:20001   no login (anonymous, lab only)
   Headlamp    http://localhost:4466    token from the command below (cluster-admin, lab only)
 
-Headlamp login token:
-  kubectl -n headlamp get secret headlamp-admin -o jsonpath='{.data.token}' | base64 -d
+Headlamp login token, printed and copied to the clipboard:
+  ./scripts/headlamp-token.sh
 
 Redis has no local port. Its password is k8s-lab-redis.
 These are lab defaults stored in Git. See README.md, section "Open it".

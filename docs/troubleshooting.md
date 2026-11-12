@@ -274,6 +274,31 @@ Every ReplicaSet had a different `checksum/config` annotation, and nothing in Gi
 
 **Fix.** `helm/kiali-values.yaml` sets a fixed 32-character `signing_key`. The same trap exists in any chart that calls `randAlphaNum` in a template: under ArgoCD, set the value yourself. After a rollout, restart `./scripts/port-forward.sh`.
 
+## 17. Headlamp login fails with an authentication error
+
+**Symptom.** You paste the token into http://localhost:4466 and Headlamp says it could not authenticate.
+
+**Found with.**
+
+```bash
+kubectl -n headlamp logs deploy/headlamp --since=10m | grep -i "proxy error"
+./scripts/headlamp-token.sh >/dev/null
+TOKEN=$(pbpaste)
+curl -s -o /dev/null -w "%{http_code}\n" -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"kind":"SelfSubjectRulesReview","apiVersion":"authorization.k8s.io/v1","spec":{"namespace":"default"}}' \
+  http://localhost:4466/clusters/main/apis/authorization.k8s.io/v1/selfsubjectrulesreviews
+```
+
+The login check is that POST. `201` means the token is good; `401` means the token is wrong.
+
+**Causes.** Two were seen:
+
+- A wrong token. The `kubectl` command ran against OrbStack's own context and printed an error, or zsh's `%` end-of-line marker was copied with the token.
+- One failed request. Headlamp keeps an HTTP/2 connection to the API server. After about 17 minutes idle, the API server closed it at the moment the login POST went out. The Headlamp log shows `http2: Transport received Server's graceful shutdown GOAWAY ... after Request.Body was written`. Go cannot retry a request whose body was already sent, so that one login fails.
+
+**Fix.** Run `./scripts/headlamp-token.sh`, which always reads from the lab cluster and copies the token to the clipboard, then log in again. The next request opens a fresh connection and succeeds.
+
 ## A note on watching long installs
 
 Two habits would have shortened this build:
