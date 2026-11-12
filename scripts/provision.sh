@@ -251,7 +251,9 @@ app_table() {
 wait_for_sync() {
   step "Waiting for ArgoCD applications to become Synced and Healthy (timeout ${SYNC_TIMEOUT_SECONDS}s)"
   local deadline=$((SECONDS + SYNC_TIMEOUT_SECONDS))
-  local expected=6
+  # One Application per file in manifests/argocd/apps, plus the root Application.
+  local expected
+  expected=$(( $(find "$ROOT_DIR/manifests/argocd/apps" -name '*.yaml' | wc -l) + 1 ))
   while (( SECONDS < deadline )); do
     local table total good
     table="$(app_table || true)"
@@ -291,6 +293,9 @@ health_checks() {
   check "prometheus ready" kubectl -n observability wait --for=condition=Ready pod -l app.kubernetes.io/name=prometheus --timeout=60s
   check "grafana ready" kubectl -n observability wait --for=condition=Ready pod -l app.kubernetes.io/name=grafana --timeout=60s
   check "jaeger ready" kubectl -n observability rollout status deploy/jaeger --timeout=60s
+  check "loki ready" kubectl -n observability rollout status statefulset/loki --timeout=120s
+  check "alloy ready" kubectl -n observability rollout status deploy/alloy --timeout=120s
+  check "kiali ready" kubectl -n istio-system rollout status deploy/kiali --timeout=120s
   local tries=0
   until curl -fsS --max-time 5 http://localhost:8080/healthz >/dev/null 2>&1 || (( tries >= 24 )); do
     tries=$((tries + 1))
@@ -316,6 +321,7 @@ Run ./scripts/port-forward.sh to open these local ports:
   Grafana     http://localhost:3000    user admin, password k8s-lab-admin
   Prometheus  http://localhost:9090    no login
   Jaeger      http://localhost:16686   no login
+  Kiali       http://localhost:20001   no login (anonymous, lab only)
 
 Redis has no local port. Its password is k8s-lab-redis.
 These are lab defaults stored in Git. See README.md, section "Default logins".
