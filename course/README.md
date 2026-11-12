@@ -16,6 +16,7 @@ Each module takes 30 to 60 minutes. Do them in order, because each one builds on
 | [7. Sidecar mode](07-sidecar-mode.md) | The classic design, side by side with ambient | `istioctl`, Kiali |
 | [8. Incidents](08-incidents.md) | Find and fix four broken setups without being told the cause | everything |
 | [9. Command reference](09-command-reference.md) | Troubleshooting commands for the cluster and for Istio | |
+| [10. eBPF and Cilium](10-ebpf-and-cilium.md) | The other sidecarless design, compared with ambient. Theory, no install. | `docker exec`, `kubectl top` |
 
 ## How the exercises work
 
