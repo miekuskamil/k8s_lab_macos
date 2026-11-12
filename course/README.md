@@ -46,6 +46,7 @@ The lab must be running (`./scripts/provision.sh`, or `./scripts/start.sh` after
 |---|---|---|
 | Shop | http://localhost:8080 | none |
 | Kiali | http://localhost:20001 | none |
+| Headlamp | http://localhost:4466 | token, see the [README](../README.md#open-it) |
 | Grafana | http://localhost:3000 | `admin` / `k8s-lab-admin` |
 | Jaeger | http://localhost:16686 | none |
 | Prometheus | http://localhost:9090 | none |

@@ -22,6 +22,7 @@ OrbStack only provides Docker. k3d starts the cluster as containers, so deleting
 | `shop` | frontend, backend-v1 (2 pods), backend-v2 (1 pod), redis, the waypoint | The application, enrolled in ambient mode |
 | `istio-system` | istiod, ztunnel, istio-cni, Kiali | The mesh itself, and its console |
 | `observability` | Prometheus, Grafana, Jaeger, Loki, Alloy | Metrics, dashboards, traces and logs |
+| `headlamp` | Headlamp | A web UI for every namespace |
 | `argocd` | ArgoCD | Applies the manifests in this repo |
 
 Both backend versions run the same image. The `APP_VERSION` environment variable sets which version a pod reports, so the canary experiments change routing and not code.
@@ -172,7 +173,7 @@ The SVG predates Loki, Alloy and Kiali and shows the first five Applications. Th
 
 `provision.sh` installs Istio and ArgoCD with Helm, because ArgoCD cannot deploy things that need Istio before Istio exists. After that you change the cluster by pushing to `main`.
 
-Eight ArgoCD Applications deploy everything else (nine with `root`):
+Nine ArgoCD Applications deploy everything else (ten with `root`):
 
 | Application | Syncs | Self-heal |
 |---|---|---|
@@ -184,6 +185,7 @@ Eight ArgoCD Applications deploy everything else (nine with `root`):
 | `loki` | Loki, the log store (Helm chart) | Yes |
 | `alloy` | Alloy, which ships pod logs to Loki (Helm chart) | Yes |
 | `kiali` | Kiali, the Istio console (Helm chart) | Yes |
+| `headlamp` | Headlamp, a web UI for the whole cluster (Helm chart, plus its login token) | Yes |
 
 `istio-config` does not self-heal so you can apply a scenario by hand and watch ArgoCD report the drift without undoing your experiment. The files in `manifests/scenarios/` are not synced at all.
 
@@ -205,6 +207,7 @@ This section describes the lab as it runs after `./scripts/provision.sh`, measur
 | Loki | 3.6 (chart 6.55.0), single binary |
 | Grafana Alloy | 1.21 (chart 1.14.4) |
 | Kiali | 2.4.0 |
+| Headlamp | 0.46.0 |
 | Redis | 7.4 |
 | Shop images | `k8s-lab/backend:1.0.2`, `k8s-lab/frontend:1.0.2` |
 
