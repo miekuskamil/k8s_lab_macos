@@ -11,6 +11,21 @@ echo "Removing course rules from the shop namespace"
 "${K[@]}" -n shop delete telemetry waypoint-access-logs --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy backend-allow-course-client --ignore-not-found >/dev/null
 "${K[@]}" -n course-sidecar delete virtualservice,destinationrule,peerauthentication --all --ignore-not-found >/dev/null 2>&1 || true
+# Module 24: the dashboard's namespace, and the alert rule and folder that live only in Grafana
+"${K[@]}" delete namespace course-dashboards --ignore-not-found >/dev/null
+"${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- sh -c \
+  'A="$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD"
+   curl -s -o /dev/null -u "$A" -X DELETE localhost:3000/api/v1/provisioning/alert-rules/shop-burn-grafana
+   curl -s -o /dev/null -u "$A" -X DELETE "localhost:3000/api/folders/course?forceDeleteRules=true"' >/dev/null 2>&1 || true
+# Module 23: the receiver, its Alertmanager route and the SLO rules all live in one namespace
+"${K[@]}" delete namespace course-alerts --ignore-not-found >/dev/null
+# Module 22: the ApplicationSet first (its Applications' finalizers delete what they
+# deployed), then the hand-made Application, the project, Gitea and the namespaces.
+"${K[@]}" -n argocd delete applicationset podinfo --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || true
+"${K[@]}" -n argocd delete application podinfo-dev podinfo-prod --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || true
+"${K[@]}" -n argocd delete appproject team-shop --ignore-not-found >/dev/null
+"${K[@]}" delete clusterrole podinfo-reads-everything --ignore-not-found >/dev/null
+"${K[@]}" delete namespace course-gitops course-gitops-dev course-gitops-prod --ignore-not-found >/dev/null
 # Module 21: the backup markers. The k3s upgrade itself stays, like module 14's.
 "${K[@]}" -n default delete configmap before-backup after-backup --ignore-not-found >/dev/null
 # Module 20: the ops app and the extra node

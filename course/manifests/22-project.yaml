@@ -1,0 +1,15 @@
+# A fenced-in project for one team: one repository, two namespaces, nothing cluster-wide.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: team-shop
+  namespace: argocd
+spec:
+  description: Module 22, a team that may only deploy its own app
+  sourceRepos:
+    - http://gitea.course-gitops.svc.cluster.local:3000/lab/*
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: course-gitops-*
+  # Empty list: no cluster-scoped resources at all (ClusterRoles, Namespaces, CRDs...).
+  clusterResourceWhitelist: []

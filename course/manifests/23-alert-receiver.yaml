@@ -1,0 +1,62 @@
+# Module 23: a stand-in for Slack or PagerDuty. It prints every webhook Alertmanager sends.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-alerts
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alert-receiver
+  namespace: course-alerts
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: alert-receiver}
+  template:
+    metadata:
+      labels: {app: alert-receiver}
+    spec:
+      containers:
+        - name: echo
+          image: mendhak/http-https-echo:31
+          env:
+            - {name: HTTP_PORT, value: "8080"}
+            - {name: LOG_WITHOUT_NEWLINE, value: "true"}
+          ports:
+            - containerPort: 8080
+          resources:
+            requests: {cpu: 5m, memory: 32Mi}
+            limits: {memory: 96Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alert-receiver
+  namespace: course-alerts
+spec:
+  selector: {app: alert-receiver}
+  ports:
+    - {name: http, port: 8080}
+---
+# Route alerts with severity=page to the receiver. The Prometheus operator merges this
+# into Alertmanager's configuration, so teams own their routes without editing a shared file.
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: shop-pager
+  namespace: course-alerts
+spec:
+  route:
+    receiver: pager
+    matchers:
+      - {name: severity, value: page, matchType: "="}
+    groupBy: [alertname]
+    groupWait: 10s
+    groupInterval: 1m
+    repeatInterval: 1h
+  receivers:
+    - name: pager
+      webhookConfigs:
+        - url: http://alert-receiver.course-alerts.svc.cluster.local:8080/
+          sendResolved: true

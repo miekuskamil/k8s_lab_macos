@@ -24,6 +24,7 @@ forward() {
 forward argocd svc/argocd-server 8081:80 ArgoCD
 forward observability svc/kube-prometheus-stack-grafana 3000:80 Grafana
 forward observability svc/kube-prometheus-stack-prometheus 9090:9090 Prometheus
+forward observability svc/kube-prometheus-stack-alertmanager 9093:9093 Alertmanager
 forward observability svc/jaeger-query 16686:16686 Jaeger
 forward istio-system svc/kiali 20001:20001 Kiali
 forward headlamp svc/headlamp 4466:80 Headlamp

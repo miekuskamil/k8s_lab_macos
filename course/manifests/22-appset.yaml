@@ -1,0 +1,31 @@
+# One template, one Application per list element.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: podinfo
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - list:
+        elements:
+          - env: dev
+          - env: prod
+  template:
+    metadata:
+      name: "podinfo-{{.env}}"
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: team-shop
+      source:
+        repoURL: http://gitea.course-gitops.svc.cluster.local:3000/lab/podinfo-gitops.git
+        targetRevision: main
+        path: "envs/{{.env}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "course-gitops-{{.env}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true

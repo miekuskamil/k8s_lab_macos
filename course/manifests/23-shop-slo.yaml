@@ -1,0 +1,45 @@
+# Module 23: an availability SLO for the backend, 99% of requests without a 5xx.
+# The error budget is the other 1%. "Burn rate" is how fast you spend it:
+# a burn rate of 1 uses exactly the whole budget over the SLO period, 14.4 uses it 14.4 times faster.
+#
+# Real SLOs use windows of 1 hour and 5 minutes for a fast burn. The lab shrinks them to
+# 5 minutes and 1 minute so you see an alert within minutes instead of an hour.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: shop-slo
+  namespace: course-alerts
+spec:
+  groups:
+    - name: shop-slo-recording
+      interval: 30s
+      rules:
+        # Recording rules: Prometheus computes these every 30 s and stores the result
+        # as a new, cheap series. Dashboards and alerts read the result instead of
+        # recomputing the full query every time.
+        - record: shop:backend_error_ratio:rate1m
+          expr: |
+            sum(rate(istio_requests_total{reporter="waypoint", destination_service_namespace="shop", destination_canonical_service="backend", response_code=~"5.."}[1m]))
+            /
+            sum(rate(istio_requests_total{reporter="waypoint", destination_service_namespace="shop", destination_canonical_service="backend"}[1m]))
+        - record: shop:backend_error_ratio:rate5m
+          expr: |
+            sum(rate(istio_requests_total{reporter="waypoint", destination_service_namespace="shop", destination_canonical_service="backend", response_code=~"5.."}[5m]))
+            /
+            sum(rate(istio_requests_total{reporter="waypoint", destination_service_namespace="shop", destination_canonical_service="backend"}[5m]))
+    - name: shop-slo-alerts
+      rules:
+        - alert: ShopBackendErrorBudgetBurn
+          # Burn rate 14.4 on a 1% budget means an error ratio above 14.4%. The long window
+          # proves it's serious, the short one that it's still happening, so the alert
+          # also clears within a minute or two of the fix.
+          expr: |
+            shop:backend_error_ratio:rate5m > (14.4 * 0.01)
+            and
+            shop:backend_error_ratio:rate1m > (14.4 * 0.01)
+          for: 1m
+          labels:
+            severity: page
+          annotations:
+            summary: "The backend spends its 1% error budget too fast"
+            description: "5xx ratio over 5m is {{ $value | humanizePercentage }}."

@@ -1,0 +1,5 @@
+resources:
+  - ../../base
+replicas:
+  - name: podinfo
+    count: 2

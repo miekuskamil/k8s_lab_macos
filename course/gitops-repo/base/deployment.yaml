@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: podinfo
+spec:
+  replicas: 1
+  # Report a stuck rollout after 1 minute instead of the default 10, so ArgoCD shows Degraded quickly.
+  progressDeadlineSeconds: 60
+  selector:
+    matchLabels: {app: podinfo}
+  template:
+    metadata:
+      labels: {app: podinfo}
+    spec:
+      containers:
+        - name: podinfo
+          image: ghcr.io/stefanprodan/podinfo:6.7.1
+          ports:
+            - containerPort: 9898
+          env:
+            - {name: PODINFO_UI_MESSAGE, value: "hello from git"}
+          readinessProbe:
+            httpGet: {path: /readyz, port: 9898}
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {memory: 64Mi}

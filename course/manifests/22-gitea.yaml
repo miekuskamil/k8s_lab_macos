@@ -1,0 +1,66 @@
+# Module 22: a Git server inside the cluster, so exercises never touch the course's GitHub repo.
+# Gitea keeps its data in an emptyDir: delete the pod and the repositories are gone. Fine for a lab.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-gitops
+---
+# The AppProject in 22-project.yaml may not create namespaces, so they exist up front.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-gitops-dev
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-gitops-prod
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitea
+  namespace: course-gitops
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: gitea}
+  template:
+    metadata:
+      labels: {app: gitea}
+    spec:
+      containers:
+        - name: gitea
+          image: gitea/gitea:1.22.6-rootless
+          ports:
+            - containerPort: 3000
+          env:
+            # Skip the web installer: SQLite, no sign-up, and a push to a new repository creates it.
+            - {name: GITEA__security__INSTALL_LOCK, value: "true"}
+            - {name: GITEA__database__DB_TYPE, value: sqlite3}
+            - {name: GITEA__server__ROOT_URL, value: "http://gitea.course-gitops.svc.cluster.local:3000/"}
+            - {name: GITEA__service__DISABLE_REGISTRATION, value: "true"}
+            - {name: GITEA__repository__ENABLE_PUSH_CREATE_USER, value: "true"}
+            - {name: GITEA__repository__DEFAULT_PUSH_CREATE_PRIVATE, value: "false"}
+          readinessProbe:
+            httpGet: {path: /api/healthz, port: 3000}
+            periodSeconds: 5
+          resources:
+            requests: {cpu: 20m, memory: 96Mi}
+            limits: {memory: 256Mi}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/gitea}
+            - {name: config, mountPath: /etc/gitea}
+      volumes:
+        - {name: data, emptyDir: {}}
+        - {name: config, emptyDir: {}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitea
+  namespace: course-gitops
+spec:
+  selector: {app: gitea}
+  ports:
+    - {name: http, port: 3000, targetPort: 3000}

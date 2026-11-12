@@ -1,0 +1,20 @@
+{
+  "uid": "shop-burn-grafana",
+  "title": "Shop backend burns its error budget (Grafana-managed)",
+  "ruleGroup": "course",
+  "folderUID": "course",
+  "condition": "C",
+  "for": "1m",
+  "noDataState": "OK",
+  "execErrState": "Error",
+  "labels": {"severity": "page"},
+  "annotations": {"summary": "Same condition as module 23, evaluated by Grafana"},
+  "data": [
+    {"refId": "A", "datasourceUid": "prometheus", "relativeTimeRange": {"from": 300, "to": 0},
+     "model": {"refId": "A", "instant": true,
+       "expr": "sum(rate(istio_requests_total{reporter=\"waypoint\", destination_canonical_service=\"backend\", response_code=~\"5..\"}[5m])) / sum(rate(istio_requests_total{reporter=\"waypoint\", destination_canonical_service=\"backend\"}[5m]))"}},
+    {"refId": "C", "datasourceUid": "__expr__",
+     "model": {"refId": "C", "type": "threshold", "expression": "A",
+       "conditions": [{"evaluator": {"type": "gt", "params": [0.144]}}]}}
+  ]
+}

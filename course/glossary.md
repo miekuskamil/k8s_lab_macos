@@ -272,3 +272,55 @@ Modules 4, 5, 6, 8.
 
 **CNI plugin directory.** The folder containerd searches for network plugins (`bin_dir` or `bin_dirs` in its config). istio-cni must place its plugin there; the k3s upgrade in module 21 moved it. Module 21.
 
+
+## GitOps and ArgoCD
+
+**GitOps.** Running a cluster from Git: Git holds the desired state, and an agent inside the cluster keeps the live state matching it. Changes go through commits, and rollbacks through `git revert`. ArgoCD and Flux are the common agents. Module 22.
+
+**Application.** ArgoCD's resource that links one path in one Git repository to one namespace in one cluster, with a sync policy. Module 22.
+
+**AppProject.** Groups Applications and limits what they may do: which repositories, which destination namespaces, which kinds of resources. ArgoCD's RBAC for teams. Module 22.
+
+**ApplicationSet.** Generates Applications from a template and a generator, such as a list, the folders in a repository, the clusters ArgoCD knows, or open pull requests. Module 22.
+
+**Sync status and health status.** Sync says whether the cluster matches Git (`Synced`, `OutOfSync`). Health says whether the app works (`Healthy`, `Progressing`, `Degraded`). They're independent: a broken release is `Synced` and `Degraded`. Module 22.
+
+**Drift, self-heal and prune.** Drift is any difference between Git and the cluster, like a manual `kubectl scale`. With `selfHeal`, ArgoCD undoes it. With `prune`, it deletes resources that left Git. Module 22.
+
+**Sync wave and hook.** A wave (annotation `argocd.argoproj.io/sync-wave`) orders resources: lower waves go first, and each wave must be healthy before the next. A hook (`argocd.argoproj.io/hook`) runs a resource, usually a Job, at a phase of the sync, such as PreSync for a database migration. Module 22.
+
+**Kustomize base and overlay.** A base holds shared manifests. An overlay, one per environment, points at the base and changes only what differs, like replicas or an image tag. `kubectl apply -k` and ArgoCD render it without extra tools. Module 22.
+
+**Refresh and reconcile.** ArgoCD reconciles each Application every 3 minutes by default: it fetches Git, renders the manifests and compares them with the cluster. A refresh (the `argocd.argoproj.io/refresh` annotation, the UI button or a Git webhook) does it at once. Module 22.
+
+## Metrics and alerting
+
+**Counter, gauge and histogram.** The three common metric types. A counter only goes up (requests served) and means something through `rate()`. A gauge goes up and down (memory in use). A histogram counts observations into buckets, labelled `le` ("less than or equal"), so you estimate percentiles with `histogram_quantile()`. Module 23.
+
+**`rate()` and `sum by`.** `rate(x[1m])` turns a counter into a per-second speed over the last minute. `sum by (label)` adds series up and keeps only the labels you name. Module 23.
+
+**Recording rule.** A query Prometheus evaluates on a schedule and stores as a new series, so dashboards and alerts read a cheap precomputed value. Named `level:metric:operation`, like `shop:backend_error_ratio:rate5m`. Module 23.
+
+**Alerting rule, pending and firing.** A query that defines "broken". When it returns a result, the alert turns `pending`; after it has held for the rule's `for:` duration, it turns `firing` and goes to Alertmanager. Module 23.
+
+**Alertmanager: route, receiver, grouping, silence.** A route matches alerts by label and sends them to a receiver (Slack, PagerDuty, a webhook). Grouping folds many alerts into one message. A silence mutes matching alerts for a time window without changing the rules. Module 23.
+
+**AlertmanagerConfig and PrometheusRule.** Prometheus operator resources. A PrometheusRule holds recording and alerting rules; an AlertmanagerConfig holds a team's routes and receivers. The operator merges both into the running configuration, so teams keep them next to their apps. Module 23.
+
+**SLI, SLO and error budget.** An SLI measures what users experience (the share of requests without a 5xx). An SLO is the target for it (99%). The error budget is what the target leaves over (1%), the amount of failure you accept. Module 23.
+
+**Burn rate.** How fast you spend the error budget. A burn rate of 1 uses it up exactly by the end of the SLO period; 14.4 uses it 14.4 times faster. Multi-window burn-rate alerts check a long and a short window together. Module 23.
+
+**Cardinality.** The number of distinct series a metric produces: every combination of label values counts once. High-cardinality labels, like user ids, blow up Prometheus' memory. Module 23.
+
+## Grafana
+
+**Provisioned dashboard.** A dashboard Grafana loads from a file instead of its database. Grafana refuses to save changes to it, because the next load would overwrite them; you change the file in Git instead. Module 24.
+
+**Dashboard sidecar.** A small container in the Grafana pod that watches for ConfigMaps labelled `grafana_dashboard: "1"`, in every namespace, and writes their JSON where Grafana's provisioning picks it up. Module 24.
+
+**Panel, variable and threshold.** A panel is one visualisation with its query. A variable is a dropdown that panels use as `$name`, so one dashboard serves many services. A threshold colours a value by where it sits, like red below 99%. Module 24.
+
+**Contact point and notification policy.** Grafana alerting's version of Alertmanager receivers and routes. The default contact point sends email to a placeholder address, so new Grafana alerts reach nobody until you change it. Module 24.
+
+**Trace-to-logs link (derived field).** Settings on Grafana data sources that turn a trace id into a jump between Jaeger and Loki: "Logs for this span" in a trace, and "Open trace in Jaeger" next to a `trace_id` in a log line. Modules 6 and 24.

@@ -2,7 +2,7 @@
 # Replay the key exercise of every course module and check the result.
 # Use it to confirm the course works on your lab, or to check your own work.
 #
-#   ./course/verify.sh          run every module (about 12 minutes)
+#   ./course/verify.sh          run every module (about 30 minutes)
 #   ./course/verify.sh 4 5      run only modules 4 and 5
 #
 # The script changes routing and policies while it runs and restores the baseline at the end.
@@ -560,6 +560,169 @@ module_20() {
   rm -f "$log"
 }
 
+module_22() {
+  section "22: GitOps with ArgoCD"
+  baseline
+  local work="${TMPDIR:-/tmp}/k8s-lab-gitops" port=3011 pf
+  app() { "${K[@]}" -n argocd get app "$1" -o jsonpath="$2" 2>/dev/null; }
+  refresh() { "${K[@]}" -n argocd annotate app "$1" argocd.argoproj.io/refresh=normal --overwrite >/dev/null 2>&1; }
+  # wait_app <app> <jsonpath> <regex> <seconds>: poll until the value matches, print it
+  wait_app() { local v i; for ((i = 0; i < $4; i += 2)); do v="$(app "$1" "$2")"; [[ "$v" =~ $3 ]] && break; sleep 2; done; printf '%s' "$v"; }
+  g() { git -C "$work" -c user.name=lab -c user.email=lab@example.invalid "$@" >/dev/null 2>&1; }
+  push() { g push "http://lab:lab-gitops-pass@localhost:$port/lab/podinfo-gitops.git" main; refresh podinfo-dev; }
+  "${K[@]}" apply -f "$M/22-gitea.yaml" >/dev/null
+  "${K[@]}" -n course-gitops rollout status deploy/gitea --timeout=180s >/dev/null 2>&1
+  "${K[@]}" -n course-gitops exec deploy/gitea -- gitea admin user create --username lab --password lab-gitops-pass \
+    --email lab@example.invalid --admin --must-change-password=false >/dev/null 2>&1
+  "${K[@]}" -n course-gitops port-forward svc/gitea "$port:3000" >/dev/null 2>&1 &
+  pf=$!; settle 3
+  rm -rf "$work"; cp -R "$ROOT/course/gitops-repo" "$work"
+  git -C "$work" init -q -b main; g add .; g commit -m "podinfo, dev and prod"
+  expect "a push creates the repository in Gitea" "$(push; curl -s "localhost:$port/api/v1/repos/lab/podinfo-gitops" | grep -o '"private":false')" '^"private":false$'
+  "${K[@]}" apply -f "$M/22-project.yaml" -f "$M/22-app-dev.yaml" >/dev/null 2>&1
+  expect "ArgoCD deploys the dev app from Gitea" "$(wait_app podinfo-dev '{.status.sync.status} {.status.health.status}' '^Synced Healthy$' 90)" '^Synced Healthy$'
+  "${K[@]}" -n course-gitops-dev scale deploy/podinfo --replicas=3 >/dev/null; settle 15
+  expect "without selfHeal, drift shows as OutOfSync and stays" "$(app podinfo-dev '{.status.sync.status}') $("${K[@]}" -n course-gitops-dev get deploy podinfo -o jsonpath='{.spec.replicas}')" '^OutOfSync 3$'
+  "${K[@]}" -n argocd patch app podinfo-dev --type merge -p '{"spec":{"syncPolicy":{"automated":{"selfHeal":true}}}}' >/dev/null; settle 10
+  expect "with selfHeal, ArgoCD undoes the kubectl scale" "$("${K[@]}" -n course-gitops-dev get deploy podinfo -o jsonpath='{.spec.replicas}')" '^1$'
+  sed -i.bak 's/hello from git/hello from commit 2/' "$work/base/deployment.yaml"; rm -f "$work/base/deployment.yaml.bak"
+  g commit -am "new message"; push; settle 5
+  "${K[@]}" -n course-gitops-dev rollout status deploy/podinfo --timeout=90s >/dev/null 2>&1
+  expect "a pushed commit reaches the pod" "$("${K[@]}" -n course-gitops-dev exec deploy/podinfo -- wget -qO- localhost:9898 2>/dev/null | grep -o 'hello from commit 2')" '^hello from commit 2$'
+  sed -i.bak 's/podinfo:6.7.1/podinfo:6.7.99/' "$work/base/deployment.yaml"; rm -f "$work/base/deployment.yaml.bak"
+  g commit -am "bump podinfo"; push
+  expect "a broken image tag is Synced and Degraded at once" "$(wait_app podinfo-dev '{.status.sync.status} {.status.health.status}' '^Synced Degraded$' 120)" '^Synced Degraded$'
+  g revert --no-edit HEAD; push
+  expect "git revert brings the app back" "$(wait_app podinfo-dev '{.status.sync.status} {.status.health.status}' '^Synced Healthy$' 60)" '^Synced Healthy$'
+  cp "$ROOT/course/gitops-extras/migrate-job.yaml" "$ROOT/course/gitops-extras/config-wave.yaml" "$work/base/"
+  printf '  - migrate-job.yaml\n  - config-wave.yaml\n' >> "$work/base/kustomization.yaml"
+  g add .; g commit -m "migration hook and settings"; push
+  # Wait for this commit's sync, not the last one's "Succeeded".
+  local head; head="$(git -C "$work" rev-parse HEAD)"
+  wait_app podinfo-dev '{.status.operationState.operation.sync.revision} {.status.operationState.phase}' "^$head Succeeded$" 90 >/dev/null
+  expect "the PreSync hook ran before the sync" "$("${K[@]}" -n course-gitops-dev logs job/migrate 2>/dev/null | head -1)" '^migrating the schema$'
+  expect "the wave -1 ConfigMap exists" "$("${K[@]}" -n course-gitops-dev get cm podinfo-settings -o jsonpath='{.data.feature}' 2>/dev/null)" '^orders-v2$'
+  cp "$ROOT/course/gitops-extras/sneaky-clusterrole.yaml" "$work/base/"
+  printf '  - sneaky-clusterrole.yaml\n' >> "$work/base/kustomization.yaml"
+  g add .; g commit -m "let podinfo read everything"; push; settle 10
+  expect "the project refuses a ClusterRole" "$(app podinfo-dev '{.status.operationState.syncResult.resources[?(@.kind=="ClusterRole")].message}')" 'not permitted in project team-shop'
+  expect "and nothing created it" "$("${K[@]}" get clusterrole podinfo-reads-everything 2>&1 | grep -c NotFound)" '^1$'
+  g revert --no-edit HEAD; push
+  "${K[@]}" -n argocd patch app podinfo-dev --type merge -p '{"status":{"operationState":{"phase":"Terminating"}}}' >/dev/null 2>&1
+  expect "terminating the retries lets the revert through" "$(wait_app podinfo-dev '{.status.sync.status} {.status.health.status}' '^Synced Healthy$' 60)" '^Synced Healthy$'
+  "${K[@]}" -n argocd delete app podinfo-dev --wait=true --timeout=90s >/dev/null 2>&1
+  expect "deleting the Application deletes what it deployed" "$("${K[@]}" -n course-gitops-dev get deploy podinfo 2>&1 | grep -c NotFound)" '^1$'
+  "${K[@]}" apply -f "$M/22-appset.yaml" >/dev/null
+  wait_app podinfo-prod '{.status.health.status}' '^Healthy$' 90 >/dev/null
+  expect "the ApplicationSet deploys dev with 1 replica and prod with 2" "$("${K[@]}" -n course-gitops-dev get deploy podinfo -o jsonpath='{.status.readyReplicas}' 2>/dev/null) $("${K[@]}" -n course-gitops-prod get deploy podinfo -o jsonpath='{.status.readyReplicas}' 2>/dev/null)" '^1 2$'
+  "${K[@]}" -n argocd delete app podinfo-prod --wait=true --timeout=90s >/dev/null 2>&1
+  expect "the ApplicationSet recreates a deleted Application" "$(wait_app podinfo-prod '{.status.health.status}' '^Healthy$' 90)" '^Healthy$'
+  kill "$pf" 2>/dev/null; wait "$pf" 2>/dev/null; rm -rf "$work"
+  baseline
+  expect "after the reset the course-gitops namespaces and project are gone" "$("${K[@]}" get ns course-gitops course-gitops-dev course-gitops-prod 2>&1 | grep -c NotFound) $("${K[@]}" -n argocd get appproject team-shop 2>&1 | grep -c NotFound)" '^3 1$'
+}
+
+module_23() {
+  section "23: Prometheus and alerting"
+  baseline
+  local port=9092 pf loader
+  "${K[@]}" -n observability port-forward svc/kube-prometheus-stack-prometheus "$port:9090" >/dev/null 2>&1 &
+  pf=$!; settle 3
+  # prom <query>: the first result's value, or nothing
+  prom() { curl -s "localhost:$port/api/v1/query" --data-urlencode "query=$1" | python3 -c 'import json,sys; r=json.load(sys.stdin)["data"]["result"]; print(r[0]["value"][1] if r else "")' 2>/dev/null; }
+  alert_state() { curl -s "localhost:$port/api/v1/alerts" | python3 -c 'import json,sys; a=[x for x in json.load(sys.stdin)["data"]["alerts"] if x["labels"]["alertname"]=="ShopBackendErrorBudgetBurn"]; print(a[0]["state"] if a else "none")' 2>/dev/null; }
+  # poll <seconds> <command...>: run the command every 5 s until it succeeds
+  poll() { local t=$1 i; shift; for ((i = 0; i < t; i += 5)); do "$@" && return 0; sleep 5; done; return 1; }
+  expect "Prometheus sends alerts to Alertmanager" "$(curl -s "localhost:$port/api/v1/alertmanagers" | grep -o '"activeAlertmanagers":\[{"url":"http://[0-9.]*:9093' | grep -c 9093)" '^1$'
+  "${K[@]}" apply -f "$M/23-alert-receiver.yaml" -f "$M/23-shop-slo.yaml" >/dev/null
+  "${K[@]}" -n course-alerts rollout status deploy/alert-receiver --timeout=120s >/dev/null 2>&1
+  rules_loaded() { [[ "$(curl -s "localhost:$port/api/v1/rules" | grep -o '"name":"shop-slo-[a-z]*"' | sort -u | wc -l | tr -d ' ')" == 2 ]]; }
+  poll 150 rules_loaded
+  expect "Prometheus loads both SLO rule groups" "$(curl -s "localhost:$port/api/v1/rules" | grep -o '"name":"shop-slo-[a-z]*"' | sort -u | wc -l | tr -d ' ')" '^2$'
+  route_merged() { "${K[@]}" -n observability exec alertmanager-kube-prometheus-stack-alertmanager-0 -c alertmanager -- cat /etc/alertmanager/config_out/alertmanager.env.yaml 2>/dev/null | grep -q 'course-alerts/shop-pager/pager'; }
+  poll 150 route_merged
+  expect "Alertmanager merges the team's route" "$(route_merged && echo merged)" '^merged$'
+  "${K[@]}" apply -f "$M/15-faulty-pod.yaml" >/dev/null
+  "${K[@]}" -n shop rollout status deploy/backend-v1-faulty --timeout=120s >/dev/null 2>&1
+  "$ROOT/course/load.sh" 420 /api/orders 5 >/dev/null 2>&1 &
+  loader=$!; disown "$loader"
+  firing() { [[ "$(alert_state)" == firing ]]; }
+  poll 240 firing
+  between "with one broken pod of three, the 5m error ratio in percent" "$(prom 'shop:backend_error_ratio:rate5m' | awk '{printf "%d", $1 * 100}')" 15 60
+  expect "the burn-rate alert fires" "$(alert_state)" '^firing$'
+  delivered() { "${K[@]}" -n course-alerts logs deploy/alert-receiver 2>/dev/null | grep -q '"status":"firing"'; }
+  poll 60 delivered
+  expect "the receiver gets the page" "$("${K[@]}" -n course-alerts logs deploy/alert-receiver 2>/dev/null | grep -o '"alertname":"ShopBackendErrorBudgetBurn"' | head -1)" 'ShopBackendErrorBudgetBurn'
+  "${K[@]}" -n shop delete deployment backend-v1-faulty >/dev/null
+  cleared() { [[ "$(alert_state)" == none ]]; }
+  poll 150 cleared
+  expect "the alert clears while the 5m ratio is still above the threshold" "$(alert_state) $(prom 'shop:backend_error_ratio:rate5m > 0.144' | grep -c .)" '^none 1$'
+  resolved() { "${K[@]}" -n course-alerts logs deploy/alert-receiver 2>/dev/null | grep -q '"status":"resolved"'; }
+  poll 90 resolved
+  expect "the receiver gets the resolved message" "$("${K[@]}" -n course-alerts logs deploy/alert-receiver 2>/dev/null | grep -c '"status":"resolved"')" '^[1-9]'
+  kill "$loader" 2>/dev/null; pkill -f "course/load.sh" 2>/dev/null
+  between "Prometheus holds many series in total (thousands)" "$(prom 'count({__name__=~".+"})' | awk '{printf "%d", $1 / 1000}')" 10 1000
+  expect "the API server's histogram is the biggest metric" "$(curl -s "localhost:$port/api/v1/query" --data-urlencode 'query=topk(1, count by (__name__) ({__name__=~".+"}))' | grep -o '"__name__":"[a-z_]*"')" 'apiserver_'
+  kill "$pf" 2>/dev/null; wait "$pf" 2>/dev/null
+  baseline
+  expect "after the reset course-alerts is gone" "$("${K[@]}" get ns course-alerts 2>&1 | grep -c NotFound)" '^1$'
+}
+
+module_24() {
+  section "24: Grafana as code"
+  baseline
+  local gport=3998 pport=9094 pf1 pf2 pw S="${TMPDIR:-/tmp}"
+  pw="$("${K[@]}" -n observability get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 -d)"
+  "${K[@]}" -n observability port-forward svc/kube-prometheus-stack-grafana "$gport:80" >/dev/null 2>&1 &
+  pf1=$!
+  "${K[@]}" -n observability port-forward svc/kube-prometheus-stack-prometheus "$pport:9090" >/dev/null 2>&1 &
+  pf2=$!; settle 3
+  gf() { curl -s -u "admin:$pw" "$@"; }
+  prom() { curl -s "localhost:$pport/api/v1/query" --data-urlencode "query=$1" | python3 -c 'import json,sys; r=json.load(sys.stdin)["data"]["result"]; print(r[0]["value"][1] if r else "")' 2>/dev/null; }
+  poll() { local t=$1 i; shift; for ((i = 0; i < t; i += 5)); do "$@" && return 0; sleep 5; done; return 1; }
+  "${K[@]}" apply -f "$M/24-slo-dashboard.yaml" >/dev/null
+  loaded() { gf "localhost:$gport/api/dashboards/uid/shop-slo" | grep -q '"provisioned":true'; }
+  poll 60 loaded
+  expect "the sidecar loads the dashboard from its ConfigMap" "$(gf "localhost:$gport/api/dashboards/uid/shop-slo" | grep -o '"title":"Shop SLO"' | head -1)" '^"title":"Shop SLO"$'
+  gf "localhost:$gport/api/dashboards/uid/shop-slo" | python3 -c 'import json,sys; d=json.load(sys.stdin)["dashboard"]; d["title"]="edited"; print(json.dumps({"dashboard":d,"overwrite":True}))' > "$S/k8s-lab-dash.json"
+  expect "Grafana refuses to save over a provisioned dashboard" "$(gf -H 'Content-Type: application/json' -X POST "localhost:$gport/api/dashboards/db" -d @"$S/k8s-lab-dash.json")" 'Cannot save provisioned dashboard'
+  rm -f "$S/k8s-lab-dash.json"
+  # The panel queries, with $service=backend and $window=5m
+  local sel='reporter="waypoint", destination_service_namespace="shop", destination_canonical_service="backend"'
+  "$ROOT/course/load.sh" 120 /api/orders 5 >/dev/null 2>&1 &
+  local loader=$!; disown "$loader"; settle 70
+  # Built in a variable: bash 3.2 (macOS) mis-parses escaped quotes inside "$( ... )".
+  local errsel="$sel, response_code=~\"5..\"" avail
+  # $window=1m: right after module 23, the 5m window still holds its faulty pod's errors.
+  avail="1 - (sum(rate(istio_requests_total{$errsel}[1m])) or vector(0)) / sum(rate(istio_requests_total{$sel}[1m]))"
+  between "the availability panel reads close to 100% over 1m (percent)" "$(prom "$avail" | awk '{printf "%d", $1 * 100}')" 95 100
+  between "the requests-per-second panel sees the load (x10)" "$(prom "sum(rate(istio_requests_total{$sel}[5m]))" | awk '{printf "%d", $1 * 10}')" 10 80
+  expect "the p95 panel returns a latency" "$(prom "histogram_quantile(0.95, sum by (le) (rate(istio_request_duration_milliseconds_bucket{$sel}[5m])))")" '^[0-9.]+$'
+  expect "the service variable lists the backend" "$(curl -s -G "localhost:$pport/api/v1/label/destination_canonical_service/values" --data-urlencode 'match[]=istio_requests_total{reporter="waypoint", destination_service_namespace="shop", destination_canonical_service!="unknown"}' | grep -o '"backend"')" '^"backend"$'
+  gf -H 'Content-Type: application/json' -X POST "localhost:$gport/api/folders" -d '{"uid":"course","title":"Course"}' >/dev/null
+  expect "the Grafana-managed rule is accepted" "$(gf -H 'Content-Type: application/json' -X POST "localhost:$gport/api/v1/provisioning/alert-rules" -d @"$M/24-grafana-rule.json" | grep -o '"uid":"shop-burn-grafana"')" 'shop-burn-grafana'
+  evaluated() { gf "localhost:$gport/api/prometheus/grafana/api/v1/rules" | grep -q '"health":"ok"'; }
+  poll 90 evaluated
+  expect "Grafana evaluates it" "$(gf "localhost:$gport/api/prometheus/grafana/api/v1/rules" | grep -o '"health":"ok"' | head -1)" '"health":"ok"'
+  expect "its default contact point is a placeholder email" "$(gf "localhost:$gport/api/v1/provisioning/contact-points" | grep -o 'example@email.com' | head -1)" '^example@email.com$'
+  local tid=""
+  for _ in 1 2 3 4 5 6; do
+    curl -s -o /dev/null "$BASE/api/orders"; settle 10
+    tid="$(gf "localhost:$gport/api/datasources/proxy/uid/jaeger/api/traces?service=backend&limit=1&lookback=5m" | python3 -c 'import json,sys; d=json.load(sys.stdin)["data"]; print(d[0]["traceID"] if d else "")' 2>/dev/null)"
+    [[ -n "$tid" ]] && break
+  done
+  # loki_hits: how many log lines carry this trace id. Loki needs some seconds to ingest.
+  local logq="{namespace=\"shop\"} |= \"$tid\"" hits=0
+  loki_hits() { local now; now="$(date +%s)"; gf -G "localhost:$gport/api/datasources/proxy/uid/loki/loki/api/v1/query_range" --data-urlencode "query=$logq" --data-urlencode "start=$((now - 600))000000000" --data-urlencode "end=${now}000000000" | grep -c "$tid"; }
+  for _ in 1 2 3 4 5 6 7 8; do hits="$(loki_hits)"; [[ "$hits" != 0 ]] && break; sleep 5; done
+  expect "a Jaeger trace id finds its log line in Loki" "$hits" '^[1-9]'
+  expect "the trace-to-logs link in Grafana keeps its variable" "$(gf "localhost:$gport/api/datasources/uid/jaeger" | grep -o '__trace.traceId' | head -1)" '^__trace.traceId$'
+  kill "$loader" 2>/dev/null; pkill -f "course/load.sh" 2>/dev/null
+  baseline
+  expect "after the reset the dashboard and the Grafana rule are gone" "$(gf "localhost:$gport/api/dashboards/uid/shop-slo" | grep -c 'not found') $(gf "localhost:$gport/api/v1/provisioning/alert-rules/shop-burn-grafana" -o /dev/null -w '%{http_code}')" '^1 404$'
+  kill "$pf1" "$pf2" 2>/dev/null; wait "$pf1" "$pf2" 2>/dev/null
+}
+
 # Module 21 upgrades k3s for real, so it is not in the default run: ./course/verify.sh 21
 module_21() {
   section "21: k3s certificates, backups and upgrades (the upgrade is one-way)"
@@ -668,7 +831,7 @@ module_14() {
 }
 
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16 20); fi
+if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16 20 22 23 24); fi
 # Start from the Git baseline, in case an exercise is still applied.
 printf 'Restoring the baseline before the checks\n'
 "$ROOT/course/reset.sh" >/dev/null 2>&1

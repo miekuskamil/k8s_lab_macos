@@ -1,4 +1,4 @@
-# Istio course
+# Istio and platform course
 
 A hands-on Istio course built on this lab. It assumes you know Kubernetes well (CKA or CKAD level) and have never used a service mesh. Every module explains what Istio does, why it is built that way and not another, and how to see it happening in Kiali, Grafana, Jaeger and Loki.
 
@@ -28,6 +28,9 @@ Each module takes 30 to 60 minutes. Do them in order, because each one builds on
 | [19. AI agents and their tools](19-ai-agents.md) | AI: kagent with your Ollama, MCP and A2A, an intruder calling tools directly, mesh policy and RBAC around agents, agents that misreport | `agent-ask.sh`, `kubectl auth can-i` |
 | [20. Nodes, drains and cleanup](20-nodes-and-cleanup.md) | Ops: a second node, drains under traffic, PodDisruptionBudgets that protect and block, Jobs, ReplicaSets and images that pile up | `kubectl drain`, `crictl` |
 | [21. k3s certificates, backups, upgrades](21-k3s-lifecycle.md) | Ops: certificate checks and rotation, a datastore backup and restore, a k3s patch upgrade that breaks the mesh. The upgrade is one-way | `k3s certificate`, system-upgrade-controller |
+| [22. GitOps with ArgoCD](22-gitops-with-argocd.md) | Platform: your own Git server, drift and self-heal, `git revert` rollbacks, hooks and sync waves, an AppProject that fences a team in, the retry trap, ApplicationSets | `git`, ArgoCD |
+| [23. Prometheus and alerting](23-prometheus-and-alerting.md) | Platform: PromQL from `rate()` to percentiles, recording rules, an SLO with a multi-window burn-rate alert, Alertmanager routing, cardinality | Prometheus, Alertmanager |
+| [24. Grafana as code](24-grafana-as-code.md) | Platform: dashboards from ConfigMaps, variables and thresholds, why Grafana refuses edits, Grafana-managed alerts that reach nobody, trace-to-logs links | Grafana, Jaeger, Loki |
 
 **New to Istio? Read [Start here: Istio in one picture](start-here.md) first.** It takes 15 minutes, needs no cluster, and shows every resource the course uses on one diagram. Every term also has a plain explanation in the [glossary](glossary.md). Keep it open in a tab.
 
@@ -40,12 +43,14 @@ flowchart LR
   core --> adv["11 to 16<br/>edge TLS, egress, JWT,<br/>upgrades, resilience, Istio API"]
   adv --> ai["17 to 19<br/>AI: LLMs, model serving, agents"]
   m0 --> ops["20 and 21<br/>k3s operations"]
+  m0 --> plat["22 to 24<br/>ArgoCD, Prometheus, Grafana"]
   core -.-> ref["9 Command reference<br/>10 eBPF and Cilium"]
 ```
 
 - **Istio:** modules 0 to 8, then 11 to 16. Module 9 is a reference, and 10 is theory you read any time after module 7.
 - **AI on Kubernetes:** modules 17 to 19 build on the Istio route, mainly modules 3 to 6 and 12. Each module lists what it needs at the top.
-- **Kubernetes operations:** modules 20 and 21 need only module 0. As a CKA, you could take them first.
+- **Kubernetes operations:** modules 20 and 21 need only module 0. As a CKA, you might take them first.
+- **Platform tools:** modules 22 to 24 need only module 0, though 23 builds on module 6 and 24 on 23. They cover what DevOps and platform job adverts ask for most: GitOps, alerting and dashboards.
 
 ## Recommended order
 
@@ -53,9 +58,10 @@ flowchart LR
 2. Modules 1 to 7, then 8 to test yourself.
 3. Modules 11, 12, 13, 15 and 16.
 4. Modules 17 to 19, the AI track.
-5. Module 20.
-6. Module 14, then rebuild the lab: `./scripts/teardown.sh --yes && ./scripts/provision.sh`.
-7. Module 21, then rebuild again.
+5. Modules 22 to 24, the platform tools.
+6. Module 20.
+7. Module 14, then rebuild the lab: `./scripts/teardown.sh --yes && ./scripts/provision.sh`.
+8. Module 21, then rebuild again.
 
 Module 9 is a reference to keep open, and module 10 is reading for any time after module 7. Modules 14 and 21 come last because they upgrade the lab and there's no way back except a rebuild.
 

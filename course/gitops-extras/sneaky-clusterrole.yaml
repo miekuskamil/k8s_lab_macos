@@ -1,0 +1,9 @@
+# Someone on the team commits this. The AppProject allows no cluster-scoped resources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: podinfo-reads-everything
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get", "list"]

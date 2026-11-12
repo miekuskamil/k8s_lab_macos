@@ -1,0 +1,18 @@
+# A PreSync hook: ArgoCD runs this Job before it applies anything else, and waits for it.
+# A failing hook stops the sync, which is what you want from a database migration.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: busybox:1.36
+          command: ["sh", "-c", "echo migrating the schema; sleep 10; echo done"]

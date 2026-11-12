@@ -48,6 +48,7 @@ Run `./scripts/port-forward.sh` in a spare terminal and leave it running. The sh
 | Grafana, with Prometheus, Loki and Jaeger data sources | http://localhost:3000 | `admin` | `k8s-lab-admin` |
 | Jaeger | http://localhost:16686 | | |
 | Prometheus | http://localhost:9090 | | |
+| Alertmanager | http://localhost:9093 | | |
 | ArgoCD | http://localhost:8081 | `admin` | `k8s-lab-admin` |
 
 Redis has no local port. Its password is `k8s-lab-redis`.
@@ -62,6 +63,7 @@ Every secret the lab uses is a fixed default stored in Git, so every copy of the
 | ArgoCD `admin` password | `k8s-lab-admin` | `helm/argocd-values.yaml`, as a bcrypt hash | Generate a hash with the command in that file's comment, and update `argocdServerAdminPasswordMtime` |
 | Redis password | `k8s-lab-redis` | `manifests/base/03-lab-credentials.yaml` (Secret `shop/redis-auth`) | Edit it there, then restart Redis and the backends |
 | Kiali token signing key | `k8s-lab-kiali-signing-key-32chrs` | `helm/kiali-values.yaml` (`login_token.signing_key`) | Any 16, 24 or 32 characters. It must be fixed, or Kiali restarts on every ArgoCD poll ([problem 16](docs/troubleshooting.md#16-kiali-restarts-every-few-minutes)) |
+| Gitea `lab` password (course module 22 only) | `lab-gitops-pass` | the `gitea admin user create` command in `course/22-gitops-with-argocd.md` | Use another password in that command and in your `git push` URL |
 
 ArgoCD applies all of these from Git, so push a change before you expect it in the cluster. `provision.sh` also applies the two Secrets before ArgoCD starts, so pods that need them start on the first try.
 
@@ -92,7 +94,7 @@ k8s_lab_macos/
 │   └── scenarios/    canary, fault and circuit-breaker experiments, applied by hand
 ├── helm/             value files for every Helm chart the lab installs
 ├── scripts/          provision, start, port-forward, traffic-test, teardown
-├── course/           the course: modules 0 to 21, their manifests and scripts
+├── course/           the course: modules 0 to 24, their manifests and scripts
 └── docs/             build guide, architecture, lab guide, troubleshooting, diagrams
 ```
 
@@ -133,4 +135,4 @@ kubectl -n argocd get applications
 
 It asks before deleting. Add `--yes` to skip the question, for example in a script. This deletes the k3d cluster. The built images stay in your local Docker store.
 
-To rebuild from nothing: `./scripts/teardown.sh --yes && ./scripts/provision.sh`. On 12 November 2026 that took 2 minutes 13 seconds with cached images. On a fresh rebuild the same evening, `./course/verify.sh` passed all 139 checks, and `./course/verify.sh 21`, the one-way k3s upgrade, passed all 9 of its own.
+To rebuild from nothing: `./scripts/teardown.sh --yes && ./scripts/provision.sh`. On 12 November 2026 that took 2 minutes 13 seconds with cached images. On a fresh rebuild the same evening, `./course/verify.sh` passed 177 of its 178 checks (the one miss, a check that read a window still holding the previous module's errors, was fixed and rerun), and `./course/verify.sh 21`, the one-way k3s upgrade, passed all 9 of its own.

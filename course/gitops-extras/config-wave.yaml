@@ -1,0 +1,9 @@
+# Sync wave -1: ArgoCD applies this before the Deployment (wave 0) and waits until it's healthy.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: podinfo-settings
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+data:
+  feature: "orders-v2"
