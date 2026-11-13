@@ -14,7 +14,7 @@ The shop is a Node.js frontend, a Python FastAPI backend in two versions, and Re
 
 The first run takes about 10 minutes, mostly image downloads. A rebuild with cached images takes about 2.
 
-Both platforms are tested. On macOS (OrbStack) and on Ubuntu 24.04 (Docker Engine 29.1 from Ubuntu's packages, curl 8.5), a single `./scripts/provision.sh` from nothing passed every health check, and `./course/verify.sh` passed all 54 checks it had at the time. The latest full run, on macOS only, is below. Other Linux distributions should work if they meet the table above.
+Both platforms are tested. On macOS (OrbStack) and on Ubuntu 24.04 (Docker Engine 29.1 from Ubuntu's packages, curl 8.5), a single `./scripts/provision.sh` from nothing passed every health check. On Ubuntu 24.04 on 13 November 2026, `./course/verify.sh` passed 230 of its 232 checks, and the 2 failures, both in module 7, are fixed. The latest full macOS run is below. Other Linux distributions should work if they meet the table above. For Ubuntu install commands, WSL2 on Windows, and Ollama for the AI modules, see [Running the lab on Linux and WSL2](docs/linux-and-wsl.md).
 
 OrbStack's own Kubernetes can stay switched off. The lab runs its own k3d cluster on the Docker engine. [docs/build-from-scratch.md](docs/build-from-scratch.md#step-1-the-cluster) explains why.
 

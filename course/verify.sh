@@ -218,7 +218,7 @@ module_7() {
   expect "the injector added the istio-init container" "$("${K[@]}" -n course-sidecar get pod -l app=httpbin -o jsonpath='{.items[0].spec.initContainers[*].name}')" '^istio-init$'
   local httpbin_pod
   httpbin_pod="$("${K[@]}" -n course-sidecar get pod -l app=httpbin -o jsonpath='{.items[0].metadata.name}')"
-  expect "istioctl describe reports PERMISSIVE by default" "$("${I[@]}" x describe pod -n course-sidecar "$httpbin_pod" 2>/dev/null | grep 'Workload mTLS mode')" 'PERMISSIVE'
+  expect "istioctl describe reports PERMISSIVE by default" "$("${I[@]}" x describe pod "$httpbin_pod.course-sidecar" 2>/dev/null | grep 'Workload mTLS mode')" 'PERMISSIVE'
   # The Prometheus operator turns the PodMonitor into a scrape job within seconds.
   local scrape_jobs=0
   for _ in 1 2 3 4 5 6; do
@@ -232,7 +232,7 @@ module_7() {
   "${K[@]}" apply -f "$M/07-sidecar-strict-mtls.yaml" >/dev/null; settle 5
   expect "STRICT: the plaintext client is refused" "$(in_outside curl -s -m 5 -o /dev/null -w '%{http_code}' http://httpbin.course-sidecar:8000/status/200)" '^000$'
   expect "STRICT: the sidecar client still works" "$(in_sidecar curl -s -m 5 -o /dev/null -w '%{http_code}' http://httpbin:8000/status/200)" '^200$'
-  expect "istioctl describe now reports STRICT" "$("${I[@]}" x describe pod -n course-sidecar "$httpbin_pod" 2>/dev/null | grep 'Workload mTLS mode')" 'STRICT'
+  expect "istioctl describe now reports STRICT" "$("${I[@]}" x describe pod "$httpbin_pod.course-sidecar" 2>/dev/null | grep 'Workload mTLS mode')" 'STRICT'
   local plain retried
   plain="$(in_sidecar sh -c 'ok=0; for i in $(seq 1 80); do c=$(curl -s -o /dev/null -w "%{http_code}" "http://httpbin:8000/unstable?failure_rate=0.5"); [ "$c" = 200 ] && ok=$((ok+1)); done; echo $ok')"
   "${K[@]}" apply -f "$M/07-sidecar-retries.yaml" >/dev/null; settle 5

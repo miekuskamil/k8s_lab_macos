@@ -149,7 +149,7 @@ The two sidecars appear next to the gateway, the waypoint and ztunnel. Look at t
 - ztunnel receives `WADS, WDS`, which stand for workloads and addresses. This is a much smaller protocol made for ztunnel.
 
 ```bash
-istioctl x describe pod -n course-sidecar $(kubectl -n course-sidecar get pod -l app=httpbin -o name | cut -d/ -f2)
+istioctl x describe pod $(kubectl -n course-sidecar get pod -l app=httpbin -o jsonpath='{.items[0].metadata.name}').course-sidecar
 ```
 
 **What you should see.**

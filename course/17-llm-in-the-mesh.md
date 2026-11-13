@@ -18,7 +18,11 @@ Time: about 50 minutes. This is the first of three AI modules. While the model a
 
 - [Ollama](https://ollama.com) running on your machine with `qwen2.5:3b`. Install the model with `ollama pull qwen2.5:3b` (1.9 GB on disk). The module's numbers come from this model.
 - Enough memory. The lab uses about 5 GB, and `qwen2.5:3b` adds about 2.4 GB while it answers. The whole test run peaked at 16.5 GB on a 24 GB Mac. A 14-billion-parameter model gives better answers but needs about 9 GB, which doesn't fit next to the lab on 24 GB. Ollama unloads a model after 5 idle minutes and gives the memory back.
-- macOS with OrbStack or Docker Desktop. Both let containers reach your machine under the name `host.docker.internal`. On Linux, start Ollama with `OLLAMA_HOST=0.0.0.0` and point that name at your Docker host's IP. The test run for this module covered macOS only.
+- macOS with OrbStack or Docker Desktop. Both let containers reach your machine under the name `host.docker.internal`.
+
+### On Linux and WSL (Ubuntu 24.04)
+
+Plain Docker Engine on Linux doesn't answer the name `host.docker.internal`, and Ollama on Linux listens only on `127.0.0.1` by default. The pods then never reach the model. Two steps fix both: make Ollama listen on every interface, and add the name to the cluster's DNS. [Running the lab on Linux and WSL2](../docs/linux-and-wsl.md#the-ai-modules-17-18-19-and-27) has the commands and a check. With Docker Desktop on WSL2, the name already works and you only need Ollama for Windows.
 
 ## Concept: what the assistant does
 

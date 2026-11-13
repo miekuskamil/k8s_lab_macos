@@ -24,6 +24,10 @@ Time: about 45 minutes. The module adds about 200 MB to the cluster. The two mod
 
   The module uses a 3-billion-parameter chat model on purpose, because it fits next to the lab on a 24 GB Mac. Bigger models answer better. Step 6 shows why that matters less than you'd think.
 
+### On Linux and WSL (Ubuntu 24.04)
+
+Pods reach Ollama under the name `host.docker.internal`. Plain Docker Engine on Linux doesn't answer that name. If you already did the Ollama setup for module 17 in [Running the lab on Linux and WSL2](../docs/linux-and-wsl.md#the-ai-modules-17-18-19-and-27), nothing more is needed. Otherwise do those two steps first.
+
 ## Concept: two phases
 
 A RAG system works in two phases, and the diagram shows both.

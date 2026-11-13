@@ -145,17 +145,19 @@ kubectl -n course-gitops-dev get deploy podinfo
 
 ```bash
 cd /tmp/podinfo-gitops
-sed -i '' 's/hello from git/hello from commit 2/' base/deployment.yaml      # on Linux: sed -i
+sed -i.bak 's/hello from git/hello from commit 2/' base/deployment.yaml
 git commit -qam "new message" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
 cd -
 kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.sync.revision}{"\n"}' -w
 ```
 
+`sed -i.bak` edits the file in place on both macOS and Linux, and keeps the old version as `deployment.yaml.bak`. `git commit -a` only commits files Git already tracks, so the `.bak` files stay out of the repository.
+
 Wait. Then make a second change, and this time tell ArgoCD to look right away:
 
 ```bash
 cd /tmp/podinfo-gitops
-sed -i '' 's/hello from commit 2/hello from commit 3/' base/deployment.yaml
+sed -i.bak 's/hello from commit 2/hello from commit 3/' base/deployment.yaml
 git commit -qam "message 3" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
 cd -
 kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
@@ -169,7 +171,7 @@ kubectl -n course-gitops-dev exec deploy/podinfo -- wget -qO- localhost:9898 | g
 
 ```bash
 cd /tmp/podinfo-gitops
-sed -i '' 's/podinfo:6.7.1/podinfo:6.7.99/' base/deployment.yaml
+sed -i.bak 's/podinfo:6.7.1/podinfo:6.7.99/' base/deployment.yaml
 git commit -qam "bump podinfo" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
 cd -
 kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
@@ -233,8 +235,8 @@ Now make the migration fail:
 
 ```bash
 cd /tmp/podinfo-gitops
-sed -i '' 's/echo done"/echo schema conflict; exit 1"/' base/migrate-job.yaml
-sed -i '' 's/hello from commit 3/hello from commit 5/' base/deployment.yaml
+sed -i.bak 's/echo done"/echo schema conflict; exit 1"/' base/migrate-job.yaml
+sed -i.bak 's/hello from commit 3/hello from commit 5/' base/deployment.yaml
 git commit -qam "migration that fails" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
 cd -
 kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
@@ -317,7 +319,7 @@ Delete one and see what happens, then remove a file from Git:
 kubectl -n argocd delete app podinfo-prod
 sleep 20; kubectl -n argocd get app podinfo-prod
 cd /tmp/podinfo-gitops
-git rm -q base/config-wave.yaml && sed -i '' '/config-wave.yaml/d' base/kustomization.yaml
+git rm -q base/config-wave.yaml && sed -i.bak '/config-wave.yaml/d' base/kustomization.yaml
 git commit -qam "drop the settings ConfigMap" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
 cd -
 for a in dev prod; do kubectl -n argocd annotate app podinfo-$a argocd.argoproj.io/refresh=normal --overwrite; done

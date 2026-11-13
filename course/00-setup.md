@@ -31,6 +31,19 @@ brew install istioctl
 istioctl version
 ```
 
+### On Linux and WSL (Ubuntu 24.04)
+
+Homebrew is macOS only. Download the release that matches the control plane instead:
+
+```bash
+ARCH=$(dpkg --print-architecture)
+curl -fsSL "https://github.com/istio/istio/releases/download/1.24.2/istioctl-1.24.2-linux-$ARCH.tar.gz" | tar xz
+sudo install istioctl /usr/local/bin/ && rm istioctl
+istioctl version
+```
+
+Your client then reports 1.24.2, the same as the control plane. [Running the lab on Linux and WSL2](../docs/linux-and-wsl.md) covers the rest of the setup, WSL2 memory and the few commands that differ.
+
 **What you should see.**
 
 ```text
