@@ -1,0 +1,22 @@
+# Enforce: images need a real tag. "latest" changes under you, so two pods of the same
+# Deployment may run different code, and a rollback rolls back to nothing in particular.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+spec:
+  background: true
+  rules:
+    - name: require-image-tag
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [course-policy]
+      validate:
+        failureAction: Enforce
+        message: "Use a specific image tag, not latest or none."
+        pattern:
+          spec:
+            containers:
+              - image: "*:* & !*:latest"

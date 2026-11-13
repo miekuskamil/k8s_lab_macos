@@ -1,0 +1,24 @@
+# Mutate: fill in what teams forget. The +( ) anchor means "add only if missing".
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: add-defaults
+spec:
+  rules:
+    - name: team-label-and-limits
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [course-policy]
+      mutate:
+        patchStrategicMerge:
+          metadata:
+            labels:
+              +(team): unassigned
+          spec:
+            containers:
+              - (name): "*"
+                resources:
+                  limits:
+                    +(memory): 128Mi

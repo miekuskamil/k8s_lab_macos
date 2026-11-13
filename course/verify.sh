@@ -2,7 +2,7 @@
 # Replay the key exercise of every course module and check the result.
 # Use it to confirm the course works on your lab, or to check your own work.
 #
-#   ./course/verify.sh          run every module (about 30 minutes)
+#   ./course/verify.sh          run every module (about 40 minutes)
 #   ./course/verify.sh 4 5      run only modules 4 and 5
 #
 # The script changes routing and policies while it runs and restores the baseline at the end.
@@ -61,7 +61,7 @@ module_1() {
   expect "the backend Service carries the use-waypoint label" "$("${K[@]}" -n shop get svc backend -o jsonpath='{.metadata.labels.istio\.io/use-waypoint}')" '^waypoint$'
   local proxies
   proxies="$("${I[@]}" proxy-status 2>/dev/null)"
-  expect "istiod manages the gateway, the waypoint and ztunnel" "$(echo "$proxies" | grep -cE '^(shop-gateway-istio|waypoint|ztunnel)-')" '^3$'
+  expect "istiod manages the gateway, the waypoint and ztunnel" "$(echo "$proxies" | grep -oE '^(shop-gateway-istio|waypoint|ztunnel)-' | sort -u | wc -l | tr -d ' ')" '^3$'
   expect "no shop app pod has a proxy of its own" "$(echo "$proxies" | grep -cE '^(backend|frontend|redis)-')" '^0$'
 }
 
@@ -407,7 +407,7 @@ module_17() {
   section "17: an LLM as a mesh service"
   baseline
   local model
-  model="${LAB_OLLAMA_MODEL:-$(curl -s -m 5 http://localhost:11434/api/tags | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; print(m[0]["name"] if m else "")' 2>/dev/null)}"
+  model="${LAB_OLLAMA_MODEL:-$(curl -s -m 5 http://localhost:11434/api/tags | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; c=[x["name"] for x in m if "embed" not in x["name"]]; print(c[0] if c else "")' 2>/dev/null)}"
   if [[ -z "$model" ]]; then
     fail "Ollama runs on this machine with at least one model" "no answer from http://localhost:11434/api/tags"
     return
@@ -434,7 +434,7 @@ module_17() {
   settle 10
   expect "Jaeger shows the model call with its token counts" "$("${K[@]}" get --raw "/api/v1/namespaces/observability/services/jaeger-query:16686/proxy/api/traces/${trace_id}" 2>/dev/null | grep -c 'gen_ai.usage.output_tokens')" '^[1-9]'
   "${K[@]}" apply -f "$M/17-llm-timeout.yaml" >/dev/null; settle 8
-  expect "a half-second route timeout cuts the model call off (504)" "$(ask 'How many orders are there?')" '504 Gateway Timeout'
+  expect "a 100 ms route timeout cuts the model call off (504)" "$(ask 'How many orders are there?')" '504 Gateway Timeout'
   baseline
   expect "after the reset the assistant is gone" "$("${K[@]}" -n shop get deploy assistant 2>&1 | grep -c NotFound)" '^1$'
 }
@@ -474,7 +474,7 @@ module_19() {
   section "19: AI agents and their tools"
   baseline
   local model H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kagent)
-  model="${LAB_OLLAMA_MODEL:-$(curl -s -m 5 http://localhost:11434/api/tags | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; print(m[0]["name"] if m else "")' 2>/dev/null)}"
+  model="${LAB_OLLAMA_MODEL:-$(curl -s -m 5 http://localhost:11434/api/tags | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; c=[x["name"] for x in m if "embed" not in x["name"]]; print(c[0] if c else "")' 2>/dev/null)}"
   if [[ -z "$model" ]]; then fail "Ollama runs on this machine with at least one model" "no answer from http://localhost:11434/api/tags"; return; fi
   "${H[@]}" upgrade --install kagent-crds oci://ghcr.io/kagent-dev/kagent/helm/kagent-crds --version 0.10.6 --create-namespace --wait >/dev/null 2>&1
   "${H[@]}" upgrade --install kagent oci://ghcr.io/kagent-dev/kagent/helm/kagent --version 0.10.6 \
@@ -727,6 +727,203 @@ module_24() {
   kill "$pf1" "$pf2" 2>/dev/null; wait "$pf1" "$pf2" 2>/dev/null
 }
 
+module_25() {
+  section "25: OpenTelemetry Collector and Tempo"
+  baseline
+  local H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}")
+  local tempo="/api/v1/namespaces/course-otel/services/tempo:3200/proxy"
+  "${H[@]}" repo add grafana https://grafana.github.io/helm-charts >/dev/null 2>&1
+  "${H[@]}" repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts >/dev/null 2>&1
+  "${H[@]}" repo update grafana open-telemetry >/dev/null 2>&1
+  expect "Tempo installs" "$("${H[@]}" install tempo grafana/tempo --version 1.24.4 -n course-otel --create-namespace -f "$M/25-tempo-values.yaml" --wait --timeout 5m 2>&1 | grep -c 'STATUS: deployed')" '^1$'
+  expect "the Collector installs without deprecation warnings" "$("${H[@]}" install otel-collector open-telemetry/opentelemetry-collector --version 0.178.0 -n course-otel -f "$M/25-collector-values.yaml" --wait --timeout 5m 2>&1 | grep -cE 'STATUS: deployed|DEPRECATION')" '^1$'
+  # The back ends first, then the app: an app that starts before its Collector backs off.
+  "${K[@]}" apply -f "$M/25-orders-app.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/25-collector-podmonitor.yaml" -f "$M/25-tempo-datasource.yaml" >/dev/null
+  "${K[@]}" -n course-otel rollout status deploy/orders --timeout=120s >/dev/null 2>&1
+  # tql <TraceQL>: how many traces from the last 10 minutes match
+  tql() { local q; q="$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))' "$1")"
+    "${K[@]}" get --raw "$tempo/api/search?limit=20&start=$(( $(date +%s) - 600 ))&end=$(date +%s)&q=$q" 2>/dev/null | python3 -c 'import json,sys; print(len(json.load(sys.stdin).get("traces",[])))' 2>/dev/null || echo 0; }
+  local n=0
+  for _ in $(seq 1 48); do n="$(tql '{ resource.service.name = "orders" }')"; [[ "$n" =~ ^[1-9] ]] && break; settle 5; done
+  expect "Tempo receives traces, renamed to orders by the Collector" "$n" '^[1-9]'
+  local ns_tag=""
+  for _ in $(seq 1 24); do ns_tag="$("${K[@]}" get --raw "$tempo/api/search/tag/k8s.namespace.name/values" 2>/dev/null | grep -o '"course-otel"')"; [[ -n "$ns_tag" ]] && break; settle 5; done
+  expect "the Collector added Kubernetes attributes" "$ns_tag" '^"course-otel"$'
+  # 5% of requests fail, so the first 503 takes a moment
+  for _ in $(seq 1 36); do n="$(tql '{ resource.service.name = "orders" && span.http.status_code >= 500 }')"; [[ "$n" =~ ^[1-9] ]] && break; settle 5; done
+  expect "TraceQL finds failed requests" "$n" '^[1-9]'
+  expect "TraceQL finds slow requests" "$(tql '{ resource.service.name = "orders" && duration > 400ms }')" '^[1-9]'
+  expect "a structural query finds requests that called Redis" "$(tql '{ resource.service.name = "orders" } >> { span.db.system = "redis" }')" '^[1-9]'
+  expect "Tempo survived the structural query" "$("${K[@]}" -n course-otel get pod tempo-0 -o jsonpath='{.status.containerStatuses[0].restartCount}')" '^0$'
+  expect "the same traces reach Jaeger" "$("${K[@]}" get --raw '/api/v1/namespaces/observability/services/jaeger-query:16686/proxy/api/services' 2>/dev/null | grep -o '"orders"')" '^"orders"$'
+  local rate=""
+  # A new PodMonitor reaches Prometheus through a Secret update: allow up to 6 minutes.
+  for _ in $(seq 1 36); do
+    rate="$("${K[@]}" get --raw '/api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/query?query=sum%28rate%28traces_span_metrics_calls_total%7Bservice_name%3D%22orders%22%2Chttp_status_code%3D%22503%22%7D%5B2m%5D%29%29' 2>/dev/null | python3 -c 'import json,sys; r=json.load(sys.stdin)["data"]["result"]; print(r[0]["value"][1] if r else "")' 2>/dev/null)"
+    [[ "$rate" =~ ^0\.0*[1-9] || "$rate" =~ ^[1-9] ]] && break; settle 10
+  done
+  expect "span metrics in Prometheus count the 503s" "$rate" '^(0\.0*[1-9]|[1-9])'
+  expect "Grafana has the Tempo data source" "$("${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- sh -c 'curl -s -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" localhost:3000/api/datasources/uid/tempo' 2>/dev/null | grep -o '"type":"tempo"')" '^"type":"tempo"$'
+  baseline
+  expect "after the reset course-otel, its ClusterRole and the data source are gone" "$("${K[@]}" get ns course-otel 2>&1 | grep -c NotFound) $("${K[@]}" get clusterrole otel-collector 2>&1 | grep -c NotFound) $("${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- sh -c 'curl -s -o /dev/null -w "%{http_code}" -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" localhost:3000/api/datasources/uid/tempo' 2>/dev/null)" '^1 1 404$'
+}
+
+module_26() {
+  section "26: Kyverno, policy as code"
+  baseline
+  local H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}")
+  "${H[@]}" repo add kyverno https://kyverno.github.io/kyverno/ >/dev/null 2>&1
+  "${H[@]}" repo update kyverno >/dev/null 2>&1
+  expect "Kyverno installs" "$("${H[@]}" install kyverno kyverno/kyverno --version 3.8.2 -n kyverno --create-namespace -f "$M/26-kyverno-values.yaml" --wait --timeout 6m 2>&1 | grep -c 'STATUS: deployed')" '^1$'
+  "${K[@]}" apply -f "$M/26-namespace.yaml" -f "$M/26-legacy-app.yaml" >/dev/null
+  "${K[@]}" -n course-policy rollout status deploy/legacy --timeout=120s >/dev/null 2>&1
+  "${K[@]}" apply -f "$M/26-require-limits.yaml" >/dev/null
+  report_fails() { "${K[@]}" -n course-policy get policyreport -o jsonpath='{range .items[*].results[?(@.result=="fail")]}{.policy}{"\n"}{end}' 2>/dev/null | grep -c "$1"; }
+  for _ in $(seq 1 24); do [[ "$(report_fails require-memory-limits)" =~ ^[1-9] ]] && break; settle 5; done
+  expect "Audit reports the legacy app without blocking it" "$(report_fails require-memory-limits) $("${K[@]}" -n course-policy get deploy legacy -o jsonpath='{.status.readyReplicas}')" '^[1-9][0-9]* 1$'
+  "${K[@]}" apply -f "$M/26-disallow-latest.yaml" >/dev/null; settle 3
+  expect "Enforce refuses an image with the latest tag" "$("${K[@]}" -n course-policy run t1 --image=nginx:latest 2>&1 | grep -c 'Use a specific image tag')" '^[1-9]'
+  expect "Enforce refuses an image with no tag" "$("${K[@]}" -n course-policy run t2 --image=nginx 2>&1 | grep -c 'Use a specific image tag')" '^[1-9]'
+  expect "a tagged image passes" "$("${K[@]}" -n course-policy run t3 --image=nginx:1.27-alpine 2>&1)" 'created'
+  "${K[@]}" -n course-policy rollout restart deploy/legacy >/dev/null; settle 8
+  expect "a restart of the legacy app hangs: its new pods are refused" "$("${K[@]}" -n course-policy get events --field-selector reason=FailedCreate 2>/dev/null | grep -c 'kyverno')" '^[1-9]'
+  "${K[@]}" apply -f "$M/26-exception.yaml" >/dev/null
+  expect "the PolicyException lets the rollout finish" "$("${K[@]}" -n course-policy rollout status deploy/legacy --timeout=120s 2>&1 | grep -c 'successfully rolled out')" '^1$'
+  sed 's/namespace: kyverno/namespace: course-policy/; s/name: legacy-may-use-latest/name: self-service/; s/"legacy\*"/"other*"/' "$M/26-exception.yaml" | "${K[@]}" apply -f - >/dev/null 2>&1; settle 3
+  expect "an exception in the team's own namespace is ignored" "$("${K[@]}" -n course-policy run other --image=nginx:latest 2>&1 | grep -c 'Use a specific image tag')" '^[1-9]'
+  "${K[@]}" -n course-policy delete policyexception self-service --ignore-not-found >/dev/null 2>&1
+  "${K[@]}" apply -f "$M/26-add-defaults.yaml" >/dev/null; settle 3
+  "${K[@]}" -n course-policy run plain --image=nginx:1.27-alpine >/dev/null 2>&1
+  expect "mutation adds a team label and a memory limit" "$("${K[@]}" -n course-policy get pod plain -o jsonpath='{.metadata.labels.team} {.spec.containers[0].resources.limits.memory}')" '^unassigned 128Mi$'
+  "${K[@]}" -n course-policy run owned --image=nginx:1.27-alpine --labels=team=payments >/dev/null 2>&1
+  expect "mutation keeps a label that's already there" "$("${K[@]}" -n course-policy get pod owned -o jsonpath='{.metadata.labels.team}')" '^payments$'
+  "${K[@]}" apply -f "$M/26-generate-tenant.yaml" >/dev/null; settle 3
+  "${K[@]}" create namespace course-tenant-a >/dev/null 2>&1
+  "${K[@]}" label namespace course-tenant-a course-policy/tenant=true >/dev/null; settle 5
+  expect "a tenant namespace gets a quota and a default-deny NetworkPolicy" "$("${K[@]}" -n course-tenant-a get resourcequota tenant-quota -o name 2>/dev/null) $("${K[@]}" -n course-tenant-a get networkpolicy default-deny-ingress -o name 2>/dev/null)" 'tenant-quota .*default-deny-ingress'
+  local uid_before; uid_before="$("${K[@]}" -n course-tenant-a get networkpolicy default-deny-ingress -o jsonpath='{.metadata.uid}')"
+  "${K[@]}" -n course-tenant-a delete networkpolicy default-deny-ingress >/dev/null; settle 5
+  expect "Kyverno recreates a deleted generated NetworkPolicy" "$("${K[@]}" -n course-tenant-a get networkpolicy default-deny-ingress -o jsonpath='{.metadata.uid}' 2>/dev/null | grep -vc "^$uid_before$")" '^1$'
+  "${K[@]}" apply -f "$M/26-cel-policy.yaml" >/dev/null; settle 3
+  expect "the CEL policy refuses a Deployment without an owner label" "$("${K[@]}" -n course-policy create deployment no-owner --image=nginx:1.27-alpine 2>&1 | grep -c 'need an owner label')" '^1$'
+  expect "and leaves other namespaces alone" "$("${K[@]}" -n default create deployment no-owner --image=nginx:1.27-alpine --dry-run=server 2>&1)" 'created \(server dry run\)'
+  baseline
+  expect "after the reset Kyverno's webhooks, CRDs and namespaces are gone" "$("${K[@]}" get validatingwebhookconfigurations,mutatingwebhookconfigurations 2>/dev/null | grep -c kyverno) $("${K[@]}" get crd 2>/dev/null | grep -c kyverno) $("${K[@]}" get ns kyverno course-policy course-tenant-a 2>&1 | grep -c NotFound)" '^0 0 3$'
+}
+
+# Module 27 needs Ollama on your Mac with nomic-embed-text and qwen2.5:3b, so it only
+# runs when named: ./course/verify.sh 27
+module_27() {
+  section "27: RAG on Kubernetes"
+  baseline
+  local H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}") pf
+  expect "Ollama has the two models" "$(ollama list 2>/dev/null | grep -cE '^(nomic-embed-text|qwen2\.5:3b)')" '^2$'
+  "${H[@]}" repo add qdrant https://qdrant.github.io/qdrant-helm >/dev/null 2>&1
+  "${H[@]}" repo update qdrant >/dev/null 2>&1
+  expect "Qdrant installs with a volume" "$("${H[@]}" install qdrant qdrant/qdrant --version 1.20.0 -n course-rag --create-namespace -f "$M/27-qdrant-values.yaml" --wait --timeout 5m 2>&1 | grep -c 'STATUS: deployed') $("${K[@]}" -n course-rag get pvc -o jsonpath='{.items[0].status.phase}')" '^1 Bound$'
+  docker build -q -t k8s-lab/rag:1.0.0 "$ROOT/apps/rag" >/dev/null 2>&1
+  k3d image import k8s-lab/rag:1.0.0 -c "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
+  "${K[@]}" -n course-rag create configmap course-docs --from-file="$ROOT/course/" >/dev/null
+  "${K[@]}" apply -f "$M/27-rag-app.yaml" >/dev/null
+  expect "the rag app starts" "$("${K[@]}" -n course-rag rollout status deploy/rag --timeout=120s 2>&1 | grep -c 'successfully rolled out')" '^1$'
+  "${K[@]}" -n course-rag port-forward svc/rag 8091:8000 >/dev/null 2>&1 &
+  pf=$!; settle 3
+  local ingest; ingest="$(curl -s -m 300 -X POST localhost:8091/ingest)"
+  between "ingest splits the course into chunks" "$(echo "$ingest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["chunks"])' 2>/dev/null || echo 0)" 300 1500
+  expect "nomic-embed-text makes 768-dimension vectors" "$(echo "$ingest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["dimensions"])' 2>/dev/null)" '^768$'
+  expect "Qdrant holds every chunk" "$("${K[@]}" get --raw /api/v1/namespaces/course-rag/services/qdrant:6333/proxy/collections/course 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["points_count"])' 2>/dev/null)" "^$(echo "$ingest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["chunks"])' 2>/dev/null)\$"
+  expect "search finds module 22's rollback step first" "$(curl -s -G localhost:8091/search --data-urlencode 'q=how do I roll back a bad release with ArgoCD' | python3 -c 'import json,sys; print(json.load(sys.stdin)["results"][0]["file"])' 2>/dev/null)" '^22-gitops-with-argocd\.md$'
+  local ask; ask="$(curl -s -m 300 -X POST localhost:8091/ask -H 'content-type: application/json' -d '{"question":"Which Kyverno chart version does module 26 install?"}')"
+  expect "ask answers a factual question from the course" "$(echo "$ask" | python3 -c 'import json,sys; print(json.load(sys.stdin)["answer"])' 2>/dev/null)" '3\.8\.2'
+  local off; off="$(curl -s -m 300 -X POST localhost:8091/ask -H 'content-type: application/json' -d '{"question":"What is the capital of Denmark?"}')"
+  expect "an off-topic question gets I don't know" "$(echo "$off" | python3 -c 'import json,sys; print(json.load(sys.stdin)["answer"])' 2>/dev/null)" "(don't|do not) know"
+  expect "and its best match scores below 0.6" "$(echo "$off" | python3 -c 'import json,sys; print(int(json.load(sys.stdin)["sources"][0]["score"] < 0.6))' 2>/dev/null)" '^1$'
+  kill "$pf" 2>/dev/null; wait "$pf" 2>/dev/null
+  baseline
+  expect "after the reset course-rag and its volume are gone" "$("${K[@]}" get ns course-rag 2>&1 | grep -c NotFound) $("${K[@]}" get pv 2>/dev/null | grep -c course-rag)" '^1 0$'
+}
+
+module_28() {
+  section "28: continuous profiling with Pyroscope"
+  baseline
+  local H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}") pf
+  "${H[@]}" repo add grafana https://grafana.github.io/helm-charts >/dev/null 2>&1
+  "${H[@]}" repo update grafana >/dev/null 2>&1
+  expect "Pyroscope and its Alloy agent install" "$("${H[@]}" install pyroscope grafana/pyroscope --version 2.4.2 -n course-profiling --create-namespace -f "$M/28-pyroscope-values.yaml" --wait --timeout 6m 2>&1 | grep -c 'STATUS: deployed') $("${K[@]}" -n course-profiling get pods --no-headers 2>/dev/null | grep -c Running)" '^1 2$'
+  "${K[@]}" apply -f "$M/28-podinfo.yaml" -f "$M/28-pyroscope-datasource.yaml" >/dev/null
+  "${K[@]}" -n course-profiling rollout status deploy/podinfo --timeout=120s >/dev/null 2>&1
+  "${K[@]}" -n course-profiling port-forward svc/pyroscope 4041:4040 >/dev/null 2>&1 &
+  pf=$!; settle 3
+  # top <profile type> <function>: that function's share of the total, in percent
+  top() { curl -s "localhost:4041/pyroscope/render?query=$1%7Bservice_name%3D%22podinfo%22%7D&from=now-5m&until=now&format=json" | python3 -c '
+import json,sys
+fb=json.load(sys.stdin)["flamebearer"]; T=fb["numTicks"] or 1; best=0
+for lvl in fb["levels"]:
+  for i in range(0,len(lvl),4):
+    if fb["names"][lvl[i+3]]==sys.argv[1]: best=max(best,lvl[i+1])
+print(int(100*best/T))' "$2" 2>/dev/null || echo 0; }
+  local cpu=0
+  for _ in $(seq 1 24); do cpu="$(top process_cpu:cpu:nanoseconds:cpu:nanoseconds main.beginStressTest.func1)"; [[ "$cpu" =~ ^[5-9][0-9]$|^100$ ]] && break; settle 5; done
+  between "the CPU flame graph blames the stress test (percent of total)" "$cpu" 50 100
+  local services; services="$(curl -s -X POST localhost:4041/querier.v1.QuerierService/LabelValues -H 'content-type: application/json' -d "{\"name\":\"service_name\",\"start\":$(( ($(date +%s) - 600) * 1000 )),\"end\":$(( $(date +%s) * 1000 ))}")"
+  expect "the annotations opted podinfo in" "$(echo "$services" | grep -o '"podinfo"')" '^"podinfo"$'
+  # Allocation profiles count up from the start, so Pyroscope needs two scrapes for a difference.
+  local mem=0
+  for _ in $(seq 1 24); do mem="$(top memory:alloc_space:bytes:space:bytes main.beginStressTest)"; [[ "$mem" =~ ^[1-9][0-9]$|^100$ ]] && break; settle 5; done
+  between "the memory profile shows the stress test allocating (percent)" "$mem" 10 100
+  kill "$pf" 2>/dev/null; wait "$pf" 2>/dev/null
+  local ds=""
+  for _ in $(seq 1 12); do ds="$("${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- sh -c 'curl -s -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" localhost:3000/api/datasources/uid/pyroscope' 2>/dev/null | grep -o '"type":"grafana-pyroscope-datasource"')"; [[ -n "$ds" ]] && break; settle 5; done
+  expect "Grafana has the Pyroscope data source" "$ds" 'grafana-pyroscope-datasource'
+  expect "podinfo runs at its CPU limit" "$("${K[@]}" top pod -n course-profiling -l app=podinfo --no-headers 2>/dev/null | awk '{print $2}')" '^(4[0-9][0-9]|50[0-9])m$'
+  baseline
+  expect "after the reset course-profiling, Alloy's ClusterRole and the data source are gone" "$("${K[@]}" get ns course-profiling 2>&1 | grep -c NotFound) $("${K[@]}" get clusterrole pyroscope-alloy 2>&1 | grep -c NotFound) $("${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- sh -c 'curl -s -o /dev/null -w "%{http_code}" -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" localhost:3000/api/datasources/uid/pyroscope' 2>/dev/null)" '^1 1 404$'
+}
+
+module_29() {
+  section "29: the life of a request"
+  baseline
+  local N="${CLUSTER_NAME:-k8s-lab}" node pod pid
+  node="k3d-${N}-server-0"
+  "${K[@]}" apply -f "$M/29-plain-app.yaml" >/dev/null
+  "${K[@]}" -n course-life rollout status deploy/hello --timeout=120s >/dev/null 2>&1
+  "${K[@]}" -n course-life rollout status deploy/client --timeout=120s >/dev/null 2>&1
+  local events; events="$("${K[@]}" -n course-life get events -o 'custom-columns=WHO:.source.component,REASON:.reason' --no-headers 2>/dev/null)"
+  expect "three controllers and the kubelet hand the work along" "$(echo "$events" | grep -cE 'deployment-controller +ScalingReplicaSet|replicaset-controller +SuccessfulCreate|default-scheduler +Scheduled|kubelet +Started' | tr -d ' ')" '^[4-9]$|^[1-9][0-9]$'
+  pod="$("${K[@]}" -n course-life get pod -l app=hello -o jsonpath='{.items[0].metadata.name}')"
+  local rs; rs="$("${K[@]}" -n course-life get pod "$pod" -o jsonpath='{.metadata.ownerReferences[0].name}')"
+  expect "the pod belongs to a ReplicaSet, which belongs to the Deployment" "$("${K[@]}" -n course-life get pod "$pod" -o jsonpath='{.metadata.ownerReferences[0].kind}') $("${K[@]}" -n course-life get rs "$rs" -o jsonpath='{.metadata.ownerReferences[0].kind}/{.metadata.ownerReferences[0].name}')" '^ReplicaSet Deployment/hello$'
+  expect "you are system:admin in system:masters" "$("${K[@]}" auth whoami 2>/dev/null | grep -c 'system:masters')" '^1$'
+  expect "RBAC refuses the frontend's service account" "$("${K[@]}" auth can-i create deployments -n course-life --as=system:serviceaccount:shop:frontend 2>/dev/null)" '^no$'
+  expect "a watch delivers ADDED events" "$("${K[@]}" get --raw "/api/v1/namespaces/course-life/pods?watch=1&timeoutSeconds=2&labelSelector=app%3Dhello" 2>/dev/null | grep -c '"type":"ADDED"')" '^1$'
+  "${K[@]}" -n course-life run greedy --image=nginx:1.27-alpine --overrides='{"spec":{"containers":[{"name":"greedy","image":"nginx:1.27-alpine","resources":{"requests":{"memory":"64Gi"}}}]}}' >/dev/null 2>&1
+  "${K[@]}" -n course-life run picky --image=nginx:1.27-alpine --overrides='{"spec":{"nodeSelector":{"disktype":"ssd"}}}' >/dev/null 2>&1
+  settle 5
+  local sched; sched="$("${K[@]}" -n course-life get events --field-selector reason=FailedScheduling -o jsonpath='{range .items[*]}{.message}{"\n"}{end}' 2>/dev/null)"
+  expect "the scheduler's filter refuses 64Gi" "$(echo "$sched" | grep -c 'Insufficient memory')" '^[1-9]'
+  expect "and a nodeSelector no node matches" "$(echo "$sched" | grep -c "didn't match Pod's node affinity/selector")" '^[1-9]'
+  "${K[@]}" -n course-life delete pod greedy picky --wait=false >/dev/null 2>&1
+  expect "API validation refuses negative replicas" "$("${K[@]}" -n course-life create deployment bad --image=nginx:1.27-alpine --replicas=-1 --dry-run=client -o yaml | "${K[@]}" apply -f - 2>&1 | grep -c 'must be greater than or equal to 0')" '^1$'
+  expect "Istio's admission webhook refuses an unknown attribute" "$(printf 'apiVersion: security.istio.io/v1\nkind: AuthorizationPolicy\nmetadata:\n  name: broken\n  namespace: course-life\nspec:\n  rules:\n  - when:\n    - key: request.colour\n      values: ["blue"]\n' | "${K[@]}" apply -f - 2>&1 | grep -c 'unknown attribute')" '^[1-9]'
+  local svcip podip; svcip="$("${K[@]}" -n course-life get svc hello -o jsonpath='{.spec.clusterIP}')"; podip="$("${K[@]}" -n course-life get pod "$pod" -o jsonpath='{.status.podIP}')"
+  expect "scenario A: the client reaches the Service" "$("${K[@]}" -n course-life exec deploy/client -- curl -s -o /dev/null -w '%{http_code}' http://hello 2>/dev/null)" '^200$'
+  expect "kube-proxy DNATs the ClusterIP to the pod" "$(docker exec "$node" sh -c 'iptables-save -t nat' 2>/dev/null | grep 'course-life/hello' | grep -c "DNAT --to-destination ${podip}:80")" '^[1-9]'
+  expect "conntrack holds both directions of the rewrite" "$(docker exec "$node" conntrack -L -d "$svcip" 2>/dev/null | grep -c "src=${podip}")" '^[1-9]'
+  local lbip gwip; lbip="$("${K[@]}" -n shop-ingress get svc shop-gateway-istio -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"; gwip="$("${K[@]}" -n shop-ingress get pod -l gateway.networking.k8s.io/gateway-name=shop-gateway -o jsonpath='{.items[0].status.podIP}')"
+  curl -s -o /dev/null localhost:8080/ 2>/dev/null
+  expect "scenario B: kube-proxy DNATs the load balancer IP straight to the gateway pod" "$(docker exec "$node" conntrack -L -p tcp -d "$lbip" --dport 8080 2>/dev/null | grep -c "src=${gwip} ")" '^[1-9]'
+  local gw; gw="$("${K[@]}" -n shop-ingress get pod -l gateway.networking.k8s.io/gateway-name=shop-gateway -o name | head -1)"
+  expect "the gateway's Envoy opens HBONE to the frontend itself" "$("${I[@]}" proxy-config endpoints "$gw" -n shop-ingress 2>/dev/null | grep frontend | grep -c 'envoy://connect_originate/')" '^[1-9]'
+  local cid; cid="$(docker exec "$node" crictl ps --name frontend -q 2>/dev/null | head -1)"
+  pid="$(docker exec "$node" crictl inspect --output go-template --template '{{.info.pid}}' "$cid" 2>/dev/null)"
+  expect "ztunnel listens inside the frontend pod" "$(docker exec "$node" sh -c "cat /proc/$pid/net/tcp /proc/$pid/net/tcp6" 2>/dev/null | python3 -c 'import sys; print(" ".join(str(p) for p in sorted({int(l.split()[1].split(":")[1],16) for l in sys.stdin if len(l.split())>3 and l.split()[3]=="0A"})))')" '15001 15006 15008 15053'
+  expect "istio-cni redirects the pod's outgoing TCP to ztunnel" "$(docker exec "$node" nsenter -t "$pid" -n iptables-save 2>/dev/null | grep -c 'REDIRECT --to-ports 15001')" '^[1-9]'
+  expect "ztunnel holds the frontend's 24-hour certificate" "$("${I[@]}" ztunnel-config certificates 2>/dev/null | grep 'ns/shop/sa/frontend' | grep -c Leaf)" '^[1-9]'
+  baseline
+  expect "after the reset course-life is gone" "$("${K[@]}" get ns course-life 2>&1 | grep -c NotFound)" '^1$'
+}
+
 # Module 21 upgrades k3s for real, so it is not in the default run: ./course/verify.sh 21
 module_21() {
   section "21: k3s certificates, backups and upgrades (the upgrade is one-way)"
@@ -835,7 +1032,7 @@ module_14() {
 }
 
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16 20 22 23 24); fi
+if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16 20 22 23 24 25 26 28 29); fi
 # Start from the Git baseline, in case an exercise is still applied.
 printf 'Restoring the baseline before the checks\n'
 "$ROOT/course/reset.sh" >/dev/null 2>&1

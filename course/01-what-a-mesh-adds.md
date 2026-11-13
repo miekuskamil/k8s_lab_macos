@@ -57,6 +57,31 @@ flowchart TB
 - **ztunnel** is a small Rust proxy that runs once per node as a DaemonSet. It gives every pod on its node an identity, encrypts traffic and enforces layer 4 rules. It never parses HTTP.
 - **A waypoint** is an Envoy proxy you deploy only for the Services that need HTTP features. In this lab only the backend has one.
 
+## Concept: how a request finds ztunnel and the waypoint
+
+In plain Kubernetes, kube-proxy's iptables rules on the node rewrite the ClusterIP to a pod IP. In ambient mode the request gets caught earlier, inside the pod. The `istio-cni` agent enters each mesh pod's network namespace and adds redirect rules there. ztunnel then opens listening sockets inside that same namespace: port 15001 for traffic the pod sends, 15006 for plain traffic coming in, and 15008 for HBONE traffic coming in. The app still dials `backend:8000` and has no idea.
+
+Once ztunnel holds the outgoing connection, it looks up the destination address in the table istiod sends it, and makes one of three choices:
+
+```mermaid
+flowchart TB
+  out["frontend opens a connection to backend:8000<br/>(caught inside the pod, sent to ztunnel :15001)"]
+  q1{"Is the destination<br/>in the mesh?"}
+  q2{"Does its Service carry<br/>istio.io/use-waypoint?"}
+  plain["send plain TCP,<br/>as without a mesh"]
+  wp["HBONE to the waypoint,<br/>which applies L7 rules"]
+  pod["HBONE straight to<br/>the destination pod :15008"]
+  out --> q1
+  q1 -- "no" --> plain
+  q1 -- "yes" --> q2
+  q2 -- "yes, for example backend" --> wp
+  q2 -- "no, for example redis" --> pod
+```
+
+Note who decides: the label sits on the destination Service, not on the caller. A waypoint in ambient mode belongs to the receiving side. It handles traffic *to* the Services that point at it, from any caller. That's why the backend's calls to Redis never touch the waypoint, even though the backend's own Service uses one.
+
+A common misconception: "ambient has no proxy in the pod, so the traffic leaves the pod as plain text". It doesn't. The plain hop runs from the app to a ztunnel socket inside the pod's own network namespace. The traffic is HBONE mTLS before it reaches any network interface.
+
 ## Why this way
 
 **Why split L4 and L7?** Most teams adopt a mesh for encryption and identity. That needs no HTTP parsing, and a TCP proxy written for that one job stays small and fast. HTTP parsing costs a lot, and few services need it. Sidecar mode pays the full Envoy cost in every pod. Ambient mode pays it once per waypoint. In this lab ztunnel uses 12 to 16 MiB for the whole node, and the waypoint about 30 to 40 MiB. Module 7 measures a sidecar for comparison.

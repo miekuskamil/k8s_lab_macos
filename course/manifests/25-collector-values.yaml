@@ -1,0 +1,69 @@
+# The OpenTelemetry Collector as one Deployment ("gateway" mode).
+# Pipeline: receive OTLP -> add Kubernetes labels -> fix the service name -> batch -> send to Tempo and Jaeger,
+# and turn spans into request metrics that Prometheus scrapes.
+mode: deployment
+fullnameOverride: otel-collector
+image:
+  # The contrib build carries the span_metrics connector and the k8s_attributes processor.
+  repository: otel/opentelemetry-collector-contrib
+presets:
+  # Adds the k8s_attributes processor and the RBAC it needs to read pod metadata.
+  kubernetesAttributes:
+    enabled: true
+ports:
+  spanmetrics:
+    enabled: true
+    containerPort: 8889
+    servicePort: 8889
+    protocol: TCP
+resources:
+  requests: {cpu: 20m, memory: 64Mi}
+  limits: {memory: 256Mi}
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc: {endpoint: "${env:MY_POD_IP}:4317"}
+        http: {endpoint: "${env:MY_POD_IP}:4318"}
+  processors:
+    memory_limiter:
+      check_interval: 5s
+      limit_percentage: 80
+      spike_limit_percentage: 25
+    batch: {}
+    # The app hard-codes service.name "backend" in its code. Fix it centrally: name each
+    # service after its Kubernetes Deployment, which k8s_attributes added just before.
+    transform/service_name:
+      trace_statements:
+        - context: resource
+          statements:
+            - set(attributes["service.name"], attributes["k8s.deployment.name"]) where attributes["k8s.deployment.name"] != nil
+  connectors:
+    span_metrics:
+      histogram:
+        explicit:
+          buckets: [5ms, 25ms, 100ms, 250ms, 500ms, 1s, 2s]
+      # This app's instrumentation uses the older attribute name http.status_code.
+      # Newer semantic conventions call it http.response.status_code.
+      dimensions:
+        - name: http.status_code
+  exporters:
+    otlp_grpc/tempo:
+      endpoint: tempo.course-otel.svc.cluster.local:4317
+      tls: {insecure: true}
+    otlp_grpc/jaeger:
+      endpoint: jaeger-collector.observability.svc.cluster.local:4317
+      tls: {insecure: true}
+    prometheus:
+      endpoint: "${env:MY_POD_IP}:8889"
+  service:
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [memory_limiter, k8s_attributes, transform/service_name, batch]
+        exporters: [otlp_grpc/tempo, otlp_grpc/jaeger, span_metrics]
+      metrics:
+        receivers: [span_metrics]
+        processors: [batch]
+        exporters: [prometheus]
+      logs: null

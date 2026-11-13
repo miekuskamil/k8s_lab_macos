@@ -94,7 +94,7 @@ k8s_lab_macos/
 │   └── scenarios/    canary, fault and circuit-breaker experiments, applied by hand
 ├── helm/             value files for every Helm chart the lab installs
 ├── scripts/          provision, start, port-forward, traffic-test, teardown
-├── course/           the course: modules 0 to 24, their manifests and scripts
+├── course/           the course: modules 0 to 29, their manifests and scripts
 └── docs/             build guide, architecture, lab guide, troubleshooting, diagrams
 ```
 
@@ -102,6 +102,7 @@ k8s_lab_macos/
 |---|---|
 | [docs/build-from-scratch.md](docs/build-from-scratch.md) | How the lab was built, step by step: every decision, the alternatives, and what went wrong |
 | [docs/architecture.md](docs/architecture.md) | How a request travels, where mTLS applies, what was measured |
+| [docs/life-of-a-request.md](docs/life-of-a-request.md) | One request through every layer: API server gates, controllers, scheduler, kubelet, veth and bridge, iptables and conntrack, ztunnel, the waypoint, with packet captures and real output |
 | [course/README.md](course/README.md) | The Istio course |
 | [docs/lab-guide.md](docs/lab-guide.md) | The lab's experiments and GitOps workflow, without the course depth |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Every problem hit so far, with symptom, diagnosis and fix |
@@ -135,4 +136,4 @@ kubectl -n argocd get applications
 
 It asks before deleting. Add `--yes` to skip the question, for example in a script. This deletes the k3d cluster. The built images stay in your local Docker store.
 
-To rebuild from nothing: `./scripts/teardown.sh --yes && ./scripts/provision.sh`. On 12 November 2026 that took 2 minutes 13 seconds with cached images. On a fresh rebuild the same evening, `./course/verify.sh` passed 177 of its 178 checks (the one miss, a check that read a window still holding the previous module's errors, was fixed and rerun), and `./course/verify.sh 21`, the one-way k3s upgrade, passed all 9 of its own.
+To rebuild from nothing: `./scripts/teardown.sh --yes && ./scripts/provision.sh`. On 13 November 2026 that took 2 minutes 16 seconds with cached images. On that fresh cluster, `./course/verify.sh` passed all 232 of its checks across 22 modules in 41 minutes, and `./course/verify.sh 27` (RAG, which needs Ollama on the host) passed all 11 of its own. `./course/verify.sh 21`, the one-way k3s upgrade, passed all 9 of its checks on 12 November.

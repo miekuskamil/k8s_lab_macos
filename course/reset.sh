@@ -11,6 +11,54 @@ echo "Removing course rules from the shop namespace"
 "${K[@]}" -n shop delete telemetry waypoint-access-logs --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy backend-allow-course-client --ignore-not-found >/dev/null
 "${K[@]}" -n course-sidecar delete virtualservice,destinationrule,peerauthentication --all --ignore-not-found >/dev/null 2>&1 || true
+# Module 29: the plain app and its client
+"${K[@]}" delete namespace course-life --ignore-not-found >/dev/null
+# Module 28: the release first (Alloy's ClusterRole outlives the namespace), then the
+# namespace and Grafana's Pyroscope data source.
+if helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n course-profiling status pyroscope >/dev/null 2>&1; then
+  helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n course-profiling uninstall pyroscope --wait >/dev/null 2>&1 || true
+fi
+"${K[@]}" delete namespace course-profiling --ignore-not-found >/dev/null
+# Module 27: Qdrant's release, then the namespace. Its volume goes with the PVC.
+# The rag image and the Ollama models on your Mac stay.
+if helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n course-rag status qdrant >/dev/null 2>&1; then
+  helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n course-rag uninstall qdrant --wait >/dev/null 2>&1 || true
+fi
+"${K[@]}" delete namespace course-rag --ignore-not-found >/dev/null
+# Module 26: policies before Kyverno itself, so nothing blocks the clean-up. The chart's
+# own hook removes the webhooks Kyverno created at runtime, and its CRDs.
+if helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kyverno status kyverno >/dev/null 2>&1; then
+  "${K[@]}" delete clusterpolicies.kyverno.io,validatingpolicies.policies.kyverno.io --all --ignore-not-found >/dev/null 2>&1 || true
+  "${K[@]}" -n kyverno delete policyexceptions.kyverno.io --all --ignore-not-found >/dev/null 2>&1 || true
+  helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kyverno uninstall kyverno --wait >/dev/null 2>&1 || true
+fi
+"${K[@]}" delete namespace kyverno course-policy course-tenant-a --ignore-not-found >/dev/null
+# Module 25: Helm releases first, because the Collector's ClusterRole and binding
+# outlive a namespace delete. Then the namespace and Grafana's Tempo data source.
+for release in otel-collector tempo; do
+  if helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n course-otel status "$release" >/dev/null 2>&1; then
+    helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n course-otel uninstall "$release" --wait >/dev/null 2>&1 || true
+  fi
+done
+"${K[@]}" delete namespace course-otel --ignore-not-found >/dev/null
+# A provisioned data source is read-only and outlives its ConfigMap, so replace the file
+# with a deleteDatasources instruction, wait until Grafana drops it, then remove the file.
+#   remove_datasource <configmap> <uid> <name>
+remove_datasource() {
+  local cm=$1 uid=$2 name=$3
+  has_it() {
+    "${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- sh -c \
+      "curl -s -o /dev/null -w '%{http_code}' -u \"\$GF_SECURITY_ADMIN_USER:\$GF_SECURITY_ADMIN_PASSWORD\" localhost:3000/api/datasources/uid/$uid" 2>/dev/null | grep -q 200
+  }
+  if has_it; then
+    printf 'apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: %s\n  namespace: observability\n  labels:\n    grafana_datasource: "1"\ndata:\n  delete.yaml: |\n    apiVersion: 1\n    deleteDatasources:\n      - name: %s\n        orgId: 1\n' "$cm" "$name" \
+      | "${K[@]}" apply -f - >/dev/null
+    for _ in $(seq 1 24); do has_it || break; sleep 5; done
+  fi
+  "${K[@]}" -n observability delete configmap "$cm" --ignore-not-found >/dev/null
+}
+remove_datasource course-tempo-datasource tempo Tempo
+remove_datasource course-pyroscope-datasource pyroscope Pyroscope
 # Module 24: the dashboard's namespace, and the alert rule and folder that live only in Grafana
 "${K[@]}" delete namespace course-dashboards --ignore-not-found >/dev/null
 "${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- sh -c \

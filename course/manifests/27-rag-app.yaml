@@ -1,0 +1,47 @@
+# Module 27: the RAG service. It reads the course's Markdown from the course-docs
+# ConfigMap (created in step 3), stores vectors in Qdrant, and calls Ollama on your Mac
+# for embeddings and answers.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag
+  namespace: course-rag
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: rag}
+  template:
+    metadata:
+      labels: {app: rag}
+    spec:
+      containers:
+        - name: rag
+          image: k8s-lab/rag:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports: [{name: http, containerPort: 8000}]
+          env:
+            - {name: OLLAMA_URL, value: "http://host.docker.internal:11434"}
+            - {name: QDRANT_URL, value: "http://qdrant.course-rag.svc.cluster.local:6333"}
+            - {name: EMBED_MODEL, value: nomic-embed-text}
+            - {name: CHAT_MODEL, value: "qwen2.5:3b"}
+            - {name: DOCS_DIR, value: /docs}
+          volumeMounts:
+            - {name: docs, mountPath: /docs, readOnly: true}
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+          resources:
+            requests: {cpu: 20m, memory: 64Mi}
+            limits: {memory: 256Mi}
+      volumes:
+        - name: docs
+          configMap:
+            name: course-docs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rag
+  namespace: course-rag
+spec:
+  selector: {app: rag}
+  ports: [{name: http, port: 8000}]

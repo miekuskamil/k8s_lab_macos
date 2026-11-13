@@ -28,6 +28,16 @@ An eviction is polite: before it removes a pod, Kubernetes checks every PodDisru
 
 A PDB only covers *voluntary* disruptions: drains, upgrades, a cluster autoscaler removing a node. A node that crashes doesn't ask anyone.
 
+Under the hood, the budget is a number. The disruption controller writes `status.disruptionsAllowed` on every PDB: the healthy pods minus the pods the budget demands. `kubectl get pdb` shows it as `ALLOWED DISRUPTIONS`. Every eviction asks the API server first, and the API server refuses with `429 Too Many Requests` while that number is 0. `kubectl drain` treats the refusal as "not yet": it waits 5 seconds and asks again, until the eviction passes or `--timeout` runs out.
+
+| Budget on the two `web` pods | Healthy pods | Allowed disruptions | The drain |
+|---|---|---|---|
+| `minAvailable: 1` | 2 | 1 | evicts one pod |
+| `minAvailable: 1` | 1, the replacement isn't Ready yet | 0 | retries every 5 seconds |
+| `minAvailable: 2` | 2 | 0 | retries until `--timeout`, and forever without it |
+
+A common misconception: a PDB guards your pods against everything. It only guards the Eviction API. `kubectl delete pod`, a Deployment's own rolling update and a crashing node all ignore it.
+
 ## The bigger picture: what fills a cluster up
 
 A cluster that runs for months collects leftovers, and they cost disk, memory in the API server, and your time when you search for the real problem:

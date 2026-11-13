@@ -44,6 +44,32 @@ A **revision** is a name for one installed control plane, like `1-25-5`. The lab
 
 A **tag** is a nickname that points at a revision, such as `default`, `stable` or `canary`. Large teams label their workloads with tags instead of revisions. Then an upgrade means moving the tag, and every workload that uses it follows at once. In this module you move single workloads with revision labels, because watching them move one by one teaches more. At the end you point the `default` tag at the new revision.
 
+## Concept: how a proxy finds its istiod
+
+A label does nothing by itself. Something has to read it and point the proxy at one istiod. That something differs per proxy:
+
+| Proxy | What reads the label | Result |
+|---|---|---|
+| Sidecar | The revision's own injection webhook, which matches namespaces labelled `istio.io/rev=1-25-5` | The injected `istio-proxy` connects to `istiod-1-25-5` |
+| Waypoint, gateway | Each istiod, which only manages the Gateways whose `istio.io/rev` names its revision | That istiod writes the proxy's Deployment and points it at itself |
+| ztunnel | Helm, when you install or upgrade the chart | The DaemonSet connects to `istiod-1-25-5` |
+
+A tag uses the same trick one level up. `istioctl` and the Helm chart store a tag as one more mutating webhook, named `istio-revision-tag-<tag>`, that matches `istio.io/rev=<tag>` and calls the revision behind it. The `default` tag also matches `istio-injection: enabled`. Moving a tag rewrites that webhook. Running pods keep their proxy until they restart.
+
+```mermaid
+flowchart LR
+  subgraph cp["istio-system, after step 5"]
+    old["istiod<br/>revision default, 1.24.2"]
+    new["istiod-1-25-5<br/>revision 1-25-5"]
+  end
+  zt["ztunnel<br/>Helm revision=1-25-5"] -. "xDS" .-> new
+  wp["waypoint<br/>istio.io/rev=1-25-5"] -. "xDS" .-> new
+  gw["shop-gateway<br/>no label yet"] -. "xDS" .-> old
+  sc["sidecars in course-sidecar<br/>istio-injection: enabled"] -. "xDS" .-> old
+```
+
+A common misconception: the canary istiod receives a share of the traffic, like a canary Deployment does. It doesn't. No request ever passes through istiod. The new control plane only sends configuration, and only to proxies that connect to it, so installing it in step 2 changes nothing for users.
+
 ## The bigger picture: why upgrades are scary, and how teams make them boring
 
 Ask platform engineers what they dread, and "upgrading the mesh" comes up fast. The mesh sits in every request path. A bad upgrade doesn't break one service. It breaks all of them at the same moment.

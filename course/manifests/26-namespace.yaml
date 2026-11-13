@@ -1,0 +1,5 @@
+# Module 26: the policies only apply to this namespace, so they never touch the rest of the lab.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-policy

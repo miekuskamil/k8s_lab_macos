@@ -26,6 +26,14 @@ For networking, the hooks that matter are:
 
 Programs keep state in BPF maps: key-value tables in the kernel that user-space programs can read and write. A Cilium agent writes "Service 10.43.191.63:8000 has these endpoints" into a map, and the eBPF program reads it for every connection.
 
+## Concept: kernel space and user space
+
+Linux splits a machine into two places. Kernel space holds the network interfaces, the routing table and the packet filter. The iptables rules that kube-proxy writes are data the kernel walks for each new connection. User space holds ordinary programs: your app, Envoy, ztunnel. They reach the network only through system calls on sockets.
+
+This split explains why "in the kernel" sounds fast. When a user-space proxy handles a connection, the kernel copies the data up to the proxy, and the proxy hands it back down on a second connection. Each crossing costs a copy and a context switch. An eBPF program runs inside the kernel, on the packet where it already sits, so an L4 decision needs no crossing.
+
+The price is power. A kernel program must stay small and safe, so the verifier refuses anything complex. A user-space proxy may parse HTTP, hold TLS sessions and keep large tables, and a bug in it crashes one process, not the node. Keep this trade-off in mind for the rest of the module: it decides which job lands in eBPF and which lands in Envoy.
+
 ## Concept: what Cilium does with it
 
 Cilium is a CNI plugin, the same role flannel has in this lab. It gives pods their IPs and connects them. On top of that, it can take over three other jobs:
@@ -53,7 +61,7 @@ flowchart LR
 | Job | Without Cilium | With Cilium |
 |---|---|---|
 | Pod networking | flannel (this lab) | eBPF on each pod's interface |
-| Service load balancing | kube-proxy writes iptables rules | eBPF socket and tc programs read a BPF map. kube-proxy can be removed. |
+| Service load balancing | kube-proxy writes iptables rules | eBPF socket and tc programs read a BPF map. You run without kube-proxy. |
 | L3/L4 policy | NetworkPolicy, enforced by the CNI | NetworkPolicy and CiliumNetworkPolicy, enforced in eBPF |
 | L7 policy (HTTP methods and paths) | not possible with plain Kubernetes | an Envoy per node, not eBPF |
 | Flow visibility | none built in | Hubble reads flow events from the eBPF programs |
@@ -117,7 +125,7 @@ The third row is common in production, and it explains why "Cilium or Istio" is 
 
 These commands use `docker exec` into the k3d node container, which is safe and needs no extra rights.
 
-**1. kube-proxy's iptables rules.** In your lab, Services are implemented with iptables. Cilium would replace these rules with a BPF map.
+**1. kube-proxy's iptables rules.** In your lab, kube-proxy implements Services with iptables. Cilium would replace these rules with a BPF map.
 
 ```bash
 docker exec k3d-k8s-lab-server-0 sh -c 'iptables-save | grep -c "^-A KUBE-SVC"'
@@ -166,7 +174,7 @@ ztunnel used 7 to 10 MiB when this was written, and the waypoint about 29 MiB. E
 2. Cilium: no. WireGuard or IPsec must be turned on. Ambient: yes, every connection between enrolled pods uses mTLS through HBONE on port 15008.
 3. Istio. The caller presents a certificate holding its SPIFFE ID, and the backend verifies it against the shared root CA, so the proof travels with the connection. A Cilium identity is a number agreed inside a cluster (Cluster Mesh shares them between clusters), and the packet carries no proof of it. Cilium has an optional mutual authentication feature built on SPIRE that adds certificates, but it is not on by default. Note that neither design stops someone who may create pods in a namespace: they can copy the labels (Cilium) or pick the service account (Istio). Kubernetes RBAC guards both.
 4. The eBPF verifier limits program size and loops, and a program sees packets, not a reassembled byte stream. HTTP needs reassembly across packets, parsing of variable-length headers and often TLS termination. That is why both designs hand L7 to Envoy.
-5. kube-proxy, through the iptables rules you counted in step 1. ztunnel does not replace it: the Service IP is still resolved through kube-proxy's rules before ztunnel sees the connection.
+5. It depends on the caller. For pods outside the mesh, kube-proxy does it, through the iptables rules you counted in step 1. For ambient pods, ztunnel does it: istio-cni's redirect inside the pod sends the connection to ztunnel before it ever reaches the node's kube-proxy rules, and ztunnel picks the endpoint from istiod's list. Module 29 shows both paths side by side.
 
 </details>
 

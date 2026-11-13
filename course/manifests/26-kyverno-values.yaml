@@ -1,0 +1,27 @@
+# Kyverno with one replica per controller, sized for a laptop.
+# Production runs the admission controller with 3 replicas: if every replica is down,
+# the API server can't call the webhook, and with failurePolicy Fail it rejects changes.
+admissionController:
+  replicas: 1
+  container:
+    resources:
+      requests: {cpu: 50m, memory: 128Mi}
+      limits: {memory: 384Mi}
+backgroundController:
+  resources:
+    requests: {cpu: 20m, memory: 64Mi}
+    limits: {memory: 256Mi}
+cleanupController:
+  resources:
+    requests: {cpu: 10m, memory: 48Mi}
+    limits: {memory: 128Mi}
+reportsController:
+  resources:
+    requests: {cpu: 20m, memory: 64Mi}
+    limits: {memory: 256Mi}
+features:
+  policyExceptions:
+    # Off by default since Kyverno 1.13. Exceptions live only in kyverno's own namespace,
+    # so teams can't grant themselves exceptions in their namespaces.
+    enabled: true
+    namespace: kyverno

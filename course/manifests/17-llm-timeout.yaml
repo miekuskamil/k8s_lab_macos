@@ -1,5 +1,6 @@
-# A route timeout on the waypoint for calls to Ollama. Half a second is far too
-# short for a language model, on purpose: even a two-word answer takes longer.
+# A route timeout on the waypoint for calls to Ollama. A tenth of a second is far too
+# short for a language model, on purpose: the small qwen2.5:3b needed 0.26 seconds
+# for a short answer in the test run, the 14B model several seconds.
 # Watch what a timeout does to an LLM call.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -18,4 +19,4 @@ spec:
           name: host.docker.internal
           port: 11434
       timeouts:
-        request: 500ms
+        request: 100ms

@@ -46,6 +46,10 @@ Each balancing method knows a different amount:
 
 You'll measure the first two. The third needs a newer Istio than the lab's.
 
+Predict the results before you measure. Each replica has one slot (`--parallel 1`): one request runs, and the others wait in that replica's queue. `llm-load.sh` opens a new connection for every short question, and ztunnel picks a pod for each new connection without looking at how busy it is. With two replicas and one of them busy with the long story, every short question has about a one-in-two chance of landing behind it: expect about 5 of 10 stuck. The waypoint looks at every HTTP request and counts the requests it has in progress per pod. Its `LEAST_REQUEST` only fails when both random picks hit the busy pod, one in two times one in two: expect about 2 or 3 of 10. Compare that with the test runs in steps 2 and 3.
+
+This is also the difference between L4 and L7 balancing that you know from plain Kubernetes. kube-proxy and ztunnel both choose once per connection. Only a proxy that reads HTTP, like the waypoint, sees each request.
+
 ## The bigger picture: the Gateway API Inference Extension
 
 In 2025 the Kubernetes networking group published an extension to the Gateway API for exactly this problem. It adds an **InferencePool**: a group of model server pods, plus an **endpoint picker**, a small service the gateway asks "which pod should take this request?". The endpoint picker reads each server's metrics, the same kind you'll see in this module (`llamacpp:requests_deferred`, the queue), and answers with the pod that will respond fastest. A companion feature reads the model name from the JSON body, so one address serves many models.
@@ -88,11 +92,12 @@ kubectl -n shop exec deploy/course-client -- curl -s http://llm-qwen.ai.svc.clus
 
 | | Module 17: your Mac's GPU | This module: the cluster's CPU |
 |---|---|---|
-| Model size | 14 billion parameters | 0.5 billion |
-| Speed, warm | about 13 tokens per second | about 90 tokens per second |
-| Answer quality | accurate, follows instructions | often vague or slightly wrong |
+| Model size | 3 billion parameters (`qwen2.5:3b`) | 0.5 billion |
+| Hardware | the Mac's GPU | two CPU cores (`--threads 2`, limit `cpu: "2"`) |
+| Speed, warm | about 66 tokens per second | about 90 tokens per second |
+| Answer quality | mostly right, follows instructions | often vague or slightly wrong |
 
-The small model is fast because it's tiny. That's the trade-off every team makes: a big model gives better answers and needs expensive hardware, a small one runs anywhere and answers worse.
+The cluster's model is faster without any GPU, because it's six times smaller. That's the trade-off every team makes: a bigger model gives better answers and needs more memory and better hardware, a small one runs anywhere and answers worse. A 14-billion-parameter model on the same Mac GPU managed about 13 tokens per second in an earlier test run.
 
 ### 2. Get stuck behind a long request
 

@@ -35,6 +35,8 @@ An **SLO** sets a target for what users experience: "99% of backend requests suc
 
 **Burn rate** says how fast you're spending the budget. At a burn rate of 1, you use exactly the whole budget over the SLO period. At 14.4, a 30-day budget would last about two days, and a 1-hour window at that rate spends 2% of a month's budget. That's the classic threshold for paging someone.
 
+To turn a burn rate into a threshold for a query, multiply it by the error budget: 14.4 × 1% gives an error ratio of 14.4%. That's why the rules below compare the error ratio with 14.4%, and why a 99.9% SLO at the same burn rate would page at 1.44%.
+
 | Alert rule | What happens |
 |---|---|
 | Error ratio above 1%, right now | Pages on every blip. People learn to ignore it. |
@@ -60,6 +62,19 @@ The SRE approach alerts on **symptoms**, on what users feel: errors and latency,
 **Why does the waypoint measure the SLO and not the backend?** The waypoint sees every request to the backend, with the response code, and labels it with the caller's and the backend's identity. No library, no code change, the same metric for every service in the mesh.
 
 ## Do it
+
+### Concept: what Prometheus stores, and what `rate()` reads
+
+Prometheus stores **time series**. A series is one metric name plus one exact set of labels, and it holds samples: a timestamp and a number, one per scrape. `istio_requests_total` with `response_code="200"` and the same metric with `response_code="503"` are two separate series. Change any label value, and you get a new series. The newest samples, roughly the last two hours, sit in memory in the **head block**; Prometheus then compacts them into blocks on disk. Every series in the head costs memory, whether anyone queries it or not. Step 6 counts them.
+
+A query has two shapes:
+
+| You write | You get | Name |
+|---|---|---|
+| `x_total` | the newest sample of each series, at one moment | instant vector |
+| `x_total[1m]` | every sample of each series from the last minute | range vector |
+
+`rate()` takes a range vector, works out how much each counter grew from the first to the last sample in the range, and divides by the seconds. It also handles counter resets: when a pod restarts and its counter starts again at 0, `rate()` treats the drop as a restart, not as negative traffic. It needs at least two samples, so with this lab's 15-second scrape, `[1m]` holds about four, while `[15s]` often returns nothing. A common rule: make the range at least four times the scrape interval.
 
 ### 1. Read a counter
 
@@ -94,6 +109,18 @@ kubectl -n course-alerts rollout status deploy/alert-receiver
 Then open http://localhost:9090/rules and http://localhost:9093/#/status.
 
 **What you should see.** Within about 75 seconds, Prometheus lists two groups, `shop-slo-recording` and `shop-slo-alerts`. Alertmanager's config shows a new route, `course-alerts/shop-pager/pager`, for alerts with `severity="page"`, next to the chart's default `null` receiver. In Prometheus, query `shop:backend_error_ratio:rate5m`: a value of `0`, since nothing fails.
+
+### Concept: how a rule becomes a page
+
+Every 30 seconds, Prometheus runs each rule's expression as an instant query. A recording rule stores the result as a new sample of its own series. An alerting rule treats every series in the result as one alert, with that series' labels plus the labels the rule adds, such as `severity="page"`. An empty result means no alert. That's why the alert expression holds comparisons like `> (14.4 * 0.01)`: a comparison drops the series from the result when things are fine.
+
+| Expression result | Held for the `for:` duration? | Alert state |
+|---|---|---|
+| empty | | inactive |
+| one or more series | not yet | pending |
+| one or more series | yes | firing, sent to Alertmanager |
+
+While an alert fires, Prometheus keeps re-sending it to Alertmanager. When the expression turns empty again, Prometheus sends it once more as resolved, and Alertmanager decides whether anyone hears about that. Delays add up along the chain: up to 15 seconds for the scrape, up to 30 for the recording rule, up to 30 for the alerting rule, then the full `for: 1m`. So expect `pending` about a minute after the fault, and `firing` a minute later.
 
 ### 4. Break it, get paged
 

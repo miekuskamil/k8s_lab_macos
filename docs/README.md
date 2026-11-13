@@ -6,6 +6,7 @@ Pick the document by what you want to do.
 |---|---|
 | Understand how the lab is built, and rebuild it step by step with the reasons behind each choice | [build-from-scratch.md](build-from-scratch.md) |
 | See how a request travels, where mTLS applies and what the running system measures | [architecture.md](architecture.md) |
+| Follow one request through every layer, from the API server's gates to the packets on the wire, with real output at each hop | [life-of-a-request.md](life-of-a-request.md) |
 | Run the canary, fault and circuit-breaker experiments, and learn GitOps day to day | [lab-guide.md](lab-guide.md) |
 | Learn Istio from zero, module by module | [../course/README.md](../course/README.md) |
 | Fix something that broke | [troubleshooting.md](troubleshooting.md) for the problems seen so far, [../course/09-command-reference.md](../course/09-command-reference.md) for commands by layer |

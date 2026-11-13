@@ -1,0 +1,32 @@
+# Module 28: a Go app with pprof built in. --stress-cpu burns one CPU core on purpose,
+# so the flame graph has a clear culprit. The annotations opt the pod into profiling.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: podinfo
+  namespace: course-profiling
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: podinfo}
+  template:
+    metadata:
+      labels: {app: podinfo}
+      annotations:
+        profiles.grafana.com/cpu.scrape: "true"
+        profiles.grafana.com/cpu.port_name: http
+        profiles.grafana.com/memory.scrape: "true"
+        profiles.grafana.com/memory.port_name: http
+        profiles.grafana.com/goroutine.scrape: "true"
+        profiles.grafana.com/goroutine.port_name: http
+        profiles.grafana.com/service_name: podinfo
+    spec:
+      containers:
+        - name: podinfo
+          image: ghcr.io/stefanprodan/podinfo:6.7.1
+          command: ["./podinfo", "--port=9898", "--stress-cpu=1", "--stress-memory=32"]
+          ports:
+            - {name: http, containerPort: 9898}
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 500m, memory: 128Mi}

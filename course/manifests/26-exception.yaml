@@ -1,0 +1,17 @@
+# A documented exception: the legacy app may keep its latest tag for now.
+# It lives in the kyverno namespace, where only the platform team may create exceptions.
+apiVersion: kyverno.io/v2
+kind: PolicyException
+metadata:
+  name: legacy-may-use-latest
+  namespace: kyverno
+spec:
+  exceptions:
+    - policyName: disallow-latest-tag
+      ruleNames: [require-image-tag, autogen-require-image-tag]
+  match:
+    any:
+      - resources:
+          kinds: [Pod, Deployment, ReplicaSet]
+          namespaces: [course-policy]
+          names: ["legacy*"]

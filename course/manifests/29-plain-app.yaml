@@ -1,0 +1,61 @@
+# Module 29: a plain app outside the mesh, to follow a pod's life and a request without
+# any proxy. The namespace has no istio.io/dataplane-mode label.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-life
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello
+  namespace: course-life
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: hello}
+  template:
+    metadata:
+      labels: {app: hello}
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.27-alpine
+          ports: [{name: http, containerPort: 80}]
+          readinessProbe:
+            httpGet: {path: /, port: http}
+            periodSeconds: 2
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {memory: 64Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello
+  namespace: course-life
+spec:
+  selector: {app: hello}
+  ports: [{name: http, port: 80, targetPort: http}]
+---
+# A client in the same plain namespace, to send requests from inside the cluster.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+  namespace: course-life
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: client}
+  template:
+    metadata:
+      labels: {app: client}
+    spec:
+      containers:
+        - name: curl
+          image: curlimages/curl:8.11.1
+          command: ["sleep", "infinity"]
+          resources:
+            requests: {cpu: 5m, memory: 8Mi}
+            limits: {memory: 32Mi}

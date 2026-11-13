@@ -1,0 +1,18 @@
+# Grafana's sidecar adds this data source from Grafana's own namespace.
+# reset.sh removes it the same way as module 25's Tempo data source.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: course-pyroscope-datasource
+  namespace: observability
+  labels:
+    grafana_datasource: "1"
+data:
+  pyroscope.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Pyroscope
+        type: grafana-pyroscope-datasource
+        uid: pyroscope
+        access: proxy
+        url: http://pyroscope.course-profiling.svc.cluster.local:4040

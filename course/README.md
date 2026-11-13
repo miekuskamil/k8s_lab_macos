@@ -31,6 +31,11 @@ Each module takes 30 to 60 minutes. Do them in order, because each one builds on
 | [22. GitOps with ArgoCD](22-gitops-with-argocd.md) | Platform: your own Git server, drift and self-heal, `git revert` rollbacks, hooks and sync waves, an AppProject that fences a team in, the retry trap, ApplicationSets | `git`, ArgoCD |
 | [23. Prometheus and alerting](23-prometheus-and-alerting.md) | Platform: PromQL from `rate()` to percentiles, recording rules, an SLO with a multi-window burn-rate alert, Alertmanager routing, cardinality | Prometheus, Alertmanager |
 | [24. Grafana as code](24-grafana-as-code.md) | Platform: dashboards from ConfigMaps, variables and thresholds, why Grafana refuses edits, Grafana-managed alerts that reach nobody, trace-to-logs links | Grafana, Jaeger, Loki |
+| [25. OpenTelemetry Collector and Tempo](25-opentelemetry-and-tempo.md) | Platform: a Collector between apps and back ends, Kubernetes attributes, fixing service names centrally, span metrics, Tempo and TraceQL | `helm`, Grafana, TraceQL |
+| [26. Kyverno, policy as code](26-kyverno-policy-as-code.md) | Platform: Audit then Enforce, the silent rollout hang, written exceptions, mutation, generated tenant defaults, a CEL policy, PolicyReports | `helm`, `kubectl` |
+| [27. RAG on Kubernetes](27-rag-on-kubernetes.md) | AI: Qdrant, embeddings from your Ollama, ingesting the course, retrieval misses and wrong answers, top-k against tokens. Needs Ollama | `docker`, `k3d`, `curl` |
+| [28. Continuous profiling with Pyroscope](28-continuous-profiling.md) | Platform: annotation opt-in, flame graphs, self against total time, memory allocations, the cost of profiling | `helm`, Grafana |
+| [29. The life of a request](29-life-of-a-request.md) | Internals: kubectl to API server (authentication, RBAC, admission, kine), controllers, scheduler decisions, kubelet, CRI and CNI; then one request without a mesh and one through ambient Istio, hop by hop, with a large diagram | `kubectl -v`, `iptables`, `conntrack`, `istioctl` |
 
 **New to Istio? Read [Start here: Istio in one picture](start-here.md) first.** It takes 15 minutes, needs no cluster, and shows every resource the course uses on one diagram. Every term also has a plain explanation in the [glossary](glossary.md). Keep it open in a tab.
 
@@ -43,22 +48,23 @@ flowchart LR
   core --> adv["11 to 16<br/>edge TLS, egress, JWT,<br/>upgrades, resilience, Istio API"]
   adv --> ai["17 to 19<br/>AI: LLMs, model serving, agents"]
   m0 --> ops["20 and 21<br/>k3s operations"]
-  m0 --> plat["22 to 24<br/>ArgoCD, Prometheus, Grafana"]
+  m0 --> plat["22 to 28<br/>ArgoCD, Prometheus, Grafana,<br/>OpenTelemetry, Kyverno, Pyroscope"]
   core -.-> ref["9 Command reference<br/>10 eBPF and Cilium"]
 ```
 
 - **Istio:** modules 0 to 8, then 11 to 16. Module 9 is a reference, and 10 is theory you read any time after module 7.
 - **AI on Kubernetes:** modules 17 to 19 build on the Istio route, mainly modules 3 to 6 and 12. Each module lists what it needs at the top.
 - **Kubernetes operations:** modules 20 and 21 need only module 0. As a CKA, you might take them first.
-- **Platform tools:** modules 22 to 24 need only module 0, though 23 builds on module 6 and 24 on 23. They cover what DevOps and platform job adverts ask for most: GitOps, alerting and dashboards.
+- **Platform tools:** modules 22 to 26 and 28 need only module 0, though 23 builds on module 6 and 24 on 23. They cover what DevOps and platform job adverts ask for most: GitOps, alerting, dashboards, OpenTelemetry, policy as code and profiling.
+- **AI without Istio:** module 27 (RAG) needs only module 0 and Ollama on your Mac.
 
 ## Recommended order
 
 1. [Start here](start-here.md), then module 0.
-2. Modules 1 to 7, then 8 to test yourself.
+2. Modules 1 to 7, then 29 (the life of a request) to tie them together, then 8 to test yourself.
 3. Modules 11, 12, 13, 15 and 16.
 4. Modules 17 to 19, the AI track.
-5. Modules 22 to 24, the platform tools.
+5. Modules 22 to 28, the platform tools (27 is AI and needs Ollama).
 6. Module 20.
 7. Module 14, then rebuild the lab: `./scripts/teardown.sh --yes && ./scripts/provision.sh`.
 8. Module 21, then rebuild again.
@@ -116,10 +122,11 @@ The course changes Istio resources by hand, with `kubectl apply`. ArgoCD manages
 ## Check that the course works
 
 ```bash
-./course/verify.sh        # every module, about 10 minutes
+./course/verify.sh        # every module that is safe to repeat, about 40 minutes
 ./course/verify.sh 4      # one module
 ./course/verify.sh 14     # the Istio upgrade, one-way, not part of the full run
 ./course/verify.sh 17 18 19  # the AI modules: 17 and 19 need Ollama on your machine, 18 downloads about 900 MB
+./course/verify.sh 27        # RAG: needs Ollama with nomic-embed-text and qwen2.5:3b
 ./course/verify.sh 21     # the k3s upgrade, one-way, not part of the full run
 ```
 

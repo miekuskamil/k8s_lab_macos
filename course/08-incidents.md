@@ -44,6 +44,19 @@ Envoy's response flags in the access log and in `istio_requests_total{response_f
 | `NR` | no route configured |
 | `DI`, `FI` | delay or fault injected on purpose |
 
+## Concept: who wrote the error?
+
+Without a mesh, an error page came from your app or your ingress controller. In the shop, a request also passes the gateway's Envoy, ztunnel on every hop between pods, and the waypoint's Envoy. Each of them writes errors of its own, and each leaves a different kind of evidence. Ask "which component answered?" before you ask "why?".
+
+| What curl shows | Who wrote it | Where to look next |
+|---|---|---|
+| A status with a short plain-text body, such as `RBAC: access denied` or `no healthy upstream` | An Envoy: the gateway or the waypoint | That proxy's access log and its `response_flags` |
+| `503` with `upstream connect error or disconnect/reset before headers` | An Envoy whose connection to the next hop failed or got reset, often by ztunnel | The ztunnel log on the node |
+| `000`, a reset, no HTTP status at all | Nothing at L7 answered: ztunnel closed the connection, or nothing listens | The ztunnel log |
+| The app's own JSON error | The app | The app's logs in Loki |
+
+Traces give a second clue. In this lab the gateway, the waypoint and the backend write spans, and ztunnel writes none. A trace that ends early names the last component that saw the request, so count the spans before you read them. When no Envoy sits in front of ztunnel, a refusal at L4 shows up in no trace and in no HTTP metric, only in the ztunnel log.
+
 ---
 
 ## Incident 1: "Every page says access denied"

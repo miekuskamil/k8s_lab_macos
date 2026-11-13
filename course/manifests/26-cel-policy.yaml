@@ -1,0 +1,20 @@
+# The newer CEL style: a Kyverno ValidatingPolicy, close to Kubernetes' own
+# ValidatingAdmissionPolicy. Deployments in course-policy need an owner label.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: require-owner-label
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [apps]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [deployments]
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: course-policy
+  validations:
+    - expression: "has(object.metadata.labels) && 'owner' in object.metadata.labels"
+      message: "Deployments in course-policy need an owner label."

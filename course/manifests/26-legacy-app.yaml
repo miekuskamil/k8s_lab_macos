@@ -1,0 +1,17 @@
+# An app that predates the rules: a "latest" image tag and no memory limit.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legacy
+  namespace: course-policy
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: legacy}
+  template:
+    metadata:
+      labels: {app: legacy}
+    spec:
+      containers:
+        - name: web
+          image: nginx:latest

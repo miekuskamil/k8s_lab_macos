@@ -41,7 +41,9 @@ data plane version: 1.24.2 (3 proxies)
 
 The client can be newer than the control plane. Every command in this course was tested with client 1.32 against control plane 1.24. If a command fails with an unknown field error, install the matching client from the releases page.
 
-The "3 proxies" are the Envoy proxies istiod knows about: the ingress gateway, the waypoint and ztunnel. The shop's own pods are not in the count. Module 1 explains why.
+The "3 proxies" are the proxies istiod knows about: two Envoys (the ingress gateway and the waypoint) and ztunnel, which is a separate Rust program, not Envoy. The shop's own pods are not in the count. Module 1 explains why.
+
+The three version lines come from three places. `istioctl` prints its own version, asks istiod for the control plane version, and asks istiod which proxies it currently sends configuration to. A proxy that lost its connection to istiod drops out of that count, so a number lower than you expect is a first clue in troubleshooting.
 
 ## The tools and what each one answers
 

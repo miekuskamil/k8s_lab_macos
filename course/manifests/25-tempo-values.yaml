@@ -1,0 +1,22 @@
+# Grafana Tempo in single-binary mode: one pod that receives, stores and queries traces.
+# Traces live on an emptyDir and expire after 6 hours. Fine for a lab, not for production.
+tempo:
+  retention: 6h
+  reportingEnabled: false
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+  # 384Mi was too low: a structural TraceQL query (>>) got Tempo OOM-killed three times.
+  # GOMEMLIMIT makes Go's garbage collector work harder before the container limit.
+  extraEnv:
+    - name: GOMEMLIMIT
+      value: 600MiB
+  resources:
+    requests: {cpu: 20m, memory: 128Mi}
+    limits: {memory: 768Mi}
+persistence:
+  enabled: false

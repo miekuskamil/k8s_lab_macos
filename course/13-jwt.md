@@ -55,6 +55,21 @@ flowchart LR
 
 The split mirrors module 3 exactly. Authentication answers "who are you?", authorization answers "may you do this?".
 
+## Concept: two identities on one request
+
+You already know one kind of JWT from CKA. A ServiceAccount token, the file at `/var/run/secrets/kubernetes.io/serviceaccount/token`, is a JWT. The API server checks its signature, issuer, audience and expiry: the same four checks RequestAuthentication runs at the gateway.
+
+After this module, a request carries two separate identities, and an AuthorizationPolicy matches each one with its own field:
+
+| | Workload identity (modules 2 and 3) | End-user identity (this module) |
+|---|---|---|
+| Says | which pod sent the request | which person the request acts for |
+| Comes from | the mTLS certificate, signed by istiod | a JWT in the `Authorization` header, signed by an identity provider |
+| Policy field | `principals` | `requestPrincipals`, and `request.auth.claims[...]` for single claims |
+| Looks like | `cluster.local/ns/shop/sa/frontend` | `https://idp.k8s-lab.local/bob` (issuer, a slash, then subject) |
+
+At the ingress gateway the caller is curl on your Mac. It has no mesh certificate, so the JWT is the only identity there. That's why every rule in `13-require-jwt.yaml` uses `requestPrincipals` and none uses `principals`.
+
 ## The bigger picture: who issues the tokens
 
 In production nobody writes tokens by hand. An identity provider does it: Keycloak, Okta, Auth0, Microsoft Entra ID, Google, or Dex inside the cluster. The user logs in there, usually through OpenID Connect, and the provider hands the browser or app a signed token. Every later request carries it in the `Authorization: Bearer ...` header.

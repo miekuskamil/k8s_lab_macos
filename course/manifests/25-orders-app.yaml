@@ -1,0 +1,120 @@
+# Module 25: a small copy of the shop's backend, outside the mesh, in its own namespace.
+# Its OpenTelemetry SDK sends traces to the Collector instead of straight to Jaeger.
+# The namespace comes from step 1's Tempo install (--create-namespace).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-auth
+  namespace: course-otel
+stringData:
+  password: otel-lab-redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: course-otel
+spec:
+  selector:
+    matchLabels: {app: redis}
+  template:
+    metadata:
+      labels: {app: redis}
+    spec:
+      containers:
+        - name: redis
+          image: redis:7.4-alpine
+          command: ["sh", "-c", "exec redis-server --requirepass \"$REDIS_PASSWORD\" --save '' --appendonly no --maxmemory 32mb"]
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom: {secretKeyRef: {name: redis-auth, key: password}}
+          ports: [{containerPort: 6379}]
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {memory: 64Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: course-otel
+spec:
+  selector: {app: redis}
+  ports: [{port: 6379}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders
+  namespace: course-otel
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: orders}
+  template:
+    metadata:
+      labels: {app: orders}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: orders
+          image: k8s-lab/backend:1.0.3
+          imagePullPolicy: IfNotPresent
+          ports: [{name: http, containerPort: 8000}]
+          env:
+            - {name: APP_VERSION, value: v1}
+            - {name: REDIS_HOST, value: redis.course-otel.svc.cluster.local}
+            - name: REDIS_PASSWORD
+              valueFrom: {secretKeyRef: {name: redis-auth, key: password}}
+            # The only tracing setting the app needs: where to send spans. Its code
+            # hard-codes service.name "backend"; the Collector renames it to "orders".
+            - {name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector.course-otel.svc.cluster.local:4318"}
+            # 5% of /api/ requests fail with 503, so there are errors to find.
+            - {name: ERROR_RATE, value: "0.05"}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+          resources:
+            requests: {cpu: 20m, memory: 96Mi}
+            limits: {memory: 192Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders
+  namespace: course-otel
+spec:
+  selector: {app: orders}
+  ports: [{name: http, port: 8000}]
+---
+# Steady traffic: list orders, place orders, and some slow requests.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traffic
+  namespace: course-otel
+spec:
+  selector:
+    matchLabels: {app: traffic}
+  template:
+    metadata:
+      labels: {app: traffic}
+    spec:
+      containers:
+        - name: curl
+          image: curlimages/curl:8.11.1
+          command: ["sh", "-c"]
+          args:
+            - |
+              i=0
+              while true; do
+                i=$((i + 1))
+                curl -s -o /dev/null http://orders:8000/api/orders
+                curl -s -o /dev/null -X POST -H 'content-type: application/json' -d '{"item":"otel","quantity":1}' http://orders:8000/api/orders
+                curl -s -o /dev/null "http://orders:8000/api/slow?ms=$(( (i % 5) * 150 ))"
+                sleep 1
+              done
+          resources:
+            requests: {cpu: 5m, memory: 8Mi}
+            limits: {memory: 32Mi}

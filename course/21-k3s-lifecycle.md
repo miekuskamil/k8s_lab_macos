@@ -42,6 +42,25 @@ It happens because every upgrade carries risk, so teams postpone it, so the next
 
 The upgrade in this module shows the other half of the job: knowing what depends on what. The lab's Istio 1.24 supports Kubernetes 1.28 to 1.31, so the lab may take any 1.31 patch, but not 1.32 until Istio moves first.
 
+## Concept: how a pod gets its network, and how one missing file stops it
+
+You'll need this picture to understand step 4. Every time containerd creates a pod sandbox, it reads the CNI config and runs each plugin in it as a separate program, in order, from its plugin directory. On the lab's node, flannel runs first and istio-cni last. Removing a sandbox runs the same chain backwards with `DEL`.
+
+```mermaid
+sequenceDiagram
+  participant C as containerd
+  participant F as flannel and host-local IPAM
+  participant I as istio-cni
+  C->>F: ADD: give the new pod an IP
+  F-->>C: 10.42.0.x, lease file written
+  C->>I: ADD: set up ambient redirection
+  Note over C,I: plugin not in the directory: ADD fails
+  C->>I: DEL (cleanup, backwards): fails again
+  Note over C,F: the chain stops, flannel's DEL never runs, the lease stays
+```
+
+flannel's IP manager, host-local IPAM, keeps one file per handed-out address, and the node's range holds 254 of them. So a missing plugin does two kinds of damage: no new pod starts, and every failed attempt keeps an address. Pods that already run keep working, because CNI only runs when a sandbox starts or stops. In k3d, though, a k3s restart restarts the whole node container, so every pod on it needs a new sandbox at once.
+
 ## Why this way
 
 **Why stop k3s for a backup?** SQLite keeps recent changes in a write-ahead log (`state.db-wal`) next to the main file. Copying the files while k3s writes to them risks a backup where the two don't match. Stopped, the three files (`state.db`, `-wal`, `-shm`) form a consistent set. With etcd, `k3s etcd-snapshot save` takes a consistent snapshot while the cluster runs.

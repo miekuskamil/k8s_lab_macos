@@ -59,6 +59,10 @@ The `reporter` label says which proxy recorded a metric:
 | `waypoint` | the waypoint |
 | `destination` | the server side, in sidecar mode |
 
+That table holds for the HTTP metric `istio_requests_total`. ztunnel's TCP metrics carry `reporter` too, set to `source` or `destination` by the end of the connection where ztunnel sat. So one connection often shows up twice, once from each side. Always filter or group by `reporter`, or you count the same traffic double.
+
+The diagram's arrows show where data ends up, not who sends it. Nobody pushes metrics. Each proxy and app serves its numbers on a metrics port, and Prometheus pulls them every 15 seconds, guided by the PodMonitors. Spans travel the other way: the gateway, the waypoint and the backend push them to Jaeger. This difference explains the lag you saw in module 4: a metric only moves after the next scrape and once the `rate()` window fills.
+
 ## Concept: how one trace crosses three processes
 
 A trace is a tree of spans that share a trace id. The id travels in the W3C `traceparent` HTTP header:
@@ -152,6 +156,12 @@ Send traffic first with `./course/load.sh 120` so the `rate()` window has data.
 - The first query shows `backend-v1` with `response_code="200"` at about 5 per second. A `201` series appears too, near 0, left over from the `POST` in step 1.
 - The second shows `backend-v1` at `10`. That's an estimate sitting on a bucket edge, not a measurement. Istio's histogram buckets run 0.5, 1, 5, 10, 25, 50 ms and up, and Prometheus only knows how many requests fell into each bucket, not their exact times.
 - The third lists many workloads, not only the shop: `frontend`, `backend-v1`, `redis`, Grafana, Loki, istiod and more, because ztunnel counts every connection of every pod in an ambient namespace, Prometheus's own scrapes included.
+
+### Concept: who decides to keep a trace
+
+The last two digits of `traceparent` carry the decision. `01` means "sampled, record this trace", `00` means "don't". The first proxy that sees a request without a `traceparent`, here the ingress gateway, rolls the dice once with the `randomSamplingPercentage` it has and writes the result into the header. The waypoint and the backend's SDK follow the flag they receive. So 10% sampling keeps 10% of whole traces. You never get a trace with the gateway span but no backend span because of sampling.
+
+The Telemetry resource follows the same layering as PeerAuthentication. One in `istio-system` covers the whole mesh, one in a namespace overrides it there, and one with `targetRefs` or a `selector` overrides it for a single proxy. A common mistake follows from the head decision: you lower the sampling rate on the waypoint alone and see no change, because the gateway already decided for every request that reaches it.
 
 ### 3. Change the sampling rate
 

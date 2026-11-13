@@ -32,6 +32,21 @@ Three differences stand out:
 | How routes attach | The route names its parent in `parentRefs` | The VirtualService names its Gateway in `gateways`. Without that field, it applies inside the mesh |
 | How versions are named | One Service per version | Subsets: named groups of one Service's pods, picked by labels in a DestinationRule |
 
+## Concept: how a VirtualService finds its traffic
+
+An HTTPRoute attaches to something by name: a Gateway or a Service in `parentRefs`. A VirtualService attaches by host name instead. `hosts: [backend.shop.svc.cluster.local]` means "every request addressed to this name", from any client in the mesh. The `gateways` field then says where the rules run: on the named gateway pods, or, without the field, inside the mesh. In ambient mode "inside the mesh" means the waypoint of the backend Service.
+
+istiod reads all three resources and turns them into Envoy config, the same way it turns HTTPRoutes into config in module 4. Follow one request in step 3:
+
+```mermaid
+flowchart LR
+  f["frontend calls<br/>backend:8000"] --> w["waypoint<br/>VirtualService rules<br/>for host backend"]
+  w -- "90%: subset v1" --> c1["Envoy cluster for v1<br/>backend pods with version=v1"]
+  w -- "10%: subset v2" --> c2["Envoy cluster for v2<br/>backend pods with version=v2"]
+```
+
+A subset is a filter on the Service's endpoints. The `backend` Service selects `app: backend`, so it holds the pods of both versions. The DestinationRule narrows that list by the extra label `version`, and Envoy treats each subset as its own group of pods. The result looks exactly like module 4, where `backend-v1` and `backend-v2` were two Services. Only the way you name the groups differs. One consequence matters for step 3: a VirtualService that names a subset needs a DestinationRule that defines it. Without one, the subset matches no pods and requests fail.
+
 ## The bigger picture: why two APIs exist
 
 Istio launched in 2017, before Kubernetes had any good answer for routing. The old Ingress resource only knew hosts and paths, so every project invented its own: Istio's VirtualService, Contour's HTTPProxy, Traefik's IngressRoute, and more. A team that switched tools rewrote everything.

@@ -27,6 +27,20 @@ flowchart LR
 
 They sound alike, but they do different jobs. A retry hides one failure from one user. Outlier detection stops the failures from happening in the first place. The exercise puts numbers on that difference.
 
+## Concept: the waypoint keeps the score, not Kubernetes
+
+Outlier detection lives inside one Envoy. Here that's the shop's waypoint: it counts the answers of each `backend-v1` pod in its own memory, and once a pod returns three 5xx in a row, it stops picking that pod. Nothing outside the waypoint changes:
+
+| Who | What it sees after the ejection |
+|---|---|
+| Kubernetes (`kubectl -n shop get endpointslices`) | three pods, all ready |
+| istiod | three pods, and it keeps sending all three to the waypoint |
+| The waypoint's Envoy | three pods, one of them marked as ejected, so it picks from two |
+
+So no `kubectl` command shows an ejection. You see it in its effects: the 503s stop, and the faulty pod's log goes quiet. Each proxy also judges on its own. The lab's waypoint runs as one pod, so one set of three errors is enough. With two waypoint pods, each would need its own three errors. In sidecar mode every client sidecar keeps a separate score, so some clients still call a pod that others already ejected. And an ejection always ends by itself: when the time runs out, Envoy tries the pod again, fixed or not.
+
+Retries need a different pod to help at all. Istio configures Envoy's retries to skip the pods that this request already tried, so after the faulty pod's 503, the second attempt almost always lands on a healthy pod.
+
 ## The bigger picture: failing gracefully
 
 Large systems never run fully healthy. With hundreds of pods across dozens of nodes, something is always broken somewhere. The goal isn't zero failures. It's making sure a broken part doesn't turn into a broken product.
@@ -152,7 +166,7 @@ echo "the faulty pod got $(( $(calls) - before )) of those requests"
 
 1. Its readiness probe calls `/readyz`, which still works: `ERROR_RATE` only breaks `/api/` paths. Kubernetes trusts the probe, so the pod stays in the Service's endpoints. Outlier detection judges the pod by its real answers instead. This gap between "the probe says fine" and "users say broken" is the whole reason outlier detection exists.
 2. `consecutive5xxErrors: 3`: Envoy ejects a pod once it has returned three 5xx answers in a row, and the third one still reached a user. Fewer would eject pods after a single unlucky error.
-3. Envoy ejects nothing, and the 503 rate goes back to about one in three. With `0`, outlier detection still counts errors but never acts on them. Teams set it during a rollout to watch which pods it would eject, without risking an unexpected change.
+3. Envoy ejects nothing, and the 503 rate goes back to about one in three. In a test run, 25 of 90 requests failed with `0`, and none of 90 with `50`. With `0`, outlier detection still counts errors but never acts on them. Teams set it during a rollout to watch which pods it would eject, without risking an unexpected change.
 4. Each layer makes up to 3 attempts (1 plus 2 retries), so 3 × 3 × 3 = 27 requests per click, at the moment the backend struggles most. That's a retry storm. Retry in one layer, usually the one closest to the failing service, here the waypoint.
 
 </details>

@@ -1,0 +1,44 @@
+# Generate: every namespace labelled tenant=true gets a quota and a default-deny
+# NetworkPolicy the moment it's created. synchronize keeps them in place: delete one,
+# and Kyverno puts it back.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: tenant-baseline
+spec:
+  rules:
+    - name: quota
+      match:
+        any:
+          - resources:
+              kinds: [Namespace]
+              selector:
+                matchLabels: {course-policy/tenant: "true"}
+      generate:
+        apiVersion: v1
+        kind: ResourceQuota
+        name: tenant-quota
+        namespace: "{{ request.object.metadata.name }}"
+        synchronize: true
+        data:
+          spec:
+            hard:
+              pods: "10"
+              limits.memory: 2Gi
+    - name: default-deny
+      match:
+        any:
+          - resources:
+              kinds: [Namespace]
+              selector:
+                matchLabels: {course-policy/tenant: "true"}
+      generate:
+        apiVersion: networking.k8s.io/v1
+        kind: NetworkPolicy
+        name: default-deny-ingress
+        namespace: "{{ request.object.metadata.name }}"
+        synchronize: true
+        data:
+          spec:
+            podSelector: {}
+            policyTypes: [Ingress]

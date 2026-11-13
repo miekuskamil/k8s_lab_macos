@@ -49,6 +49,20 @@ Look at the diagram again. The app speaks plain HTTP, and the waypoint opens the
 
 Because the mesh only enforces rules on what it reads. If the app opens TLS itself, the waypoint sees an encrypted stream and knows only the server name. With origination, the waypoint reads the method and the path, applies L7 rules, records the response code, and only then encrypts. The hop from the app to the waypoint still travels inside HBONE mTLS, so nothing crosses the network in clear text.
 
+## Concept: three resources, one external host
+
+The manifests for this module hold three Istio resources for httpbin.org. Each does one job:
+
+| Resource | Its job here | Closest thing in plain Kubernetes |
+|---|---|---|
+| ServiceEntry `httpbin-org` | Puts `httpbin.org` in the registry on port 80 and sends it on to port 443 (`targetPort`). Its label `istio.io/use-waypoint: waypoint` sends the traffic through the waypoint. | A Service of type `ExternalName`, which only adds a DNS alias: no policy, no metrics |
+| DestinationRule `httpbin-org-tls` | `tls.mode: SIMPLE` tells the waypoint to open TLS to the real server. This is the origination. | none |
+| AuthorizationPolicy `httpbin-org-read-only` (step 5) | Attaches to the ServiceEntry through `targetRefs` and allows only GET on two paths, only for the course client | none: a NetworkPolicy stops at IPs and ports |
+
+`resolution: DNS` tells the waypoint to look up httpbin.org's real addresses itself when it connects. The `240.240.0.1` address exists only between the pod and ztunnel.
+
+A common mistake: treating a ServiceEntry as a firewall rule. It allows nothing and blocks nothing. It only gives the mesh a name. Blocking needs the NetworkPolicy in step 4, and per-request rules need the AuthorizationPolicy in step 5.
+
 ## The bigger picture: why egress control matters
 
 Most security work points inwards: who may call my service? Egress asks the opposite question, and attackers love that it often goes unasked.

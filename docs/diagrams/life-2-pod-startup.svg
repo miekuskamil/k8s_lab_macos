@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1560" height="995" viewBox="0 0 1560 995" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+<rect width="1560" height="995" fill="#ffffff"/>
+<defs>
+<marker id="a24292f" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#24292f"/></marker>
+<marker id="a8250df" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#8250df"/></marker>
+</defs>
+<rect x="40" y="150" width="270" height="101" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<text x="52" y="174" font-size="16" font-weight="700" fill="#24292f">Deployment hello</text>
+<text x="52" y="196" font-size="14" fill="#57606a">replicas: 1</text>
+<text x="52" y="215" font-size="14" fill="#57606a">template: nginx:1.27-alpine</text>
+<text x="52" y="234" font-size="14" fill="#57606a">stored, resourceVersion set</text>
+<rect x="340" y="150" width="270" height="82" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<text x="352" y="174" font-size="16" font-weight="700" fill="#24292f">ReplicaSet hello-76fb6c6b6f</text>
+<text x="352" y="196" font-size="14" fill="#57606a">pod-template-hash=76fb6c6b6f</text>
+<text x="352" y="215" font-size="14" fill="#57606a">ownerReference: Deployment/hello</text>
+<rect x="640" y="150" width="270" height="101" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<text x="652" y="174" font-size="16" font-weight="700" fill="#24292f">Pod hello-76fb6c6b6f-sj879</text>
+<text x="652" y="196" font-size="14" fill="#57606a">spec.nodeName empty</text>
+<text x="652" y="215" font-size="14" fill="#57606a">phase Pending</text>
+<text x="652" y="234" font-size="14" fill="#57606a">ownerReference: ReplicaSet</text>
+<rect x="940" y="150" width="270" height="158" rx="10" fill="#fbefff" stroke="#8250df" stroke-width="2"/>
+<text x="952" y="174" font-size="16" font-weight="700" fill="#24292f">Scheduler</text>
+<text x="952" y="196" font-size="14" fill="#57606a">filter: requests fit? selector?</text>
+<text x="952" y="215" font-size="14" fill="#57606a">taints? ports?</text>
+<text x="952" y="234" font-size="14" fill="#57606a">score: spread, image present,</text>
+<text x="952" y="253" font-size="14" fill="#57606a">balance</text>
+<text x="952" y="272" font-size="14" fill="#57606a">bind: nodeName</text>
+<text x="952" y="291" font-size="14" fill="#57606a">k3d-k8s-lab-server-0</text>
+<rect x="1240" y="150" width="270" height="101" rx="10" fill="#fbefff" stroke="#8250df" stroke-width="2"/>
+<text x="1252" y="174" font-size="16" font-weight="700" fill="#24292f">kubelet</text>
+<text x="1252" y="196" font-size="14" fill="#57606a">sees a new pod on its node</text>
+<text x="1252" y="215" font-size="14" fill="#57606a">syncPod: sandbox, volumes,</text>
+<text x="1252" y="234" font-size="14" fill="#57606a">containers, probes</text>
+<rect x="1240" y="378" width="270" height="120" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<text x="1252" y="402" font-size="16" font-weight="700" fill="#24292f">containerd: RunPodSandbox</text>
+<text x="1252" y="424" font-size="14" fill="#57606a">kubelet calls it over CRI (a gRPC</text>
+<text x="1252" y="443" font-size="14" fill="#57606a">socket)</text>
+<text x="1252" y="462" font-size="14" fill="#57606a">a pause container holds the pod&#x27;s</text>
+<text x="1252" y="481" font-size="14" fill="#57606a">network namespace</text>
+<rect x="940" y="378" width="270" height="120" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+<text x="952" y="402" font-size="16" font-weight="700" fill="#24292f">CNI: flannel</text>
+<text x="952" y="424" font-size="14" fill="#57606a">a veth pair: eth0 in the pod, the</text>
+<text x="952" y="443" font-size="14" fill="#57606a">other end on cni0</text>
+<text x="952" y="462" font-size="14" fill="#57606a">host-local IPAM: 10.42.0.197 from</text>
+<text x="952" y="481" font-size="14" fill="#57606a">10.42.0.0/24</text>
+<rect x="640" y="378" width="270" height="120" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+<text x="652" y="402" font-size="16" font-weight="700" fill="#24292f">istio-cni (ambient only)</text>
+<text x="652" y="424" font-size="14" fill="#57606a">iptables in the pod&#x27;s namespace:</text>
+<text x="652" y="443" font-size="14" fill="#57606a">15001, 15006, 15053</text>
+<text x="652" y="462" font-size="14" fill="#57606a">ztunnel opens its sockets inside</text>
+<text x="652" y="481" font-size="14" fill="#57606a">the pod</text>
+<rect x="340" y="378" width="270" height="101" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<text x="352" y="402" font-size="16" font-weight="700" fill="#24292f">Containers</text>
+<text x="352" y="424" font-size="14" fill="#57606a">image already present</text>
+<text x="352" y="443" font-size="14" fill="#57606a">create, start</text>
+<text x="352" y="462" font-size="14" fill="#57606a">cgroup limits: memory 64Mi</text>
+<rect x="40" y="378" width="270" height="120" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<text x="52" y="402" font-size="16" font-weight="700" fill="#24292f">Ready</text>
+<text x="52" y="424" font-size="14" fill="#57606a">readinessProbe GET / every 2 s</text>
+<text x="52" y="443" font-size="14" fill="#57606a">passes</text>
+<text x="52" y="462" font-size="14" fill="#57606a">condition Ready=True, about 1 s</text>
+<text x="52" y="481" font-size="14" fill="#57606a">after PodScheduled</text>
+<rect x="40" y="568" width="270" height="82" rx="10" fill="#fbefff" stroke="#8250df" stroke-width="2"/>
+<text x="52" y="592" font-size="16" font-weight="700" fill="#24292f">EndpointSlice controller</text>
+<text x="52" y="614" font-size="14" fill="#57606a">adds 10.42.0.197 ready=true to</text>
+<text x="52" y="633" font-size="14" fill="#57606a">Service hello</text>
+<rect x="470" y="568" width="700" height="63" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+<text x="482" y="592" font-size="16" font-weight="700" fill="#24292f">kube-proxy (on every node)</text>
+<text x="482" y="614" font-size="14" fill="#57606a">writes a new KUBE-SEP chain: DNAT to 10.42.0.197:80</text>
+<rect x="470" y="645" width="700" height="63" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<text x="482" y="669" font-size="16" font-weight="700" fill="#24292f">CoreDNS</text>
+<text x="482" y="691" font-size="14" fill="#57606a">hello.course-life.svc.cluster.local answers ClusterIP 10.43.76.137</text>
+<rect x="470" y="722" width="700" height="63" rx="10" fill="#fbefff" stroke="#8250df" stroke-width="2"/>
+<text x="482" y="746" font-size="16" font-weight="700" fill="#24292f">istiod</text>
+<text x="482" y="768" font-size="14" fill="#57606a">pushes the workload to every ztunnel and waypoint; matters only for mesh traffic</text>
+<rect x="40" y="835" width="470" height="120" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
+<text x="52" y="859" font-size="16" font-weight="700" fill="#24292f">When the scheduler says no</text>
+<text x="52" y="881" font-size="14" fill="#57606a">64Gi request: 0/1 nodes are available: 1 Insufficient memory</text>
+<text x="52" y="900" font-size="14" fill="#57606a">nodeSelector disktype=ssd: didn&#x27;t match Pod&#x27;s node</text>
+<text x="52" y="919" font-size="14" fill="#57606a">affinity/selector</text>
+<text x="52" y="938" font-size="14" fill="#57606a">preemption: no victims found, so the pod stays Pending</text>
+<rect x="545" y="835" width="470" height="120" rx="10" fill="#fff1e5" stroke="#bc4c00" stroke-width="2"/>
+<text x="557" y="859" font-size="16" font-weight="700" fill="#24292f">Requests against limits</text>
+<text x="557" y="881" font-size="14" fill="#57606a">the scheduler counts requests only: 30% of the node&#x27;s memory</text>
+<text x="557" y="900" font-size="14" fill="#57606a">limits add up to 106%: the node is overcommitted</text>
+<text x="557" y="919" font-size="14" fill="#57606a">if every pod used its limit at once, the OOM killer picks</text>
+<text x="557" y="938" font-size="14" fill="#57606a">victims</text>
+<rect x="1050" y="835" width="470" height="120" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<text x="1062" y="859" font-size="16" font-weight="700" fill="#24292f">Self-healing</text>
+<text x="1062" y="881" font-size="14" fill="#57606a">delete the pod: the ReplicaSet controller sees 0 of 1</text>
+<text x="1062" y="900" font-size="14" fill="#57606a">it creates a new Pod, and the chain from the third box runs</text>
+<text x="1062" y="919" font-size="14" fill="#57606a">again</text>
+<text x="1062" y="938" font-size="14" fill="#57606a">owner references let the garbage collector delete children</text>
+<polyline points="310,180 340,180" fill="none" stroke="#8250df" stroke-width="2" marker-end="url(#a8250df)"/>
+<polyline points="610,180 640,180" fill="none" stroke="#8250df" stroke-width="2" marker-end="url(#a8250df)"/>
+<polyline points="910,180 940,180" fill="none" stroke="#8250df" stroke-width="2" marker-end="url(#a8250df)"/>
+<polyline points="1210,180 1240,180" fill="none" stroke="#8250df" stroke-width="2" marker-end="url(#a8250df)"/>
+<polyline points="1375.0,251 1375.0,378" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
+<text x="1383.0" y="319.5" font-size="13" font-weight="600" fill="#24292f">CRI</text>
+<polyline points="1240,408 1210,408" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
+<polyline points="940,408 910,408" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
+<polyline points="640,408 610,408" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
+<polyline points="340,408 310,408" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
+<polyline points="175.0,498 175.0,568" fill="none" stroke="#8250df" stroke-width="2" marker-end="url(#a8250df)"/>
+<text x="183.0" y="538.0" font-size="13" font-weight="600" fill="#8250df">status Ready</text>
+<polyline points="310,598 400,598 400,596 470,596" fill="none" stroke="#8250df" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#a8250df)"/>
+<polyline points="310,598 400,598 400,673 470,673" fill="none" stroke="#8250df" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#a8250df)"/>
+<polyline points="310,598 400,598 400,750 470,750" fill="none" stroke="#8250df" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#a8250df)"/>
+<text x="40" y="52" font-size="26" font-weight="700" fill="#24292f">2. From an object to a ready pod</text>
+<text x="40" y="82" font-size="15" fill="#57606a">Each arrow is one component reacting to a change it watched. In the test run, all of it took about two seconds.</text>
+<text x="250" y="140" font-size="13" font-weight="700" fill="#8250df">deployment-controller</text>
+<text x="550" y="140" font-size="13" font-weight="700" fill="#8250df">replicaset-controller</text>
+<text x="850" y="140" font-size="13" font-weight="700" fill="#8250df">watch</text>
+<text x="1150" y="140" font-size="13" font-weight="700" fill="#8250df">bind</text>
+<text x="644" y="368" font-size="12" fill="#57606a">skipped outside ambient namespaces</text>
+<text x="316" y="590" font-size="13" font-weight="700" fill="#8250df">watch</text>
+</svg>

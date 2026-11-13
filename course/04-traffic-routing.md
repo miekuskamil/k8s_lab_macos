@@ -44,6 +44,11 @@ spec:
           weight: 10
 ```
 
+Two facts make this route work, and both surprise people:
+
+- Only a waypoint reads an HTTPRoute whose parent is a Service. ztunnel never reads HTTP, so it ignores the route. Remove the `istio.io/use-waypoint` label from `backend`, and the route stays in the cluster while traffic goes straight to the pods again, spread by pod count.
+- The waypoint picks the pod itself. It resolves `backend-v1` to its pod IPs and opens HBONE connections to them. kube-proxy's ClusterIP rules play no part in this hop, and neither does the Service's own random choice.
+
 ## Why this way
 
 **Why Gateway API and not Istio's VirtualService?** Istio has had its own routing API (VirtualService and DestinationRule) since 2017. Gateway API is the Kubernetes project's standard for the same job, supported by Istio, Cilium, Envoy Gateway and others. A route written against it works with other implementations. Istio still needs VirtualService for a few features Gateway API lacks, such as fault injection (module 5).
@@ -108,6 +113,14 @@ kubectl apply -f course/manifests/04-route-50-50.yaml
 ```
 
 **What you should see.** About 150 each: the lab got `v1 151` and `v2 149`. A minute later, Kiali's two edges from the `backend` service node carry about the same rate, close to 2.5 requests per second each from the load script. This is the step where you would watch v2's error rate and latency before going further.
+
+### Concept: how the waypoint picks a rule
+
+A route with several rules works like an `if ... else if ... else`. The waypoint takes the first rule whose `matches` fit the request and ignores the rest. A rule with no `matches` fits every request, so it serves as the `else`.
+
+Gateway API fixes the order, and it is not always the order you wrote. More specific matches win: an exact path beats a path prefix, and a longer prefix beats a shorter one. Matches with more header conditions come before those with fewer. So a catch-all rule written first does not swallow `/api/version`. Step 4 shows the order the waypoint really uses.
+
+Inside one rule, the `weight` values from steps 1 and 2 still apply. Matching picks the rule, then the weights pick the backend.
 
 **3. Route by path, not by chance.**
 

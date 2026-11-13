@@ -58,6 +58,19 @@ rules:
                                   "cluster.local/ns/observability/sa/kube-prometheus-stack-prometheus"]}}]
 ```
 
+## Concept: which caller each check sees
+
+A waypoint does not pretend to be the client. It ends the frontend's connection, reads the request, and opens a new connection to a backend pod with its own certificate, `sa/waypoint`. So the two checks see different callers for the same request:
+
+| Check | Runs in | Caller it sees for a frontend request |
+|---|---|---|
+| `backend-allow-frontend` (L7) | waypoint | `sa/frontend` |
+| `backend-only-from-waypoint` (L4) | ztunnel at the backend pod | `sa/waypoint` |
+
+That's why the L4 rule names the waypoint and not the frontend. A common mistake is to write the pod-level rule with `sa/frontend`: every request through the waypoint then fails at the backend's ztunnel, even though the frontend is the "right" caller.
+
+A second trap: putting HTTP fields (`methods`, `paths`) in a policy that ztunnel enforces, through `selector`. ztunnel never reads HTTP, so it fails safe: Istio turns such an ALLOW rule into a DENY, and ztunnel closes every matching connection. If a rule mentions methods or paths, attach it with `targetRefs` so a waypoint enforces it.
+
 ## Concept: how ALLOW rules combine
 
 1. If any `DENY` policy matches the request, the proxy denies it.

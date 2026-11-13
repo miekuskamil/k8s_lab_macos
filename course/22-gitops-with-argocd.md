@@ -90,6 +90,17 @@ The repository holds [podinfo](https://github.com/stefanprodan/podinfo), a tiny 
 
 **What you should see.** `Synced Healthy` within about 10 seconds, and one `podinfo` pod in `course-gitops-dev`. Open ArgoCD (http://localhost:8081, `admin` / `k8s-lab-admin`) and click `podinfo-dev`: a tree of the Service, the Deployment, its ReplicaSet and its pod.
 
+### Concept: how ArgoCD spots a difference
+
+ArgoCD learns about changes on the two sides of the comparison in different ways. That explains why step 3 reacts in seconds and step 4 in minutes.
+
+| Side | How ArgoCD learns about a change | Typical delay |
+|---|---|---|
+| Live state, in the cluster | The application-controller watches every resource it manages, like any Kubernetes controller. A change to one of them starts a new comparison. | seconds |
+| Desired state, in Git | Git sends nothing by itself. ArgoCD fetches it on each reconcile, every 3 minutes plus some jitter, or at once on a refresh or webhook. | up to about 3 minutes |
+
+The comparison is a diff of each rendered manifest against its live object, and it covers only the fields your manifests set. Fields that only the cluster fills in, such as `status`, `uid` or a default the API server added, don't count as drift. So `kubectl scale` makes the app `OutOfSync`, because `replicas` sits in Git, while a pod that restarts doesn't. A common mistake: you put `replicas` in Git and also attach an HPA. With self-heal on, ArgoCD and the HPA then keep undoing each other. Leave the field out of Git, or tell ArgoCD to skip it with `ignoreDifferences`.
+
 ### 3. Drift, with and without self-heal
 
 ```bash
@@ -196,6 +207,21 @@ kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.operationState.phase
 ```
 
 **What you should see.** The operation stays `Running` for a few minutes before your revert takes effect. The next step explains why, and how to skip the wait.
+
+### Concept: a sync is an operation with a fixed revision
+
+A sync isn't a loop that always applies the newest commit. ArgoCD writes an **operation** into the Application's `status.operationState`: the Git revision to apply, and how far it got. That revision stays fixed until the operation ends. When an automated sync fails, ArgoCD retries the same operation, with the same old commit, and waits longer before each attempt. Your revert lands in Git, but ArgoCD starts no new sync while the old operation still runs.
+
+```mermaid
+flowchart LR
+  bad["commit B<br/>(broken)"] --> op["operation:<br/>sync B"]
+  op -- "fails" --> retry["retry sync B<br/>after a longer pause"]
+  retry -- "fails" --> retry
+  fix["commit C<br/>(revert)"] -. "waits" .-> next["operation:<br/>sync C"]
+  retry -- "retries used up,<br/>or you terminate it" --> next
+```
+
+Plain Kubernetes has no such queue: a Deployment controller always works toward the newest spec. With ArgoCD, a failing operation stands between your fix and the cluster, and step 7 shows how to end it.
 
 ### 7. Guardrails, and the retry trap
 

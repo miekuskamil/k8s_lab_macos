@@ -1,0 +1,13 @@
+# Prometheus scrapes the request metrics the spanmetrics connector builds from spans.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: otel-collector
+  namespace: course-otel
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: opentelemetry-collector
+  podMetricsEndpoints:
+    - port: spanmetrics
+      interval: 15s

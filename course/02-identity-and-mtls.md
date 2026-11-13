@@ -30,7 +30,7 @@ sequenceDiagram
 
 ## Concept: HBONE, the tunnel between nodes
 
-ztunnel does not encrypt each pod's TCP stream separately. It opens one mTLS connection per destination node on port 15008 and carries every pod's streams inside it as HTTP/2 CONNECT requests. Istio calls this HBONE (HTTP-Based Overlay Network Environment).
+ztunnel does not run a new TLS handshake for every TCP connection the app opens. It sends each one as an HTTP/2 CONNECT request inside an mTLS connection on port 15008, and it reuses an open mTLS connection for new streams between the same two identities. A connection from `sa/frontend` never carries another service account's streams, because the client certificate names exactly one identity. Istio calls this HBONE (HTTP-Based Overlay Network Environment).
 
 ```mermaid
 flowchart LR
@@ -49,6 +49,19 @@ flowchart LR
 
 The application still speaks plain HTTP. ztunnel captures it on the way out, encrypts it, and decrypts it on the other side.
 
+The diagram draws two nodes to show the idea. This lab has one node, so the same ztunnel process plays both roles. It still builds the tunnel: the address it dials is the destination pod's IP on port 15008, where ztunnel listens inside that pod's network namespace (module 1 showed the three ports). Step 2 shows exactly this in the log.
+
+## Concept: who accepts plain text
+
+PeerAuthentication answers one question for the receiving side: "do I accept a connection that arrives without mTLS?" The destination's ztunnel enforces it, because a plain connection lands on its port 15006 inside the receiving pod, and an HBONE connection lands on 15008.
+
+| Mode | HBONE (mTLS) from a mesh pod | Plain TCP from outside the mesh |
+|---|---|---|
+| `PERMISSIVE` (Istio's default) | accepted | accepted |
+| `STRICT` (the lab's `shop`) | accepted | closed at once |
+
+PeerAuthentication says nothing about *which* identity may connect. Any mesh pod with a valid certificate passes STRICT. Choosing callers is authorization, the topic of module 3. A common mistake runs the other way too: people expect PERMISSIVE to mean "unencrypted". Between two mesh pods ztunnel always uses mTLS, whatever the mode. PERMISSIVE only keeps the door open for callers that have no mesh.
+
 ## Why this way
 
 **Why service accounts, not IPs or labels?** IPs change every time Kubernetes recreates a pod. Anyone who edits a Deployment sets its labels. A service account is the identity Kubernetes already authenticates. Tying the certificate to it means a policy that says "allow `sa/frontend`" stays true no matter how many frontend pods run or where.
@@ -57,7 +70,7 @@ The application still speaks plain HTTP. ztunnel captures it on the way out, enc
 
 **Why does ztunnel request certificates on behalf of pods?** In sidecar mode each sidecar requests its own. In ambient mode the pod has no proxy, so the node's ztunnel holds the certificates for every pod on its node. istiod checks with the API server that the pod really runs on that node, so one ztunnel never gets a certificate for a pod on another node.
 
-**Why one tunnel per node pair, not per pod?** Fewer TLS handshakes and fewer connections. HTTP/2 already knows how to carry many streams on one connection, so Istio did not need a new protocol.
+**Why streams inside a tunnel, not one handshake per connection?** Fewer TLS handshakes and fewer connections. HTTP/2 already knows how to carry many streams on one connection, so Istio did not need a new protocol.
 
 **Why STRICT in `shop`?** Istio's default is PERMISSIVE: accept both mTLS and plaintext, so you enroll workloads one at a time without breaking callers. Once every workload has joined, STRICT closes the plaintext door. The lab sets STRICT in `shop` with a `PeerAuthentication` in `manifests/istio/security.yaml`.
 

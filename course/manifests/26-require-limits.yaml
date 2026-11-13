@@ -1,0 +1,27 @@
+# Every container in course-policy needs a memory limit. Audit first: Kyverno reports
+# violations in PolicyReports but blocks nothing. Switch failureAction to Enforce later.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-memory-limits
+  annotations:
+    policies.kyverno.io/title: Require memory limits
+    policies.kyverno.io/description: A container without a memory limit can take a whole node's memory.
+spec:
+  background: true
+  rules:
+    - name: memory-limit
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [course-policy]
+      validate:
+        failureAction: Audit
+        message: "Every container needs resources.limits.memory."
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  limits:
+                    memory: "?*"

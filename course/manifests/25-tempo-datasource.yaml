@@ -1,0 +1,28 @@
+# Grafana's sidecar adds data sources from ConfigMaps labelled grafana_datasource=1
+# in Grafana's own namespace. This one points at Tempo and links it to Loki and Prometheus.
+# $$ escapes the variable: Grafana's provisioning would expand ${...} as an env var.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: course-tempo-datasource
+  namespace: observability
+  labels:
+    grafana_datasource: "1"
+data:
+  tempo.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        access: proxy
+        url: http://tempo.course-otel.svc.cluster.local:3200
+        jsonData:
+          serviceMap:
+            datasourceUid: prometheus
+          nodeGraph:
+            enabled: true
+          tracesToLogsV2:
+            datasourceUid: loki
+            customQuery: true
+            query: '{namespace="course-otel"} |= "$${__trace.traceId}"'

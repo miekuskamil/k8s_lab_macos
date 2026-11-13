@@ -31,6 +31,26 @@ flowchart LR
 
 The gateway ends (terminates) the browser's TLS session, reads the HTTP request, picks a route and opens a fresh mTLS connection into the mesh. The frontend never sees the edge certificate.
 
+## Concept: how a client decides to trust a certificate
+
+A certificate is a public key plus some names and dates, signed by an issuer. The private key stays in the Secret: the gateway sends only the certificate and proves it holds the key during the handshake. Before curl sends a single byte of HTTP, it runs three checks:
+
+1. Signature. A CA in curl's trust store signed the certificate. curl and browsers ship a list of public CAs, and the lab CA is not on it. That's why step 3 passes `--cacert /tmp/lab-ca.crt`.
+2. Name. The host name in the URL appears in the certificate's Subject Alternative Name (SAN) list. Modern clients ignore the older Common Name field.
+3. Dates. The current time lies between "not before" and "not after".
+
+```mermaid
+flowchart LR
+  root["lab root CA<br/>self-signed<br/>saved as /tmp/lab-ca.crt"]
+  leaf["certificate shop-tls<br/>SAN: shop.local, localhost<br/>valid 90 days"]
+  curl["curl --cacert"]
+  root -- "signs" --> leaf
+  curl -- "trusts" --> root
+  curl -- "checks" --> leaf
+```
+
+You rely on the same chain every day. Your kubeconfig holds `certificate-authority-data`, and kubectl checks the API server's certificate against it, exactly the way curl checks the gateway here.
+
 ## Concept: how cert-manager works
 
 cert-manager turns certificates into ordinary Kubernetes resources. You describe the certificate you want, and a controller makes it happen and keeps it fresh.

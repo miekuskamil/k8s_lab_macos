@@ -6,11 +6,12 @@
 
 AI features are the fastest-growing kind of traffic on Kubernetes right now, and most of them follow one pattern: a normal service gathers some data, sends it to a language model with a question, and returns the answer. This module adds exactly that to the shop: an **assistant** that answers questions about orders. The model runs in Ollama on your own machine. Then you use the mesh to do what platform teams do with AI traffic in production: give it identity, lock it down, watch it, and size its timeouts.
 
-Time: about 50 minutes. First of three AI modules.
+Time: about 50 minutes. First of three AI modules. Adds about 2.4 GB of memory on your Mac while the model answers.
 
 ## What you need
 
-- [Ollama](https://ollama.com) running on your machine with at least one model. `ollama list` shows your models. Small and fast works well here: `ollama pull qwen2.5:3b` (about 2 GB). Bigger models answer better but slower. This module was tested with `qwen2.5-14b-64k`, a 14-billion-parameter model, at about 13 tokens per second on an Apple silicon Mac.
+- [Ollama](https://ollama.com) running on your machine with `qwen2.5:3b`: `ollama pull qwen2.5:3b` (1.9 GB on disk). The module's numbers come from this model.
+- **Memory.** The lab uses about 5 GB. `qwen2.5:3b` adds about 2.4 GB while it answers: the whole test run peaked at 16.5 GB on a 24 GB Mac. A 14-billion-parameter model answers better, but needs about 9 GB, which doesn't fit next to the lab on 24 GB. Ollama unloads a model after 5 idle minutes and gives the memory back.
 - macOS with OrbStack or Docker Desktop. Both let containers reach your machine as `host.docker.internal`. On Linux, start Ollama with `OLLAMA_HOST=0.0.0.0` and give the name to your Docker host's IP; the test run for this module covered macOS only.
 
 ## Concept: what the assistant does
@@ -50,6 +51,20 @@ Put the numbers from this module next to the rest of the shop:
 
 **Tokens** are the units a model reads and writes: pieces of words, roughly four characters of English each. Every hosted model bills by them, input and output separately, and your own GPU spends its time on them. So token counts belong next to latency on every dashboard.
 
+## Concept: how a model writes an answer
+
+One model call goes through up to three phases. Knowing them lets you predict every timing in this module:
+
+| Phase | What happens | What drives its time |
+|---|---|---|
+| Load | Ollama reads the model file from disk into memory | Only on the first call, or after 5 idle minutes. It's the gap between 1.34 and 0.34 seconds in step 2 |
+| Prefill | The model reads the whole prompt in one pass | The number of input tokens, but each one is cheap |
+| Decode | The model writes the answer one token at a time. Every new token needs a full pass through the model | The number of output tokens, times the time per token |
+
+At about 66 tokens per second, the 20 output tokens in step 2 take about 0.3 seconds, most of the 0.34 seconds you'll measure. So the length of the answer decides how long the user waits, and that's why the assistant caps it with `max_tokens`. A timeout that fires during decode throws away every token written so far.
+
+The input side decides the bill. A model keeps no memory between calls: the assistant sends the order data and the question again with every request, so you pay for those input tokens every time, even for the same question.
+
 ## The bigger picture: AI gateways
 
 As AI traffic grew, a new kind of product appeared: the AI gateway. agentgateway, kgateway, Envoy AI Gateway and similar tools sit between apps and models and add things a classic proxy lacks: rate limits counted in tokens instead of requests, switching between model providers, caching repeated prompts, filtering what goes into a prompt and what comes out.
@@ -60,7 +75,7 @@ There's also a security story. Ollama, like many model servers, has **no authent
 
 ## Why this way
 
-**Why call Ollama on your Mac instead of running it in the cluster?** Your Mac's GPU runs a 14B model at usable speed. The lab's Kubernetes node is a Linux VM without GPU access, where only tiny models run, slowly. Module 18 runs one there anyway, to show the difference. Calling an outside model is also the most common real setup: a hosted API from OpenAI, Anthropic or Google, reached through egress.
+**Why call Ollama on your Mac instead of running it in the cluster?** Your Mac's GPU runs `qwen2.5:3b` at about 66 tokens per second, and a 14B model too, if you have the memory. The lab's Kubernetes node is a Linux VM without GPU access, where only tiny models run at a usable speed. Module 18 runs one there anyway, to show the difference. Calling an outside model is also the most common real setup: a hosted API from OpenAI, Anthropic or Google, reached through egress.
 
 **Why does the assistant need its own AuthorizationPolicy for the backend?** Module 3's policy allows only `sa/frontend`. The assistant runs as `sa/assistant`, a different identity, so the backend refuses it until you add a rule. That's deny-by-default working as intended: a new AI feature doesn't quietly gain access to your data.
 
@@ -76,12 +91,12 @@ There's also a security story. Ollama, like many model servers, has **no authent
 
 ```bash
 kubectl apply -f course/manifests/17-assistant.yaml
-kubectl -n shop set env deploy/assistant OLLAMA_MODEL="$(ollama list | awk 'NR==2 {print $1}')"
+kubectl -n shop set env deploy/assistant OLLAMA_MODEL=qwen2.5:3b
 kubectl -n shop rollout status deploy/assistant
 curl -s http://localhost:8080/api/model; echo
 ```
 
-**What you should see.** The model the assistant will use, the Ollama URL, and `max_tokens: 120`, a cap on answer length. The second command picks the first model from your `ollama list`. Choose another one by name if you like.
+**What you should see.** `{"model":"qwen2.5:3b","ollama":"http://host.docker.internal:11434","max_tokens":120}`: the model, the Ollama URL, and a cap on answer length. On a Mac with more memory, set any other model from `ollama list` by name. If you get `no healthy upstream` right after the rollout, wait a few seconds: the gateway hasn't received the new pod's address yet.
 
 ### 2. Ask a question, and meet a 403
 
@@ -97,7 +112,9 @@ kubectl apply -f course/manifests/17-allow-assistant.yaml
 ask "How many orders are there, and what was ordered?"
 ```
 
-**What you should see.** A real answer, plus `input_tokens`, `output_tokens` and `model_seconds`. In the test run for this module: 325 input tokens, 24 output tokens, 3.1 seconds. Ask a few more questions. The first one after a pause takes longer, while Ollama loads the model into memory.
+**What you should see.** A real answer, plus `input_tokens`, `output_tokens` and `model_seconds`. In the test run for this module: 197 input tokens, 20 output tokens, 1.34 seconds for the first call, while Ollama loaded the model into memory, and 0.34 seconds for the same question right after.
+
+Read the answers critically. Asked which item was ordered most, the model replied that "book" was, and added: "There is no item named verify in the order data". One order was in fact for `verify`. A small model contradicts its own context now and then; module 27 looks at that problem in depth.
 
 ### 3. See what the mesh knows about the model
 
@@ -139,10 +156,10 @@ The `trace_id` field in each answer points at the full trace. Open Jaeger (http:
 
 | Span | Time |
 |---|---|
-| ingress gateway to assistant | 947 ms |
-| assistant: `GET` the orders, through the waypoint, to the backend and Redis | 8 ms |
-| assistant: `chat qwen2.5-14b-64k:latest` | 924 ms |
-| waypoint: `host.docker.internal:11434` | 919 ms |
+| ingress gateway to assistant | 247 ms |
+| assistant: `GET` the orders, through the waypoint, to the backend and Redis | 5 ms |
+| assistant: `chat qwen2.5:3b` | 233 ms |
+| waypoint: `host.docker.internal:11434` | 230 ms |
 
 Click the `chat ...` span. Its tags follow the OpenTelemetry conventions for generative AI: `gen_ai.system`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`. Almost the whole request is the model. The rest of the shop barely registers.
 
@@ -152,7 +169,7 @@ Prometheus counts the tokens too. In Grafana, Explore, Prometheus:
 sum by (type) (assistant_llm_tokens_total)
 ```
 
-**What you should see.** Far more input than output: 1,278 against 57 in the test run. The order data in every prompt costs much more than the short answers.
+**What you should see.** Far more input than output: 1,152 against 55 in the test run. The order data in every prompt costs much more than the short answers.
 
 ### 6. Watch a timeout cut a model call off
 
@@ -161,7 +178,7 @@ kubectl apply -f course/manifests/17-llm-timeout.yaml
 ask "How many orders are there?"
 ```
 
-**What you should see.** `model call failed: Server error '504 Gateway Timeout'` after half a second. The route timeout on the waypoint fired before the model finished. On a Mac with Homebrew's Ollama, look at its log:
+**What you should see.** `model call failed: Server error '504 Gateway Timeout'` after a tenth of a second: the route allows 100 ms, and even a two-word answer took more than twice that in step 5. The route timeout on the waypoint fired before the model finished. On a Mac with Homebrew's Ollama, look at its log:
 
 ```bash
 tail -n 5 /opt/homebrew/var/log/ollama.log

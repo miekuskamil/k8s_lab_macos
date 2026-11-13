@@ -67,6 +67,17 @@ Open Grafana, Dashboards, and find **Shop SLO**.
 
 **What you should see.** The ConfigMap holds the whole dashboard as JSON: `templating` with the two variables, `panels` with their queries and thresholds. Grafana shows the dashboard within a few seconds. In the test run, the sidecar had loaded it before the next command ran. With no traffic, the stat panels read "no traffic".
 
+### Concept: what happens when a panel draws
+
+Grafana stores no metrics. Each time the dashboard loads or refreshes, Grafana works through these steps:
+
+1. It runs the variable queries. `$service` comes from `label_values(istio_requests_total{...}, destination_canonical_service)`, a question to Prometheus for every value of that label. `$window` is a fixed list, `1m,5m,30m`, so it needs no query.
+2. It replaces `$service` and `$window` in each panel's PromQL with plain text. `[$window]` becomes `[5m]` before Prometheus ever sees it.
+3. It sends each panel's query to Prometheus, with the dashboard's time range and a step, the gap between two points on the graph.
+4. It draws what comes back. A stat panel reduces each series to one number, here the last value (`lastNotNull`), then colours it with the thresholds. When the query returns nothing, the panel shows its `noValue` text, "no traffic".
+
+So switching `Window` only sends new queries; nothing changes in Prometheus. When a panel looks wrong, copy its query with the variables filled in (the panel's Inspect, Query view shows it) and run it in Prometheus: the numbers there are the truth. Grafana also offers a built-in variable, `$__rate_interval`, that picks a safe range for `rate()` from the scrape interval. This dashboard uses its own `$window` instead, so you choose the window and see the module 23 trade-off.
+
 ### 2. Feed it traffic, then break the backend
 
 ```bash
@@ -105,6 +116,17 @@ curl -s -u admin:$P -H 'Content-Type: application/json' -X POST localhost:3000/a
 The rule has the same condition as module 23's, but with one 5-minute window only. Open Alerting, Alert rules in Grafana and watch it for a few minutes. Then open Alerting, Contact points.
 
 **What you should see.** In the test run, the faulty pod from step 2 was gone for about four minutes when the rule appeared, and the rule went `pending`, then `firing` 20 seconds later, and stayed firing for about three minutes. It paged about a problem that was already fixed: the 5-minute window still held the old errors. Module 23's two-window rule doesn't do that. Contact points shows the default, `grafana-default-email`, sending to `example@email.com`, and the lab has no mail server. Grafana's log says `Sending alerts to local notifier` every minute: the alert fires into nothing. Out of the box, Grafana alerting looks like it works and reaches nobody.
+
+### Concept: how the trace-to-logs links work
+
+Jaeger and Loki know nothing about each other. Grafana builds both links from text templates in the data source settings, in `helm/kube-prometheus-stack-values.yaml`:
+
+| Direction | Setting | What it does |
+|---|---|---|
+| trace to logs | `tracesToLogsV2` on the Jaeger data source | fills the span's trace id into the Loki query `{namespace="shop"} \|= "<trace id>"`, over the span's time plus and minus 5 minutes |
+| logs to trace | `derivedFields` on the Loki data source | runs the regex `"trace_id":"(\w+)"` over each log line and turns the match into a link to the Jaeger data source |
+
+Both links depend on one thing outside Grafana: the backend writes the current trace id into every log line it prints during a request. An app that doesn't log its trace id gets a "Logs for this span" button that finds nothing.
 
 ### 5. From a trace to its logs
 

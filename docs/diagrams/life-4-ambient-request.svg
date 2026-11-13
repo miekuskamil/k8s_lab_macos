@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1560" height="1323" viewBox="0 0 1560 1323" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+<rect width="1560" height="1323" fill="#ffffff"/>
+<defs>
+<marker id="a0969da" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#0969da"/></marker>
+<marker id="a1a7f37" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#1a7f37"/></marker>
+<marker id="a24292f" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#24292f"/></marker>
+<marker id="a8250df" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#8250df"/></marker>
+</defs>
+<rect x="40" y="767" width="1000" height="184" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="52" y="791" font-size="16" font-weight="700" fill="#24292f">backend-v1 pod</text>
+<rect x="520" y="493" width="1000" height="184" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="532" y="517" font-size="16" font-weight="700" fill="#24292f">frontend pod 10.42.0.13 (sockets inside its own network namespace)</text>
+<rect x="40" y="150" width="440" height="63" rx="10" fill="#fff8c5" stroke="#9a6700" stroke-width="2"/>
+<text x="52" y="174" font-size="16" font-weight="700" fill="#24292f">Your Mac</text>
+<text x="52" y="196" font-size="14" fill="#57606a">curl localhost:8080/api/orders</text>
+<rect x="560" y="150" width="440" height="63" rx="10" fill="#fff8c5" stroke="#9a6700" stroke-width="2"/>
+<text x="572" y="174" font-size="16" font-weight="700" fill="#24292f">Docker port mapping</text>
+<text x="572" y="196" font-size="14" fill="#57606a">0.0.0.0:8080 to port 8080 of k3d-k8s-lab-serverlb</text>
+<rect x="1080" y="150" width="440" height="82" rx="10" fill="#fff8c5" stroke="#9a6700" stroke-width="2"/>
+<text x="1092" y="174" font-size="16" font-weight="700" fill="#24292f">k3d-k8s-lab-serverlb</text>
+<text x="1092" y="196" font-size="14" fill="#57606a">nginx in TCP stream mode</text>
+<text x="1092" y="215" font-size="14" fill="#57606a">upstream 8080_tcp: server k3d-k8s-lab-server-0:8080</text>
+<rect x="1080" y="302" width="440" height="101" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+<text x="1092" y="326" font-size="16" font-weight="700" fill="#24292f">PREROUTING: KUBE-SERVICES runs first</text>
+<text x="1092" y="348" font-size="14" fill="#57606a">-d 192.168.107.2 --dport 8080: kube-proxy&#x27;s load</text>
+<text x="1092" y="367" font-size="14" fill="#57606a">balancer IP rule</text>
+<text x="1092" y="386" font-size="14" fill="#57606a">KUBE-EXT-EIP2... marks the packet for masquerade</text>
+<rect x="560" y="302" width="440" height="82" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+<text x="572" y="326" font-size="16" font-weight="700" fill="#24292f">DNAT: kube-proxy</text>
+<text x="572" y="348" font-size="14" fill="#57606a">KUBE-SVC-EIP2... -&gt; KUBE-SEP-XZ3I...</text>
+<text x="572" y="367" font-size="14" fill="#57606a">destination becomes the gateway pod 10.42.0.88:8080</text>
+<rect x="40" y="302" width="440" height="101" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+<text x="52" y="326" font-size="16" font-weight="700" fill="#24292f">SNAT: KUBE-POSTROUTING</text>
+<text x="52" y="348" font-size="14" fill="#57606a">MASQUERADE --random-fully</text>
+<text x="52" y="367" font-size="14" fill="#57606a">source becomes 10.42.0.1 with a new port</text>
+<text x="52" y="386" font-size="14" fill="#57606a">the gateway sees the node, not the serverlb</text>
+<rect x="40" y="493" width="400" height="158" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+<text x="52" y="517" font-size="16" font-weight="700" fill="#24292f">Gateway pod: Envoy</text>
+<text x="52" y="539" font-size="14" fill="#57606a">ns shop-ingress, not in ambient mode</text>
+<text x="52" y="558" font-size="14" fill="#57606a">route http.8080: /* to frontend.shop:3000</text>
+<text x="52" y="577" font-size="14" fill="#57606a">endpoint envoy://connect_originate/10.42.0.13:3000</text>
+<text x="52" y="596" font-size="14" fill="#57606a">opens the HBONE tunnel itself, with its own</text>
+<text x="52" y="615" font-size="14" fill="#57606a">certificate</text>
+<text x="52" y="634" font-size="14" fill="#57606a">span: 18.5 ms, the whole request</text>
+<rect x="540" y="539" width="300" height="120" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+<text x="552" y="563" font-size="16" font-weight="700" fill="#24292f">ztunnel :15008 (inbound)</text>
+<text x="552" y="585" font-size="14" fill="#57606a">terminates mTLS, checks the caller&#x27;s</text>
+<text x="552" y="604" font-size="14" fill="#57606a">identity</text>
+<text x="552" y="623" font-size="14" fill="#57606a">L4 AuthorizationPolicy</text>
+<text x="552" y="642" font-size="14" fill="#57606a">hands plain bytes to :3000</text>
+<rect x="865" y="539" width="300" height="120" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<text x="877" y="563" font-size="16" font-weight="700" fill="#24292f">frontend app :3000</text>
+<text x="877" y="585" font-size="14" fill="#57606a">Node.js, no tracing of its own</text>
+<text x="877" y="604" font-size="14" fill="#57606a">about 11 ms of the 18.5</text>
+<text x="877" y="623" font-size="14" fill="#57606a">calls</text>
+<text x="877" y="642" font-size="14" fill="#57606a">http://backend.shop.svc.cluster.local:8000</text>
+<rect x="1190" y="539" width="310" height="120" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+<text x="1202" y="563" font-size="16" font-weight="700" fill="#24292f">ztunnel :15001 (outbound)</text>
+<text x="1202" y="585" font-size="14" fill="#57606a">istio-cni&#x27;s REDIRECT caught the connect</text>
+<text x="1202" y="604" font-size="14" fill="#57606a">DNS through :15053</text>
+<text x="1202" y="623" font-size="14" fill="#57606a">istiod says: the backend Service has a</text>
+<text x="1202" y="642" font-size="14" fill="#57606a">waypoint</text>
+<rect x="1100" y="767" width="420" height="158" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+<text x="1112" y="791" font-size="16" font-weight="700" fill="#24292f">Waypoint pod: Envoy, sa/waypoint</text>
+<text x="1112" y="813" font-size="14" fill="#57606a">reads the HTTP request: GET /api/orders</text>
+<text x="1112" y="832" font-size="14" fill="#57606a">AuthorizationPolicy backend-allow-frontend:</text>
+<text x="1112" y="851" font-size="14" fill="#57606a">sa/frontend only, GET and POST, /api/*</text>
+<text x="1112" y="870" font-size="14" fill="#57606a">HTTPRoute picks backend-v1; timeouts and retries</text>
+<text x="1112" y="889" font-size="14" fill="#57606a">metrics and a span: 7.4 ms</text>
+<text x="1112" y="908" font-size="14" fill="#57606a">refused: 403 RBAC: access denied, from here</text>
+<rect x="60" y="813" width="300" height="120" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+<text x="72" y="837" font-size="16" font-weight="700" fill="#24292f">ztunnel :15001 (outbound)</text>
+<text x="72" y="859" font-size="14" fill="#57606a">redis has no waypoint</text>
+<text x="72" y="878" font-size="14" fill="#57606a">so ztunnel tunnels straight to its</text>
+<text x="72" y="897" font-size="14" fill="#57606a">ztunnel</text>
+<text x="72" y="916" font-size="14" fill="#57606a">Layer 4 only</text>
+<rect x="385" y="813" width="300" height="82" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<text x="397" y="837" font-size="16" font-weight="700" fill="#24292f">backend app :8000</text>
+<text x="397" y="859" font-size="14" fill="#57606a">span POST /api/orders: 5.5 ms</text>
+<text x="397" y="878" font-size="14" fill="#57606a">writes the order to Redis</text>
+<rect x="710" y="813" width="290" height="82" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+<text x="722" y="837" font-size="16" font-weight="700" fill="#24292f">ztunnel :15008 (inbound)</text>
+<text x="722" y="859" font-size="14" fill="#57606a">checks sa/waypoint</text>
+<text x="722" y="878" font-size="14" fill="#57606a">hands bytes to :8000</text>
+<rect x="40" y="1041" width="400" height="82" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<text x="52" y="1065" font-size="16" font-weight="700" fill="#24292f">redis pod</text>
+<text x="52" y="1087" font-size="14" fill="#57606a">its ztunnel :15008 checks sa/backend</text>
+<text x="52" y="1106" font-size="14" fill="#57606a">INCRBY 0.5 ms, then HSET LPUSH LTRIM 0.3 ms</text>
+<rect x="1100" y="1041" width="420" height="120" rx="10" fill="#fbefff" stroke="#8250df" stroke-width="2"/>
+<text x="1112" y="1065" font-size="16" font-weight="700" fill="#24292f">istiod</text>
+<text x="1112" y="1087" font-size="14" fill="#57606a">sends routes, policies and endpoints over xDS to every</text>
+<text x="1112" y="1106" font-size="14" fill="#57606a">ztunnel, waypoint and gateway</text>
+<text x="1112" y="1125" font-size="14" fill="#57606a">signs SPIFFE certificates: 24 h leaves, a 10 year</text>
+<text x="1112" y="1144" font-size="14" fill="#57606a">root; ztunnel renews them on its own</text>
+<rect x="480" y="1041" width="580" height="120" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
+<text x="492" y="1065" font-size="16" font-weight="700" fill="#24292f">The four identities</text>
+<text x="492" y="1087" font-size="14" fill="#57606a">1 ns/shop-ingress/sa/shop-gateway-istio -&gt; ns/shop/sa/frontend</text>
+<text x="492" y="1106" font-size="14" fill="#57606a">2 ns/shop/sa/frontend -&gt; ns/shop/sa/waypoint</text>
+<text x="492" y="1125" font-size="14" fill="#57606a">3 ns/shop/sa/waypoint -&gt; ns/shop/sa/backend</text>
+<text x="492" y="1144" font-size="14" fill="#57606a">4 ns/shop/sa/backend -&gt; ns/shop/sa/redis</text>
+<rect x="40" y="1201" width="1480" height="82" rx="10" fill="#ffffff" stroke="#8c959f" stroke-width="2"/>
+<text x="52" y="1225" font-size="16" font-weight="700" fill="#24292f">The way back</text>
+<text x="52" y="1247" font-size="14" fill="#57606a">Each HBONE tunnel is a two-way stream: the response returns through the same tunnels and identities. Then conntrack undoes the SNAT and the DNAT, nginx and Docker pass the bytes on, and curl prints</text>
+<text x="52" y="1266" font-size="14" fill="#57606a">the JSON. Nothing decides anything on the way back: every check happened on the way in.</text>
+<polyline points="480,180 560,180" fill="none" stroke="#1a7f37" stroke-width="2" marker-end="url(#a1a7f37)"/>
+<polyline points="1000,180 1080,180" fill="none" stroke="#1a7f37" stroke-width="2" marker-end="url(#a1a7f37)"/>
+<polyline points="1300.0,232 1300.0,302" fill="none" stroke="#1a7f37" stroke-width="2" marker-end="url(#a1a7f37)"/>
+<polyline points="1080,332 1000,332" fill="none" stroke="#1a7f37" stroke-width="2" marker-end="url(#a1a7f37)"/>
+<polyline points="560,332 480,332" fill="none" stroke="#1a7f37" stroke-width="2" marker-end="url(#a1a7f37)"/>
+<polyline points="240,403 240,493" fill="none" stroke="#1a7f37" stroke-width="2" marker-end="url(#a1a7f37)"/>
+<text x="248" y="453.0" font-size="13" font-weight="600" fill="#1a7f37">plain TCP</text>
+<polyline points="440,583 540,579" fill="none" stroke="#0969da" stroke-width="2" marker-end="url(#a0969da)"/>
+<polyline points="840,579 865,579" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
+<polyline points="1165,579 1190,579" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
+<polyline points="1340,659 1340,767" fill="none" stroke="#0969da" stroke-width="2" marker-end="url(#a0969da)"/>
+<polyline points="1100,857 1000,853" fill="none" stroke="#0969da" stroke-width="2" marker-end="url(#a0969da)"/>
+<polyline points="710,853 685,853" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
+<polyline points="385,853 360,853" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
+<polyline points="180,933 180,1041" fill="none" stroke="#0969da" stroke-width="2" marker-end="url(#a0969da)"/>
+<text x="188" y="991.0" font-size="13" font-weight="600" fill="#0969da">HBONE 4</text>
+<polyline points="1310,1041 1310,925" fill="none" stroke="#8250df" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#a8250df)"/>
+<text x="1318" y="987.0" font-size="13" font-weight="600" fill="#8250df">xDS</text>
+<text x="40" y="52" font-size="26" font-weight="700" fill="#24292f">4. Scenario B: curl to Redis through the ambient mesh</text>
+<text x="40" y="82" font-size="15" fill="#57606a">One DNAT and one SNAT bring the request to the gateway; then four HBONE tunnels, each with two verified identities.</text>
+<text x="560" y="288" font-size="13" font-weight="700" fill="#1a7f37">conntrack remembers both rewrites; svclb&#x27;s host port rule comes later and never matches</text>
+<text x="446" y="573" font-size="13" font-weight="700" fill="#0969da">HBONE 1</text>
+<text x="1082" y="707.0" font-size="13" font-weight="700" fill="#0969da">HBONE 2</text>
+<text x="1082" y="725.0" font-size="13" fill="#0969da">to the Service IP 10.43.239.201:8000</text>
+<text x="1024" y="879" font-size="13" font-weight="700" fill="#0969da">HBONE 3</text>
+</svg>

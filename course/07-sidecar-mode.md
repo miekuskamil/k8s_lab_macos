@@ -58,6 +58,27 @@ sequenceDiagram
 
 You know mutating admission webhooks from CKA. This is one: istiod rewrites every pod spec in a labelled namespace before the API server stores it.
 
+A common mistake follows from this. You label a namespace `istio-injection: enabled` and expect its running pods to join the mesh. They don't. The webhook only sees pods at creation, so nothing changes until you run `kubectl rollout restart`.
+
+## Concept: two proxies on every request
+
+After injection, the pod's network namespace holds iptables rules that `istio-init` wrote. You know iptables rules from kube-proxy, but these live inside the pod, not on the node. They send every outgoing TCP connection to Envoy on port 15001 and every incoming one to Envoy on port 15006. Envoy runs as user ID 1337, and the rules skip that user, so Envoy's own connections leave the pod instead of looping back into it.
+
+So a call from `client` to `httpbin` passes two Envoys, one in each pod:
+
+```mermaid
+flowchart LR
+  subgraph cpod["pod client"]
+    c["curl"] -- "iptables, port 15001" --> ce["istio-proxy<br/>routing, retries, faults,<br/>starts mTLS"]
+  end
+  subgraph hpod["pod httpbin"]
+    he["istio-proxy, port 15006<br/>ends mTLS, checks policy,<br/>adds the XFCC header"] -- "localhost" --> h["httpbin"]
+  end
+  ce == "mTLS" ==> he
+```
+
+The left Envoy works for the caller, the right one for the receiver. That split explains most of this module. The client's sidecar applies retries and faults (steps 5 and 6). The server's sidecar decides about mTLS and tells the app who called (steps 3 and 4). Both report metrics, so you get two numbers for one request (Investigate question 3). Ambient keeps the same two roles but moves them out of the pod: the caller's ztunnel and the receiver's ztunnel share the L4 work, and the waypoint takes the receiver's L7 work.
+
 ## Why this way, and why ambient exists
 
 | | Sidecar | Ambient |

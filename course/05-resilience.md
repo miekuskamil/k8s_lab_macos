@@ -136,6 +136,23 @@ In the access log, the response flags show what the waypoint did: `DI` (delay in
 "GET /api/orders HTTP/1.1" 503 DI,FI ...
 ```
 
+### Concept: what the connection pool numbers mean
+
+The scenario file sets a few limits under `connectionPool`. Two of them do the work in this step:
+
+| Field | Value | Meaning |
+|---|---|---|
+| `tcp.maxConnections` | 5 | the waypoint opens at most 5 connections to the host |
+| `http.http1MaxPendingRequests` | 5 | at most 5 requests wait for a free connection |
+
+The backend speaks HTTP/1.1, and Envoy sends one HTTP/1.1 request at a time on a connection. So at most 5 requests run and 5 wait. Request number 11 gets `503 UO` at once. With 50 callers and a backend that takes 300 ms, you should predict that most requests fail and only a small share fits through.
+
+Three details catch people out:
+
+- The limits live inside each waypoint pod. Envoy counts its own connections and has no idea what other replicas do. Scale the waypoint to two pods, and the backend sees up to twice the traffic. Step 4 shows the same weakness for rate limits.
+- A DestinationRule applies to the host the route picked, not to the host the caller dialled. The baseline route sends traffic to `backend-v1` and `backend-v2`, so the scenario file repeats the same limits for `backend`, `backend-v1` and `backend-v2`. A rule only for `backend` would never fire here.
+- The breaker does not "open" for a while, as in the classic pattern. Envoy checks the counters for every request. The moment a slot frees up, the next request goes through.
+
 ### 3. Circuit breaking
 
 First without a breaker, to see the baseline:
