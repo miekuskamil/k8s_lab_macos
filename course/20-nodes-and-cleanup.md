@@ -85,7 +85,7 @@ Sidecar mode works too, but every moved pod starts a new Envoy.
 
 ```bash
 k3d node create agent --cluster k8s-lab --role agent --wait
-k3d image import k8s-lab/backend:1.0.3 k8s-lab/frontend:1.0.3 k8s-lab/assistant:1.0.3 -c k8s-lab
+k3d image import k8s-lab/backend:1.0.3 k8s-lab/frontend:1.0.3 k8s-lab/assistant:1.1.0 -c k8s-lab
 kubectl get nodes
 kubectl -n istio-system get pods -o wide | grep -E "ztunnel|cni"
 ```

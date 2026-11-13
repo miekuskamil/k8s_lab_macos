@@ -23,6 +23,7 @@ CLUSTER_NAME="${CLUSTER_NAME:-k8s-lab}"
 K3S_IMAGE="${K3S_IMAGE:-rancher/k3s:v1.31.5-k3s1}"
 KUBE_CONTEXT="k3d-${CLUSTER_NAME}"
 IMAGE_TAG="1.0.3"
+ASSISTANT_TAG="1.1.0"   # 1.1.0 added PROVIDER=anthropic, see docs/ai-models.md
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -129,10 +130,10 @@ build_images() {
     ok "built k8s-lab/backend:${IMAGE_TAG}"
     docker build --quiet -t "k8s-lab/frontend:${IMAGE_TAG}" "$ROOT_DIR/apps/frontend" >/dev/null
     ok "built k8s-lab/frontend:${IMAGE_TAG}"
-    docker build --quiet -t "k8s-lab/assistant:${IMAGE_TAG}" "$ROOT_DIR/apps/assistant" >/dev/null
-    ok "built k8s-lab/assistant:${IMAGE_TAG} (used by the AI lessons)"
+    docker build --quiet -t "k8s-lab/assistant:${ASSISTANT_TAG}" "$ROOT_DIR/apps/assistant" >/dev/null
+    ok "built k8s-lab/assistant:${ASSISTANT_TAG} (used by the AI lessons)"
   fi
-  k3d image import "k8s-lab/backend:${IMAGE_TAG}" "k8s-lab/frontend:${IMAGE_TAG}" "k8s-lab/assistant:${IMAGE_TAG}" -c "$CLUSTER_NAME" >/dev/null
+  k3d image import "k8s-lab/backend:${IMAGE_TAG}" "k8s-lab/frontend:${IMAGE_TAG}" "k8s-lab/assistant:${ASSISTANT_TAG}" -c "$CLUSTER_NAME" >/dev/null
   ok "images imported into k3d cluster $CLUSTER_NAME, no registry needed"
 }
 

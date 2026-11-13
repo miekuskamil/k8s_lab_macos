@@ -14,6 +14,7 @@ import re
 import time
 from pathlib import Path
 
+import anthropic
 import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -22,6 +23,12 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://host.docker.internal:11434")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
 EMBED_MODEL = os.getenv("EMBED_MODEL", "nomic-embed-text")
 CHAT_MODEL = os.getenv("CHAT_MODEL", "qwen2.5:3b")
+# PROVIDER picks who writes the answers: "ollama" or "anthropic" (Claude). Search always
+# uses EMBED_MODEL in Ollama, because Claude has no embedding model.
+PROVIDER = os.getenv("PROVIDER", "ollama")
+if PROVIDER == "anthropic":
+    CHAT_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-opus-5-5")
+claude = anthropic.Anthropic(timeout=300, max_retries=1) if PROVIDER == "anthropic" else None
 COLLECTION = os.getenv("COLLECTION", "course")
 DOCS_DIR = Path(os.getenv("DOCS_DIR", "/docs"))
 # Files to leave out of the index, comma-separated. Module 27 quotes its own test
@@ -134,6 +141,23 @@ def search_only(q: str, k: int = TOP_K):
     return {"question": q, "results": [{k2: r[k2] for k2 in ("score", "file", "heading")} for r in search(q, k)]}
 
 
+def ask_claude(messages: list[dict]) -> tuple[str, int, int]:
+    """Same prompt as the Ollama path: the system message moves to Claude's system field."""
+    response = claude.beta.messages.create(
+        model=CHAT_MODEL,
+        max_tokens=4000,
+        system=messages[0]["content"],
+        messages=messages[1:],
+        output_config={"effort": "low"},
+        betas=["server-side-fallback-2026-07-01"],
+        fallbacks="default",
+    )
+    if response.stop_reason == "refusal":
+        return "The model declined to answer this question.", response.usage.input_tokens, response.usage.output_tokens
+    text = "".join(block.text for block in response.content if block.type == "text")
+    return text, response.usage.input_tokens, response.usage.output_tokens
+
+
 @app.post("/ask")
 def ask(body: Question):
     started = time.monotonic()
@@ -148,18 +172,22 @@ def ask(body: Question):
         },
         {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {body.question}"},
     ]
-    r = http.post(
-        f"{OLLAMA_URL}/api/chat",
-        json={"model": CHAT_MODEL, "messages": messages, "stream": False, "options": {"num_predict": 250, "temperature": 0}},
-    )
-    r.raise_for_status()
-    out = r.json()
+    if PROVIDER == "anthropic":
+        answer, input_tokens, output_tokens = ask_claude(messages)
+    else:
+        r = http.post(
+            f"{OLLAMA_URL}/api/chat",
+            json={"model": CHAT_MODEL, "messages": messages, "stream": False, "options": {"num_predict": 250, "temperature": 0}},
+        )
+        r.raise_for_status()
+        out = r.json()
+        answer, input_tokens, output_tokens = out["message"]["content"], out.get("prompt_eval_count"), out.get("eval_count")
     return {
-        "answer": out["message"]["content"],
+        "answer": answer,
         "sources": [{"n": i + 1, "score": h["score"], "file": h["file"], "heading": h["heading"]} for i, h in enumerate(hits)],
         "chat_model": CHAT_MODEL,
-        "input_tokens": out.get("prompt_eval_count"),
-        "output_tokens": out.get("eval_count"),
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
         "retrieve_seconds": round(retrieve_seconds, 2),
         "total_seconds": round(time.monotonic() - started, 1),
     }

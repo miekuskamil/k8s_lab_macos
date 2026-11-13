@@ -15,6 +15,7 @@ Time: about 45 minutes. The module adds about 200 MB to the cluster. The two mod
 
 ## What you need
 
+- Another Ollama model, or Claude through the Anthropic API, also works. [Choosing the model for the AI modules](../docs/ai-models.md) shows how to switch.
 - Ollama on your Mac, with two models:
 
   ```bash
@@ -104,8 +105,8 @@ kubectl -n course-rag get pods,pvc
 
 ```bash
 less apps/rag/main.py
-docker build -t k8s-lab/rag:1.1.0 apps/rag
-k3d image import k8s-lab/rag:1.1.0 -c k8s-lab
+docker build -t k8s-lab/rag:1.2.0 apps/rag
+k3d image import k8s-lab/rag:1.2.0 -c k8s-lab
 ```
 
 **What you should see.** Docker built a 274 MB image in about 10 seconds, and then k3d printed `Successfully imported 1 image(s)`. The lab has no registry. Instead, `k3d image import` copies the image straight into the node, like the shop's images. Read `main.py` top to bottom. It defines the functions `chunks_of`, `embed` and `search`, and then the `/ingest`, `/search` and `/ask` endpoints.

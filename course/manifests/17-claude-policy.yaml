@@ -1,0 +1,21 @@
+# Only the assistant may send messages to Claude. The API key costs money on every
+# call, so no other workload in the mesh gets to spend it, even with a stolen key.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: anthropic-assistant-only
+  namespace: shop
+spec:
+  targetRefs:
+    - group: networking.istio.io
+      kind: ServiceEntry
+      name: anthropic-api
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/shop/sa/assistant"]
+      to:
+        - operation:
+            methods: ["POST"]
+            paths: ["/v1/messages"]   # the query string, such as ?beta=true, is not part of the match

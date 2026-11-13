@@ -38,7 +38,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: assistant
-          image: k8s-lab/assistant:1.0.3
+          image: k8s-lab/assistant:1.1.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

@@ -12,6 +12,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 M="$ROOT/course/manifests"
 K=(kubectl --context "${KUBE_CONTEXT:-k3d-k8s-lab}")
 I=(istioctl --context "${KUBE_CONTEXT:-k3d-k8s-lab}")
+# Where the AI modules find Ollama. On WSL with Ollama for Windows, or any other
+# machine, set LAB_OLLAMA_URL, for example http://$(hostname).local:11434.
+OLLAMA="${LAB_OLLAMA_URL:-http://localhost:11434}"
 BASE="${BASE_URL:-http://localhost:8080}"
 PASS=0
 FAIL=0
@@ -407,9 +410,9 @@ module_17() {
   section "17: an LLM as a mesh service"
   baseline
   local model
-  model="${LAB_OLLAMA_MODEL:-$(curl -s -m 5 http://localhost:11434/api/tags | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; c=[x["name"] for x in m if "embed" not in x["name"]]; print(c[0] if c else "")' 2>/dev/null)}"
+  model="${LAB_OLLAMA_MODEL:-$(curl -s -m 5 $OLLAMA/api/tags | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; c=[x["name"] for x in m if "embed" not in x["name"]]; print(c[0] if c else "")' 2>/dev/null)}"
   if [[ -z "$model" ]]; then
-    fail "Ollama runs on this machine with at least one model" "no answer from http://localhost:11434/api/tags"
+    fail "Ollama runs on this machine with at least one model" "no answer from $OLLAMA/api/tags"
     return
   fi
   ask() { curl -s -m 180 -X POST "$BASE/api/ask" -H 'Content-Type: application/json' -d "{\"question\":\"$1\"}" 2>/dev/null; }
@@ -474,8 +477,8 @@ module_19() {
   section "19: AI agents and their tools"
   baseline
   local model H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kagent)
-  model="${LAB_OLLAMA_MODEL:-$(curl -s -m 5 http://localhost:11434/api/tags | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; c=[x["name"] for x in m if "embed" not in x["name"]]; print(c[0] if c else "")' 2>/dev/null)}"
-  if [[ -z "$model" ]]; then fail "Ollama runs on this machine with at least one model" "no answer from http://localhost:11434/api/tags"; return; fi
+  model="${LAB_OLLAMA_MODEL:-$(curl -s -m 5 $OLLAMA/api/tags | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; c=[x["name"] for x in m if "embed" not in x["name"]]; print(c[0] if c else "")' 2>/dev/null)}"
+  if [[ -z "$model" ]]; then fail "Ollama runs on this machine with at least one model" "no answer from $OLLAMA/api/tags"; return; fi
   "${H[@]}" upgrade --install kagent-crds oci://ghcr.io/kagent-dev/kagent/helm/kagent-crds --version 0.10.6 --create-namespace --wait >/dev/null 2>&1
   "${H[@]}" upgrade --install kagent oci://ghcr.io/kagent-dev/kagent/helm/kagent --version 0.10.6 \
     -f "$M/19-kagent-values.yaml" --set providers.ollama.model="$model" --wait --timeout 10m >/dev/null 2>&1
@@ -523,7 +526,7 @@ module_20() {
   local node=k3d-agent-0 log="${TMPDIR:-/tmp}/k8s-lab-drain.log"
   k3d node create agent --cluster "${CLUSTER_NAME:-k8s-lab}" --role agent --wait >/dev/null 2>&1
   "${K[@]}" wait --for=condition=Ready "node/$node" --timeout=120s >/dev/null 2>&1
-  k3d image import "k8s-lab/backend:1.0.3" "k8s-lab/frontend:1.0.3" "k8s-lab/assistant:1.0.3" -c "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
+  k3d image import "k8s-lab/backend:1.0.3" "k8s-lab/frontend:1.0.3" "k8s-lab/assistant:1.1.0" -c "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
   "${K[@]}" -n istio-system rollout status ds/ztunnel --timeout=180s >/dev/null 2>&1
   expect "a second node joins, and ztunnel starts on it" "$("${K[@]}" -n istio-system get pods -l app=ztunnel --field-selector spec.nodeName=$node -o jsonpath='{.items[0].status.phase}')" '^Running$'
   "${K[@]}" apply -f "$M/20-ops-app.yaml" -f "$M/03-course-client.yaml" >/dev/null
@@ -818,12 +821,12 @@ module_27() {
   section "27: RAG on Kubernetes"
   baseline
   local H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}") pf
-  expect "Ollama has the two models" "$(ollama list 2>/dev/null | grep -cE '^(nomic-embed-text|qwen2\.5:3b)')" '^2$'
+  expect "Ollama has the two models" "$(curl -s -m 5 "$OLLAMA/api/tags" | python3 -c 'import json,sys; print("\n".join(m["name"] for m in json.load(sys.stdin)["models"]))' 2>/dev/null | grep -cE '^(nomic-embed-text|qwen2\.5:3b)')" '^2$'
   "${H[@]}" repo add qdrant https://qdrant.github.io/qdrant-helm >/dev/null 2>&1
   "${H[@]}" repo update qdrant >/dev/null 2>&1
   expect "Qdrant installs with a volume" "$("${H[@]}" install qdrant qdrant/qdrant --version 1.20.0 -n course-rag --create-namespace -f "$M/27-qdrant-values.yaml" --wait --timeout 5m 2>&1 | grep -c 'STATUS: deployed') $("${K[@]}" -n course-rag get pvc -o jsonpath='{.items[0].status.phase}')" '^1 Bound$'
-  docker build -q -t k8s-lab/rag:1.1.0 "$ROOT/apps/rag" >/dev/null 2>&1
-  k3d image import k8s-lab/rag:1.1.0 -c "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
+  docker build -q -t k8s-lab/rag:1.2.0 "$ROOT/apps/rag" >/dev/null 2>&1
+  k3d image import k8s-lab/rag:1.2.0 -c "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
   "${K[@]}" -n course-rag create configmap course-docs --from-file="$ROOT/course/" >/dev/null
   "${K[@]}" apply -f "$M/27-rag-app.yaml" >/dev/null
   expect "the rag app starts" "$("${K[@]}" -n course-rag rollout status deploy/rag --timeout=120s 2>&1 | grep -c 'successfully rolled out')" '^1$'

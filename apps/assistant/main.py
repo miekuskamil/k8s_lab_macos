@@ -1,7 +1,9 @@
 """Shop assistant for the k8s_lab_macos AI lessons.
 
 Answers questions about the shop's orders. It fetches recent orders from the
-backend, then asks a language model served by Ollama. Every call to the model
+backend, then asks a language model. PROVIDER picks where the model runs:
+"ollama" (the default, any model Ollama serves) or "anthropic" (Claude, through
+the official Anthropic SDK and an API key in ANTHROPIC_API_KEY). Every call to the model
 gets an OpenTelemetry span with the GenAI attributes (model, input and output
 tokens), and Prometheus metrics count tokens and model latency.
 """
@@ -13,6 +15,7 @@ import socket
 import sys
 import time
 
+import anthropic
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -29,9 +32,15 @@ from pydantic import BaseModel, Field
 from starlette.responses import Response
 
 POD_NAME = os.getenv("HOSTNAME", socket.gethostname())
+PROVIDER = os.getenv("PROVIDER", "ollama")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://host.docker.internal:11434").rstrip("/")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 MAX_TOKENS = int(os.getenv("MAX_TOKENS", "120"))
+# Claude thinks before it answers, and thinking counts against max_tokens, so it gets
+# a bigger budget than the small local model. The system prompt keeps answers short.
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-opus-5-5")
+ANTHROPIC_MAX_TOKENS = int(os.getenv("ANTHROPIC_MAX_TOKENS", "4000"))
+ANTHROPIC_EFFORT = os.getenv("ANTHROPIC_EFFORT", "low")
 LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "120"))
 BACKEND_URL = os.getenv("BACKEND_URL", "http://backend.shop.svc.cluster.local:8000").rstrip("/")
 UNTRACED_PATHS = ("/healthz", "/readyz", "/metrics")
@@ -63,6 +72,7 @@ handler.setFormatter(JsonFormatter())
 logging.basicConfig(level=logging.INFO, handlers=[handler])
 logging.getLogger("uvicorn.access").disabled = True
 logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpx2").setLevel(logging.WARNING)  # the Anthropic SDK's HTTP client
 log = logging.getLogger("assistant")
 
 provider = TracerProvider(resource=Resource.create({"service.name": "assistant", "service.instance.id": POD_NAME}))
@@ -75,6 +85,10 @@ TOKENS = Counter("assistant_llm_tokens_total", "Tokens processed by the model", 
 LLM_SECONDS = Histogram("assistant_llm_request_seconds", "Time the model took to answer", ["model"],
                         buckets=(0.5, 1, 2, 5, 10, 20, 30, 60, 120))
 ASKS = Counter("assistant_requests_total", "Questions answered, by outcome", ["outcome"])
+
+# The SDK reads ANTHROPIC_API_KEY, and ANTHROPIC_BASE_URL when the mesh originates TLS.
+claude = anthropic.AsyncAnthropic(timeout=LLM_TIMEOUT_S, max_retries=1) if PROVIDER == "anthropic" else None
+MODEL = ANTHROPIC_MODEL if PROVIDER == "anthropic" else OLLAMA_MODEL
 
 app = FastAPI(title="shop-assistant")
 
@@ -100,6 +114,9 @@ async def metrics() -> Response:
 
 @app.get("/api/model")
 async def model() -> dict:
+    if PROVIDER == "anthropic":
+        return {"provider": "anthropic", "model": ANTHROPIC_MODEL, "url": str(claude.base_url),
+                "max_tokens": ANTHROPIC_MAX_TOKENS, "effort": ANTHROPIC_EFFORT}
     return {"model": OLLAMA_MODEL, "ollama": OLLAMA_URL, "max_tokens": MAX_TOKENS}
 
 
@@ -109,7 +126,50 @@ async def fetch_orders(client: httpx.AsyncClient) -> list:
     return response.json().get("orders", [])
 
 
+def record(span, model: str, elapsed: float, input_tokens: int, output_tokens: int) -> None:
+    span.set_attribute("gen_ai.response.model", model)
+    span.set_attribute("gen_ai.usage.input_tokens", input_tokens)
+    span.set_attribute("gen_ai.usage.output_tokens", output_tokens)
+    LLM_SECONDS.labels(MODEL).observe(elapsed)
+    TOKENS.labels(MODEL, "input").inc(input_tokens)
+    TOKENS.labels(MODEL, "output").inc(output_tokens)
+
+
+async def ask_claude(question: str, orders: list) -> dict:
+    with tracer.start_as_current_span(f"chat {ANTHROPIC_MODEL}", kind=SpanKind.CLIENT) as span:
+        span.set_attribute("gen_ai.operation.name", "chat")
+        span.set_attribute("gen_ai.system", "anthropic")
+        span.set_attribute("gen_ai.request.model", ANTHROPIC_MODEL)
+        span.set_attribute("gen_ai.request.max_tokens", ANTHROPIC_MAX_TOKENS)
+        started = time.perf_counter()
+        # fallbacks="default" lets the API retry on another model if a safety classifier declines.
+        response = await claude.beta.messages.create(
+            model=ANTHROPIC_MODEL,
+            max_tokens=ANTHROPIC_MAX_TOKENS,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": f"Recent orders: {json.dumps(orders)}\n\nQuestion: {question}"}],
+            output_config={"effort": ANTHROPIC_EFFORT},
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
+        )
+        elapsed = time.perf_counter() - started
+        if response.stop_reason == "refusal":
+            answer = "The model declined to answer this question."
+        else:
+            answer = "".join(block.text for block in response.content if block.type == "text").strip()
+        record(span, response.model, elapsed, response.usage.input_tokens, response.usage.output_tokens)
+        return {
+            "answer": answer,
+            "model": response.model,
+            "input_tokens": response.usage.input_tokens,
+            "output_tokens": response.usage.output_tokens,
+            "model_seconds": round(elapsed, 2),
+        }
+
+
 async def ask_model(client: httpx.AsyncClient, question: str, orders: list) -> dict:
+    if PROVIDER == "anthropic":
+        return await ask_claude(question, orders)
     body = {
         "model": OLLAMA_MODEL,
         "stream": False,
@@ -132,12 +192,7 @@ async def ask_model(client: httpx.AsyncClient, question: str, orders: list) -> d
         data = response.json()
         input_tokens = int(data.get("prompt_eval_count", 0))
         output_tokens = int(data.get("eval_count", 0))
-        span.set_attribute("gen_ai.response.model", data.get("model", OLLAMA_MODEL))
-        span.set_attribute("gen_ai.usage.input_tokens", input_tokens)
-        span.set_attribute("gen_ai.usage.output_tokens", output_tokens)
-        LLM_SECONDS.labels(OLLAMA_MODEL).observe(elapsed)
-        TOKENS.labels(OLLAMA_MODEL, "input").inc(input_tokens)
-        TOKENS.labels(OLLAMA_MODEL, "output").inc(output_tokens)
+        record(span, data.get("model", OLLAMA_MODEL), elapsed, input_tokens, output_tokens)
         return {
             "answer": data.get("message", {}).get("content", "").strip(),
             "model": data.get("model", OLLAMA_MODEL),
@@ -159,11 +214,11 @@ async def ask(question: Question, request: Request):
             return JSONResponse({"error": f"backend call failed: {exc}", "trace_id": trace_id}, status_code=502)
         try:
             result = await ask_model(client, question.question, orders)
-        except httpx.TimeoutException:
+        except (httpx.TimeoutException, anthropic.APITimeoutError):
             ASKS.labels("model_timeout").inc()
             trace.get_current_span().set_status(Status(StatusCode.ERROR, "model timeout"))
             return JSONResponse({"error": "the model did not answer in time", "trace_id": trace_id}, status_code=504)
-        except httpx.HTTPError as exc:
+        except (httpx.HTTPError, anthropic.APIError) as exc:
             ASKS.labels("model_error").inc()
             log.error("model call failed", extra={"fields": {"error": str(exc)}})
             return JSONResponse({"error": f"model call failed: {exc}", "trace_id": trace_id}, status_code=502)

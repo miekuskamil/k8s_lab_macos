@@ -1,0 +1,32 @@
+# Optional: the assistant with Claude instead of Ollama. See docs/ai-models.md.
+# Same idea as module 12: the assistant calls plain http://api.anthropic.com, and
+# the shop waypoint opens TLS to port 443 itself (TLS origination). The waypoint
+# then still sees every request, so metrics and the rule in 17-claude-policy.yaml work.
+apiVersion: networking.istio.io/v1
+kind: ServiceEntry
+metadata:
+  name: anthropic-api
+  namespace: shop
+  labels:
+    istio.io/use-waypoint: waypoint
+spec:
+  hosts:
+    - api.anthropic.com
+  location: MESH_EXTERNAL
+  resolution: DNS
+  ports:
+    - number: 80
+      name: http
+      protocol: HTTP
+      targetPort: 443
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: anthropic-api-tls
+  namespace: shop
+spec:
+  host: api.anthropic.com
+  trafficPolicy:
+    tls:
+      mode: SIMPLE

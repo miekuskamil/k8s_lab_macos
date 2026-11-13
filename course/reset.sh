@@ -99,8 +99,10 @@ fi
 "${K[@]}" -n shop delete deployment,service,serviceaccount -l app=assistant --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete serviceaccount assistant --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete httproute assistant ollama-timeout --ignore-not-found >/dev/null
-"${K[@]}" -n shop delete serviceentry ollama --ignore-not-found >/dev/null
-"${K[@]}" -n shop delete authorizationpolicy backend-allow-assistant ollama-chat-only --ignore-not-found >/dev/null
+"${K[@]}" -n shop delete serviceentry ollama anthropic-api --ignore-not-found >/dev/null
+"${K[@]}" -n shop delete destinationrule anthropic-api-tls --ignore-not-found >/dev/null
+"${K[@]}" -n shop delete secret anthropic --ignore-not-found >/dev/null
+"${K[@]}" -n shop delete authorizationpolicy backend-allow-assistant ollama-chat-only anthropic-assistant-only --ignore-not-found >/dev/null
 # Module 16: the classic ingress gateway. Deleting its namespace removes the Helm release too.
 "${K[@]}" delete namespace istio-ingress --ignore-not-found >/dev/null
 # Module 15: the faulty backend pod

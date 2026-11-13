@@ -101,7 +101,7 @@ Every other command in the course runs unchanged. Two commands used to break on 
 
 These modules call [Ollama](https://ollama.com), a program that runs language models on your own machine. Pods reach it under the name `host.docker.internal`, which means "the machine that runs Docker". On macOS, OrbStack and Docker Desktop answer that name for you. Plain Docker Engine on Linux doesn't, so the setup needs two extra steps.
 
-**With Docker Desktop on WSL2,** `host.docker.internal` already points at Windows. Install Ollama for Windows, pull the models, and the modules work as written. This path wasn't tested.
+**With Docker Desktop on WSL2,** `host.docker.internal` already points at Windows. Install Ollama for Windows, pull the models, and the modules work as written. This path wasn't tested. The course's test script looks for Ollama at `http://localhost:11434` by default. When Ollama runs somewhere else, tell the script where: `LAB_OLLAMA_URL=http://<windows-host>:11434 ./course/verify.sh 17`.
 
 **With Docker Engine inside Ubuntu:**
 

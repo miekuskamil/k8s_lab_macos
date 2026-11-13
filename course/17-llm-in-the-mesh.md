@@ -18,6 +18,7 @@ Time: about 50 minutes. This is the first of three AI modules. While the model a
 
 - [Ollama](https://ollama.com) running on your machine with `qwen2.5:3b`. Install the model with `ollama pull qwen2.5:3b` (1.9 GB on disk). The module's numbers come from this model.
 - Enough memory. The lab uses about 5 GB, and `qwen2.5:3b` adds about 2.4 GB while it answers. The whole test run peaked at 16.5 GB on a 24 GB Mac. A 14-billion-parameter model gives better answers but needs about 9 GB, which doesn't fit next to the lab on 24 GB. Ollama unloads a model after 5 idle minutes and gives the memory back.
+- Another Ollama model, or Claude through the Anthropic API, also works. [Choosing the model for the AI modules](../docs/ai-models.md) shows how to switch.
 - macOS with OrbStack or Docker Desktop. Both let containers reach your machine under the name `host.docker.internal`.
 
 ### On Linux and WSL (Ubuntu 24.04)

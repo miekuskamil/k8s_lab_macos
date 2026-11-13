@@ -15,7 +15,7 @@ This module works in four stages:
 
 A platform team must do the last two stages before anyone trusts an agent.
 
-Time: about 60 minutes. This is the third of three AI modules. You need Ollama on your machine with a model that supports tool calling, as in module 17. `qwen2.5:3b` works and fits next to the lab on a 24 GB Mac. It uses about 2.4 GB while it answers.
+Time: about 60 minutes. This is the third of three AI modules. You need Ollama on your machine with a model that supports tool calling, as in module 17. `qwen2.5:3b` works and fits next to the lab on a 24 GB Mac. It uses about 2.4 GB while it answers. To use Claude through the Anthropic API instead, see [Choosing the model for the AI modules](../docs/ai-models.md#3-module-19-kagent).
 
 ## Concept: model, tools, loop
 
