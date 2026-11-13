@@ -12,6 +12,7 @@ Every Istio resource and term this course uses, in plain words. Each entry start
 - [Around the mesh](#around-the-mesh)
 - [AI on Kubernetes](#ai-on-kubernetes)
 - [Kubernetes operations](#kubernetes-operations)
+- [CKS exam track](#cks-exam-track)
 
 ## Find the right resource
 
@@ -544,3 +545,14 @@ Members of `system:masters` skip RBAC. Module 29.
 **kube-router.** kube-router is the network policy controller that k3s embeds. It turns NetworkPolicy objects into iptables rules on every node. Module 29.
 
 **Probe source 169.254.7.127.** 169.254.7.127 is the link-local source address that ambient mode gives to the kubelet's health checks. istio-cni rewrites the kubelet's probe traffic to come from it. ztunnel lets that traffic through without mTLS, so health checks work under STRICT mode. Module 29.
+
+## CKS exam track
+
+These terms come from the [CKS track](../certs/cks/README.md) in `certs/cks/`. Each entry names the domain file that uses it.
+
+**kubeadm.** kubeadm is the official tool that turns plain Linux machines into a Kubernetes cluster. `kubeadm init` creates the control plane, `kubeadm join` adds a node, and `kubeadm upgrade` moves the cluster to a newer version. The CKS exam clusters come from kubeadm. [certs/README](../certs/README.md), CKS 02.
+
+**Static pod.** A static pod is a pod that the kubelet starts from a YAML file in `/etc/kubernetes/manifests`, with no API server involved. kubeadm runs the API server, etcd, the scheduler and the controller manager this way. Edit the file, and the kubelet restarts the pod within seconds. [certs/README](../certs/README.md), CKS 01, 02, 04, 06.
+
+**OrbStack machine.** An OrbStack machine is a lightweight Linux system that OrbStack runs on a Mac. It feels like a virtual machine, but every machine shares one Linux kernel. The CKS track's two nodes, `cks-cp` and `cks-w1`, are OrbStack machines. [certs/README](../certs/README.md).
+

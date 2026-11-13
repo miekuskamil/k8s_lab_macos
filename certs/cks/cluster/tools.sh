@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs as root inside one node. Installs the security tools the CKS tasks use.
-#   tools.sh cp   etcdctl, trivy, kube-bench, kubesec on the control plane
+#   tools.sh cp   etcdctl, trivy, kube-bench, kubesec, bom and the image policy back end on the control plane
 #   tools.sh w1   gVisor (runsc) and Falco on the worker, where the workloads run
 set -euo pipefail
 
@@ -9,6 +9,7 @@ ETCD_VERSION="${ETCD_VERSION:-3.7.0}"      # matches the etcd image kubeadm 1.37
 TRIVY_VERSION="${TRIVY_VERSION:-0.76.1}"
 KUBE_BENCH_VERSION="${KUBE_BENCH_VERSION:-0.16.0}"
 KUBESEC_VERSION="${KUBESEC_VERSION:-2.15.0}"
+BOM_VERSION="${BOM_VERSION:-0.8.0}"
 GVISOR_RELEASE="${GVISOR_RELEASE:-20261026}"
 FALCO_VERSION="${FALCO_VERSION:-0.45.1}"
 export DEBIAN_FRONTEND=noninteractive
@@ -31,6 +32,10 @@ if [ "$ROLE" = cp ]; then
   echo "--- kubesec $KUBESEC_VERSION"
   curl -fsSL "https://github.com/controlplaneio/kubesec/releases/download/v${KUBESEC_VERSION}/kubesec_linux_arm64.tar.gz" | tar -xz -C "$tmp"
   install -m 755 "$tmp/kubesec" /usr/local/bin/
+
+  echo "--- bom $BOM_VERSION (SBOM generator, its docs are allowed in the exam)"
+  curl -fsSL -o /usr/local/bin/bom "https://github.com/kubernetes-sigs/bom/releases/download/v${BOM_VERSION}/bom-arm64-linux"
+  chmod 755 /usr/local/bin/bom
 
   echo "--- image policy webhook back end (for 05-supply-chain-security)"
   bash "$(cd "$(dirname "$0")" && pwd)/image-policy/install.sh"
