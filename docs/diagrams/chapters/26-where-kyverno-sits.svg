@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="820" viewBox="0 0 1800 820" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1800" height="820" fill="#1e1f24"/>
+<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
+<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">Where Kyverno</text>
+<rect x="334.0" y="26.0" width="108.6" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<text x="348.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">sits</text>
+<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">Every object passes two Kyverno webhooks before the API server stores it.</text>
+<rect x="60.0" y="206.0" width="340.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="60.0" y="200.0" width="340.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="60.0" y="308.0" width="340.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="85.0" y="239.0" width="30.0" height="22.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
+<rect x="79.0" y="265.0" width="42.0" height="6.0" rx="3" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<text x="138.0" y="247.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">kubectl apply</text>
+<text x="138.0" y="273.0" font-size="16" fill="#ffffffcc" text-anchor="start">or ArgoCD sync</text>
+<rect x="540.0" y="206.0" width="380.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="540.0" y="200.0" width="380.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="540.0" y="308.0" width="380.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="561.0" y="235.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="568.0" cy="240.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<rect x="561.0" y="249.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="568.0" cy="254.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<rect x="561.0" y="263.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="568.0" cy="268.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<text x="618.0" y="262.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">API server</text>
+<rect x="1180.0" y="206.0" width="340.0" height="110.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
+<rect x="1180.0" y="200.0" width="340.0" height="110.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
+<rect x="1180.0" y="308.0" width="340.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="1204.0" y="241.0" width="32.0" height="30.0" rx="2" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="1220.0" cy="241.0" rx="16" ry="6" fill="#1e1f24" stroke="#f5f5f7" stroke-width="2.2"/>
+<polyline points="1204.0,256.0 1236.0,256.0" fill="none" stroke="#f5f5f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1258.0" y="262.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Stored</text>
+<polyline points="400.0,255.0 540.0,255.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="470.0" cy="255.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="470.0" y="262.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
+<text x="470.0" y="298.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">Send</text>
+<polyline points="920.0,255.0 1180.0,255.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="1050.0" cy="255.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1050.0" y="262.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">4</text>
+<text x="1050.0" y="298.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">Store</text>
+<rect x="320.0" y="440.0" width="1250.0" height="330.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="945.0" y="428.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">Kyverno</text>
+<rect x="360.0" y="486.0" width="360.0" height="110.0" rx="16" fill="#db2777" stroke="#db2777" stroke-width="1"/>
+<rect x="360.0" y="480.0" width="360.0" height="110.0" rx="16" fill="#db2777" stroke="#db2777" stroke-width="1"/>
+<rect x="360.0" y="588.0" width="360.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="400.0" cy="535.0" rx="16" ry="16" fill="none" stroke="#f5f5f7" stroke-width="3"/>
+<ellipse cx="400.0" cy="535.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<polyline points="400.0,514.0 400.0,521.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="400.0,549.0 400.0,556.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="379.0,535.0 386.0,535.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="414.0,535.0 421.0,535.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="438.0" y="527.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Mutate</text>
+<text x="438.0" y="555.0" font-size="16" fill="#ffffffcc" text-anchor="start">add defaults</text>
+<rect x="780.0" y="486.0" width="360.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="780.0" y="480.0" width="360.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="780.0" y="588.0" width="360.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="820.0,515.0 838.0,522.0 835.0,543.0 820.0,556.0 805.0,543.0 802.0,522.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="812.0,535.0 818.0,542.0 829.0,529.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="858.0" y="527.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Validate</text>
+<text x="858.0" y="555.0" font-size="16" fill="#ffffffcc" text-anchor="start">allow or deny</text>
+<polyline points="600.0,310.0 600.0,480.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="600.0" cy="365.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="600.0" y="372.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
+<text x="573.0" y="359.5" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="end">Mutating</text>
+<text x="573.0" y="382.5" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="end">webhook</text>
+<polyline points="670.0,480.0 670.0,310.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<polyline points="880.0,310.0 880.0,480.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="880.0" cy="365.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="880.0" y="372.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
+<text x="907.0" y="359.5" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="start">Validating</text>
+<text x="907.0" y="382.5" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="start">webhook</text>
+<polyline points="820.0,480.0 820.0,310.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<rect x="1200.0" y="470.0" width="340.0" height="96.0" rx="12" fill="#2a2b33" stroke="#7c3aed" stroke-width="2.5"/>
+<ellipse cx="1234.0" cy="518.0" rx="16" ry="16" fill="none" stroke="#7c3aed" stroke-width="3"/>
+<ellipse cx="1234.0" cy="518.0" rx="6" ry="6" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<polyline points="1234.0,497.0 1234.0,504.0" fill="none" stroke="#7c3aed" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1234.0,532.0 1234.0,539.0" fill="none" stroke="#7c3aed" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1213.0,518.0 1220.0,518.0" fill="none" stroke="#7c3aed" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1248.0,518.0 1255.0,518.0" fill="none" stroke="#7c3aed" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1266.0" y="510.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">Background</text>
+<text x="1266.0" y="534.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">controller</text>
+<rect x="1200.0" y="640.0" width="340.0" height="96.0" rx="12" fill="#2a2b33" stroke="#7c3aed" stroke-width="2.5"/>
+<polygon points="1220.0,668.0 1240.0,668.0 1250.0,678.0 1250.0,708.0 1220.0,708.0" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="1227.0,686.0 1243.0,686.0" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1227.0,694.0 1243.0,694.0" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1227.0,702.0 1238.0,702.0" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1266.0" y="680.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">Reports</text>
+<text x="1266.0" y="704.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">controller</text>
+<polyline points="1350.0,470.0 1350.0,310.0" fill="none" stroke="#c9cbd3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<text x="1360.0" y="384.5" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="start">Scan what runs,</text>
+<text x="1360.0" y="407.5" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="start">generate objects</text>
+<polyline points="1540.0,688.0 1620.0,688.0 1620.0,255.0 1520.0,255.0" fill="none" stroke="#c9cbd3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<text x="1630.0" y="476.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="start">PolicyReports</text>
+</svg>

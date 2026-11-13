@@ -10,87 +10,67 @@ You know how Kubernetes moves a packet from one pod to another. This module show
 
 When the frontend calls `http://backend:8000`, Kubernetes does three things:
 
-1. CoreDNS resolves `backend` to the Service's ClusterIP.
-2. kube-proxy (iptables or IPVS rules on the node) rewrites the ClusterIP to one pod IP, chosen at random.
-3. The CNI plugin (flannel in this lab) delivers the packet to that pod.
+1. CoreDNS, the cluster's DNS server, turns the name `backend` into the Service's ClusterIP. The ClusterIP works like a forwarding address. No machine actually owns it.
+2. kube-proxy rewrites the ClusterIP to the IP of one backend pod, chosen at random. It does this with iptables or IPVS rules on the node.
+3. The Container Network Interface (CNI) plugin, flannel in this lab, delivers the packet to that pod.
 
-That is all. Kubernetes networking works at layer 3 and 4: addresses and ports. It does not know:
+That is all. Kubernetes networking works at layer 3 and 4, which means it only sees addresses and ports. It has no answer to these questions:
 
 | Question | Why Kubernetes has no answer |
 |---|---|
-| Who is calling? | A source IP is not an identity. A recreated pod comes back with a new IP, and many pods share a node's IP after SNAT. |
+| Who is calling? | A source IP is not an identity. A recreated pod comes back with a new IP. Also, when traffic leaves a node, source NAT (SNAT) often rewrites many pods' addresses to the node's single IP. |
 | Is the traffic encrypted? | The CNI moves packets. Encryption is the application's problem. |
 | May this caller come in? | NetworkPolicy matches IPs, namespaces and labels. It has no way to say "only the frontend's GET /api/orders". |
 | Send 10% to v2 | A Service picks pods at random. The only way to get 10% is to run 1 v2 pod for every 9 v1 pods. |
 | Retry, time out, break the circuit | Every application has to implement it, in every language. |
 | How many requests failed, how slow were they? | kube-proxy counts nothing per request. |
 
-A service mesh puts a proxy in the traffic path that understands identities and HTTP, so all of that happens outside the application code.
+A service mesh answers these questions without any change to your code. It puts a proxy in the traffic path. The proxy knows who is calling and understands HTTP, so it does all of this work instead of the application.
 
 ## Concept: two ways to put a proxy in the path
 
-```mermaid
-flowchart TB
-  subgraph sidecar["Sidecar mode: a proxy in every pod"]
-    direction LR
-    subgraph pa["pod frontend"]
-      a1["app"] --> e1["Envoy"]
-    end
-    subgraph pb["pod backend"]
-      e2["Envoy"] --> b1["app"]
-    end
-    e1 == "mTLS, HTTP aware" ==> e2
-  end
-  subgraph ambient["Ambient mode: shared proxies"]
-    direction LR
-    a2["pod frontend<br/>app only"] --> z1["ztunnel<br/>one per node, L4"]
-    z1 == "HBONE mTLS" ==> w["waypoint Envoy<br/>only if you need L7"]
-    w == "HBONE mTLS" ==> z2["ztunnel"]
-    z2 --> b2["pod backend<br/>app only"]
-  end
-```
+A mesh needs a proxy in the path of every request. Istio offers two ways to put it there. The diagram shows both, sidecar mode on top and ambient mode below.
 
-**Sidecar mode** injects an Envoy container into every pod. Envoy handles both layers: mTLS (layer 4) and HTTP features (layer 7).
+![Sidecar mode against ambient mode](../docs/diagrams/chapters/01-sidecar-vs-ambient.svg)
 
-**Ambient mode** splits the two layers:
+**Sidecar mode** adds an extra container, an Envoy proxy, to every pod. Envoy handles both layers. At layer 4, the connection level, it encrypts connections with mutual TLS (mTLS). In mTLS, both sides show a certificate. At layer 7, the HTTP level, it handles features such as routing and retries.
 
-- **ztunnel** is a small Rust proxy that runs once per node as a DaemonSet. It gives every pod on its node an identity, encrypts traffic and enforces layer 4 rules. It never parses HTTP.
+**Ambient mode** splits the two layers between two kinds of proxy:
+
+- **ztunnel** is a small proxy written in Rust. One copy runs on each node, as a DaemonSet. It gives every pod on its node an identity, encrypts its traffic and enforces layer 4 rules. It never reads HTTP.
 - **A waypoint** is an Envoy proxy you deploy only for the Services that need HTTP features. In this lab only the backend has one.
 
 ## Concept: how a request finds ztunnel and the waypoint
 
-In plain Kubernetes, kube-proxy's iptables rules on the node rewrite the ClusterIP to a pod IP. In ambient mode the request gets caught earlier, inside the pod. The `istio-cni` agent enters each mesh pod's network namespace and adds redirect rules there. ztunnel then opens listening sockets inside that same namespace: port 15001 for traffic the pod sends, 15006 for plain traffic coming in, and 15008 for HBONE traffic coming in. The app still dials `backend:8000` and has no idea.
+Your app doesn't know the mesh exists, so it never sends anything to ztunnel on purpose. The mesh has to catch each connection on its way out of the pod and hand it to ztunnel.
 
-Once ztunnel holds the outgoing connection, it looks up the destination address in the table istiod sends it, and makes one of three choices:
+In plain Kubernetes, the first thing that touches a request is kube-proxy. Its iptables rules on the node rewrite the ClusterIP to a pod IP. Ambient mode catches the request earlier, while it's still inside the pod. Two steps set this up:
 
-```mermaid
-flowchart TB
-  out["frontend opens a connection to backend:8000<br/>(caught inside the pod, sent to ztunnel :15001)"]
-  q1{"Is the destination<br/>in the mesh?"}
-  q2{"Does its Service carry<br/>istio.io/use-waypoint?"}
-  plain["send plain TCP,<br/>as without a mesh"]
-  wp["HBONE to the waypoint,<br/>which applies L7 rules"]
-  pod["HBONE straight to<br/>the destination pod :15008"]
-  out --> q1
-  q1 -- "no" --> plain
-  q1 -- "yes" --> q2
-  q2 -- "yes, for example backend" --> wp
-  q2 -- "no, for example redis" --> pod
-```
+1. The `istio-cni` agent enters the network namespace of each mesh pod. A network namespace is the pod's private copy of the network stack. The agent adds redirect rules there, and these rules send the pod's traffic to ztunnel.
+2. ztunnel opens listening sockets inside that same namespace, one per job:
+   - port 15001 takes traffic the pod sends
+   - port 15006 takes plain traffic coming in
+   - port 15008 takes HBONE traffic coming in. HBONE is the mTLS tunnel that ztunnel and waypoints use between each other (module 2 goes deeper).
 
-Note who decides: the label sits on the destination Service, not on the caller. A waypoint in ambient mode belongs to the receiving side. It handles traffic *to* the Services that point at it, from any caller. That's why the backend's calls to Redis never touch the waypoint, even though the backend's own Service uses one.
+The app sees none of this. It still dials `backend:8000`.
 
-A common misconception: "ambient has no proxy in the pod, so the traffic leaves the pod as plain text". It doesn't. The plain hop runs from the app to a ztunnel socket inside the pod's own network namespace. The traffic is HBONE mTLS before it reaches any network interface.
+Now ztunnel holds the outgoing connection. It looks up the destination address in a table that istiod sends it. Then it makes one of three choices. The chart walks through them, with the frontend's call to `backend:8000` as the example:
+
+![How ztunnel picks a path for the frontend's connection](../docs/diagrams/chapters/01-ztunnel-choice.svg)
+
+Notice who decides. The `istio.io/use-waypoint` label sits on the destination Service, not on the caller. In ambient mode, a waypoint belongs to the receiving side. It handles traffic *to* the Services that point at it, from any caller. That's why the backend's calls to Redis never touch the waypoint. The backend's own Service uses a waypoint, but the Redis Service doesn't.
+
+Many people think that ambient traffic leaves the pod as plain text, because there's no proxy in the pod. It doesn't. The only plain hop runs from the app to a ztunnel socket, and that socket sits inside the pod's own network namespace. ztunnel wraps the traffic in HBONE mTLS before it reaches any network interface.
 
 ## Why this way
 
-**Why split L4 and L7?** Most teams adopt a mesh for encryption and identity. That needs no HTTP parsing, and a TCP proxy written for that one job stays small and fast. HTTP parsing costs a lot, and few services need it. Sidecar mode pays the full Envoy cost in every pod. Ambient mode pays it once per waypoint. In this lab ztunnel uses 12 to 16 MiB for the whole node, and the waypoint about 30 to 40 MiB. Module 7 measures a sidecar for comparison.
+**Why split L4 and L7?** Most teams adopt a mesh for encryption and identity. That job needs no HTTP parsing. A TCP proxy written for that one job stays small and fast. Reading HTTP costs a lot of memory and CPU, and few services need it. Sidecar mode pays the full Envoy cost in every pod. Ambient mode pays it once per waypoint. In this lab ztunnel uses 12 to 16 MiB for the whole node, and the waypoint about 30 to 40 MiB. Module 7 measures a sidecar for comparison.
 
-**Why not do L7 in ztunnel too?** Then every node would run a full HTTP proxy for every pod on it, and one tenant's heavy traffic would slow everyone's on that node. A waypoint serves one namespace or one Service, so you size and scale it like any other Deployment.
+**Why not do L7 in ztunnel too?** Then every node would run a full HTTP proxy for every pod on it. One tenant's heavy traffic would slow down every other pod on that node. A waypoint serves one namespace or one Service. So you size and scale it like any other Deployment.
 
-**Why do pods not need a restart to join?** A mutating admission webhook adds sidecars, and the webhook only runs when the API server creates a pod. In ambient mode the `istio-cni` agent watches for the namespace label and moves the redirect rules into running pods' network namespaces. Module 2 shows this live.
+**Why do pods not need a restart to join?** In sidecar mode, a mutating admission webhook adds the sidecar. This webhook edits the pod spec, and it only runs when the API server creates a pod. So an existing pod needs a restart to get its sidecar. Ambient mode never changes the pod spec. The `istio-cni` agent watches for the namespace label. When the label appears, the agent puts the redirect rules into the network namespaces of pods that are already running. Module 2 shows this live.
 
-**Why does ambient still use Envoy at all?** The waypoint is Envoy because Envoy already has the HTTP features: routing, retries, faults, outlier detection, telemetry. Istio reuses it wherever a Service needs those features.
+**Why does ambient still use Envoy at all?** Envoy already has the HTTP features Istio needs: routing, retries, faults, outlier detection and telemetry. So the waypoint is an Envoy proxy. Istio reuses Envoy wherever a Service needs those features.
 
 ## The bigger picture: why meshes exist
 
@@ -100,14 +80,16 @@ The first answer came as libraries. Twitter wrote Finagle, and Netflix wrote Hys
 
 So people moved that logic out of the application and into a proxy next to it. Lyft open-sourced Envoy in 2016 for exactly this job. In 2017 Google, IBM and Lyft launched Istio to manage whole fleets of those proxies. The app stays ignorant of the network, and the proxy speaks for it. That idea is the service mesh.
 
-Every mesh has two halves, and the split matters for everything that follows:
+Every mesh has two halves. The split matters for everything that follows.
 
 - The **data plane** touches your traffic: ztunnel, waypoints and sidecars. If it stops, requests stop.
-- The **control plane** only gives orders. That's istiod. It watches the Kubernetes API, turns your YAML into proxy configuration and pushes it out over xDS, Envoy's configuration protocol. It also signs certificates. If istiod dies for a minute, traffic keeps flowing with the last configuration the proxies received. Nothing new reaches them until istiod returns.
+- The **control plane** only gives orders. In Istio, that's istiod. It watches the Kubernetes API and turns your YAML into proxy configuration. Then it pushes that configuration out over xDS, Envoy's configuration protocol. istiod also signs certificates.
+
+If istiod dies for a minute, traffic keeps flowing. The proxies keep using the last configuration they received. Nothing new reaches them until istiod returns.
 
 You know this pattern already. The API server and the kubelet split their work the same way: one side decides, the other side does the work.
 
-Ambient mode arrived much later. Istio announced it in September 2022, after years of users complaining about the cost of sidecars, and declared it stable in Istio 1.24 in November 2024. That's the version this lab runs. Older blog posts show sidecars everywhere. Most of their ideas still apply; only the plumbing differs.
+Ambient mode arrived much later. For years, users complained about the cost of sidecars. Istio announced ambient mode in September 2022. It declared ambient mode stable in Istio 1.24, in November 2024. That's the version this lab runs. Older blog posts show sidecars everywhere. Most of their ideas still apply. Only the plumbing differs.
 
 ## Do it: see the data plane
 
@@ -139,7 +121,9 @@ shop          redis-7bbf49c9f8-zm8gf                    10.42.0.15  k3d-k8s-lab-
 shop          waypoint-b9b76876f-5jhcm                  10.42.0.19  k3d-k8s-lab-server-0 None     TCP
 ```
 
-`HBONE` means ztunnel handles this pod's traffic: all five app pods in `shop` show it. A pod outside the mesh shows `TCP`. The waypoint and the ingress gateway show `TCP` too, even though they belong to the mesh. Both are Envoy proxies that speak HBONE themselves, so ztunnel leaves their traffic alone. The `svclb` pod comes from k3s's built-in load balancer: it passes the node's port 8080 on to the gateway, and the `grep` only catches it because its name contains `shop`.
+`HBONE` means ztunnel handles this pod's traffic. All five app pods in `shop` show it. A pod outside the mesh shows `TCP`. The waypoint and the ingress gateway show `TCP` too, even though they belong to the mesh. Both are Envoy proxies that speak HBONE themselves, so ztunnel leaves their traffic alone.
+
+The `svclb` pod comes from the load balancer built into k3s. It passes the node's port 8080 on to the gateway. The `grep` only catches it because its name contains `shop`.
 
 **3. See which Services use the waypoint.**
 
@@ -147,7 +131,7 @@ shop          waypoint-b9b76876f-5jhcm                  10.42.0.19  k3d-k8s-lab-
 istioctl ztunnel-config services | grep -E "NAMESPACE|shop"
 ```
 
-**What you should see.** `backend`, `backend-v1` and `backend-v2` show `waypoint` in the WAYPOINT column. `frontend`, `redis` and the `waypoint` Service itself show `None`. Only the backend needs HTTP features, so only its Services send traffic through the waypoint. The ENDPOINTS column counts ready pods: `3/3` for `backend`, because it selects both versions.
+**What you should see.** `backend`, `backend-v1` and `backend-v2` show `waypoint` in the WAYPOINT column. `frontend`, `redis` and the `waypoint` Service itself show `None`. Only the backend needs HTTP features, so only its Services send traffic through the waypoint. The ENDPOINTS column counts ready pods. `backend` shows `3/3` because it selects the pods of both versions.
 
 The label that does it:
 
@@ -155,7 +139,7 @@ The label that does it:
 kubectl -n shop get svc backend --show-labels
 ```
 
-**What you should see.** Among the labels, `istio.io/use-waypoint=waypoint`. That label sends this Service's traffic through the Gateway named `waypoint`. Remove it, and ztunnel delivers straight to the pods again.
+**What you should see.** Among the labels, you find `istio.io/use-waypoint=waypoint`. That label sends this Service's traffic through the Gateway named `waypoint`. The waypoint is defined as a Gateway resource, which is why the label names one. If you remove the label, ztunnel delivers straight to the pods again.
 
 **4. See the proxy in the response.**
 
@@ -170,7 +154,10 @@ x-envoy-upstream-service-time: 104
 server: istio-envoy
 ```
 
-The number changes with every request. Both headers come from the ingress gateway's Envoy, not from the app: `server: istio-envoy` names the proxy, and `x-envoy-upstream-service-time` says how many milliseconds Envoy waited for the frontend.
+The number changes with every request. Both headers come from the ingress gateway's Envoy, not from the app.
+
+- `server: istio-envoy` names the proxy.
+- `x-envoy-upstream-service-time` says how many milliseconds Envoy waited for the frontend.
 
 **5. Count the proxies istiod manages.**
 
@@ -187,7 +174,7 @@ waypoint-b9b76876f-5jhcm.shop                      Kubernetes  istiod-5c5bf76f-v
 ztunnel-ttgf9.istio-system                         Kubernetes  istiod-5c5bf76f-vskzs   1.24.2   2 (WADS,WDS)
 ```
 
-The gateway, the waypoint and ztunnel. The shop's five pods don't appear, because in ambient mode they have no proxy of their own. The last column lists the xDS feeds each proxy takes from istiod. The two Envoys get listeners, clusters and endpoints. ztunnel only gets workloads and addresses, a much smaller feed.
+The three rows are the gateway, the waypoint and ztunnel. The shop's five pods don't appear, because in ambient mode they have no proxy of their own. The last column lists the xDS feeds that each proxy takes from istiod. Each feed carries one kind of configuration. The two Envoys get listeners, clusters and endpoints. ztunnel only gets workloads and addresses, which is a much smaller feed.
 
 ## Investigate
 
@@ -200,9 +187,13 @@ Run `./course/load.sh 300` and open Kiali at http://localhost:20001.
 <details>
 <summary>Answers</summary>
 
-1. The request leaves `frontend`, reaches the `backend` service node, and lands on the `backend` v1 app node. The HTTP edges carry request rates, because the waypoint read the requests and reported them. The `waypoint` workload shows up as its own node too, joined by TCP edges: the `backend` service sends its bytes to the waypoint, and the waypoint sends them on to the backend pods. Redis gets no waypoint because its Service has no `istio.io/use-waypoint` label (step 3 showed `None`). Its edges carry only TCP bytes from ztunnel, no request counts.
-2. Almost every edge carries a padlock: gateway to frontend, frontend to backend over HTTP, backend to redis, and so on. Two TCP edges don't: `frontend` to the `backend` service, and the `backend` service to `waypoint`. Prometheus holds only a source-side report for that hop (`reporter="source"`, `connection_security_policy="mutual_tls"`), because ztunnel doesn't capture the waypoint's side, and Kiali draws no padlock from it. The traffic is still mTLS. Module 2 explains what the padlock proves.
-3. One container: `backend`. There is no `istio-proxy`, because the pod has none. The `ztunnel` checkbox mixes in the lines from the node's ztunnel log that concern this pod, such as `src.identity` and `dst.hbone_addr` for each connection. That's where an ambient pod's mesh logs live. A sidecar pod in module 7 lists `istio-proxy` as a second container instead.
+1. The request leaves `frontend`, reaches the `backend` service node, and lands on the `backend` v1 app node. The HTTP edges carry request rates, because the waypoint read the requests and reported them. The `waypoint` workload also shows up as its own node, joined by TCP edges. The `backend` service sends its bytes to the waypoint, and the waypoint sends them on to the backend pods. Redis gets no waypoint because its Service has no `istio.io/use-waypoint` label. Step 3 showed `None` for it. Its edges carry only TCP bytes from ztunnel, with no request counts.
+2. Almost every edge carries a padlock. Examples are gateway to frontend, frontend to backend over HTTP, and backend to redis. Two TCP edges have no padlock:
+   - `frontend` to the `backend` service
+   - the `backend` service to `waypoint`
+
+   The gap is in the metrics, not in the encryption. ztunnel doesn't capture the waypoint's side of that hop. So Prometheus holds only the report from the sending side, with `reporter="source"` and `connection_security_policy="mutual_tls"`. Kiali draws no padlock from that one report. The traffic is still mTLS. Module 2 explains what the padlock proves.
+3. Kiali offers one container, `backend`. There is no `istio-proxy`, because the pod has none. The `ztunnel` checkbox mixes in the lines from the node's ztunnel log that concern this pod. For each connection, these lines show fields such as `src.identity` and `dst.hbone_addr`. That's where an ambient pod's mesh logs live. A sidecar pod in module 7 lists `istio-proxy` as a second container instead.
 
 </details>
 

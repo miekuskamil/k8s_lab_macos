@@ -33,7 +33,7 @@ File `course/NN-topic.md`, with these sections in this order:
 
 1. `# Module NN: title`, the glossary pointer line, and **`**Before this module:**`** with the modules to read first and whether Istio is needed.
 2. An opening paragraph: the real-world problem, then what the module does. Then `Time: about N minutes.` and the memory it adds.
-3. `## Concept: ...` sections, usually two, with a mermaid diagram and a table.
+3. `## Concept: ...` sections, usually two, each with a diagram (see **Diagrams** below) and often a table.
 4. `## The bigger picture: ...`: why the industry does it this way, where it's heading.
 5. `## Why this way`: bold questions with short answers, one per design decision in the module.
 6. `## Do it`: numbered `### N. step` sections. Each has commands, then **What you should see.** with real output and the numbers measured in the test run ("in the test run, 228 seconds"). Explain surprises; they're the best part.
@@ -46,6 +46,24 @@ File `course/NN-topic.md`, with these sections in this order:
 grep -nE "\b(can|cannot|can't|could)\b|—|–" course/NN-*.md
 grep -nE "\b(is|are|was|were|be|been|being) [a-z]+ed\b" course/NN-*.md
 ```
+
+**Explain, don't compress.** The course follows the ByteByteGo newsletter's style. A paragraph that names eight components in four correct sentences teaches nothing.
+
+- Problem first, then the name: say what goes wrong or what is needed, then the tool that fixes it.
+- A process opens with a short numbered overview (3 to 7 steps, one actor and one action each), then goes deeper step by step.
+- One idea per sentence, no fragments, at most one new term per sentence. Define a term in plain words where it first appears ("X is a ... that ...").
+- More than about three technical names in a paragraph: cut the ones the point doesn't need, or give each its own sentence.
+- Give the why as a purpose clause ("so the reply finds its way back"), and one everyday comparison for each hard idea.
+- Walk command output step by step, in the same order as the overview.
+
+**Values differ per run.** Quote real output, but never hard-code an IP or pod name in a command: look it up (`SVCIP=$(kubectl ... -o jsonpath=...)`). Say "in the test run" next to measured numbers.
+
+**Diagrams.** Draw every diagram with the kit in `docs/diagrams/bbg.py`, in a script `docs/diagrams/chapters/make-NN.py` that writes `NN-slug.svg` and `.excalidraw`. Copy the patterns in `docs/diagrams/make-life-of-a-request.py`. No mermaid.
+
+- Box label: 1 to 3 words. Sub-line: at most 4 short words (an address, a port). Arrow label: at most 4 words. Captions: one short sentence or none. Detail belongs in the prose.
+- Circled step numbers only where order matters, and they match the numbered steps in the text.
+- Colours mean kinds of things: SLATE apps, BLUE proxies, PURPLE control plane, GREEN kernel and networking, ORANGE storage, RED or PINK security decisions, TEAL node agents and DNS.
+- Render and look before you embed it. Pad the SVG to a square so Quick Look shows all of it, then open the PNG.
 
 **Define every term.** Add a glossary entry for each new term to `course/glossary.md`, under a section for the topic, ending with "Module NN."
 

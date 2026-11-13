@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="960" viewBox="0 0 1700 960" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1700" height="960" fill="#1e1f24"/>
+<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
+<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">Two ways to</text>
+<rect x="293.7" y="26.0" width="209.3" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<text x="307.7" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">fail fast</text>
+<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">Top: the waypoint stops waiting after 1 second. Bottom: a full pool turns request 11 away at once.</text>
+<rect x="40.0" y="180.0" width="1620.0" height="290.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="850.0" y="168.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">Timeout: 1 second budget</text>
+<rect x="80.0" y="236.0" width="320.0" height="130.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="80.0" y="230.0" width="320.0" height="130.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="80.0" y="358.0" width="320.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="105.0" y="279.0" width="30.0" height="22.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
+<rect x="99.0" y="305.0" width="42.0" height="6.0" rx="3" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<text x="158.0" y="287.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">caller</text>
+<text x="158.0" y="315.0" font-size="16" fill="#ffffffcc" text-anchor="start">frontend</text>
+<rect x="690.0" y="236.0" width="320.0" height="130.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="690.0" y="230.0" width="320.0" height="130.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="690.0" y="358.0" width="320.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="730.0,275.0 748.0,282.0 745.0,303.0 730.0,316.0 715.0,303.0 712.0,282.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="722.0,295.0 728.0,302.0 739.0,289.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="768.0" y="287.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Waypoint</text>
+<text x="768.0" y="315.0" font-size="16" fill="#ffffffcc" text-anchor="start">timeout 1 s</text>
+<rect x="1300.0" y="236.0" width="320.0" height="130.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="1300.0" y="230.0" width="320.0" height="130.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="1300.0" y="358.0" width="320.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="1321.0" y="275.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="1328.0" cy="280.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<rect x="1321.0" y="289.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="1328.0" cy="294.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<rect x="1321.0" y="303.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="1328.0" cy="308.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<text x="1378.0" y="287.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">backend</text>
+<text x="1378.0" y="315.0" font-size="16" fill="#ffffffcc" text-anchor="start">works for 3 s</text>
+<polyline points="400.0,270.0 690.0,270.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<ellipse cx="545.0" cy="270.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="545.0" y="277.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
+<text x="545.0" y="241.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">GET /api/slow?ms=3000</text>
+<polyline points="1010.0,270.0 1300.0,270.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<ellipse cx="1155.0" cy="270.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1155.0" y="277.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
+<text x="1155.0" y="241.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">Forward</text>
+<polyline points="690.0,325.0 400.0,325.0" fill="none" stroke="#e5484d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<ellipse cx="545.0" cy="325.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="545.0" y="332.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
+<text x="545.0" y="368.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">After 1 s:</text>
+<text x="545.0" y="391.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">504</text>
+<text x="1300.0" y="400.0" font-size="17" fill="#c9cbd3" text-anchor="start">Still working.</text>
+<text x="1300.0" y="424.0" font-size="17" fill="#c9cbd3" text-anchor="start">Its answer is thrown away.</text>
+<rect x="40.0" y="540.0" width="1620.0" height="380.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="850.0" y="528.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">Circuit breaker: pool of 5 connections + 5 queued</text>
+<rect x="80.0" y="626.0" width="320.0" height="130.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="80.0" y="620.0" width="320.0" height="130.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="80.0" y="748.0" width="320.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="105.0" y="669.0" width="30.0" height="22.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
+<rect x="99.0" y="695.0" width="42.0" height="6.0" rx="3" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<text x="158.0" y="677.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">caller</text>
+<text x="158.0" y="705.0" font-size="16" fill="#ffffffcc" text-anchor="start">request 11</text>
+<rect x="560.0" y="600.0" width="640.0" height="290.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="880.0" y="588.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">Waypoint pool, full</text>
+<rect x="590.0" y="630.0" width="270.0" height="110.0" rx="12" fill="#2a2b33" stroke="#ea7a17" stroke-width="2.5"/>
+<rect x="608.0" y="671.0" width="32.0" height="30.0" rx="2" fill="none" stroke="#ea7a17" stroke-width="2.2"/>
+<ellipse cx="624.0" cy="671.0" rx="16" ry="6" fill="#1e1f24" stroke="#ea7a17" stroke-width="2.2"/>
+<polyline points="608.0,686.0 640.0,686.0" fill="none" stroke="#ea7a17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="656.0" y="689.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">5 waiting</text>
+<rect x="900.0" y="630.0" width="270.0" height="110.0" rx="12" fill="#2a2b33" stroke="#0ea47a" stroke-width="2.5"/>
+<rect x="915.0" y="665.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#0ea47a" stroke-width="2.2"/>
+<ellipse cx="922.0" cy="670.5" rx="2" ry="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<rect x="915.0" y="679.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#0ea47a" stroke-width="2.2"/>
+<ellipse cx="922.0" cy="684.5" rx="2" ry="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<rect x="915.0" y="693.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#0ea47a" stroke-width="2.2"/>
+<ellipse cx="922.0" cy="698.5" rx="2" ry="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<text x="966.0" y="689.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">5 running</text>
+<polyline points="860.0,685.0 900.0,685.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="590.0" y="770.0" width="580.0" height="90.0" rx="12" fill="#2a2b33" stroke="#e5484d" stroke-width="2.5"/>
+<polygon points="624.0,795.0 642.0,802.0 639.0,823.0 624.0,836.0 609.0,823.0 606.0,802.0" fill="none" stroke="#e5484d" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="616.0,815.0 622.0,822.0 633.0,809.0" fill="none" stroke="#e5484d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="656.0" y="819.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">503 UO: upstream overflow</text>
+<rect x="1380.0" y="626.0" width="260.0" height="130.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="1380.0" y="620.0" width="260.0" height="130.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="1380.0" y="748.0" width="260.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="1401.0" y="665.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="1408.0" cy="670.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<rect x="1401.0" y="679.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="1408.0" cy="684.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<rect x="1401.0" y="693.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="1408.0" cy="698.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<text x="1458.0" y="677.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">backend</text>
+<text x="1458.0" y="705.0" font-size="16" fill="#ffffffcc" text-anchor="start">busy with 5</text>
+<polyline points="1170.0,685.0 1380.0,685.0" fill="none" stroke="#c9cbd3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<text x="1290.0" y="711.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">5 connections</text>
+<polyline points="400.0,670.0 590.0,670.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<ellipse cx="480.0" cy="670.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="480.0" y="677.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">4</text>
+<text x="480.0" y="641.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">Request 11</text>
+<polyline points="590.0,815.0 240.0,815.0 240.0,750.0" fill="none" stroke="#e5484d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<ellipse cx="415.0" cy="815.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="415.0" y="822.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">5</text>
+<text x="415.0" y="858.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">503 at once</text>
+<text x="1380.0" y="800.0" font-size="17" fill="#c9cbd3" text-anchor="start">Never sees</text>
+<text x="1380.0" y="824.0" font-size="17" fill="#c9cbd3" text-anchor="start">request 11.</text>
+</svg>

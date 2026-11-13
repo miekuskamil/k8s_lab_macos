@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1990" height="700" viewBox="0 0 1990 700" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1990" height="700" fill="#1e1f24"/>
+<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
+<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">Two resources,</text>
+<rect x="354.1" y="26.0" width="189.1" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<text x="368.1" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">two jobs</text>
+<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">Is the token real? Is this caller allowed? A request reaches the frontend only if both checks pass.</text>
+<rect x="50.0" y="226.0" width="240.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="50.0" y="220.0" width="240.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="50.0" y="318.0" width="240.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="76.0,250.0 96.0,250.0 106.0,260.0 106.0,290.0 76.0,290.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="83.0,268.0 99.0,268.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="83.0,276.0 99.0,276.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="83.0,284.0 94.0,284.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="128.0" y="277.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Request</text>
+<rect x="440.0" y="206.0" width="400.0" height="140.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="440.0" y="200.0" width="400.0" height="140.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="440.0" y="338.0" width="400.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="466.0" y="268.0" width="28.0" height="22.0" rx="4" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<rect x="471.0" y="252.0" width="18.0" height="24.0" rx="9" fill="none" stroke="#f5f5f7" stroke-width="3"/>
+<ellipse cx="480.0" cy="279.0" rx="3" ry="3" fill="#1e1f24" stroke="#1e1f24" stroke-width="1"/>
+<text x="518.0" y="247.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Request</text>
+<text x="518.0" y="277.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Authentication</text>
+<text x="518.0" y="305.0" font-size="16" fill="#ffffffcc" text-anchor="start">is the token valid?</text>
+<rect x="1080.0" y="206.0" width="400.0" height="140.0" rx="16" fill="#db2777" stroke="#db2777" stroke-width="1"/>
+<rect x="1080.0" y="200.0" width="400.0" height="140.0" rx="16" fill="#db2777" stroke="#db2777" stroke-width="1"/>
+<rect x="1080.0" y="338.0" width="400.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="1120.0,250.0 1138.0,257.0 1135.0,278.0 1120.0,291.0 1105.0,278.0 1102.0,257.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="1112.0,270.0 1118.0,277.0 1129.0,264.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1158.0" y="247.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Authorization</text>
+<text x="1158.0" y="277.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Policy</text>
+<text x="1158.0" y="305.0" font-size="16" fill="#ffffffcc" text-anchor="start">is this caller allowed?</text>
+<rect x="1700.0" y="226.0" width="250.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="1700.0" y="220.0" width="250.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="1700.0" y="318.0" width="250.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="1740.0,250.0 1758.0,260.0 1740.0,270.0 1722.0,260.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="1722.0,260.0 1740.0,270.0 1740.0,291.0 1722.0,281.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="1758.0,260.0 1740.0,270.0 1740.0,291.0 1758.0,281.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="1778.0" y="277.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">frontend</text>
+<ellipse cx="440.0" cy="200.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="440.0" y="207.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
+<ellipse cx="1080.0" cy="200.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1080.0" y="207.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
+<ellipse cx="1700.0" cy="220.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1700.0" y="227.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
+<polyline points="290.0,270.0 440.0,270.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<polyline points="840.0,270.0 1080.0,270.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<text x="960.0" y="235.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">Good token,</text>
+<text x="960.0" y="258.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">or no token</text>
+<polyline points="1480.0,270.0 1700.0,270.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<text x="1590.0" y="235.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">A rule</text>
+<text x="1590.0" y="258.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">matches</text>
+<rect x="490.0" y="540.0" width="300.0" height="90.0" rx="12" fill="#2a2b33" stroke="#e5484d" stroke-width="2.5"/>
+<text x="506.0" y="577.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">401</text>
+<text x="506.0" y="601.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">Unauthorized</text>
+<rect x="1130.0" y="540.0" width="300.0" height="90.0" rx="12" fill="#2a2b33" stroke="#e5484d" stroke-width="2.5"/>
+<text x="1146.0" y="577.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">403</text>
+<text x="1146.0" y="601.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">Forbidden</text>
+<polyline points="640.0,346.0 640.0,540.0" fill="none" stroke="#c9cbd3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<text x="650.0" y="451.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="start">Bad token</text>
+<polyline points="1280.0,346.0 1280.0,540.0" fill="none" stroke="#c9cbd3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<text x="1290.0" y="451.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="start">No rule matches</text>
+</svg>

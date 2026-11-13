@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="760" viewBox="0 0 1300 760" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1300" height="760" fill="#1e1f24"/>
+<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
+<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">Outlier Detection:</text>
+<rect x="434.7" y="26.0" width="370.4" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<text x="448.7" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">Eject the Bad Pod</text>
+<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">The waypoint watches each pod&#x27;s answers and stops sending to the one that keeps failing.</text>
+<rect x="60.0" y="386.0" width="340.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="60.0" y="380.0" width="340.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="60.0" y="488.0" width="340.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="100.0,415.0 118.0,422.0 115.0,443.0 100.0,456.0 85.0,443.0 82.0,422.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="92.0,435.0 98.0,442.0 109.0,429.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="138.0" y="427.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Waypoint</text>
+<text x="138.0" y="455.0" font-size="16" fill="#ffffffcc" text-anchor="start">load balances</text>
+<rect x="780.0" y="206.0" width="440.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="780.0" y="200.0" width="440.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="780.0" y="308.0" width="440.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="820.0,235.0 838.0,245.0 820.0,255.0 802.0,245.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="802.0,245.0 820.0,255.0 820.0,276.0 802.0,266.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="838.0,245.0 820.0,255.0 820.0,276.0 838.0,266.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="858.0" y="247.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">backend-v1 pod 1</text>
+<text x="858.0" y="275.0" font-size="16" fill="#ffffffcc" text-anchor="start">healthy</text>
+<rect x="780.0" y="386.0" width="440.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="780.0" y="380.0" width="440.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="780.0" y="488.0" width="440.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="820.0,415.0 838.0,425.0 820.0,435.0 802.0,425.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="802.0,425.0 820.0,435.0 820.0,456.0 802.0,446.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="838.0,425.0 820.0,435.0 820.0,456.0 838.0,446.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="858.0" y="427.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">backend-v1 pod 2</text>
+<text x="858.0" y="455.0" font-size="16" fill="#ffffffcc" text-anchor="start">healthy</text>
+<rect x="780.0" y="586.0" width="440.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="780.0" y="580.0" width="440.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="780.0" y="688.0" width="440.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="820.0,615.0 838.0,625.0 820.0,635.0 802.0,625.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="802.0,625.0 820.0,635.0 820.0,656.0 802.0,646.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="838.0,625.0 820.0,635.0 820.0,656.0 838.0,646.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="858.0" y="627.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">backend-v1-faulty</text>
+<text x="858.0" y="655.0" font-size="16" fill="#ffffffcc" text-anchor="start">503 on every request</text>
+<polyline points="230.0,380.0 230.0,255.0 780.0,255.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<polyline points="400.0,435.0 780.0,435.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<polyline points="230.0,496.0 230.0,635.0 780.0,635.0" fill="none" stroke="#e5484d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<text x="520.0" y="600.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">3 errors in a row:</text>
+<text x="520.0" y="623.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">out for 30 s</text>
+</svg>

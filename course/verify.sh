@@ -822,8 +822,8 @@ module_27() {
   "${H[@]}" repo add qdrant https://qdrant.github.io/qdrant-helm >/dev/null 2>&1
   "${H[@]}" repo update qdrant >/dev/null 2>&1
   expect "Qdrant installs with a volume" "$("${H[@]}" install qdrant qdrant/qdrant --version 1.20.0 -n course-rag --create-namespace -f "$M/27-qdrant-values.yaml" --wait --timeout 5m 2>&1 | grep -c 'STATUS: deployed') $("${K[@]}" -n course-rag get pvc -o jsonpath='{.items[0].status.phase}')" '^1 Bound$'
-  docker build -q -t k8s-lab/rag:1.0.0 "$ROOT/apps/rag" >/dev/null 2>&1
-  k3d image import k8s-lab/rag:1.0.0 -c "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
+  docker build -q -t k8s-lab/rag:1.1.0 "$ROOT/apps/rag" >/dev/null 2>&1
+  k3d image import k8s-lab/rag:1.1.0 -c "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
   "${K[@]}" -n course-rag create configmap course-docs --from-file="$ROOT/course/" >/dev/null
   "${K[@]}" apply -f "$M/27-rag-app.yaml" >/dev/null
   expect "the rag app starts" "$("${K[@]}" -n course-rag rollout status deploy/rag --timeout=120s 2>&1 | grep -c 'successfully rolled out')" '^1$'
@@ -833,7 +833,7 @@ module_27() {
   between "ingest splits the course into chunks" "$(echo "$ingest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["chunks"])' 2>/dev/null || echo 0)" 300 1500
   expect "nomic-embed-text makes 768-dimension vectors" "$(echo "$ingest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["dimensions"])' 2>/dev/null)" '^768$'
   expect "Qdrant holds every chunk" "$("${K[@]}" get --raw /api/v1/namespaces/course-rag/services/qdrant:6333/proxy/collections/course 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["points_count"])' 2>/dev/null)" "^$(echo "$ingest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["chunks"])' 2>/dev/null)\$"
-  expect "search finds module 22's rollback step first" "$(curl -s -G localhost:8091/search --data-urlencode 'q=how do I roll back a bad release with ArgoCD' | python3 -c 'import json,sys; print(json.load(sys.stdin)["results"][0]["file"])' 2>/dev/null)" '^22-gitops-with-argocd\.md$'
+  expect "search puts module 22 first for the rollback question" "$(curl -s -G localhost:8091/search --data-urlencode 'q=how do I roll back a bad release with ArgoCD' | python3 -c 'import json,sys; print(json.load(sys.stdin)["results"][0]["file"])' 2>/dev/null)" '^22-gitops-with-argocd\.md$'
   local ask; ask="$(curl -s -m 300 -X POST localhost:8091/ask -H 'content-type: application/json' -d '{"question":"Which Kyverno chart version does module 26 install?"}')"
   expect "ask answers a factual question from the course" "$(echo "$ask" | python3 -c 'import json,sys; print(json.load(sys.stdin)["answer"])' 2>/dev/null)" '3\.8\.2'
   local off; off="$(curl -s -m 300 -X POST localhost:8091/ask -H 'content-type: application/json' -d '{"question":"What is the capital of Denmark?"}')"

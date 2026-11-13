@@ -41,22 +41,15 @@ Each module takes 30 to 60 minutes. Do them in order, because each one builds on
 
 ## Three routes through the course
 
-```mermaid
-flowchart LR
-  s["Start here<br/>Istio in one picture"] --> m0["0 Setup"]
-  m0 --> core["1 to 8<br/>Istio core"]
-  core --> adv["11 to 16<br/>edge TLS, egress, JWT,<br/>upgrades, resilience, Istio API"]
-  adv --> ai["17 to 19<br/>AI: LLMs, model serving, agents"]
-  m0 --> ops["20 and 21<br/>k3s operations"]
-  m0 --> plat["22 to 28<br/>ArgoCD, Prometheus, Grafana,<br/>OpenTelemetry, Kyverno, Pyroscope"]
-  core -.-> ref["9 Command reference<br/>10 eBPF and Cilium"]
-```
+![Routes through the course: module 0, then the Istio, operations and platform tracks](../docs/diagrams/chapters/readme-course-routes.svg)
 
-- **Istio:** modules 0 to 8, then 11 to 16. Module 9 is a reference, and 10 is theory you read any time after module 7.
-- **AI on Kubernetes:** modules 17 to 19 build on the Istio route, mainly modules 3 to 6 and 12. Each module lists what it needs at the top.
-- **Kubernetes operations:** modules 20 and 21 need only module 0. As a CKA, you might take them first.
-- **Platform tools:** modules 22 to 26 and 28 need only module 0, though 23 builds on module 6 and 24 on 23. They cover what DevOps and platform job adverts ask for most: GitOps, alerting, dashboards, OpenTelemetry, policy as code and profiling.
-- **AI without Istio:** module 27 (RAG) needs only module 0 and Ollama on your Mac.
+| Route | Modules |
+|---|---|
+| Istio | modules 0 to 8, then 11 to 16. Module 9 is a reference, and 10 is theory you read any time after module 7. |
+| AI on Kubernetes | modules 17 to 19 build on the Istio route, mainly modules 3 to 6 and 12. Each module lists what it needs at the top. |
+| Kubernetes operations | modules 20 and 21 need only module 0. As a CKA, you might take them first. |
+| Platform tools | modules 22 to 26 and 28 need only module 0, though 23 builds on module 6 and 24 on 23. They cover what DevOps and platform job adverts ask for most: GitOps, alerting, dashboards, OpenTelemetry, policy as code and profiling. |
+| AI without Istio | module 27 (RAG) needs only module 0 and Ollama on your Mac. |
 
 ## Recommended order
 
@@ -84,12 +77,14 @@ Every module except 14 and 21 runs on the baseline. Neither module downgrades an
 
 Every module has the same parts:
 
-- **Concept.** What problem the feature solves, with a diagram.
-- **The bigger picture.** Where the idea comes from and how teams use it in real life, in modules 1 to 7.
-- **Why this way.** The design choice and the alternatives Istio did not take.
-- **Do it.** Commands to run, each followed by what you should see.
-- **Investigate.** Questions you answer with the UIs, not with the manifests.
-- **Clean up.** How to return the lab to its starting state.
+| Part | What it holds |
+|---|---|
+| Concept | What problem the feature solves, with a diagram. |
+| The bigger picture | Where the idea comes from and how teams use it in real life, in modules 1 to 7. |
+| Why this way | The design choice and the alternatives Istio did not take. |
+| Do it | Commands to run, each followed by what you should see. |
+| Investigate | Questions you answer with the UIs, not with the manifests. |
+| Clean up | How to return the lab to its starting state. |
 
 Course files live in this folder:
 
@@ -100,6 +95,15 @@ Course files live in this folder:
 | `course/load.sh` | Sends steady traffic so Grafana and Kiali have something to draw |
 | `course/incident.sh` | Breaks the lab on purpose for module 8 |
 | `course/verify.sh` | Replays every module's key exercise and checks the results |
+
+### Your outputs won't match the numbers exactly
+
+"What you should see" shows real output from one test run. Some values change on every run:
+
+- Pod IPs, Service IPs and pod name suffixes (`hello-76fb6c6b6f-zzn5j`): Kubernetes assigns them fresh whenever it creates a pod or a Service.
+- Timings, token counts and request counts: they depend on your machine and on timing.
+
+Other values never change: resource names, namespaces, ports, the pod range `10.42.0.0/16` and the Service range `10.43.0.0/16`. So compare the shape of the output and the names, not the exact numbers. Commands never hard-code an IP. They look it up first. For module 29 and the [life of a request](../docs/life-of-a-request.md), `./course/my-values.sh` prints your current addresses under the names the text uses.
 
 ## Before you start
 

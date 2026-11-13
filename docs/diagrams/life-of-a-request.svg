@@ -1,296 +1,182 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="2600" height="2149" viewBox="0 0 2600 2149" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
-<rect width="2600" height="2149" fill="#ffffff"/>
-<defs>
-<marker id="a24292f" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#24292f"/></marker>
-<marker id="a8250df" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#8250df"/></marker>
-<marker id="abc4c00" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#bc4c00"/></marker>
-<marker id="acf222e" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#cf222e"/></marker>
-</defs>
-<rect x="40" y="112" width="2520" height="770" rx="10" fill="#ffffff" stroke="#8c959f" stroke-width="2"/>
-<rect x="470" y="222" width="1400" height="256" rx="10" fill="#fbefff" stroke="#8250df" stroke-width="2"/>
-<text x="482" y="246" font-size="16" font-weight="700" fill="#24292f">API server: every request passes these checks in order</text>
-<rect x="490" y="262" width="320" height="196" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
-<text x="502" y="286" font-size="16" font-weight="700" fill="#24292f">2. Authentication</text>
-<text x="502" y="308" font-size="14" fill="#57606a">Client cert signed by client-ca → user</text>
-<text x="502" y="327" font-size="14" fill="#57606a">system:admin, groups system:masters and</text>
-<text x="502" y="346" font-size="14" fill="#57606a">system:authenticated.</text>
-<text x="502" y="365" font-size="14" fill="#57606a">--anonymous-auth=false.</text>
-<text x="502" y="384" font-size="14" fill="#57606a">Service accounts use signed JWT tokens.</text>
-<rect x="830" y="262" width="320" height="196" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
-<text x="842" y="286" font-size="16" font-weight="700" fill="#24292f">3. Authorization</text>
-<text x="842" y="308" font-size="14" fill="#57606a">--authorization-mode=Node,RBAC.</text>
-<text x="842" y="327" font-size="14" fill="#57606a">Node authorizer for kubelets, then RBAC</text>
-<text x="842" y="346" font-size="14" fill="#57606a">Roles and ClusterRoles. system:masters</text>
-<text x="842" y="365" font-size="14" fill="#57606a">skips RBAC.</text>
-<text x="842" y="384" font-size="14" fill="#57606a">Example: kubectl auth can-i create</text>
-<text x="842" y="403" font-size="14" fill="#57606a">deployments</text>
-<text x="842" y="422" font-size="14" fill="#57606a">--as=system:serviceaccount:shop:frontend</text>
-<text x="842" y="441" font-size="14" fill="#57606a">→ no</text>
-<rect x="1170" y="262" width="320" height="196" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
-<text x="1182" y="286" font-size="16" font-weight="700" fill="#24292f">4. Mutating admission</text>
-<text x="1182" y="308" font-size="14" fill="#57606a">Built-in plugins plus webhooks (Istio</text>
-<text x="1182" y="327" font-size="14" fill="#57606a">sidecar injector, Kyverno mutate) change</text>
-<text x="1182" y="346" font-size="14" fill="#57606a">the object.</text>
-<rect x="1510" y="262" width="320" height="196" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
-<text x="1522" y="286" font-size="16" font-weight="700" fill="#24292f">5. Validation</text>
-<text x="1522" y="308" font-size="14" fill="#57606a">Schema validation, then validating</text>
-<text x="1522" y="327" font-size="14" fill="#57606a">admission: NodeRestriction,</text>
-<text x="1522" y="346" font-size="14" fill="#57606a">ValidatingAdmissionPolicy (CEL),</text>
-<text x="1522" y="365" font-size="14" fill="#57606a">webhooks (Kyverno, Istio validation).</text>
-<text x="1522" y="384" font-size="14" fill="#57606a">Refusal → error back to kubectl.</text>
-<rect x="60" y="262" width="370" height="139" rx="10" fill="#fff8c5" stroke="#9a6700" stroke-width="2"/>
-<text x="72" y="286" font-size="16" font-weight="700" fill="#24292f">1. kubectl apply</text>
-<text x="72" y="308" font-size="14" fill="#57606a">Reads kubeconfig.</text>
-<text x="72" y="327" font-size="14" fill="#57606a">Sends REST POST</text>
-<text x="72" y="346" font-size="14" fill="#57606a">/apis/apps/v1/namespaces/default/deployments</text>
-<text x="72" y="365" font-size="14" fill="#57606a">(protobuf/JSON) over TLS with a client</text>
-<text x="72" y="384" font-size="14" fill="#57606a">certificate.</text>
-<rect x="490" y="538" width="1360" height="82" rx="10" fill="#fff1e5" stroke="#bc4c00" stroke-width="2"/>
-<text x="502" y="562" font-size="16" font-weight="700" fill="#24292f">6. Storage</text>
-<text x="502" y="584" font-size="14" fill="#57606a">--etcd-servers=unix://kine.sock: kine translates etcd calls to SQLite /var/lib/rancher/k3s/server/db/state.db (74 MB) in k3s.</text>
-<text x="502" y="603" font-size="14" fill="#57606a">Real clusters use etcd (Raft, 3 or 5 nodes). Every object gets a resourceVersion.</text>
-<rect x="1910" y="262" width="630" height="120" rx="10" fill="#fbefff" stroke="#8250df" stroke-width="2"/>
-<text x="1922" y="286" font-size="16" font-weight="700" fill="#24292f">7. Controller manager</text>
-<text x="1922" y="308" font-size="14" fill="#57606a">Watch: informers cache objects.</text>
-<text x="1922" y="327" font-size="14" fill="#57606a">Deployment controller creates a ReplicaSet (ownerReference); the ReplicaSet</text>
-<text x="1922" y="346" font-size="14" fill="#57606a">controller creates Pods.</text>
-<text x="1922" y="365" font-size="14" fill="#57606a">Reconcile loop: compare desired vs actual, act, repeat.</text>
-<rect x="60" y="690" width="370" height="168" rx="10" fill="#fbefff" stroke="#8250df" stroke-width="2"/>
-<text x="72" y="714" font-size="16" font-weight="700" fill="#24292f">8. Scheduler</text>
-<text x="72" y="736" font-size="14" fill="#57606a">Watches Pods with no nodeName.</text>
-<text x="72" y="755" font-size="14" fill="#57606a">Filter (resources, taints, affinity, ports) →</text>
-<text x="72" y="774" font-size="14" fill="#57606a">Score (spread, image locality, balance) → Bind</text>
-<text x="72" y="793" font-size="14" fill="#57606a">(writes spec.nodeName).</text>
-<text x="72" y="812" font-size="14" fill="#57606a">Failure: 0/1 nodes are available: Insufficient</text>
-<text x="72" y="831" font-size="14" fill="#57606a">memory = filter phase.</text>
-<rect x="456.0" y="690" width="290" height="168" rx="10" fill="#fbefff" stroke="#8250df" stroke-width="2"/>
-<text x="468.0" y="714" font-size="16" font-weight="700" fill="#24292f">9. kubelet</text>
-<text x="468.0" y="736" font-size="14" fill="#57606a">On k3d-k8s-lab-server-0.</text>
-<text x="468.0" y="755" font-size="14" fill="#57606a">Sees its pod via watch, admits it,</text>
-<text x="468.0" y="774" font-size="14" fill="#57606a">calls containerd over CRI.</text>
-<rect x="772.0" y="690" width="290" height="168" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
-<text x="784.0" y="714" font-size="16" font-weight="700" fill="#24292f">10. containerd</text>
-<text x="784.0" y="736" font-size="14" fill="#57606a">Creates the pause sandbox (network</text>
-<text x="784.0" y="755" font-size="14" fill="#57606a">namespace), pulls the image, starts</text>
-<text x="784.0" y="774" font-size="14" fill="#57606a">containers.</text>
-<rect x="1088.0" y="690" width="400" height="168" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
-<text x="1100.0" y="714" font-size="16" font-weight="700" fill="#24292f">11. CNI chain</text>
-<text x="1100.0" y="736" font-size="14" fill="#57606a">flannel: pod IP from 10.42.0.0/24 on the cni0</text>
-<text x="1100.0" y="755" font-size="14" fill="#57606a">bridge + veth.</text>
-<text x="1100.0" y="774" font-size="14" fill="#57606a">istio-cni (if the namespace is in ambient):</text>
-<text x="1100.0" y="793" font-size="14" fill="#57606a">iptables inside the pod netns, tells ztunnel to</text>
-<text x="1100.0" y="812" font-size="14" fill="#57606a">open sockets inside the pod.</text>
-<rect x="1514.0" y="690" width="280" height="168" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
-<text x="1526.0" y="714" font-size="16" font-weight="700" fill="#24292f">12. Probes</text>
-<text x="1526.0" y="736" font-size="14" fill="#57606a">startup → readiness.</text>
-<text x="1526.0" y="755" font-size="14" fill="#57606a">Ready pod → the EndpointSlice</text>
-<text x="1526.0" y="774" font-size="14" fill="#57606a">controller adds its IP.</text>
-<rect x="1820.0" y="690" width="720" height="168" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
-<text x="1832.0" y="714" font-size="16" font-weight="700" fill="#24292f">13. Consumers of EndpointSlices</text>
-<rect x="1832.0" y="726" width="225.33333333333334" height="120" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
-<text x="1844.0" y="750" font-size="16" font-weight="700" fill="#24292f">kube-proxy</text>
-<text x="1844.0" y="772" font-size="14" fill="#57606a">Writes iptables KUBE-SVC /</text>
-<text x="1844.0" y="791" font-size="14" fill="#57606a">KUBE-SEP rules.</text>
-<rect x="2067.3333333333335" y="726" width="225.33333333333334" height="120" rx="10" fill="#fbefff" stroke="#8250df" stroke-width="2"/>
-<text x="2079.3333333333335" y="750" font-size="16" font-weight="700" fill="#24292f">istiod</text>
-<text x="2079.3333333333335" y="772" font-size="14" fill="#57606a">Pushes the endpoint over</text>
-<text x="2079.3333333333335" y="791" font-size="14" fill="#57606a">xDS: to ztunnel (WDS), to</text>
-<text x="2079.3333333333335" y="810" font-size="14" fill="#57606a">waypoints and gateways</text>
-<text x="2079.3333333333335" y="829" font-size="14" fill="#57606a">(EDS).</text>
-<rect x="2302.666666666667" y="726" width="225.33333333333334" height="120" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
-<text x="2314.666666666667" y="750" font-size="16" font-weight="700" fill="#24292f">CoreDNS</text>
-<text x="2314.666666666667" y="772" font-size="14" fill="#57606a">Answers names.</text>
-<rect x="40" y="912" width="700" height="1197" rx="10" fill="#ffffff" stroke="#8c959f" stroke-width="2"/>
-<rect x="80" y="992" width="620" height="82" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
-<text x="92" y="1016" font-size="16" font-weight="700" fill="#24292f">1. Client pod (namespace outside the mesh)</text>
-<text x="92" y="1038" font-size="14" fill="#57606a">Asks DNS: /etc/resolv.conf → CoreDNS 10.43.0.10 → A record for the Service</text>
-<text x="92" y="1057" font-size="14" fill="#57606a">ClusterIP.</text>
-<rect x="80" y="1126" width="620" height="63" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
-<text x="92" y="1150" font-size="16" font-weight="700" fill="#24292f">2. connect(ClusterIP:port)</text>
-<text x="92" y="1172" font-size="14" fill="#57606a">Leaves the pod through its veth into the node netns.</text>
-<rect x="80" y="1241" width="620" height="120" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
-<text x="92" y="1265" font-size="16" font-weight="700" fill="#24292f">3. Node iptables</text>
-<text x="92" y="1287" font-size="14" fill="#57606a">KUBE-SERVICES matches the ClusterIP</text>
-<text x="92" y="1306" font-size="14" fill="#57606a">→ KUBE-SVC-xxx picks an endpoint (random, probability)</text>
-<text x="92" y="1325" font-size="14" fill="#57606a">→ KUBE-SEP-xxx DNATs to pod IP:port.</text>
-<text x="92" y="1344" font-size="14" fill="#57606a">conntrack records the translation.</text>
-<rect x="80" y="1413" width="620" height="63" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
-<text x="92" y="1437" font-size="16" font-weight="700" fill="#24292f">4. cni0 bridge → veth of the target pod</text>
-<text x="92" y="1459" font-size="14" fill="#57606a">Same node here. Across nodes, flannel VXLAN would wrap the packet.</text>
-<rect x="80" y="1528" width="620" height="63" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
-<text x="92" y="1552" font-size="16" font-weight="700" fill="#24292f">5. Target pod</text>
-<text x="92" y="1574" font-size="14" fill="#57606a">Receives plain TCP, source = client pod IP.</text>
-<rect x="120" y="1601" width="580" height="63" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
-<text x="132" y="1625" font-size="16" font-weight="700" fill="#24292f">No identity, no encryption</text>
-<text x="132" y="1647" font-size="14" fill="#57606a">Any pod may connect unless a NetworkPolicy says otherwise.</text>
-<rect x="80" y="1716" width="620" height="82" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2" stroke-dasharray="7 5"/>
-<text x="92" y="1740" font-size="16" font-weight="700" fill="#24292f">6. Return</text>
-<text x="92" y="1762" font-size="14" fill="#57606a">The reply goes back; conntrack reverses the DNAT, so the client sees the</text>
-<text x="92" y="1781" font-size="14" fill="#57606a">ClusterIP as the source.</text>
-<rect x="770" y="912" width="1790" height="1197" rx="10" fill="#ffffff" stroke="#8c959f" stroke-width="2"/>
-<rect x="790" y="992" width="540" height="63" rx="10" fill="#fff8c5" stroke="#9a6700" stroke-width="2"/>
-<text x="802" y="1016" font-size="16" font-weight="700" fill="#24292f">1. Mac</text>
-<text x="802" y="1038" font-size="14" fill="#57606a">curl localhost:8080</text>
-<rect x="790" y="1107" width="540" height="63" rx="10" fill="#fff8c5" stroke="#9a6700" stroke-width="2"/>
-<text x="802" y="1131" font-size="16" font-weight="700" fill="#24292f">2. OrbStack / Docker port mapping</text>
-<text x="802" y="1153" font-size="14" fill="#57606a">host 0.0.0.0:8080 → container k3d-k8s-lab-serverlb:8080</text>
-<rect x="790" y="1222" width="540" height="63" rx="10" fill="#fff8c5" stroke="#9a6700" stroke-width="2"/>
-<text x="802" y="1246" font-size="16" font-weight="700" fill="#24292f">3. k3d serverlb (nginx, TCP stream mode)</text>
-<text x="802" y="1268" font-size="14" fill="#57606a">upstream 8080_tcp { server k3d-k8s-lab-server-0:8080 }</text>
-<rect x="790" y="1337" width="540" height="82" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
-<text x="802" y="1361" font-size="16" font-weight="700" fill="#24292f">4. Node 192.168.107.2:8080, PREROUTING</text>
-<text x="802" y="1383" font-size="14" fill="#57606a">KUBE-SERVICES runs before the svclb host port rule:</text>
-<text x="802" y="1402" font-size="14" fill="#57606a">kube-proxy&#x27;s load balancer IP rule matches first</text>
-<rect x="790" y="1471" width="540" height="101" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
-<text x="802" y="1495" font-size="16" font-weight="700" fill="#24292f">5. kube-proxy DNAT</text>
-<text x="802" y="1517" font-size="14" fill="#57606a">KUBE-EXT-EIP2... marks for masquerade → KUBE-SVC-EIP2... →</text>
-<text x="802" y="1536" font-size="14" fill="#57606a">KUBE-SEP-...</text>
-<text x="802" y="1555" font-size="14" fill="#57606a">DNAT → gateway pod 10.42.0.88:8080</text>
-<rect x="790" y="1624" width="540" height="82" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
-<text x="802" y="1648" font-size="16" font-weight="700" fill="#24292f">6. KUBE-POSTROUTING</text>
-<text x="802" y="1670" font-size="14" fill="#57606a">MASQUERADE --random-fully: the source becomes 10.42.0.1.</text>
-<text x="802" y="1689" font-size="14" fill="#57606a">The svclb pod&#x27;s host port DNAT never matches.</text>
-<rect x="1370" y="992" width="540" height="139" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
-<text x="1382" y="1016" font-size="16" font-weight="700" fill="#24292f">7. Gateway pod (Envoy)</text>
-<text x="1382" y="1038" font-size="14" fill="#57606a">Namespace shop-ingress, NOT in ambient mode.</text>
-<text x="1382" y="1057" font-size="14" fill="#57606a">HTTPRoute match /* → frontend.shop:3000.</text>
-<text x="1382" y="1076" font-size="14" fill="#57606a">Endpoint envoy://connect_originate/10.42.0.13:3000: Envoy itself opens</text>
-<text x="1382" y="1095" font-size="14" fill="#57606a">HBONE (HTTP CONNECT over mTLS) to port 15008 of the frontend pod.</text>
-<text x="1382" y="1114" font-size="14" fill="#57606a">Identity spiffe://cluster.local/ns/shop-ingress/sa/shop-gateway-istio</text>
-<rect x="1370" y="1183" width="540" height="232" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
-<text x="1382" y="1207" font-size="16" font-weight="700" fill="#24292f">8. Frontend pod netns</text>
-<text x="1382" y="1229" font-size="14" fill="#57606a">App listens on 3000.</text>
-<rect x="1382" y="1246" width="516" height="82" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
-<text x="1394" y="1270" font-size="16" font-weight="700" fill="#24292f">ztunnel sockets live INSIDE the pod</text>
-<text x="1394" y="1292" font-size="14" fill="#57606a">15008 HBONE inbound, 15006 plaintext inbound, 15001 outbound, 15053</text>
-<text x="1394" y="1311" font-size="14" fill="#57606a">DNS.</text>
-<rect x="1382" y="1338" width="516" height="63" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
-<text x="1394" y="1362" font-size="16" font-weight="700" fill="#24292f">ztunnel inbound: L4 AuthorizationPolicy</text>
-<text x="1394" y="1384" font-size="14" fill="#57606a">Checks the policy, terminates mTLS, delivers to the app on :3000.</text>
-<rect x="1370" y="1467" width="540" height="120" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
-<text x="1382" y="1491" font-size="16" font-weight="700" fill="#24292f">9. Frontend app calls the backend</text>
-<text x="1382" y="1513" font-size="14" fill="#57606a">http://backend.shop.svc.cluster.local:8000</text>
-<text x="1382" y="1532" font-size="14" fill="#57606a">DNS: iptables redirects it to 15053 (ztunnel DNS proxy).</text>
-<text x="1382" y="1551" font-size="14" fill="#57606a">TCP: iptables REDIRECT --to-ports 15001.</text>
-<text x="1382" y="1570" font-size="14" fill="#57606a">ztunnel&#x27;s own traffic (mark 0x539) is exempt.</text>
-<rect x="1370" y="1639" width="540" height="101" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
-<text x="1382" y="1663" font-size="16" font-weight="700" fill="#24292f">10. ztunnel outbound</text>
-<text x="1382" y="1685" font-size="14" fill="#57606a">The backend Service has istio.io/use-waypoint: waypoint</text>
-<text x="1382" y="1704" font-size="14" fill="#57606a">→ HBONE mTLS to the waypoint pod :15008</text>
-<text x="1382" y="1723" font-size="14" fill="#57606a">as spiffe://cluster.local/ns/shop/sa/frontend</text>
-<rect x="1950" y="992" width="540" height="205" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
-<text x="1962" y="1016" font-size="16" font-weight="700" fill="#24292f">11. Waypoint (Envoy, L7)</text>
-<rect x="1962" y="1028" width="516" height="63" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
-<text x="1974" y="1052" font-size="16" font-weight="700" fill="#24292f">AuthorizationPolicy backend-allow-frontend</text>
-<text x="1974" y="1074" font-size="14" fill="#57606a">L7 check: only sa/frontend, GET/POST paths.</text>
-<rect x="1962" y="1101" width="516" height="82" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
-<text x="1974" y="1125" font-size="16" font-weight="700" fill="#24292f">Route and record</text>
-<text x="1974" y="1147" font-size="14" fill="#57606a">HTTPRoute picks backend-v1 (weights), retries and timeouts.</text>
-<text x="1974" y="1166" font-size="14" fill="#57606a">Writes metrics istio_requests_total and a trace span.</text>
-<rect x="1950" y="1249" width="540" height="186" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
-<text x="1962" y="1273" font-size="16" font-weight="700" fill="#24292f">12. Backend pod</text>
-<rect x="1962" y="1285" width="516" height="63" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
-<text x="1974" y="1309" font-size="16" font-weight="700" fill="#24292f">ztunnel inbound: backend-only-from-waypoint</text>
-<text x="1974" y="1331" font-size="14" fill="#57606a">L4 policy.</text>
-<rect x="1962" y="1358" width="516" height="63" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
-<text x="1974" y="1382" font-size="16" font-weight="700" fill="#24292f">App :8000</text>
-<text x="1974" y="1404" font-size="14" fill="#57606a">Calls Redis.</text>
-<rect x="1950" y="1487" width="540" height="140" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
-<text x="1962" y="1511" font-size="16" font-weight="700" fill="#24292f">13. Backend → Redis</text>
-<text x="1962" y="1533" font-size="14" fill="#57606a">Redis has no waypoint, so ztunnel to ztunnel only (L4, mTLS).</text>
-<rect x="1962" y="1550" width="516" height="63" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
-<text x="1974" y="1574" font-size="16" font-weight="700" fill="#24292f">redis-allow-backend</text>
-<text x="1974" y="1596" font-size="14" fill="#57606a">L4 policy.</text>
-<rect x="1950" y="1667" width="540" height="101" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2" stroke-dasharray="7 5"/>
-<text x="1962" y="1691" font-size="16" font-weight="700" fill="#24292f">14. Return path</text>
-<text x="1962" y="1713" font-size="14" fill="#57606a">Same connections in reverse: HBONE streams are bidirectional.</text>
-<text x="1962" y="1732" font-size="14" fill="#57606a">conntrack undoes kube-proxy&#x27;s SNAT and DNAT.</text>
-<text x="1962" y="1751" font-size="14" fill="#57606a">nginx and Docker forward the bytes back to curl.</text>
-<rect x="1950" y="1798" width="540" height="120" rx="10" fill="#ffffff" stroke="#8c959f" stroke-width="2"/>
-<text x="1962" y="1822" font-size="16" font-weight="700" fill="#24292f">Measured trace (Jaeger) of one request</text>
-<text x="1962" y="1844" font-size="14" fill="#57606a">One POST /api/orders: gateway 18.5 ms in total, waypoint 7.4 ms,</text>
-<text x="1962" y="1863" font-size="14" fill="#57606a">backend 5.5 ms, Redis 0.5 and 0.3 ms.</text>
-<text x="1962" y="1882" font-size="14" fill="#57606a">The untraced Node.js frontend takes most of the gap; each mesh hop</text>
-<text x="1962" y="1901" font-size="14" fill="#57606a">costs about a millisecond.</text>
-<rect x="790" y="1746" width="540" height="170" rx="10" fill="#ffffff" stroke="#8c959f" stroke-width="2"/>
-<text x="802" y="1770" font-size="16" font-weight="700" fill="#24292f">Legend</text>
-<rect x="806" y="1786" width="22" height="20" rx="10" fill="#fbefff" stroke="#8250df" stroke-width="2"/>
-<rect x="1066" y="1786" width="22" height="20" rx="10" fill="#fff1e5" stroke="#bc4c00" stroke-width="2"/>
-<rect x="806" y="1816" width="22" height="20" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
-<rect x="1066" y="1816" width="22" height="20" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
-<rect x="806" y="1846" width="22" height="20" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
-<rect x="1066" y="1846" width="22" height="20" rx="10" fill="#fff8c5" stroke="#9a6700" stroke-width="2"/>
-<rect x="806" y="1876" width="22" height="20" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
-<rect x="790" y="1940" width="540" height="139" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
-<text x="802" y="1964" font-size="16" font-weight="700" fill="#24292f">Security checkpoints, in order</text>
-<text x="802" y="1986" font-size="14" fill="#57606a">1. RBAC + admission (control plane, steps 2 to 5)</text>
-<text x="802" y="2005" font-size="14" fill="#57606a">2. NetworkPolicy (kernel, plain path A)</text>
-<text x="802" y="2024" font-size="14" fill="#57606a">3. mTLS identity at every ztunnel hop</text>
-<text x="802" y="2043" font-size="14" fill="#57606a">4. L4 AuthorizationPolicy at ztunnel</text>
-<text x="802" y="2062" font-size="14" fill="#57606a">5. L7 AuthorizationPolicy at the waypoint</text>
-<polyline points="810,360.0 830,360.0" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<polyline points="1150,360.0 1170,360.0" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<polyline points="1490,360.0 1510,360.0" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<polyline points="430,331.5 490,331.5" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<polyline points="1670.0,262 1670.0,200 245.0,200 245.0,262" fill="none" stroke="#cf222e" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#acf222e)"/>
-<text x="259.0" y="192" font-size="13" font-weight="600" fill="#cf222e">refused by step 2, 3, 4 or 5: error back to kubectl</text>
-<polyline points="1670.0,458 1670.0,538" fill="none" stroke="#bc4c00" stroke-width="2" marker-end="url(#abc4c00)"/>
-<text x="1680.0" y="503.0" font-size="13" font-weight="600" fill="#bc4c00">store</text>
-<polyline points="1850,579.0 2050,579.0 2050,382" fill="none" stroke="#8250df" stroke-width="2" marker-end="url(#a8250df)"/>
-<text x="1866" y="571.0" font-size="13" font-weight="600" fill="#8250df">watch</text>
-<polyline points="430,774.0 456.0,774.0" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<polyline points="746.0,774.0 772.0,774.0" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<polyline points="1062.0,774.0 1088.0,774.0" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<polyline points="1488.0,774.0 1514.0,774.0" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<polyline points="1794.0,774.0 1820.0,774.0" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<polyline points="2420,382 2420,658 260,658 260,690" fill="none" stroke="#8250df" stroke-width="2" marker-end="url(#a8250df)"/>
-<text x="274" y="650" font-size="13" font-weight="600" fill="#8250df">new Pods (no nodeName yet) → scheduler; Bind → kubelet on that node</text>
-<polyline points="140,1074 140,1126" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<text x="150" y="1105.0" font-size="13" font-weight="600" fill="#24292f">connect()</text>
-<polyline points="140,1189 140,1241" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<text x="150" y="1220.0" font-size="13" font-weight="600" fill="#24292f">veth</text>
-<polyline points="140,1361 140,1413" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<text x="150" y="1392.0" font-size="13" font-weight="600" fill="#24292f">DNAT done</text>
-<polyline points="140,1476 140,1528" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<text x="150" y="1507.0" font-size="13" font-weight="600" fill="#24292f">veth</text>
-<polyline points="140,1664 140,1716" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<text x="150" y="1695.0" font-size="13" font-weight="600" fill="#24292f">reply</text>
-<polyline points="850,1055 850,1107" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<text x="860" y="1086.0" font-size="13" font-weight="600" fill="#24292f">TCP</text>
-<polyline points="850,1170 850,1222" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<text x="860" y="1201.0" font-size="13" font-weight="600" fill="#24292f">TCP</text>
-<polyline points="850,1285 850,1337" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<text x="860" y="1316.0" font-size="13" font-weight="600" fill="#24292f">to node :8080</text>
-<polyline points="850,1419 850,1471" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<text x="860" y="1450.0" font-size="13" font-weight="600" fill="#24292f">KUBE-EXT</text>
-<polyline points="850,1572 850,1624" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<text x="860" y="1603.0" font-size="13" font-weight="600" fill="#24292f">SNAT</text>
-<polyline points="1430,1131 1430,1183" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<text x="1440" y="1162.0" font-size="13" font-weight="600" fill="#24292f">HBONE → :15008</text>
-<polyline points="1430,1415 1430,1467" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<text x="1440" y="1446.0" font-size="13" font-weight="600" fill="#24292f">app makes a call</text>
-<polyline points="1430,1587 1430,1639" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<text x="1440" y="1618.0" font-size="13" font-weight="600" fill="#24292f">:15001</text>
-<polyline points="2010,1197 2010,1249" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<text x="2020" y="1228.0" font-size="13" font-weight="600" fill="#24292f">HBONE → :15008</text>
-<polyline points="2010,1435 2010,1487" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<text x="2020" y="1466.0" font-size="13" font-weight="600" fill="#24292f">to Redis</text>
-<polyline points="1330,1665.0 1350.0,1665.0 1350.0,1022 1370,1022" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<polyline points="1910,1689.5 1930.0,1689.5 1930.0,1022 1950,1022" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<polyline points="2010,1627 2010,1667" fill="none" stroke="#24292f" stroke-width="2" marker-end="url(#a24292f)"/>
-<text x="2020" y="1652.0" font-size="13" font-weight="600" fill="#24292f">response</text>
-<text x="40" y="54" font-size="34" font-weight="700" fill="#24292f">The life of a request: from kubectl apply to a response</text>
-<text x="40" y="88" font-size="16" fill="#57606a">Everything measured on this lab: k3s v1.31.5 in k3d on OrbStack, Istio 1.24.2 ambient. Purple: control plane. Orange: storage. Green: kernel networking. Blue: proxies. Red: security decisions. Yellow: outside the cluster.</text>
-<text x="60" y="144" font-size="22" font-weight="700" fill="#8250df">1. A pod comes to life: kubectl apply -f deployment.yaml</text>
-<text x="60" y="944" font-size="22" font-weight="700" fill="#1a7f37">A. Plain Kubernetes (no mesh)</text>
-<text x="60" y="968" font-size="15" fill="#57606a">A client pod calls a Service.</text>
-<text x="790" y="944" font-size="22" font-weight="700" fill="#0969da">B. The shop through Istio ambient</text>
-<text x="790" y="968" font-size="15" fill="#57606a">curl on the Mac → gateway → frontend → waypoint → backend → Redis, and back.</text>
-<text x="838" y="1801" font-size="14" fill="#24292f">control plane</text>
-<text x="1098" y="1801" font-size="14" fill="#24292f">storage</text>
-<text x="838" y="1831" font-size="14" fill="#24292f">kernel networking</text>
-<text x="1098" y="1831" font-size="14" fill="#24292f">proxies</text>
-<text x="838" y="1861" font-size="14" fill="#24292f">security decisions</text>
-<text x="1098" y="1861" font-size="14" fill="#24292f">outside the cluster</text>
-<text x="838" y="1891" font-size="14" fill="#24292f">pods and apps</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1060" viewBox="0 0 1800 1060" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1800" height="1060" fill="#1e1f24"/>
+<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
+<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">The Life of a</text>
+<rect x="334.0" y="26.0" width="169.0" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<text x="348.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">Request</text>
+<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">Part 1 builds the pod. Scenario A and B send a request to it: once without a mesh, once through it.</text>
+<rect x="40.0" y="170.0" width="540.0" height="850.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="310.0" y="158.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">1 · A pod comes to life</text>
+<rect x="80.0" y="221.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="80.0" y="215.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="80.0" y="313.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="105.0" y="249.0" width="30.0" height="22.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
+<rect x="99.0" y="275.0" width="42.0" height="6.0" rx="3" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<text x="158.0" y="257.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">kubectl</text>
+<text x="158.0" y="283.0" font-size="16" fill="#ffffffcc" text-anchor="start">sends the Deployment</text>
+<ellipse cx="80.0" cy="215.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="80.0" y="222.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
+<polyline points="310.0,315.0 310.0,373.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="80.0" y="379.0" width="460.0" height="100.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="80.0" y="373.0" width="460.0" height="100.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="80.0" y="471.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="106.0" y="421.0" width="28.0" height="22.0" rx="4" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<rect x="111.0" y="405.0" width="18.0" height="24.0" rx="9" fill="none" stroke="#f5f5f7" stroke-width="3"/>
+<ellipse cx="120.0" cy="432.0" rx="3" ry="3" fill="#1e1f24" stroke="#1e1f24" stroke-width="1"/>
+<text x="158.0" y="415.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">API server</text>
+<text x="158.0" y="441.0" font-size="16" fill="#ffffffcc" text-anchor="start">who? allowed? valid?</text>
+<ellipse cx="80.0" cy="373.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="80.0" y="380.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
+<polyline points="310.0,473.0 310.0,531.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="80.0" y="537.0" width="460.0" height="100.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
+<rect x="80.0" y="531.0" width="460.0" height="100.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
+<rect x="80.0" y="629.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="104.0" y="567.0" width="32.0" height="30.0" rx="2" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="120.0" cy="567.0" rx="16" ry="6" fill="#1e1f24" stroke="#f5f5f7" stroke-width="2.2"/>
+<polyline points="104.0,582.0 136.0,582.0" fill="none" stroke="#f5f5f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="158.0" y="573.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">kine + SQLite</text>
+<text x="158.0" y="599.0" font-size="16" fill="#ffffffcc" text-anchor="start">stores the object</text>
+<ellipse cx="80.0" cy="531.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="80.0" y="538.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
+<polyline points="310.0,631.0 310.0,689.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="80.0" y="695.0" width="460.0" height="100.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="80.0" y="689.0" width="460.0" height="100.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="80.0" y="787.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="120.0" cy="739.0" rx="16" ry="16" fill="none" stroke="#f5f5f7" stroke-width="3"/>
+<ellipse cx="120.0" cy="739.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<polyline points="120.0,718.0 120.0,725.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="120.0,753.0 120.0,760.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="99.0,739.0 106.0,739.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="134.0,739.0 141.0,739.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="158.0" y="731.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">Controllers</text>
+<text x="158.0" y="757.0" font-size="16" fill="#ffffffcc" text-anchor="start">ReplicaSet, then Pod</text>
+<ellipse cx="80.0" cy="689.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="80.0" y="696.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">4</text>
+<polyline points="310.0,789.0 310.0,847.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="80.0" y="853.0" width="460.0" height="100.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
+<rect x="80.0" y="847.0" width="460.0" height="100.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
+<rect x="80.0" y="945.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="101.0" y="877.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="108.0" cy="882.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<rect x="101.0" y="891.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="108.0" cy="896.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<rect x="101.0" y="905.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="108.0" cy="910.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<text x="158.0" y="889.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">Scheduler + kubelet</text>
+<text x="158.0" y="915.0" font-size="16" fill="#ffffffcc" text-anchor="start">node, sandbox, IP, start</text>
+<ellipse cx="80.0" cy="847.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="80.0" y="854.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">5</text>
+<rect x="630.0" y="170.0" width="540.0" height="850.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="900.0" y="158.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">A · No mesh</text>
+<rect x="670.0" y="221.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="670.0" y="215.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="670.0" y="313.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="710.0,245.0 728.0,255.0 710.0,265.0 692.0,255.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="692.0,255.0 710.0,265.0 710.0,286.0 692.0,276.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="728.0,255.0 710.0,265.0 710.0,286.0 728.0,276.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="748.0" y="257.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">client pod</text>
+<text x="748.0" y="283.0" font-size="16" fill="#ffffffcc" text-anchor="start">curl http://hello</text>
+<ellipse cx="670.0" cy="215.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="670.0" y="222.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
+<polyline points="900.0,315.0 900.0,373.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="670.0" y="379.0" width="460.0" height="100.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
+<rect x="670.0" y="373.0" width="460.0" height="100.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
+<rect x="670.0" y="471.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="710.0" cy="423.0" rx="19" ry="19" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
+<text x="710.0" y="430.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="middle">?</text>
+<text x="748.0" y="415.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">CoreDNS</text>
+<text x="748.0" y="441.0" font-size="16" fill="#ffffffcc" text-anchor="start">name to ClusterIP</text>
+<ellipse cx="670.0" cy="373.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="670.0" y="380.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
+<polyline points="900.0,473.0 900.0,531.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="670.0" y="537.0" width="460.0" height="100.0" rx="16" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<rect x="670.0" y="531.0" width="460.0" height="100.0" rx="16" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<rect x="670.0" y="629.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="710.0" cy="581.0" rx="16" ry="16" fill="none" stroke="#f5f5f7" stroke-width="3"/>
+<ellipse cx="710.0" cy="581.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<polyline points="710.0,560.0 710.0,567.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="710.0,595.0 710.0,602.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="689.0,581.0 696.0,581.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="724.0,581.0 731.0,581.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="748.0" y="573.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">Kernel iptables</text>
+<text x="748.0" y="599.0" font-size="16" fill="#ffffffcc" text-anchor="start">DNAT to the pod</text>
+<ellipse cx="670.0" cy="531.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="670.0" y="538.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
+<polyline points="900.0,631.0 900.0,689.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="670.0" y="695.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="670.0" y="689.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="670.0" y="787.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="710.0,719.0 728.0,729.0 710.0,739.0 692.0,729.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="692.0,729.0 710.0,739.0 710.0,760.0 692.0,750.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="728.0,729.0 710.0,739.0 710.0,760.0 728.0,750.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="748.0" y="731.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">hello pod</text>
+<text x="748.0" y="757.0" font-size="16" fill="#ffffffcc" text-anchor="start">plain TCP, no identity</text>
+<ellipse cx="670.0" cy="689.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="670.0" y="696.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">4</text>
+<polyline points="900.0,789.0 900.0,847.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="670.0" y="853.0" width="460.0" height="100.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
+<rect x="670.0" y="847.0" width="460.0" height="100.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
+<rect x="670.0" y="945.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="694.0" y="883.0" width="32.0" height="30.0" rx="2" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="710.0" cy="883.0" rx="16" ry="6" fill="#1e1f24" stroke="#f5f5f7" stroke-width="2.2"/>
+<polyline points="694.0,898.0 726.0,898.0" fill="none" stroke="#f5f5f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="748.0" y="889.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">conntrack</text>
+<text x="748.0" y="915.0" font-size="16" fill="#ffffffcc" text-anchor="start">restores the reply</text>
+<ellipse cx="670.0" cy="847.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="670.0" y="854.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">5</text>
+<rect x="1220.0" y="170.0" width="540.0" height="850.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="1490.0" y="158.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">B · Ambient mesh</text>
+<rect x="1260.0" y="221.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="1260.0" y="215.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="1260.0" y="313.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="1285.0" y="249.0" width="30.0" height="22.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
+<rect x="1279.0" y="275.0" width="42.0" height="6.0" rx="3" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<text x="1338.0" y="257.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">Your Mac</text>
+<text x="1338.0" y="283.0" font-size="16" fill="#ffffffcc" text-anchor="start">curl :8080</text>
+<ellipse cx="1260.0" cy="215.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1260.0" y="222.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
+<polyline points="1490.0,315.0 1490.0,373.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="1260.0" y="379.0" width="460.0" height="100.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
+<rect x="1260.0" y="373.0" width="460.0" height="100.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
+<rect x="1260.0" y="471.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="1300.0,403.0 1318.0,410.0 1315.0,431.0 1300.0,444.0 1285.0,431.0 1282.0,410.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="1292.0,423.0 1298.0,430.0 1309.0,417.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1338.0" y="415.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">Gateway</text>
+<text x="1338.0" y="441.0" font-size="16" fill="#ffffffcc" text-anchor="start">Envoy, opens HBONE</text>
+<ellipse cx="1260.0" cy="373.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1260.0" y="380.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
+<polyline points="1490.0,473.0 1490.0,531.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="1260.0" y="537.0" width="460.0" height="100.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
+<rect x="1260.0" y="531.0" width="460.0" height="100.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
+<rect x="1260.0" y="629.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="1288.0" cy="581.0" rx="7" ry="16" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
+<polyline points="1288.0,565.0 1314.0,565.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1288.0,597.0 1314.0,597.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<ellipse cx="1314.0" cy="581.0" rx="7" ry="16" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<text x="1338.0" y="573.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">ztunnel</text>
+<text x="1338.0" y="599.0" font-size="16" fill="#ffffffcc" text-anchor="start">mTLS in every pod</text>
+<ellipse cx="1260.0" cy="531.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1260.0" y="538.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
+<polyline points="1490.0,631.0 1490.0,689.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="1260.0" y="695.0" width="460.0" height="100.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="1260.0" y="689.0" width="460.0" height="100.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="1260.0" y="787.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="1300.0,719.0 1318.0,726.0 1315.0,747.0 1300.0,760.0 1285.0,747.0 1282.0,726.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="1292.0,739.0 1298.0,746.0 1309.0,733.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1338.0" y="731.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">Waypoint</text>
+<text x="1338.0" y="757.0" font-size="16" fill="#ffffffcc" text-anchor="start">L7 policy, routing</text>
+<ellipse cx="1260.0" cy="689.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1260.0" y="696.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">4</text>
+<polyline points="1490.0,789.0 1490.0,847.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="1260.0" y="853.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="1260.0" y="847.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="1260.0" y="945.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="1284.0" y="883.0" width="32.0" height="30.0" rx="2" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="1300.0" cy="883.0" rx="16" ry="6" fill="#1e1f24" stroke="#f5f5f7" stroke-width="2.2"/>
+<polyline points="1284.0,898.0 1316.0,898.0" fill="none" stroke="#f5f5f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1338.0" y="889.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">backend → Redis</text>
+<text x="1338.0" y="915.0" font-size="16" fill="#ffffffcc" text-anchor="start">identity at every hop</text>
+<ellipse cx="1260.0" cy="847.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1260.0" y="854.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">5</text>
 </svg>

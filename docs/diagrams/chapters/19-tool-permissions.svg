@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="640" viewBox="0 0 1800 640" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1800" height="640" fill="#1e1f24"/>
+<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
+<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">Whose Permissions Does</text>
+<rect x="515.2" y="26.0" width="249.5" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<text x="529.2" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">a Tool Use?</text>
+<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">The API server checks whoever sends the request. Here that is the tool server, not you or the agent.</text>
+<rect x="60.0" y="246.0" width="300.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="60.0" y="240.0" width="300.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="60.0" y="348.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="100.0" cy="285.0" rx="10" ry="10" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<rect x="84.0" y="298.0" width="32.0" height="19.0" rx="10" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<text x="138.0" y="287.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">You</text>
+<text x="138.0" y="315.0" font-size="16" fill="#ffffffcc" text-anchor="start">or any client</text>
+<rect x="520.0" y="246.0" width="300.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="520.0" y="240.0" width="300.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="520.0" y="348.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="560.0,275.0 578.0,285.0 560.0,295.0 542.0,285.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="542.0,285.0 560.0,295.0 560.0,316.0 542.0,306.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="578.0,285.0 560.0,295.0 560.0,316.0 578.0,306.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="598.0" y="287.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">k8s-agent</text>
+<text x="598.0" y="315.0" font-size="16" fill="#ffffffcc" text-anchor="start">sa/k8s-agent</text>
+<rect x="980.0" y="246.0" width="300.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="980.0" y="240.0" width="300.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="980.0" y="348.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="1020.0" cy="295.0" rx="16" ry="16" fill="none" stroke="#f5f5f7" stroke-width="3"/>
+<ellipse cx="1020.0" cy="295.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<polyline points="1020.0,274.0 1020.0,281.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1020.0,309.0 1020.0,316.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="999.0,295.0 1006.0,295.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1034.0,295.0 1041.0,295.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1058.0" y="287.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">kagent-tools</text>
+<text x="1058.0" y="315.0" font-size="16" fill="#ffffffcc" text-anchor="start">sa/kagent-tools</text>
+<rect x="1440.0" y="246.0" width="300.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="1440.0" y="240.0" width="300.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="1440.0" y="348.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="1461.0" y="275.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="1468.0" cy="280.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<rect x="1461.0" y="289.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="1468.0" cy="294.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<rect x="1461.0" y="303.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="1468.0" cy="308.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<text x="1518.0" y="287.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Kubernetes API</text>
+<text x="1518.0" y="315.0" font-size="16" fill="#ffffffcc" text-anchor="start">RBAC</text>
+<polyline points="360.0,295.0 520.0,295.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<ellipse cx="440.0" cy="295.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="440.0" y="302.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
+<text x="440.0" y="338.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">A2A request</text>
+<polyline points="820.0,295.0 980.0,295.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<ellipse cx="900.0" cy="295.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="900.0" y="302.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
+<text x="900.0" y="338.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">MCP:</text>
+<text x="900.0" y="361.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">POST /mcp</text>
+<polyline points="1280.0,295.0 1440.0,295.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<ellipse cx="1360.0" cy="295.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1360.0" y="302.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
+<text x="1360.0" y="338.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">kubectl with</text>
+<text x="1360.0" y="361.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">its own token</text>
+<rect x="1440.0" y="470.0" width="300.0" height="110.0" rx="12" fill="#2a2b33" stroke="#e5484d" stroke-width="2.5"/>
+<polygon points="1474.0,505.0 1492.0,512.0 1489.0,533.0 1474.0,546.0 1459.0,533.0 1456.0,512.0" fill="none" stroke="#e5484d" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="1466.0,525.0 1472.0,532.0 1483.0,519.0" fill="none" stroke="#e5484d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1506.0" y="517.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">RBAC checks</text>
+<text x="1506.0" y="541.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">sa/kagent-tools</text>
+<polyline points="1590.0,356.0 1590.0,470.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+</svg>

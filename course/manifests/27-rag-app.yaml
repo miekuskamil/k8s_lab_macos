@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: rag
-          image: k8s-lab/rag:1.0.0
+          image: k8s-lab/rag:1.1.0
           imagePullPolicy: IfNotPresent
           ports: [{name: http, containerPort: 8000}]
           env:
@@ -25,6 +25,7 @@ spec:
             - {name: EMBED_MODEL, value: nomic-embed-text}
             - {name: CHAT_MODEL, value: "qwen2.5:3b"}
             - {name: DOCS_DIR, value: /docs}
+            - {name: EXCLUDE_FILES, value: 27-rag-on-kubernetes.md}
           volumeMounts:
             - {name: docs, mountPath: /docs, readOnly: true}
           readinessProbe:

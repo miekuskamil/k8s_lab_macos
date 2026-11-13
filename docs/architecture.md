@@ -32,75 +32,7 @@ Both backend versions run the same image. The `APP_VERSION` environment variable
 
 Follow one request from the browser to Redis. Thick blue arrows are encrypted mesh tunnels, thin arrows are plaintext (outside the mesh, or inside a single pod), dashed arrows are control and telemetry traffic.
 
-```mermaid
-flowchart LR
-  browser["Browser on macOS<br/>localhost:8080"]
-
-  subgraph orb["OrbStack, Docker engine"]
-    subgraph k3d["k3d cluster k8s-lab"]
-      lb["k3d load balancer<br/>host :8080 to node :8080"]
-
-      subgraph node["k3s node container"]
-        subgraph ingress["ns shop-ingress, outside mesh"]
-          gw["shop-gateway<br/>Envoy :8080"]
-        end
-
-        subgraph shop["ns shop, ambient"]
-          fe["frontend<br/>:3000"]
-          wp["waypoint Envoy<br/>HBONE :15008"]
-          b1["backend-v1 x2<br/>:8000"]
-          b2["backend-v2 x1<br/>:8000"]
-          redis[("redis<br/>:6379")]
-        end
-
-        subgraph sys["ns istio-system"]
-          zt["ztunnel<br/>HBONE :15008<br/>metrics :15020"]
-          istiod["istiod<br/>xDS :15012"]
-        end
-
-        subgraph obs["ns observability, ambient"]
-          prom["Prometheus<br/>:9090"]
-          am["Alertmanager<br/>:9093"]
-          graf["Grafana<br/>:3000"]
-          jaeger["Jaeger<br/>UI :16686<br/>OTLP :4317, :4318"]
-        end
-
-        subgraph gitops["ns argocd"]
-          argo["ArgoCD<br/>:8081 by port-forward"]
-        end
-      end
-    end
-  end
-
-  github["GitHub<br/>miekuskamil/k8s_lab_macos<br/>branch main"]
-
-  browser -->|"1 HTTP"| lb
-  lb -->|"2 TCP :8080"| gw
-  gw ==>|"3 HBONE"| zt
-  zt -->|"4 deliver"| fe
-  fe -->|"5 HTTP :8000, captured"| zt
-  zt ==>|"6 HBONE"| wp
-  wp ==>|"7 HBONE, 90 v1 / 10 v2"| zt
-  zt -->|"8 deliver"| b1
-  zt -->|"8 deliver"| b2
-  b1 ==>|"9 TCP :6379, L4 mTLS"| redis
-  b2 ==>|"9 TCP :6379, L4 mTLS"| redis
-
-  istiod -.->|"certs, config"| zt
-  istiod -.->|"xDS"| wp
-  istiod -.->|"xDS"| gw
-  wp -.->|"OTLP gRPC :4317"| jaeger
-  b1 -.->|"OTLP HTTP :4318"| jaeger
-  prom -.->|"scrape"| wp
-  prom -.->|"scrape"| b1
-  prom -.->|"alerts"| am
-  graf -.->|"PromQL"| prom
-  graf -.->|"trace lookup"| jaeger
-  argo -->|"git poll, sync"| github
-
-  linkStyle 2,5,6,9,10 stroke:#1f6feb,stroke-width:4px
-  linkStyle 11,12,13,14,15,16,17,18,19 stroke:#8b949e,stroke-width:1.5px,stroke-dasharray:5 4
-```
+![How a request travels: browser, load balancer, gateway, ztunnel, frontend, waypoint, backend, Redis, with istiod, observability and ArgoCD](diagrams/chapters/architecture-request-path.svg)
 
 The same flow as a standalone image, with the trust zones drawn in:
 
@@ -133,46 +65,7 @@ The hop between a pod and ztunnel is plaintext, but it never leaves the pod. In 
 
 ## How Git changes reach the cluster
 
-```mermaid
-flowchart TD
-  dev["You"] -->|"1 git push to main"| repo["GitHub repository"]
-
-  subgraph k3d["k3d cluster k8s-lab"]
-    subgraph argocd["ns argocd"]
-      root["Application root<br/>path manifests/argocd/apps"]
-    end
-    base["shop-base<br/>namespaces, RBAC, quotas"]
-    apps["shop-apps<br/>frontend, backend, redis"]
-    istio["istio-config<br/>gateway, waypoint, routes<br/>no selfHeal"]
-    kps["kube-prometheus-stack<br/>Helm chart plus helm/ values"]
-    obs["observability-config<br/>Jaeger, monitors, dashboard"]
-    logs["loki, alloy, kiali<br/>three more Helm charts"]
-    live["live cluster state"]
-  end
-
-  root -->|"2 poll repo"| repo
-  root -->|"3 create child apps"| base
-  root --> apps
-  root --> istio
-  root --> kps
-  root --> obs
-  root --> logs
-  base -->|"4 apply"| live
-  apps -->|"4 apply"| live
-  istio -->|"4 apply"| live
-  kps -->|"4 apply"| live
-  obs -->|"4 apply"| live
-  logs -->|"4 apply"| live
-  live -.->|"5 drift report"| root
-
-  linkStyle 3,4,5,6,7 stroke:#8b949e,stroke-width:1.5px
-  linkStyle 8,9,10,11,12,13 stroke:#1f6feb,stroke-width:3px
-  linkStyle 14 stroke:#8b949e,stroke-width:1.5px,stroke-dasharray:5 4
-```
-
 ![GitOps flow: push, poll, create child Applications, apply, drift report](diagrams/gitops-flow.svg)
-
-The SVG predates Loki, Alloy and Kiali and shows the first five Applications. The Mermaid diagram above is current.
 
 `provision.sh` installs Istio and ArgoCD with Helm, because ArgoCD cannot deploy things that need Istio before Istio exists. After that you change the cluster by pushing to `main`.
 
@@ -262,8 +155,7 @@ The node used 3.3 GiB in total, including k3s itself. Loki took 84 MiB, Alloy 57
 ### What was not verified
 
 - The panels were checked through Grafana's query API, not by looking at them in a browser.
-- `docs/diagrams/traffic-flow.excalidraw` passed a structure check (valid JSON, every element has the fields Excalidraw requires, no duplicate ids). It was not opened in Excalidraw. Its arrows are not bound to the boxes, so they stay in place when you move a box.
-- Importing the Mermaid diagrams into draw.io and Excalidraw follows their documented menus and was not tested. All 14 Mermaid diagrams in the docs and course were checked with Mermaid's own parser (version 11.4) but not rendered.
+- All 53 Excalidraw files in `docs/diagrams/` passed a structure check: valid JSON, the fields Excalidraw requires on every element, no duplicate ids. They were not opened in Excalidraw itself. Arrows are not bound to boxes, so they stay in place when you move a box.
 - Linux was tested on one distribution (Ubuntu 24.04) on one kernel. The inotify check in `provision.sh` was not triggered, because that kernel's limits were already above it.
 
 ## Resource limits
@@ -289,24 +181,13 @@ The [README](../README.md#open-it) lists the values. Committing them keeps the l
 
 ## Editing the diagrams
 
-Each diagram exists in three forms:
+Every diagram is drawn by a Python script in `docs/diagrams/`. `bbg.py` is the drawing kit, and the `make-*.py` and `chapters/make-*.py` scripts draw the diagrams. Each script writes an SVG, which GitHub shows, and an Excalidraw file, which you open at [excalidraw.com](https://excalidraw.com).
 
-- The Mermaid blocks on this page. Treat them as the source.
-- `docs/diagrams/traffic-flow.svg` and `docs/diagrams/gitops-flow.svg`, standalone images with no external fonts or scripts.
-- `docs/diagrams/traffic-flow.excalidraw`, an editable scene of the traffic flow. Its arrows are not attached to the boxes, so move them together.
-
-**draw.io.** Choose Arrange, Insert, Advanced, Mermaid, paste a diagram's text without the code fence, and select Insert. The import may drop the edge colors set by `linkStyle`, so recolor the encrypted edges by hand. To export, use File, Export as (tick "Include a copy of my diagram" so the PNG or SVG stays editable) or File, Save as `.drawio`. There is no way back to Mermaid.
-
-**Excalidraw.** Open `docs/diagrams/traffic-flow.excalidraw` from Menu, Open. To start from Mermaid instead, open the library, choose Mermaid to Excalidraw, paste the text and select Insert. To export, use Menu, Export image with "Embed scene" ticked, or save the `.excalidraw` file.
-
-**Command line.** To render the Mermaid blocks to SVG files:
+To change a diagram, edit its script and run it again:
 
 ```bash
-npm install --global @mermaid-js/mermaid-cli
-mmdc -i docs/architecture.md -o docs/diagrams/architecture.svg
+python3 docs/diagrams/chapters/make-architecture.py
 ```
-
-This writes `architecture-1.svg` and `architecture-2.svg` in `docs/diagrams/`.
 
 ## What this setup does not cover
 

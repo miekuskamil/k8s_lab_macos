@@ -4,7 +4,7 @@
 
 **Before this module:** none. Read [Istio in one picture](start-here.md) first.
 
-Check that the lab works, install `istioctl`, and learn where each tool fits. Takes 15 minutes.
+In this module you check that the lab works, install `istioctl`, and learn where each tool fits. It takes 15 minutes.
 
 ## Check the lab
 
@@ -24,7 +24,7 @@ The [course README](README.md#before-you-start) lists every UI. One tip: keep He
 
 ## Install istioctl
 
-`istioctl` is to Istio what `kubectl` is to Kubernetes: it reads the mesh's state and explains it. Install it with Homebrew on macOS, or from the [Istio releases page](https://github.com/istio/istio/releases) on Linux.
+`istioctl` is to Istio what `kubectl` is to Kubernetes. It reads the mesh's state and explains it. Install it with Homebrew on macOS, or from the [Istio releases page](https://github.com/istio/istio/releases) on Linux.
 
 ```bash
 brew install istioctl
@@ -39,29 +39,29 @@ control plane version: 1.24.2
 data plane version: 1.24.2 (3 proxies)
 ```
 
-The client can be newer than the control plane. Every command in this course was tested with client 1.32 against control plane 1.24. If a command fails with an unknown field error, install the matching client from the releases page.
+It's fine for the client to be newer than the control plane. Every command in this course ran with client 1.32 against control plane 1.24. If a command fails with an unknown field error, install the matching client from the releases page.
 
-The "3 proxies" are the proxies istiod knows about: two Envoys (the ingress gateway and the waypoint) and ztunnel, which is a separate Rust program, not Envoy. The shop's own pods are not in the count. Module 1 explains why.
+The "3 proxies" line counts the proxies that take orders from istiod, the Istio control plane:
 
-The three version lines come from three places. `istioctl` prints its own version, asks istiod for the control plane version, and asks istiod which proxies it currently sends configuration to. A proxy that lost its connection to istiod drops out of that count, so a number lower than you expect is a first clue in troubleshooting.
+- the ingress gateway, which is an Envoy proxy
+- the waypoint, which is also an Envoy proxy
+- ztunnel, which is a separate program written in Rust, not Envoy
+
+The shop's own pods are not in the count. Module 1 explains why.
+
+The three version lines come from three places:
+
+1. `istioctl` prints its own version.
+2. It asks istiod for the control plane version.
+3. It asks istiod which proxies it sends configuration to right now.
+
+This third line is useful when something breaks. A proxy that lost its connection to istiod drops out of the count. So a number lower than you expect is a first clue that a proxy no longer gets its configuration.
 
 ## The tools and what each one answers
 
-```mermaid
-flowchart LR
-  you["You"]
-  you --> kiali["Kiali<br/>What talks to what,<br/>is it encrypted,<br/>is my config valid?"]
-  you --> grafana["Grafana<br/>How much, how fast,<br/>how many errors,<br/>over time?"]
-  you --> jaeger["Jaeger<br/>Where did this one<br/>request spend its time?"]
-  you --> loki["Loki, in Grafana<br/>What did the pods<br/>print while it happened?"]
-  you --> istioctl["istioctl<br/>What config does<br/>this proxy hold now?"]
-  kiali --> prom[("Prometheus")]
-  grafana --> prom
-  grafana --> loki
-  grafana --> jaeger
-```
+![Five tools and the question each one answers](../docs/diagrams/chapters/00-observability-tools.svg)
 
-Kiali and Grafana read the same Prometheus data. Kiali turns it into a live map of the mesh. Grafana turns it into graphs over time. Use Kiali to find which edge is broken, then Grafana to see since when and how badly.
+Kiali and Grafana read the same Prometheus data. Kiali turns it into a live map of the mesh. Grafana turns it into graphs over time. Use Kiali to find which edge, the arrow between two services, is broken. Then use Grafana to see since when and how badly.
 
 ## Learn Kiali in five minutes
 
@@ -73,11 +73,11 @@ Start some traffic, then open http://localhost:20001:
 
 1. **Overview** lists namespaces with a health badge. Click `shop`.
 2. **Traffic Graph** draws the services and the calls between them. Choose namespace `shop` and `shop-ingress`, then set Display to show "Traffic Animation" and "Security". A padlock on an edge means mTLS.
-3. **Applications**, **Workloads**, **Services** list the same pods from three angles, each with metrics, traces and logs tabs.
+3. **Applications**, **Workloads** and **Services** list the same pods from three angles. Each view has tabs for metrics, traces and logs.
 4. **Istio Config** lists every Istio resource and flags invalid ones with a red icon.
 
 Kiali is read-only in this course. You make every change with `kubectl` so it stays in your shell history.
 
 ## What the verification run showed
 
-`./course/verify.sh` replays every module against the lab. Run it whenever you change the lab, and after this course to check your own work. The summary of the last run is at the end of [the course README](README.md#check-that-the-course-works).
+`./course/verify.sh` replays every module against the lab. Run it whenever you change the lab. Run it again after this course to check your own work. The summary of the last run is at the end of [the course README](README.md#check-that-the-course-works).

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Draw "The life of a request": from kubectl apply to a response.
+"""Draw the life-of-a-request diagrams in ByteByteGo style (see bbg.py).
 
-Three bands on one canvas:
-  1. top:          a pod comes to life (control plane, steps 1 to 13)
-  2. middle left:  scenario A, plain Kubernetes, client pod to Service
-  3. right:        scenario B, the shop through Istio ambient, curl to response
+  life-of-a-request       the big picture, used at the top of module 29
+  life-1-control-plane    one write through the API server, then the watchers
+  life-2-pod-startup      from a Deployment to a ready pod with endpoints
+  life-3-plain-request    scenario A: client pod to nginx, no mesh
+  life-4-ambient-request  scenario B: your Mac to Redis through the ambient mesh
 
-Writes life-of-a-request.svg (shown on GitHub) and life-of-a-request.excalidraw
-(open and edit at https://excalidraw.com) from the same description.
+The circled numbers match the numbered steps in docs/life-of-a-request.md and in
+module 29. Addresses come from one test run of the lab.
 
 Run from anywhere: python3 docs/diagrams/make-life-of-a-request.py
 """
@@ -15,362 +16,202 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from drawlib import *  # noqa: E402,F403
+from bbg import *  # noqa: E402,F403
 
 OUT = Path(__file__).resolve().parent
-W, H = 2600, 2560
-c = Canvas(W, H)
-BLANK = ("#8c959f", "#ffffff")
 
 
-def height(w, lines):
-    """Height box() will give a box of width w holding these lines."""
-    n = sum(len(c.wrap(line, w - 24)) for line in lines)
-    return 36 + 19 * n + (8 if n else 0)
+def control_plane():
+    c = Canvas(1700, 1010)
+    c.title("One write,", "many watchers")
+    c.subtitle("kubectl apply sends one HTTPS request. Three gates decide, storage keeps it, watchers react.")
+
+    c.node(60, 205, 290, 100, SLATE, "kubectl", "laptop", "apply -f app.yaml")
+    c.outline(60, 455, 290, 110, RED, "Refused\n401 · 403 · 422")
+
+    c.group(410, 170, 540, 520, "API server")
+    gates = [(205, RED, "Authentication", "lock", "Who are you?"),
+             (365, RED, "Authorization", "shield", "May you do this?"),
+             (525, PINK, "Admission", "gear", "Change it? Allow it?")]
+    for i, (y, col, label, icon, sub) in enumerate(gates):
+        c.node(450, y, 460, 110, col, label, icon, sub)
+        c.step(450, y, i + 2)
+        c.line([(450, y + 70), (350, 510)], RED, 2.5, True, head=True)
+    for y in (315, 475):
+        c.line([(680, y), (680, y + 50)], LINE, 2.5, head=True)
+
+    c.arrow([(350, 255), (450, 255)], "", n=1, at=(400, 255))
+    c.text(400, 300, "HTTPS", 17, SOFT, True, "middle")
+
+    c.node(450, 790, 460, 110, ORANGE, "kine + SQLite", "db", "etcd in bigger clusters")
+    c.arrow([(680, 635), (680, 790)], "Store it", n=5, at=(680, 735))
+
+    c.group(1090, 170, 560, 790, "Watchers")
+    watchers = [("Deployment controller", PURPLE, "gear"), ("ReplicaSet controller", PURPLE, "gear"),
+                ("Scheduler", GREEN, "gear"), ("kubelet", TEAL, "server"),
+                ("EndpointSlice controller", PURPLE, "gear"), ("kube-proxy · CoreDNS · istiod", BLUE, "globe")]
+    for i, (label, col, icon) in enumerate(watchers):
+        c.outline(1120, 200 + i * 124, 500, 96, col, label, icon)
+    c.arrow([(910, 845), (1090, 845)], "Watch", n=6, at=(1000, 845), pos="above")
+
+    c.note(60, 990, ["Each watcher writes its result back through steps 1 to 5."], 17)
+    c.save(OUT, "life-1-control-plane")
 
 
-def group(x, y, w, col, title, lines, inner, h=None, across=False):
-    """A box holding its own lines, then smaller boxes inside it: stacked, or side by side
-    when across=True. Returns bottom y."""
-    top = y + (height(w, lines) if lines else 36)
-    if across:
-        iw = (w - 24 - 10 * (len(inner) - 1)) / len(inner)
-        ih = max(height(iw, l) for _, _, l in inner)
-        total = top + ih + 12
-    else:
-        iw = w - 24
-        total = top + sum(height(iw, l) + 10 for _, _, l in inner) + 4
-    bottom = c.box(x, y, w, col, title, lines, h=h or (total - y))
-    yy, xx = top, x + 12
-    for icol, ititle, ilines in inner:
-        if across:
-            c.box(xx, top, iw, icol, ititle, ilines, h=(h or (total - y)) - (top - y) - 12)
-            xx += iw + 10
-        else:
-            yy = c.box(x + 12, yy, iw, icol, ititle, ilines) + 10
-    return bottom
+def pod_startup():
+    c = Canvas(1700, 1130)
+    c.title("From a Deployment to a", "Ready Pod")
+    c.subtitle("Each arrow is one component reacting to a change it watched. The whole chain took about two seconds.")
+
+    top = 190
+    c.node(60, top, 320, 100, SLATE, "Deployment", "doc", "hello, replicas: 1")
+    c.node(560, top, 320, 100, SLATE, "ReplicaSet", "doc", "hello-76fb6c6b6f")
+    c.node(1060, top, 320, 100, SLATE, "Pod", "cube", "no node yet")
+    c.arrow([(380, top + 50), (560, top + 50)], "Deployment\ncontroller", n=1, at=(470, top + 50), pos="below")
+    c.arrow([(880, top + 50), (1060, top + 50)], "ReplicaSet\ncontroller", n=2, at=(970, top + 50), pos="below")
+
+    c.node(1060, 400, 320, 100, GREEN, "Scheduler", "gear", "filter · score · bind")
+    c.arrow([(1220, top + 100), (1220, 400)], "Pick a node", n=3, at=(1220, 345))
+
+    c.node(1060, 590, 320, 100, TEAL, "kubelet", "server", "on the chosen node")
+    c.arrow([(1220, 500), (1220, 590)], "watch: a pod for me", at=(1222, 560), col=SOFT)
+
+    c.group(60, 560, 860, 330, "Pod sandbox on the node")
+    c.outline(95, 600, 380, 100, ORANGE, "Sandbox\npause container", "cube")
+    c.outline(505, 600, 380, 100, TEAL, "flannel\nIP 10.42.0.197", "globe")
+    c.outline(95, 750, 380, 100, BLUE, "istio-cni\nambient only", "lock")
+    c.outline(505, 750, 380, 100, GREEN, "Containers\nstart · probe", "cube")
+    c.step(505, 600, 5)
+    c.step(505, 750, 6)
+    c.arrow([(1060, 640), (920, 640)], "containerd\n(CRI)", n=4, at=(990, 640), pos="below")
+
+    c.node(60, 990, 400, 100, PURPLE, "EndpointSlice", "gear", "10.42.0.197 ready")
+    c.arrow([(260, 890), (260, 990)], "Ready", n=7, at=(260, 940))
+
+    c.group(560, 965, 1080, 150, "Watchers update")
+    for i, (label, col, icon) in enumerate([("kube-proxy", TEAL, "server"), ("CoreDNS", TEAL, "dns"), ("istiod", BLUE, "gear")]):
+        c.outline(590 + i * 345, 1000, 315, 90, col, label, icon)
+    c.arrow([(460, 1040), (560, 1040)], "")
+    c.save(OUT, "life-2-pod-startup")
 
 
-def down(x, y1, y2, col=INK, label="", dashed=False):
-    c.arrow([(x, y1), (x, y2)], col, label, dashed, at=(x + 10, (y1 + y2) / 2 + 5) if label else None)
+def plain_request():
+    c = Canvas(1700, 990)
+    c.title("Scenario A:", "No Mesh")
+    c.subtitle("curl http://hello from a client pod. The node's kernel does all the work, with rules kube-proxy wrote.")
+
+    c.group(40, 160, 1620, 640, "Node k3d-k8s-lab-server-0")
+    c.node(90, 220, 360, 110, SLATE, "client pod", "cube", "10.42.0.198")
+    c.node(90, 600, 360, 110, TEAL, "CoreDNS", "dns", "10.43.0.10")
+    c.arrow([(170, 330), (170, 600)], "Where is\nhello?", n=1, at=(170, 465))
+    c.arrow([(370, 600), (370, 330)], "10.43.76.137", at=(370, 470), pos="right", col=SOFT)
+
+    c.node(650, 220, 420, 110, GREEN, "Kernel: iptables", "gear", "rules from kube-proxy")
+    c.arrow([(450, 275), (650, 275)], "Connect to\n10.43.76.137", n=2, at=(550, 275), pos="above")
+
+    c.node(1250, 220, 360, 110, SLATE, "hello pod", "cube", "nginx · 10.42.0.197")
+    c.arrow([(1070, 275), (1250, 275)], "DNAT to\n10.42.0.197", n=3, at=(1160, 275), pos="above")
+
+    c.node(650, 520, 420, 110, ORANGE, "conntrack", "db", "the kernel's notebook")
+    c.arrow([(860, 330), (860, 520)], "writes down\nthe rewrite", at=(940, 430), pos="right", col=SOFT)
+    c.arrow([(1430, 330), (1430, 575), (1070, 575)], "Reply", n=4, at=(1430, 455))
+    c.arrow([(650, 575), (450, 300)], "source restored:\n10.43.76.137", at=(560, 520), pos="left", col=SOFT)
+
+    c.text(60, 860, "What nobody checked", 21, INK, True)
+    for i, t in enumerate(["No identity", "No encryption", "No policy", "No request metrics"]):
+        c.outline(60 + i * 405, 880, 375, 76, RED, t)
+    c.save(OUT, "life-3-plain-request")
 
 
-# ---- title ------------------------------------------------------------------
-c.text(40, 54, "The life of a request: from kubectl apply to a response", 34, INK, True)
-c.text(40, 88, "Everything measured on this lab: k3s v1.31.5 in k3d on OrbStack, Istio 1.24.2 ambient. "
-       "Purple: control plane. Orange: storage. Green: kernel networking. Blue: proxies. "
-       "Red: security decisions. Yellow: outside the cluster.", 16, MUTED)
+def ambient_request():
+    c = Canvas(1800, 1180)
+    c.title("Scenario B:", "Through the Mesh")
+    c.subtitle("curl localhost:8080/api/orders on your Mac. Every hop inside the cluster is an mTLS tunnel with two checked identities.")
 
-# ============================================================================
-# Band 1: a pod comes to life
-# ============================================================================
-B1 = 112
-band1 = len(c.boxes)
-c.box(40, B1, 2520, BLANK, "", h=10)  # placeholder, resized at the end of the band
-c.text(60, B1 + 32, "1. A pod comes to life: kubectl apply -f deployment.yaml", 22, CTRL[0], True)
+    c.node(60, 170, 300, 100, SLATE, "Your Mac", "laptop", "curl :8080")
+    c.node(560, 170, 320, 100, SLATE, "k3d serverlb", "server", "nginx, TCP only")
+    c.node(1080, 170, 360, 100, GREEN, "Node kernel", "gear", "DNAT + SNAT")
+    c.arrow([(360, 220), (560, 220)], "Docker\nport 8080", n=1, at=(460, 220), pos="below")
+    c.arrow([(880, 220), (1080, 220)], "to node :8080", at=(980, 205), pos="above", col=SOFT)
 
-R1 = B1 + 110  # top of the API server frame
-# step 1: kubectl
-k_x, k_w = 60, 370
-# API server frame with steps 2 to 5
-api_x, api_w = 470, 1400
-sw, sg = 320, 20
-api = [
-    ("2. Authentication", [
-        "Client cert signed by client-ca → user system:admin, groups system:masters and system:authenticated.",
-        "--anonymous-auth=false.",
-        "Service accounts use signed JWT tokens."]),
-    ("3. Authorization", [
-        "--authorization-mode=Node,RBAC.",
-        "Node authorizer for kubelets, then RBAC Roles and ClusterRoles. system:masters skips RBAC.",
-        "Example: kubectl auth can-i create deployments",
-        "--as=system:serviceaccount:shop:frontend",
-        "→ no"]),
-    ("4. Mutating admission", [
-        "Built-in plugins plus webhooks (Istio sidecar injector, Kyverno mutate) change the object."]),
-    ("5. Validation", [
-        "Schema validation, then validating admission: NodeRestriction, ValidatingAdmissionPolicy (CEL), "
-        "webhooks (Kyverno, Istio validation).",
-        "Refusal → error back to kubectl."]),
-]
-sh = max(height(sw, l) for _, l in api)
-api_h = 40 + sh + 20
-c.box(api_x, R1, api_w, CTRL, "API server: every request passes these checks in order", h=api_h)
-sx = [api_x + 20 + i * (sw + sg) for i in range(4)]
-for x, (t, l) in zip(sx, api):
-    c.box(x, R1 + 40, sw, SEC, t, l, h=sh)
-for i in range(3):
-    c.arrow([(sx[i] + sw, R1 + 40 + sh / 2), (sx[i + 1], R1 + 40 + sh / 2)], INK)
+    c.node(1080, 380, 360, 110, BLUE, "Gateway", "shield", "Envoy · shop-ingress")
+    c.arrow([(1260, 270), (1260, 380)], "kube-proxy:\nto 10.42.0.88", n=2, at=(1260, 325))
 
-k_h = height(k_w, ["Reads kubeconfig.", "Sends REST POST /apis/apps/v1/namespaces/default/deployments "
-                   "(protobuf/JSON) over TLS with a client certificate."])
-c.box(k_x, R1 + 40, k_w, EXT, "1. kubectl apply", [
-    "Reads kubeconfig.",
-    "Sends REST POST /apis/apps/v1/namespaces/default/deployments (protobuf/JSON) over TLS "
-    "with a client certificate."])
-c.arrow([(k_x + k_w, R1 + 40 + k_h / 2), (sx[0], R1 + 40 + k_h / 2)], INK)
-# refusal path from step 5 back to kubectl, above the frame
-c.arrow([(sx[3] + sw / 2, R1 + 40), (sx[3] + sw / 2, R1 - 22), (k_x + k_w / 2, R1 - 22), (k_x + k_w / 2, R1 + 40)],
-        SEC[0], "refused by step 2, 3, 4 or 5: error back to kubectl", dashed=True, at=(k_x + k_w / 2 + 14, R1 - 30))
+    c.group(60, 360, 900, 170, "frontend pod")
+    c.outline(85, 400, 260, 96, BLUE, "ztunnel\n:15001 out", "tunnel")
+    c.outline(370, 400, 260, 96, SLATE, "frontend\napp :3000", "cube")
+    c.outline(655, 400, 280, 96, BLUE, "ztunnel\n:15008 in", "tunnel")
+    c.arrow([(1080, 435), (935, 435)], "HBONE", n=3, at=(1008, 435), pos="above")
+    c.line([(655, 448), (630, 448)], LINE, 2.5, head=True)
+    c.line([(370, 448), (345, 448)], LINE, 2.5, head=True)
 
-# step 6: storage below the API server
-st_y = R1 + api_h + 60
-st_x, st_w = api_x + 20, api_w - 40
-st_bottom = c.box(st_x, st_y, st_w, STORE, "6. Storage", [
-    "--etcd-servers=unix://kine.sock: kine translates etcd calls to SQLite "
-    "/var/lib/rancher/k3s/server/db/state.db (74 MB) in k3s.",
-    "Real clusters use etcd (Raft, 3 or 5 nodes). Every object gets a resourceVersion."])
-down(sx[3] + sw / 2, R1 + 40 + sh, st_y, STORE[0], "store")
+    c.node(60, 640, 380, 110, PURPLE, "Waypoint", "shield", "L7 policy · routing")
+    c.arrow([(215, 496), (215, 640)], "HBONE to\nthe waypoint", n=4, at=(215, 568))
 
-# step 7: controller manager, right of the API server
-cm_x, cm_w = api_x + api_w + 40, 2540 - (api_x + api_w + 40)
-cm_bottom = c.box(cm_x, R1 + 40, cm_w, CTRL, "7. Controller manager", [
-    "Watch: informers cache objects.",
-    "Deployment controller creates a ReplicaSet (ownerReference); the ReplicaSet controller creates Pods.",
-    "Reconcile loop: compare desired vs actual, act, repeat."])
-st_mid = (st_y + st_bottom) / 2
-c.arrow([(st_x + st_w, st_mid), (cm_x + 140, st_mid), (cm_x + 140, cm_bottom)], CTRL[0], "watch",
-        at=(st_x + st_w + 16, st_mid - 8))
+    c.group(560, 620, 860, 170, "backend-v1 pod")
+    c.outline(585, 660, 260, 96, BLUE, "ztunnel\n:15008 in", "tunnel")
+    c.outline(870, 660, 260, 96, SLATE, "backend\napp :8000", "cube")
+    c.outline(1155, 660, 240, 96, BLUE, "ztunnel\n:15001 out", "tunnel")
+    c.arrow([(440, 708), (585, 708)], "Allowed", n=5, at=(512, 708), pos="above")
+    c.line([(845, 708), (870, 708)], LINE, 2.5, head=True)
+    c.line([(1130, 708), (1155, 708)], LINE, 2.5, head=True)
 
-# row 2: steps 8 to 13, left to right
-R2 = st_bottom + 70
-row2 = [
-    (370, CTRL, "8. Scheduler", [
-        "Watches Pods with no nodeName.",
-        "Filter (resources, taints, affinity, ports) → Score (spread, image locality, balance) "
-        "→ Bind (writes spec.nodeName).",
-        "Failure: 0/1 nodes are available: Insufficient memory = filter phase."], None),
-    (290, CTRL, "9. kubelet", [
-        "On k3d-k8s-lab-server-0.",
-        "Sees its pod via watch, admits it, calls containerd over CRI."], None),
-    (290, GREY, "10. containerd", [
-        "Creates the pause sandbox (network namespace), pulls the image, starts containers."], None),
-    (400, NET, "11. CNI chain", [
-        "flannel: pod IP from 10.42.0.0/24 on the cni0 bridge + veth.",
-        "istio-cni (if the namespace is in ambient): iptables inside the pod netns, "
-        "tells ztunnel to open sockets inside the pod."], None),
-    (280, GREY, "12. Probes", [
-        "startup → readiness.",
-        "Ready pod → the EndpointSlice controller adds its IP."], None),
-    (720, GREY, "13. Consumers of EndpointSlices", [], [
-        (NET, "kube-proxy", ["Writes iptables KUBE-SVC / KUBE-SEP rules."]),
-        (CTRL, "istiod", ["Pushes the endpoint over xDS: to ztunnel (WDS), to waypoints and gateways (EDS)."]),
-        (GREY, "CoreDNS", ["Answers names."])]),
-]
-gap = (2480 - sum(r[0] for r in row2)) / (len(row2) - 1)
-r2h = 0
-for w, col, t, l, inner in row2:
-    if inner:
-        iw = (w - 24 - 10 * (len(inner) - 1)) / len(inner)
-        r2h = max(r2h, 36 + max(height(iw, il) for _, _, il in inner) + 12)
-    else:
-        r2h = max(r2h, height(w, l))
-x = 60
-r2x = []
-for w, col, t, l, inner in row2:
-    r2x.append(x)
-    if inner:
-        group(x, R2, w, col, t, l, inner, h=r2h, across=True)
-    else:
-        c.box(x, R2, w, col, t, l, h=r2h)
-    x += w + gap
-for i in range(len(row2) - 1):
-    a = r2x[i] + row2[i][0]
-    c.arrow([(a, R2 + r2h / 2), (r2x[i + 1], R2 + r2h / 2)], INK)
-# 7 -> 8: new Pods go to the scheduler
-gy = R2 - 32
-c.arrow([(cm_x + cm_w - 120, cm_bottom), (cm_x + cm_w - 120, gy), (r2x[0] + 200, gy), (r2x[0] + 200, R2)],
-        CTRL[0], "new Pods (no nodeName yet) → scheduler; Bind → kubelet on that node",
-        at=(r2x[0] + 214, gy - 8))
+    c.node(1500, 650, 260, 110, SLATE, "Redis", "db", "10.42.0.14")
+    c.arrow([(1395, 708), (1500, 708)], "", n=6, at=(1448, 708))
+    c.text(1448, 760, "HBONE", 17, SOFT, True, "middle")
 
-B1_end = R2 + r2h + 24
-b = c.boxes[band1]
-c.boxes[band1] = (b[0], b[1], b[2], B1_end - B1, b[4], b[5], b[6], b[7])
+    c.node(60, 880, 380, 100, PURPLE, "istiod", "gear", "config + certificates")
+    c.arrow([(250, 880), (250, 750)], "xDS", at=(290, 815), pos="right", col=SOFT)
 
-# ============================================================================
-# Band 2: scenario A, plain Kubernetes
-# ============================================================================
-B2 = B1_end + 30
-A_x, A_w = 40, 700
-c.box(A_x, B2, A_w, BLANK, "", h=10)
-band2 = len(c.boxes) - 1
-c.text(A_x + 20, B2 + 32, "A. Plain Kubernetes (no mesh)", 22, NET[0], True)
-c.text(A_x + 20, B2 + 56, "A client pod calls a Service.", 15, MUTED)
-
-hx, hw, hgap = A_x + 40, A_w - 80, 52
-y = B2 + 80
-hops_a = [
-    (GREY, "1. Client pod (namespace outside the mesh)", [
-        "Asks DNS: /etc/resolv.conf → CoreDNS 10.43.0.10 → A record for the Service ClusterIP."], "connect()"),
-    (GREY, "2. connect(ClusterIP:port)", [
-        "Leaves the pod through its veth into the node netns."], "veth"),
-    (NET, "3. Node iptables", [
-        "KUBE-SERVICES matches the ClusterIP",
-        "→ KUBE-SVC-xxx picks an endpoint (random, probability)",
-        "→ KUBE-SEP-xxx DNATs to pod IP:port.",
-        "conntrack records the translation."], "DNAT done"),
-    (NET, "4. cni0 bridge → veth of the target pod", [
-        "Same node here. Across nodes, flannel VXLAN would wrap the packet."], "veth"),
-    (GREY, "5. Target pod", [
-        "Receives plain TCP, source = client pod IP."], None),
-]
-for i, (col, t, l, lab) in enumerate(hops_a):
-    yb = c.box(hx, y, hw, col, t, l)
-    if lab:
-        down(hx + 60, yb, yb + hgap, INK, lab)
-        y = yb + hgap
-    else:
-        y = yb
-# security note glued to the target pod
-y = c.box(hx + 40, y + 10, hw - 40, SEC, "No identity, no encryption", [
-    "Any pod may connect unless a NetworkPolicy says otherwise."])
-down(hx + 60, y, y + hgap, INK, "reply")
-y = c.box(hx, y + hgap, hw, GREY, "6. Return", [
-    "The reply goes back; conntrack reverses the DNAT, so the client sees the ClusterIP as the source."],
-    dashed=True)
-A_end = y + 30
-
-# ============================================================================
-# Band 3: scenario B, the shop through Istio ambient
-# ============================================================================
-Bx = A_x + A_w + 30
-Bw = 2560 - Bx
-c.box(Bx, B2, Bw, BLANK, "", h=10)
-band3 = len(c.boxes) - 1
-c.text(Bx + 20, B2 + 32, "B. The shop through Istio ambient", 22, PROXY[0], True)
-c.text(Bx + 20, B2 + 56, "curl on the Mac → gateway → frontend → waypoint → backend → Redis, and back.", 15, MUTED)
-
-cw, cg = 540, 40
-cx = [Bx + 20 + i * (cw + cg) for i in range(3)]
-top = B2 + 80
-gap = 52
+    c.group(540, 870, 1220, 250, "Identities checked on the way")
+    rows = ["shop-gateway-istio  →  frontend", "frontend  →  waypoint", "waypoint  →  backend", "backend  →  redis"]
+    for i, t in enumerate(rows):
+        c.step(590, 920 + i * 48, ["3", "4", "5", "6"][i])
+        c.text(625, 927 + i * 48, t, 19, INK, True)
+    c.outline(1250, 915, 480, 150, GREEN, "Back through\nthe same tunnels", "tunnel")
+    c.step(1250, 915, 7)
+    c.save(OUT, "life-4-ambient-request")
 
 
-def column(x, y, hops):
-    """Stack hops down a column with labelled arrows; return (bottom y, list of (top, bottom))."""
-    spans = []
-    for i, (kind, col, t, l, inner, lab) in enumerate(hops):
-        if kind == "box":
-            yb = c.box(x, y, cw, col, t, l)
-        else:
-            yb = group(x, y, cw, col, t, l, inner)
-        spans.append((y, yb))
-        if lab is not None and i < len(hops) - 1:
-            down(x + 60, yb, yb + gap, INK, lab)
-        y = yb + gap
-    return y - gap, spans
+def overview():
+    c = Canvas(1800, 1060)
+    c.title("The Life of a", "Request")
+    c.subtitle("Part 1 builds the pod. Scenario A and B send a request to it: once without a mesh, once through it.")
+
+    def column(x, title, rows, col_title):
+        c.group(x, 170, 540, 850, title)
+        y = 215
+        for i, (label, col, icon, sub) in enumerate(rows):
+            c.node(x + 40, y, 460, 100, col, label, icon, sub, size=22)
+            c.step(x + 40, y, i + 1)
+            if i < len(rows) - 1:
+                c.line([(x + 270, y + 100), (x + 270, y + 158)], LINE, 2.5, True, head=True)
+            y += 158
+
+    column(40, "1 · A pod comes to life", [
+        ("kubectl", SLATE, "laptop", "sends the Deployment"),
+        ("API server", RED, "lock", "who? allowed? valid?"),
+        ("kine + SQLite", ORANGE, "db", "stores the object"),
+        ("Controllers", PURPLE, "gear", "ReplicaSet, then Pod"),
+        ("Scheduler + kubelet", TEAL, "server", "node, sandbox, IP, start")], SLATE)
+    column(630, "A · No mesh", [
+        ("client pod", SLATE, "cube", "curl http://hello"),
+        ("CoreDNS", TEAL, "dns", "name to ClusterIP"),
+        ("Kernel iptables", GREEN, "gear", "DNAT to the pod"),
+        ("hello pod", SLATE, "cube", "plain TCP, no identity"),
+        ("conntrack", ORANGE, "db", "restores the reply")], SLATE)
+    column(1220, "B · Ambient mesh", [
+        ("Your Mac", SLATE, "laptop", "curl :8080"),
+        ("Gateway", BLUE, "shield", "Envoy, opens HBONE"),
+        ("ztunnel", BLUE, "tunnel", "mTLS in every pod"),
+        ("Waypoint", PURPLE, "shield", "L7 policy, routing"),
+        ("backend → Redis", SLATE, "db", "identity at every hop")], SLATE)
+    c.save(OUT, "life-of-a-request")
 
 
-col1 = [
-    ("box", EXT, "1. Mac", ["curl localhost:8080"], None, "TCP"),
-    ("box", EXT, "2. OrbStack / Docker port mapping", [
-        "host 0.0.0.0:8080 → container k3d-k8s-lab-serverlb:8080"], None, "TCP"),
-    ("box", EXT, "3. k3d serverlb (nginx, TCP stream mode)", [
-        "upstream 8080_tcp { server k3d-k8s-lab-server-0:8080 }"], None, "to node :8080"),
-    ("box", NET, "4. Node 192.168.107.2:8080, PREROUTING", [
-        "KUBE-SERVICES runs before the svclb host port rule:",
-        "kube-proxy's load balancer IP rule matches first"], None, "KUBE-EXT"),
-    ("box", NET, "5. kube-proxy DNAT", [
-        "KUBE-EXT-EIP2... marks for masquerade → KUBE-SVC-EIP2... → KUBE-SEP-...",
-        "DNAT → gateway pod 10.42.0.88:8080"], None, "SNAT"),
-    ("box", NET, "6. KUBE-POSTROUTING", [
-        "MASQUERADE --random-fully: the source becomes 10.42.0.1.",
-        "The svclb pod's host port DNAT never matches."], None, None),
-]
-col2 = [
-    ("box", PROXY, "7. Gateway pod (Envoy)", [
-        "Namespace shop-ingress, NOT in ambient mode.",
-        "HTTPRoute match /* → frontend.shop:3000.",
-        "Endpoint envoy://connect_originate/10.42.0.13:3000: Envoy itself opens HBONE "
-        "(HTTP CONNECT over mTLS) to port 15008 of the frontend pod.",
-        "Identity spiffe://cluster.local/ns/shop-ingress/sa/shop-gateway-istio"], None, "HBONE → :15008"),
-    ("group", GREY, "8. Frontend pod netns", ["App listens on 3000."], [
-        (PROXY, "ztunnel sockets live INSIDE the pod", [
-            "15008 HBONE inbound, 15006 plaintext inbound, 15001 outbound, 15053 DNS."]),
-        (SEC, "ztunnel inbound: L4 AuthorizationPolicy", [
-            "Checks the policy, terminates mTLS, delivers to the app on :3000."])], "app makes a call"),
-    ("box", NET, "9. Frontend app calls the backend", [
-        "http://backend.shop.svc.cluster.local:8000",
-        "DNS: iptables redirects it to 15053 (ztunnel DNS proxy).",
-        "TCP: iptables REDIRECT --to-ports 15001.",
-        "ztunnel's own traffic (mark 0x539) is exempt."], None, ":15001"),
-    ("box", PROXY, "10. ztunnel outbound", [
-        "The backend Service has istio.io/use-waypoint: waypoint",
-        "→ HBONE mTLS to the waypoint pod :15008",
-        "as spiffe://cluster.local/ns/shop/sa/frontend"], None, None),
-]
-col3 = [
-    ("group", PROXY, "11. Waypoint (Envoy, L7)", [], [
-        (SEC, "AuthorizationPolicy backend-allow-frontend", [
-            "L7 check: only sa/frontend, GET/POST paths."]),
-        (PROXY, "Route and record", [
-            "HTTPRoute picks backend-v1 (weights), retries and timeouts.",
-            "Writes metrics istio_requests_total and a trace span."])], "HBONE → :15008"),
-    ("group", GREY, "12. Backend pod", [], [
-        (SEC, "ztunnel inbound: backend-only-from-waypoint", ["L4 policy."]),
-        (GREY, "App :8000", ["Calls Redis."])], "to Redis"),
-    ("group", PROXY, "13. Backend → Redis", [
-        "Redis has no waypoint, so ztunnel to ztunnel only (L4, mTLS)."], [
-        (SEC, "redis-allow-backend", ["L4 policy."])], None),
-]
-b1, sp1 = column(cx[0], top, col1)
-b2, sp2 = column(cx[1], top, col2)
-b3, sp3 = column(cx[2], top, col3)
-
-# column to column: from the right edge of the last hop, up the gutter, into the next column's first hop
-for (sx_, spans_a), (nx, spans_b), lab in (((cx[0], sp1), (cx[1], sp2), "to gateway"),
-                                            ((cx[1], sp2), (cx[2], sp3), "HBONE → waypoint :15008")):
-    ya = (spans_a[-1][0] + spans_a[-1][1]) / 2
-    yb = spans_b[0][0] + 30
-    gx = sx_ + cw + cg / 2
-    c.arrow([(sx_ + cw, ya), (gx, ya), (gx, yb), (nx, yb)], INK)
-
-# return path and timing, under columns 1 and 3
-ret_x = cx[2]
-ret_bottom = c.box(ret_x, b3 + 40, cw, GREY, "14. Return path", [
-    "Same connections in reverse: HBONE streams are bidirectional.",
-    "conntrack undoes kube-proxy's SNAT and DNAT.",
-    "nginx and Docker forward the bytes back to curl."], dashed=True)
-tim_bottom = c.box(ret_x, ret_bottom + 30, cw, BLANK, "Measured trace (Jaeger) of one request", [
-    "One POST /api/orders: gateway 18.5 ms in total, waypoint 7.4 ms, backend 5.5 ms, Redis 0.5 and 0.3 ms.",
-    "The untraced Node.js frontend takes most of the gap; each mesh hop costs about a millisecond."])
-down(cx[2] + 60, b3, b3 + 40, INK, "response")
-
-# legend and security checkpoints under column 1
-lg_y = b1 + 40
-leg = [(CTRL, "control plane"), (STORE, "storage"), (NET, "kernel networking"), (PROXY, "proxies"),
-       (SEC, "security decisions"), (EXT, "outside the cluster"), (GREY, "pods and apps")]
-leg_h = 44 + 30 * ((len(leg) + 1) // 2) + 6
-c.box(cx[0], lg_y, cw, BLANK, "Legend", h=leg_h)
-for n, (col, label) in enumerate(leg):
-    lx = cx[0] + 16 + (n % 2) * 260
-    ly = lg_y + 40 + (n // 2) * 30
-    c.box(lx, ly, 22, col, "", h=20)
-    c.text(lx + 32, ly + 15, label, 14, INK)
-
-sec_y = lg_y + leg_h + 24
-sec_bottom = c.box(cx[0], sec_y, cw, SEC, "Security checkpoints, in order", [
-    "1. RBAC + admission (control plane, steps 2 to 5)",
-    "2. NetworkPolicy (kernel, plain path A)",
-    "3. mTLS identity at every ztunnel hop",
-    "4. L4 AuthorizationPolicy at ztunnel",
-    "5. L7 AuthorizationPolicy at the waypoint"])
-
-B_end = max(b2, tim_bottom, sec_bottom, A_end - 30) + 30
-for i, end in ((band2, B_end), (band3, B_end)):
-    b = c.boxes[i]
-    c.boxes[i] = (b[0], b[1], b[2], end - b[1], b[4], b[5], b[6], b[7])
-
-c.h = int(B_end + 40)
-
-# warn about text that may not fit its box (rough widths: 14 px body, 16 px bold titles)
-for x, y, w, h, col, title, lines, dashed in c.boxes:
-    if title and len(title) * 9.4 > w - 20:
-        print(f"title may overflow: {title!r}")
-    for line in lines:
-        if len(line) * 7.3 > w - 24:
-            print(f"line may overflow: {line!r}")
-    if x + w > c.w - 20 or y + h > c.h - 20:
-        print(f"box near the canvas edge: {title!r}")
-c.save(OUT, "life-of-a-request")
-print(f"canvas {c.w} x {c.h}")
+if __name__ == "__main__":
+    overview()
+    control_plane()
+    pod_startup()
+    plain_request()
+    ambient_request()

@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="790" viewBox="0 0 1800 790" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1800" height="790" fill="#1e1f24"/>
+<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
+<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">How to</text>
+<rect x="193.0" y="26.0" width="249.5" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<text x="207.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">investigate</text>
+<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">Work from symptoms to cause, and from the outside in. Each step narrows down the next one.</text>
+<rect x="60.0" y="196.0" width="360.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="60.0" y="190.0" width="360.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="60.0" y="298.0" width="360.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="100.0" cy="235.0" rx="10" ry="10" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<rect x="84.0" y="248.0" width="32.0" height="19.0" rx="10" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<text x="138.0" y="237.0" font-size="26" fill="#f5f5f7" font-weight="700" text-anchor="start">Symptom</text>
+<text x="138.0" y="267.0" font-size="16" fill="#ffffffcc" text-anchor="start">curl -v localhost:8080/api/orders</text>
+<ellipse cx="60.0" cy="190.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="60.0" y="197.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
+<text x="70.0" y="340.0" font-size="17" fill="#c9cbd3" text-anchor="start">What does the user get?</text>
+<polyline points="420.0,245.0 500.0,245.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="500.0" y="196.0" width="360.0" height="110.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
+<rect x="500.0" y="190.0" width="360.0" height="110.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
+<rect x="500.0" y="298.0" width="360.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="540.0" cy="245.0" rx="20" ry="11" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
+<ellipse cx="540.0" cy="245.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<text x="578.0" y="237.0" font-size="26" fill="#f5f5f7" font-weight="700" text-anchor="start">Kiali</text>
+<text x="578.0" y="267.0" font-size="16" fill="#ffffffcc" text-anchor="start">Traffic Graph</text>
+<ellipse cx="500.0" cy="190.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="500.0" y="197.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
+<text x="510.0" y="340.0" font-size="17" fill="#c9cbd3" text-anchor="start">Which edge is red</text>
+<text x="510.0" y="364.0" font-size="17" fill="#c9cbd3" text-anchor="start">or missing?</text>
+<polyline points="860.0,245.0 940.0,245.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="940.0" y="196.0" width="360.0" height="110.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
+<rect x="940.0" y="190.0" width="360.0" height="110.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
+<rect x="940.0" y="298.0" width="360.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="964.0" y="231.0" width="32.0" height="30.0" rx="2" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="980.0" cy="231.0" rx="16" ry="6" fill="#1e1f24" stroke="#f5f5f7" stroke-width="2.2"/>
+<polyline points="964.0,246.0 996.0,246.0" fill="none" stroke="#f5f5f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1018.0" y="237.0" font-size="26" fill="#f5f5f7" font-weight="700" text-anchor="start">Grafana</text>
+<text x="1018.0" y="267.0" font-size="16" fill="#ffffffcc" text-anchor="start">Prometheus metrics</text>
+<ellipse cx="940.0" cy="190.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="940.0" y="197.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
+<text x="950.0" y="340.0" font-size="17" fill="#c9cbd3" text-anchor="start">Since when, how many?</text>
+<text x="950.0" y="364.0" font-size="17" fill="#c9cbd3" text-anchor="start">Which code and response flag?</text>
+<polyline points="1300.0,245.0 1380.0,245.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="1380.0" y="196.0" width="360.0" height="110.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
+<rect x="1380.0" y="190.0" width="360.0" height="110.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
+<rect x="1380.0" y="298.0" width="360.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="1420.0" cy="245.0" rx="20" ry="11" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
+<ellipse cx="1420.0" cy="245.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<text x="1458.0" y="237.0" font-size="26" fill="#f5f5f7" font-weight="700" text-anchor="start">Jaeger</text>
+<text x="1458.0" y="267.0" font-size="16" fill="#ffffffcc" text-anchor="start">one trace</text>
+<ellipse cx="1380.0" cy="190.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1380.0" y="197.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">4</text>
+<text x="1390.0" y="340.0" font-size="17" fill="#c9cbd3" text-anchor="start">Where does one bad request</text>
+<text x="1390.0" y="364.0" font-size="17" fill="#c9cbd3" text-anchor="start">stop or spend its time?</text>
+<rect x="1380.0" y="566.0" width="360.0" height="110.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
+<rect x="1380.0" y="560.0" width="360.0" height="110.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
+<rect x="1380.0" y="668.0" width="360.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="1406.0,595.0 1426.0,595.0 1436.0,605.0 1436.0,635.0 1406.0,635.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="1413.0,613.0 1429.0,613.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1413.0,621.0 1429.0,621.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1413.0,629.0 1424.0,629.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1458.0" y="607.0" font-size="26" fill="#f5f5f7" font-weight="700" text-anchor="start">Logs</text>
+<text x="1458.0" y="637.0" font-size="16" fill="#ffffffcc" text-anchor="start">waypoint · ztunnel · Loki</text>
+<ellipse cx="1380.0" cy="560.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1380.0" y="567.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">5</text>
+<text x="1390.0" y="710.0" font-size="17" fill="#c9cbd3" text-anchor="start">Waypoint access log,</text>
+<text x="1390.0" y="734.0" font-size="17" fill="#c9cbd3" text-anchor="start">ztunnel, app logs in Loki</text>
+<polyline points="1380.0,615.0 1300.0,615.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="940.0" y="566.0" width="360.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="940.0" y="560.0" width="360.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="940.0" y="668.0" width="360.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="980.0" cy="615.0" rx="16" ry="16" fill="none" stroke="#f5f5f7" stroke-width="3"/>
+<ellipse cx="980.0" cy="615.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<polyline points="980.0,594.0 980.0,601.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="980.0,629.0 980.0,636.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="959.0,615.0 966.0,615.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="994.0,615.0 1001.0,615.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1018.0" y="607.0" font-size="26" fill="#f5f5f7" font-weight="700" text-anchor="start">Config</text>
+<text x="1018.0" y="637.0" font-size="16" fill="#ffffffcc" text-anchor="start">istioctl analyze</text>
+<ellipse cx="940.0" cy="560.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="940.0" y="567.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">6</text>
+<text x="950.0" y="710.0" font-size="17" fill="#c9cbd3" text-anchor="start">Kiali Istio Config,</text>
+<text x="950.0" y="734.0" font-size="17" fill="#c9cbd3" text-anchor="start">kubectl get the suspect resource</text>
+<polyline points="940.0,615.0 860.0,615.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="500.0" y="566.0" width="360.0" height="110.0" rx="16" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<rect x="500.0" y="560.0" width="360.0" height="110.0" rx="16" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<rect x="500.0" y="668.0" width="360.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="540.0,595.0 558.0,602.0 555.0,623.0 540.0,636.0 525.0,623.0 522.0,602.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="532.0,615.0 538.0,622.0 549.0,609.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="578.0" y="607.0" font-size="26" fill="#f5f5f7" font-weight="700" text-anchor="start">Fix</text>
+<text x="578.0" y="637.0" font-size="16" fill="#ffffffcc" text-anchor="start">then prove it</text>
+<ellipse cx="500.0" cy="560.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="500.0" y="567.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">7</text>
+<text x="510.0" y="710.0" font-size="17" fill="#c9cbd3" text-anchor="start">Prove the symptom is gone</text>
+<polyline points="1560.0,410.0 1560.0,560.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<rect x="60.0" y="560.0" width="360.0" height="110.0" rx="12" fill="#2a2b33" stroke="#8b8f9c" stroke-width="2.5"/>
+<text x="76.0" y="619.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">Outside in</text>
+</svg>

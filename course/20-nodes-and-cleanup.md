@@ -2,33 +2,45 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](glossary.md) explains every Istio resource and term in this course.
 
-**Before this module:** module 0 only. This is plain Kubernetes operations; the mesh just keeps running underneath.
+**Before this module:** module 0 only. This module covers plain Kubernetes operations. The mesh just keeps running underneath.
 
-Day-to-day cluster work isn't glamorous: a node needs a kernel patch, a disk fills up, a node dies and its leftovers linger. This module adds a second node to the lab, drains it under live traffic, shows how a PodDisruptionBudget protects you and how it blocks you, and cleans up the things that pile up in every cluster: finished Jobs, old ReplicaSets and images.
+Day-to-day cluster work isn't glamorous. A node needs a kernel patch, a disk fills up, or a node dies and leaves its leftovers behind. This module walks through that work in four parts:
 
-Time: about 45 minutes. Adds about 300 MB of memory while the second node runs.
+1. You add a second node to the lab.
+2. You drain the node under live traffic.
+3. You see how a PodDisruptionBudget protects you, and how it blocks you.
+4. You clean up the things that pile up in every cluster: finished Jobs, old ReplicaSets and images.
+
+Time: about 45 minutes. The second node uses about 300 MB of memory while it runs.
 
 ## Concept: cordon, drain, delete
 
-```mermaid
-flowchart LR
-  a["Ready<br/>pods schedule here"] -- "kubectl cordon" --> b["SchedulingDisabled<br/>no new pods,<br/>old ones keep running"]
-  b -- "kubectl drain" --> c["empty<br/>(except DaemonSets)"]
-  c -- "kubectl uncordon" --> a
-  c -- "remove the machine,<br/>then kubectl delete node" --> d["gone"]
-```
+![Node states: cordon, drain, then uncordon or delete](../docs/diagrams/chapters/20-cordon-drain-delete.svg)
 
-- **Cordon** marks a node unschedulable. Nothing moves yet.
-- **Drain** cordons it, then *evicts* every pod, one by one, through the Eviction API. Their controllers (Deployments, StatefulSets) create replacements on other nodes. DaemonSet pods stay, which is what `--ignore-daemonsets` acknowledges: ztunnel and istio-cni must run on every node.
-- **Delete** removes the Node object. Taking the machine away doesn't do that on its own.
+To take a node out of service, you go through up to three steps. The diagram shows them from left to right:
+
+1. You cordon the node. Cordoning marks the node unschedulable, so no new pods land there. Nothing moves yet.
+2. You drain the node. A drain cordons it, then *evicts* every pod, one by one, through the Eviction API. The pods' controllers, such as Deployments and StatefulSets, create replacements on other nodes.
+3. You remove the machine, then delete the Node object. Taking the machine away doesn't delete the Node object on its own.
+
+DaemonSet pods stay on the node during a drain, and the `--ignore-daemonsets` flag says that you accept this. They have to stay, because ztunnel and istio-cni must run on every node. If you want the node back instead of removing it, `kubectl uncordon` makes it schedulable again.
 
 ## Concept: PodDisruptionBudgets
 
-An eviction is polite: before it removes a pod, Kubernetes checks every PodDisruptionBudget (PDB) that selects it. `minAvailable: 1` on a two-replica app means "keep at least one pod running". The drain evicts one pod, waits for its replacement to become ready, then takes the next one. Without a PDB, a drain may evict every replica at once.
+Without protection, a drain may evict every replica of an app at once, and the app goes down. A PodDisruptionBudget (PDB) prevents that. A PDB is a rule that says how many pods of an app must stay up. An eviction is polite: before it removes a pod, Kubernetes checks every PDB that selects the pod. `minAvailable: 1` on a two-replica app means "keep at least one pod running". With that budget, the drain works like this:
 
-A PDB only covers *voluntary* disruptions: drains, upgrades, a cluster autoscaler removing a node. A node that crashes doesn't ask anyone.
+1. The drain evicts one pod.
+2. The drain waits until the replacement pod is ready.
+3. The drain evicts the next pod.
 
-Under the hood, the budget is a number. The disruption controller writes `status.disruptionsAllowed` on every PDB: the healthy pods minus the pods the budget demands. `kubectl get pdb` shows it as `ALLOWED DISRUPTIONS`. Every eviction asks the API server first, and the API server refuses with `429 Too Many Requests` while that number is 0. `kubectl drain` treats the refusal as "not yet": it waits 5 seconds and asks again, until the eviction passes or `--timeout` runs out.
+A PDB only covers *voluntary* disruptions, such as drains, upgrades, or a cluster autoscaler that removes a node. A node that crashes doesn't ask anyone.
+
+Under the hood, the budget is a number. Think of it as a counter of pods you may take away right now. The disruption controller writes that counter as `status.disruptionsAllowed` on every PDB. It equals the healthy pods minus the pods the budget demands. `kubectl get pdb` shows it as `ALLOWED DISRUPTIONS`. Each eviction goes through these steps:
+
+1. `kubectl drain` asks the API server to evict a pod.
+2. While the counter is 0, the API server refuses with `429 Too Many Requests`.
+3. `kubectl drain` treats the refusal as "not yet" and waits 5 seconds.
+4. `kubectl drain` asks again, until the eviction passes or `--timeout` runs out.
 
 | Budget on the two `web` pods | Healthy pods | Allowed disruptions | The drain |
 |---|---|---|---|
@@ -36,17 +48,17 @@ Under the hood, the budget is a number. The disruption controller writes `status
 | `minAvailable: 1` | 1, the replacement isn't Ready yet | 0 | retries every 5 seconds |
 | `minAvailable: 2` | 2 | 0 | retries until `--timeout`, and forever without it |
 
-A common misconception: a PDB guards your pods against everything. It only guards the Eviction API. `kubectl delete pod`, a Deployment's own rolling update and a crashing node all ignore it.
+Many people believe that a PDB guards your pods against everything. It only guards the Eviction API. Three things ignore it: `kubectl delete pod`, a Deployment's own rolling update, and a crashing node.
 
 ## The bigger picture: what fills a cluster up
 
-A cluster that runs for months collects leftovers, and they cost disk, memory in the API server, and your time when you search for the real problem:
+A cluster that runs for months collects leftovers. They cost disk space, memory in the API server, and your time when you search for the real problem:
 
 | Leftover | Why it stays | The fix |
 |---|---|---|
 | Finished Jobs and their pods | Kubernetes keeps them so you still have the logs | `ttlSecondsAfterFinished` on the Job, or `successfulJobsHistoryLimit` on a CronJob |
 | Old ReplicaSets | every Deployment change creates one, kept for `kubectl rollout undo` | `revisionHistoryLimit` (default 10) |
-| Images on nodes | the kubelet keeps them for the next start | the kubelet deletes unused images when disk use passes 85% (`imageGCHighThresholdPercent`); `crictl rmi --prune` does it by hand |
+| Images on nodes | the kubelet keeps them for the next start | the kubelet deletes unused images when disk use passes 85% (`imageGCHighThresholdPercent`). `crictl rmi --prune` does it by hand |
 | Failed and evicted pods | they stay for inspection | `kubectl delete pods -A --field-selector=status.phase=Failed` |
 | Nodes that no longer exist | removing a machine doesn't remove its Node object | `kubectl delete node` |
 
@@ -54,13 +66,18 @@ Container logs live on the node too. The kubelet rotates them at 10 MB per conta
 
 ## Why this way
 
-**Why does the second node get the lab's images imported?** The lab builds `k8s-lab/backend`, `frontend` and `assistant` locally and imports them straight into each node, with no registry. A new node starts without them, so `k3d image import` copies them over. The same thing bites you in step 6: pruning removes them again, and nothing brings them back.
+**Why does the second node get the lab's images imported?** The lab builds `k8s-lab/backend`, `frontend` and `assistant` locally. It imports them straight into each node, with no registry in between. A new node starts without them, so `k3d image import` copies them over. The same gap bites you in step 6. Pruning removes the images again, and nothing brings them back.
 
-**Why don't pods move back after an uncordon?** Kubernetes only places pods when they start. It never moves running pods to balance load. A restart (`kubectl rollout restart`) or a tool like the descheduler spreads them again.
+**Why don't pods move back after an uncordon?** Kubernetes only places pods when they start. It never moves running pods to balance load. To spread them again, restart them (`kubectl rollout restart`) or use a tool like the descheduler.
 
-**Why `whenUnsatisfiable: ScheduleAnyway` in the spread constraint?** `DoNotSchedule` would leave pods Pending whenever spreading isn't possible, for example with one node. `ScheduleAnyway` treats spreading as a preference. Step 4 shows the cost: sometimes both replicas end up on the same node.
+**Why `whenUnsatisfiable: ScheduleAnyway` in the spread constraint?** `DoNotSchedule` would leave pods Pending whenever spreading isn't possible, for example with one node. `ScheduleAnyway` treats spreading as a preference, not a rule. Step 4 shows the cost: sometimes both replicas end up on the same node.
 
-**Why does the mesh need nothing special during a drain?** In ambient mode, ztunnel runs on every node and the pods carry no proxy of their own. A pod that moves gets new traffic rules from istio-cni on its new node, and ztunnel on the old node keeps serving the pods still there. Sidecar mode works too, but every moved pod starts a new Envoy.
+**Why does the mesh need nothing special during a drain?** In ambient mode, ztunnel runs on every node, and the pods carry no proxy of their own. When a pod moves, two things happen:
+
+- istio-cni on the new node gives the pod its traffic rules.
+- ztunnel on the old node keeps serving the pods that are still there.
+
+Sidecar mode works too, but every moved pod starts a new Envoy.
 
 ## Do it
 
@@ -73,7 +90,7 @@ kubectl get nodes
 kubectl -n istio-system get pods -o wide | grep -E "ztunnel|cni"
 ```
 
-**What you should see.** `k3d-agent-0` joins as `Ready` within seconds, and a second ztunnel and istio-cni pod start on it by themselves: they're DaemonSets.
+**What you should see.** `k3d-agent-0` joins as `Ready` within seconds. A second ztunnel pod and a second istio-cni pod start on it by themselves, because they're DaemonSets.
 
 ### 2. Deploy an app over both nodes
 
@@ -85,7 +102,7 @@ kubectl -n shop exec deploy/course-client -- sh -c 'for i in $(seq 1 20); do cur
 kubectl -n istio-system logs -l app=ztunnel --since=1m --prefix | grep 'dst.workload="web' | tail -2
 ```
 
-**What you should see.** One `web` pod per node, 20 times `200`, and ztunnel log lines from both nodes' ztunnel pods: traffic to the pod on `k3d-agent-0` arrives through the ztunnel on that node.
+**What you should see.** You see one `web` pod per node and 20 times `200`. You also see log lines from the ztunnel pods on both nodes. Traffic to the pod on `k3d-agent-0` arrives through the ztunnel on that node.
 
 ### 3. Drain under traffic
 
@@ -103,7 +120,7 @@ kubectl drain k3d-agent-0 --ignore-daemonsets --delete-emptydir-data
 kubectl -n course-ops get pods -o wide
 ```
 
-**What you should see.** The drain evicts the `web` pod on the agent node in about two seconds, a replacement starts on the server node, and the second terminal prints nothing. In the test run, 348 requests passed during the drain without a single failure.
+**What you should see.** The drain evicts the `web` pod on the agent node in about two seconds. A replacement starts on the server node, and the second terminal prints nothing. In the test run, 348 requests passed during the drain without a single failure.
 
 ### 4. Uncordon, and a budget that blocks you
 
@@ -117,7 +134,11 @@ kubectl apply -f course/manifests/20-pdb-too-strict.yaml
 kubectl drain k3d-agent-0 --ignore-daemonsets --delete-emptydir-data --timeout=30s
 ```
 
-**What you should see.** After the uncordon, nothing moves. After the restart, the pods spread out again. In the test run both landed on the agent node: during the rollout the old pods still counted, and `ScheduleAnyway` let the scheduler break the spread. Then the drain repeats `Cannot evict pod as it would violate the pod's disruption budget` until it gives up, and the node stays `SchedulingDisabled`. A PDB that demands every replica is a classic reason why node maintenance hangs for hours. If no `web` pod sits on the agent node after the restart, the drain finishes at once: restart again until one does.
+**What you should see.** After the uncordon, nothing moves. After the restart, the pods spread out again. In the test run, both pods landed on the agent node. During the rollout, the old pods still counted, and `ScheduleAnyway` let the scheduler break the spread.
+
+Then the drain repeats `Cannot evict pod as it would violate the pod's disruption budget` until it gives up. The node stays `SchedulingDisabled`. A PDB that demands every replica is a classic reason why node maintenance hangs for hours.
+
+If no `web` pod sits on the agent node after the restart, the drain finishes at once. In that case, restart again until a pod lands there.
 
 Put the sensible budget back:
 
@@ -134,7 +155,7 @@ kubectl get rs -A | awk '$3==0' | wc -l     # ReplicaSets scaled to 0, kept for 
 kubectl get deploy -A -o custom-columns=NAME:.metadata.name,HISTORY:.spec.revisionHistoryLimit | head
 ```
 
-**What you should see.** The Job disappears 30 seconds after it finishes. Dozens of ReplicaSets sit at 0 replicas: most Deployments keep the default 10 old versions.
+**What you should see.** The Job disappears 30 seconds after it finishes. Dozens of ReplicaSets sit at 0 replicas, because most Deployments keep the default 10 old versions.
 
 ### 6. Images on the node
 
@@ -145,7 +166,7 @@ docker exec k3d-agent-0 crictl rmi --prune
 docker exec k3d-agent-0 crictl images
 ```
 
-**What you should see.** In the test run, `crictl rmi --prune` cut the agent node from 1.1 GB to 459 MB. Look at what it deleted: `k8s-lab/frontend` and `k8s-lab/assistant`, because nothing on that node ran them. Those images came from `k3d image import`, not from a registry, so if a frontend pod now lands on this node, it fails with `ErrImageNeverPull` or `ImagePullBackOff`. Pruning is safe with a registry and risky without one.
+**What you should see.** In the test run, `crictl rmi --prune` cut the agent node from 1.1 GB to 459 MB. Look at what it deleted: `k8s-lab/frontend` and `k8s-lab/assistant`. Nothing on that node ran them, so the prune treated them as unused. Those images came from `k3d image import`, not from a registry. So if a frontend pod now lands on this node, it fails with `ErrImageNeverPull` or `ImagePullBackOff`. Pruning is safe with a registry and risky without one.
 
 ### 7. Remove the node
 
@@ -157,7 +178,7 @@ kubectl delete node k3d-agent-0
 kubectl get nodes
 ```
 
-**What you should see.** After `k3d node delete`, the machine is gone, but Kubernetes keeps listing the node, `NotReady` after about 40 seconds. Only `kubectl delete node` removes it. Cloud providers do this step for you through their cloud controller; on bare metal and in k3d, you do it yourself.
+**What you should see.** After `k3d node delete`, the machine is gone, but Kubernetes keeps listing the node. After about 40 seconds, the node shows `NotReady`. Only `kubectl delete node` removes it. Cloud providers do this step for you through their cloud controller. On bare metal and in k3d, you do it yourself.
 
 ## Investigate
 
@@ -169,10 +190,16 @@ kubectl get nodes
 <details>
 <summary>Answers</summary>
 
-1. The drain hangs, like step 4: evicting the only pod would break the budget, and the replacement only starts once the old pod goes. Scale to two replicas first, or the budget blocks every drain of that node. Many teams use `maxUnavailable: 1` instead of `minAvailable` to avoid this trap with single replicas.
-2. The DaemonSet controller would put them straight back on the same node, since a cordon doesn't stop DaemonSets. They also tend to be node-level plumbing, like ztunnel, istio-cni and log shippers, that the node needs until the very end.
-3. `kubectl describe node` for the condition and the eviction events, then on the node: container images (`crictl images`, prune), container logs (`/var/log/pods`), and emptyDir volumes of running pods. Images and logs are the usual suspects.
-4. `kubectl rollout undo`: with no old ReplicaSets, Kubernetes has nothing to roll back to. In a GitOps setup like this lab, you'd roll back by reverting the commit instead, so some teams accept that trade.
+1. The drain hangs, as in step 4. Evicting the only pod would break the budget, and the replacement only starts once the old pod goes. Scale to two replicas first. Otherwise the budget blocks every drain of that node. Many teams use `maxUnavailable: 1` instead of `minAvailable` to avoid this trap with single replicas.
+2. A cordon doesn't stop DaemonSets. So the DaemonSet controller would put the evicted pods straight back on the same node. DaemonSet pods also tend to be node-level plumbing, like ztunnel, istio-cni and log shippers. The node needs them until the very end.
+3. Check in this order:
+   1. Run `kubectl describe node` to see the condition and the eviction events.
+   2. On the node, check the container images (`crictl images`, then prune).
+   3. Check the container logs (`/var/log/pods`).
+   4. Check the emptyDir volumes of running pods.
+
+   Images and logs are the usual suspects.
+4. They lose `kubectl rollout undo`. With no old ReplicaSets, Kubernetes has nothing to roll back to. In a GitOps setup like this lab, you'd roll back by reverting the commit instead. So some teams accept that trade.
 
 </details>
 

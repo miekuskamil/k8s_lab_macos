@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="760" viewBox="0 0 1800 760" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1800" height="760" fill="#1e1f24"/>
+<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
+<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">Two proxies on</text>
+<rect x="354.1" y="26.0" width="289.8" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<text x="368.1" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">every request</text>
+<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">iptables rules inside each pod hand the app&#x27;s connections to Envoy. The app never notices.</text>
+<rect x="40.0" y="180.0" width="800.0" height="520.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="440.0" y="168.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">pod client</text>
+<rect x="80.0" y="236.0" width="260.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="80.0" y="230.0" width="260.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="80.0" y="338.0" width="260.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="120.0,265.0 138.0,275.0 120.0,285.0 102.0,275.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="102.0,275.0 120.0,285.0 120.0,306.0 102.0,296.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="138.0,275.0 120.0,285.0 120.0,306.0 138.0,296.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="158.0" y="277.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">curl</text>
+<text x="158.0" y="305.0" font-size="16" fill="#ffffffcc" text-anchor="start">the app</text>
+<rect x="500.0" y="236.0" width="300.0" height="110.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
+<rect x="500.0" y="230.0" width="300.0" height="110.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
+<rect x="500.0" y="338.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="540.0,265.0 558.0,272.0 555.0,293.0 540.0,306.0 525.0,293.0 522.0,272.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="532.0,285.0 538.0,292.0 549.0,279.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="578.0" y="277.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">istio-proxy</text>
+<text x="578.0" y="305.0" font-size="16" fill="#ffffffcc" text-anchor="start">outbound :15001</text>
+<polyline points="340.0,285.0 500.0,285.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<text x="420.0" y="311.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">iptables</text>
+<text x="420.0" y="334.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">port 15001</text>
+<rect x="500.0" y="390.0" width="300.0" height="58.0" rx="12" fill="#2a2b33" stroke="#1677ff" stroke-width="2.5"/>
+<text x="516.0" y="422.5" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="start">Routing</text>
+<rect x="500.0" y="464.0" width="300.0" height="58.0" rx="12" fill="#2a2b33" stroke="#1677ff" stroke-width="2.5"/>
+<text x="516.0" y="496.5" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="start">Retries</text>
+<rect x="500.0" y="538.0" width="300.0" height="58.0" rx="12" fill="#2a2b33" stroke="#1677ff" stroke-width="2.5"/>
+<text x="516.0" y="570.5" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="start">Faults</text>
+<rect x="500.0" y="612.0" width="300.0" height="58.0" rx="12" fill="#2a2b33" stroke="#1677ff" stroke-width="2.5"/>
+<text x="516.0" y="644.5" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="start">Starts mTLS</text>
+<rect x="960.0" y="180.0" width="800.0" height="520.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="1360.0" y="168.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">pod httpbin</text>
+<rect x="1000.0" y="236.0" width="300.0" height="110.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
+<rect x="1000.0" y="230.0" width="300.0" height="110.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
+<rect x="1000.0" y="338.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="1040.0,265.0 1058.0,272.0 1055.0,293.0 1040.0,306.0 1025.0,293.0 1022.0,272.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="1032.0,285.0 1038.0,292.0 1049.0,279.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1078.0" y="277.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">istio-proxy</text>
+<text x="1078.0" y="305.0" font-size="16" fill="#ffffffcc" text-anchor="start">inbound :15006</text>
+<rect x="1460.0" y="236.0" width="260.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="1460.0" y="230.0" width="260.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="1460.0" y="338.0" width="260.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="1500.0,265.0 1518.0,275.0 1500.0,285.0 1482.0,275.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="1482.0,275.0 1500.0,285.0 1500.0,306.0 1482.0,296.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="1518.0,275.0 1500.0,285.0 1500.0,306.0 1518.0,296.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="1538.0" y="277.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">httpbin</text>
+<text x="1538.0" y="305.0" font-size="16" fill="#ffffffcc" text-anchor="start">the app</text>
+<polyline points="1300.0,285.0 1460.0,285.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<text x="1380.0" y="311.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">localhost</text>
+<rect x="1000.0" y="390.0" width="300.0" height="58.0" rx="12" fill="#2a2b33" stroke="#1677ff" stroke-width="2.5"/>
+<text x="1016.0" y="422.5" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="start">Ends mTLS</text>
+<rect x="1000.0" y="464.0" width="300.0" height="58.0" rx="12" fill="#2a2b33" stroke="#1677ff" stroke-width="2.5"/>
+<text x="1016.0" y="496.5" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="start">Checks policy</text>
+<rect x="1000.0" y="538.0" width="300.0" height="58.0" rx="12" fill="#2a2b33" stroke="#1677ff" stroke-width="2.5"/>
+<text x="1016.0" y="570.5" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="start">Adds XFCC header</text>
+<polyline points="800.0,285.0 1000.0,285.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<text x="900.0" y="273.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">mTLS</text>
+</svg>

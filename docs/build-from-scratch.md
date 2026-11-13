@@ -12,22 +12,7 @@ Plan on 45 minutes if you type everything, or 10 if you run `./scripts/provision
 
 ## What you are building
 
-```mermaid
-flowchart TB
-  subgraph host["Your machine: macOS with OrbStack, or Linux with Docker"]
-    subgraph k3d["k3d cluster k8s-lab: one k3s node container, one load balancer container"]
-      direction TB
-      L1["Step 1-2: Kubernetes 1.31 (k3s) and the app images"]
-      L2["Step 3-4: Gateway API CRDs, then Istio ambient: istiod, istio-cni, ztunnel"]
-      L3["Step 5: namespaces, quotas, lab credentials"]
-      L4["Step 6: ArgoCD, which then syncs everything below from GitHub"]
-      L5["Step 7: the shop: frontend, backend v1 and v2, redis"]
-      L6["Step 8: Istio config: gateway, waypoint, routes, policies"]
-      L7["Step 9: Prometheus, Grafana, Jaeger, Loki, Alloy, Kiali"]
-      L1 --> L2 --> L3 --> L4 --> L5 --> L6 --> L7
-    end
-  end
-```
+![What you are building: steps 1 to 6 by hand, steps 7 to 9 applied by ArgoCD](diagrams/chapters/build-layers.svg)
 
 Steps 1 to 6 are imperative: you run commands. From step 7 on, you only commit files and ArgoCD applies them. That split is the main design decision of the lab, explained in step 6.
 

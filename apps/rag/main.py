@@ -24,8 +24,17 @@ EMBED_MODEL = os.getenv("EMBED_MODEL", "nomic-embed-text")
 CHAT_MODEL = os.getenv("CHAT_MODEL", "qwen2.5:3b")
 COLLECTION = os.getenv("COLLECTION", "course")
 DOCS_DIR = Path(os.getenv("DOCS_DIR", "/docs"))
+# Files to leave out of the index, comma-separated. Module 27 quotes its own test
+# questions and answers; indexing it would let the test set leak into the data.
+EXCLUDE_FILES = {f.strip() for f in os.getenv("EXCLUDE_FILES", "").split(",") if f.strip()}
 CHUNK_CHARS = int(os.getenv("CHUNK_CHARS", "1500"))
 TOP_K = int(os.getenv("TOP_K", "4"))
+# nomic-embed-text was trained with a task prefix on every input: "search_document: "
+# for stored text, "search_query: " for questions. Without them, questions and
+# passages land in slightly different places, and retrieval gets worse.
+# EMBED_PREFIXES=off turns them off, to measure the difference.
+USE_PREFIXES = os.getenv("EMBED_PREFIXES", "on") == "on" and "nomic-embed" in EMBED_MODEL
+PREFIX = {"document": "search_document: ", "query": "search_query: "}
 
 app = FastAPI(title="course-rag")
 http = httpx.Client(timeout=300)
@@ -53,7 +62,9 @@ def chunks_of(path: Path) -> list[dict]:
     return out
 
 
-def embed(texts: list[str]) -> list[list[float]]:
+def embed(texts: list[str], kind: str) -> list[list[float]]:
+    if USE_PREFIXES:
+        texts = [PREFIX[kind] + t for t in texts]
     r = http.post(f"{OLLAMA_URL}/api/embed", json={"model": EMBED_MODEL, "input": texts})
     r.raise_for_status()
     return r.json()["embeddings"]
@@ -66,7 +77,7 @@ def point_id(chunk: dict) -> str:
 
 
 def search(question: str, k: int) -> list[dict]:
-    vector = embed([question])[0]
+    vector = embed([question], "query")[0]
     r = http.post(
         f"{QDRANT_URL}/collections/{COLLECTION}/points/search",
         json={"vector": vector, "limit": k, "with_payload": True},
@@ -89,12 +100,12 @@ def healthz():
 @app.post("/ingest")
 def ingest():
     started = time.monotonic()
-    chunks = [c for path in sorted(DOCS_DIR.glob("*.md")) for c in chunks_of(path)]
+    chunks = [c for path in sorted(DOCS_DIR.glob("*.md")) if path.name not in EXCLUDE_FILES for c in chunks_of(path)]
     if not chunks:
         raise HTTPException(400, f"No .md files in {DOCS_DIR}")
     vectors = []
     for i in range(0, len(chunks), 32):
-        vectors += embed([c["text"] for c in chunks[i : i + 32]])
+        vectors += embed([c["text"] for c in chunks[i : i + 32]], "document")
     embed_seconds = time.monotonic() - started
     # Recreate the collection: the vector size comes from the embedding model.
     http.delete(f"{QDRANT_URL}/collections/{COLLECTION}")
@@ -112,6 +123,7 @@ def ingest():
         "chunks": len(chunks),
         "dimensions": len(vectors[0]),
         "embed_model": EMBED_MODEL,
+        "embed_prefixes": USE_PREFIXES,
         "embed_seconds": round(embed_seconds, 1),
         "total_seconds": round(time.monotonic() - started, 1),
     }

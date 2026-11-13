@@ -4,22 +4,30 @@
 
 **Before this module:** module 0. No Istio knowledge needed.
 
-The whole lab runs on ArgoCD, and so far you've mostly worked around it: `reset.sh` re-syncs it, and the course warns you not to push mid-exercise. This module turns it into the subject. You run your own Git server inside the cluster, deploy an app from it, and then do the things that come up in every platform team and every GitOps interview: drift, rollbacks, ordered deploys with migrations, a project that fences a team in, and one template for many environments.
+The whole lab runs on ArgoCD, and so far you've mostly worked around it. `reset.sh` re-syncs it, and the course warns you not to push in the middle of an exercise. In this module, ArgoCD is the subject. You run your own Git server inside the cluster and deploy an app from it. Then you practise the tasks that come up in every platform team and every GitOps interview:
+
+- drift, where the cluster no longer matches Git
+- rollbacks
+- ordered deploys with database migrations
+- a project that limits what one team may deploy
+- one template for many environments
 
 Time: about 60 minutes.
 
 ## Concept: the reconcile loop
 
-```mermaid
-flowchart LR
-  dev["You:<br/>git push"] --> git["Git<br/>(desired state)"]
-  git -- "poll every 3 min,<br/>or a webhook" --> repo["repo-server<br/>renders the manifests<br/>(Kustomize, Helm)"]
-  repo --> ctrl["application-controller<br/>compares desired with live"]
-  ctrl -- "sync: kubectl apply" --> k8s["Cluster<br/>(live state)"]
-  k8s -- "watch" --> ctrl
-```
+A change in Git does nothing on its own. ArgoCD fixes that. It works like a thermostat: Git holds the setting you want, and ArgoCD keeps checking the cluster against it and corrects any difference. The diagram shows the loop in four steps:
 
-ArgoCD keeps two questions apart, and its UI shows both for every Application:
+1. You push a commit to Git, which holds the desired state.
+2. The repo-server fetches the commit and renders the manifests with Kustomize or Helm. It checks Git every 3 minutes, or at once on a webhook.
+3. The application-controller compares the rendered manifests with the live state in the cluster.
+4. When the two differ, the application-controller syncs, which means it runs the equivalent of `kubectl apply`.
+
+The application-controller also watches the cluster, so it notices changes made there too.
+
+![ArgoCD reconcile loop: git push, repo-server renders, application-controller compares and syncs](../docs/diagrams/chapters/22-reconcile-loop.svg)
+
+For every Application, ArgoCD answers two separate questions, and its UI shows both:
 
 | Status | Question | Values |
 |---|---|---|
@@ -39,23 +47,39 @@ An **Application** links one path in one Git repository to one namespace in one 
 | `selfHeal: true` | Undo changes made in the cluster, like a `kubectl edit`. Without it, drift shows as `OutOfSync` and stays. |
 | finalizer `resources-finalizer.argocd.argoproj.io` | Deleting the Application also deletes everything it deployed. |
 
-An **AppProject** decides what a group of Applications may do at all: which repositories they read, which namespaces they deploy to, which kinds of resources they create. It's ArgoCD's version of RBAC, and the place where a platform team says "this team deploys its app, and nothing else".
+An **AppProject** sets the limits for a group of Applications. It decides three things:
+
+- which repositories they read
+- which namespaces they deploy to
+- which kinds of resources they create
+
+It's ArgoCD's version of RBAC. A platform team uses it to say "this team deploys its app, and nothing else".
 
 ## The bigger picture: why GitOps won
 
-Before GitOps, a CI pipeline ran `kubectl apply` or `helm upgrade` at the end of a build. That works until it doesn't: the pipeline holds cluster-admin credentials, nobody knows whether the cluster still matches the last deploy, and a manual hotfix at 3 a.m. quietly survives until the next deploy overwrites it.
+Before GitOps, a CI pipeline ran `kubectl apply` or `helm upgrade` at the end of a build. This approach has three problems:
 
-GitOps turns this around. The cluster *pulls* its desired state from Git, and an agent inside the cluster keeps comparing. Git becomes the audit log (who changed what, when, reviewed by whom), a rollback becomes a `git revert`, and the CI pipeline no longer needs any access to the cluster. ArgoCD and Flux, both CNCF graduated projects, are the two common agents. Danish and UK job adverts for platform roles name ArgoCD more often than any other deployment tool.
+- The pipeline holds cluster-admin credentials.
+- Nobody knows whether the cluster still matches the last deploy.
+- A manual hotfix at 3 a.m. stays in place without anyone noticing, until the next deploy overwrites it.
+
+GitOps turns this around. The cluster *pulls* its desired state from Git, and an agent inside the cluster keeps comparing the two. This gives you three things:
+
+- Git becomes the audit log. It records who changed what, when, and who reviewed it.
+- A rollback becomes a `git revert`.
+- The CI pipeline no longer needs any access to the cluster.
+
+ArgoCD and Flux, both CNCF graduated projects, are the two common agents. Danish and UK job adverts for platform roles name ArgoCD more often than any other deployment tool.
 
 ## Why this way
 
-**Why a Git server inside the cluster?** The lab's own ArgoCD reads the course repository on GitHub. Exercises there would mean commits to GitHub, and a push resyncs `istio-config`, which wipes whatever module you're in. Gitea gives you a private repository in seconds, and ArgoCD reads it over the cluster network like any other Git host.
+**Why a Git server inside the cluster?** The lab's own ArgoCD reads the course repository on GitHub. Exercises there would mean commits to GitHub. A push to GitHub also resyncs `istio-config`, and that wipes whatever module you're in. Gitea is a small Git server. It gives you a private repository in seconds, and ArgoCD reads it over the cluster network like any other Git host.
 
 **Why a new AppProject instead of the lab's `k8s-lab` project?** `k8s-lab` allows everything, because it deploys Istio, CRDs and cluster-wide RBAC. A team's app deserves the opposite: one repository, its own namespaces, no cluster-scoped resources. Step 7 shows the difference.
 
 **Why Kustomize overlays for dev and prod?** One base holds the app, and each environment changes only what differs, here the number of replicas. ArgoCD renders Kustomize by itself, with no plugin.
 
-**Why `progressDeadlineSeconds: 60` in the Deployment?** A stuck rollout turns `Degraded` only after this deadline, 10 minutes by default. One minute keeps step 5 short. Production teams often lower it too, so broken releases surface faster.
+**Why `progressDeadlineSeconds: 60` in the Deployment?** A stuck rollout turns `Degraded` only after this deadline, which is 10 minutes by default. One minute keeps step 5 short. Production teams often lower it too, so broken releases show up sooner.
 
 ## Do it
 
@@ -69,7 +93,7 @@ kubectl -n course-gitops exec deploy/gitea -- gitea admin user create --username
 kubectl -n course-gitops port-forward svc/gitea 3001:3000 >/dev/null 2>&1 &
 ```
 
-**What you should see.** `New user 'lab' has been successfully created!`. Gitea now answers on http://localhost:3001; sign in as `lab` with `lab-gitops-pass` if you'd like to browse it. The manifest also creates the namespaces `course-gitops-dev` and `course-gitops-prod`, because the project from step 2 won't allow ArgoCD to create namespaces.
+**What you should see.** The last command prints `New user 'lab' has been successfully created!`. Gitea now answers on http://localhost:3001. To browse it, sign in as `lab` with the password `lab-gitops-pass`. The manifest also creates the namespaces `course-gitops-dev` and `course-gitops-prod`. It does this because the project from step 2 won't allow ArgoCD to create namespaces.
 
 ### 2. Push an app and let ArgoCD deploy it
 
@@ -88,18 +112,20 @@ kubectl -n course-gitops-dev get pods
 
 The repository holds [podinfo](https://github.com/stefanprodan/podinfo), a tiny web app made for GitOps demos, as a Kustomize base with two overlays, `envs/dev` and `envs/prod`. Gitea creates the repository on the first push.
 
-**What you should see.** `Synced Healthy` within about 10 seconds, and one `podinfo` pod in `course-gitops-dev`. Open ArgoCD (http://localhost:8081, `admin` / `k8s-lab-admin`) and click `podinfo-dev`: a tree of the Service, the Deployment, its ReplicaSet and its pod.
+**What you should see.** The app turns `Synced Healthy` within about 10 seconds, and one `podinfo` pod runs in `course-gitops-dev`. Open ArgoCD (http://localhost:8081, `admin` / `k8s-lab-admin`) and click `podinfo-dev`. You see a tree of the Service, the Deployment, its ReplicaSet and its pod.
 
 ### Concept: how ArgoCD spots a difference
 
-ArgoCD learns about changes on the two sides of the comparison in different ways. That explains why step 3 reacts in seconds and step 4 in minutes.
+ArgoCD compares two sides: the cluster and Git. It learns about changes on each side in a different way. That's why step 3 reacts in seconds and step 4 takes minutes.
 
 | Side | How ArgoCD learns about a change | Typical delay |
 |---|---|---|
 | Live state, in the cluster | The application-controller watches every resource it manages, like any Kubernetes controller. A change to one of them starts a new comparison. | seconds |
 | Desired state, in Git | Git sends nothing by itself. ArgoCD fetches it on each reconcile, every 3 minutes plus some jitter, or at once on a refresh or webhook. | up to about 3 minutes |
 
-The comparison is a diff of each rendered manifest against its live object, and it covers only the fields your manifests set. Fields that only the cluster fills in, such as `status`, `uid` or a default the API server added, don't count as drift. So `kubectl scale` makes the app `OutOfSync`, because `replicas` sits in Git, while a pod that restarts doesn't. A common mistake: you put `replicas` in Git and also attach an HPA. With self-heal on, ArgoCD and the HPA then keep undoing each other. Leave the field out of Git, or tell ArgoCD to skip it with `ignoreDifferences`.
+ArgoCD compares each rendered manifest with its live object. It checks only the fields your manifests set. The cluster fills in some fields by itself, such as `status`, `uid` or a default from the API server. These fields don't count as drift. So `kubectl scale` makes the app `OutOfSync`, because `replicas` sits in Git. A pod that restarts doesn't make it `OutOfSync`.
+
+A common mistake is to put `replicas` in Git and also attach an HPA, the autoscaler that changes the replica count. With self-heal on, ArgoCD and the HPA then keep undoing each other's changes. Leave the field out of Git, or tell ArgoCD to skip it with `ignoreDifferences`.
 
 ### 3. Drift, with and without self-heal
 
@@ -113,7 +139,7 @@ kubectl -n course-gitops-dev scale deploy/podinfo --replicas=3
 kubectl -n course-gitops-dev get deploy podinfo
 ```
 
-**What you should see.** First `OutOfSync Healthy`, and 3 replicas that stay: ArgoCD noticed the drift and only reported it. After the patch, the Deployment drops back to 1 replica within 2 seconds. The second `kubectl scale` gets undone just as fast; in the test run, by the time the next command ran, 1 replica was all that was left.
+**What you should see.** First the app shows `OutOfSync Healthy`, and the 3 replicas stay. ArgoCD noticed the drift but only reported it. After the patch, the Deployment drops back to 1 replica within 2 seconds. ArgoCD undoes the second `kubectl scale` just as fast. In the test run, only 1 replica was left by the time the next command ran.
 
 ### 4. Ship a change through Git
 
@@ -137,7 +163,7 @@ kubectl -n course-gitops-dev rollout status deploy/podinfo
 kubectl -n course-gitops-dev exec deploy/podinfo -- wget -qO- localhost:9898 | grep message
 ```
 
-**What you should see.** The first commit took 228 seconds to appear in the test run: ArgoCD polls Git every 3 minutes, plus some random jitter. With the annotation, it took 1 second. The pod then answers `"message": "hello from commit 3"`. In production, a Git webhook does what the annotation does: GitHub or GitLab calls ArgoCD on every push.
+**What you should see.** In the test run, the first commit took 228 seconds to appear. That's because ArgoCD polls Git every 3 minutes, plus some random jitter. With the annotation, the second commit took 1 second. The pod then answers `"message": "hello from commit 3"`. In production, a Git webhook does the same job as the annotation. GitHub or GitLab calls ArgoCD on every push.
 
 ### 5. A bad release, and `git revert`
 
@@ -151,7 +177,12 @@ kubectl -n argocd get app podinfo-dev -w           # Ctrl-C at Degraded, after a
 kubectl -n course-gitops-dev get pods
 ```
 
-**What you should see.** `Synced Degraded` after 61 seconds in the test run, and two pods: the new one in `ErrImagePull` (tag 6.7.99 doesn't exist), the old one still `Running` and serving. A rolling update never removes the old pod before the new one is ready, so users noticed nothing. ArgoCD's resource list explains the health: `Deployment "podinfo" exceeded its progress deadline`.
+**What you should see.** In the test run, the app showed `Synced Degraded` after 61 seconds. There are two pods:
+
+- The new pod is in `ErrImagePull`, because tag 6.7.99 doesn't exist.
+- The old pod is still `Running` and serving traffic.
+
+A rolling update never removes the old pod before the new one is ready, so users noticed nothing. ArgoCD's resource list explains the health status: `Deployment "podinfo" exceeded its progress deadline`.
 
 Roll back the GitOps way:
 
@@ -165,7 +196,7 @@ kubectl -n argocd get app podinfo-dev
 kubectl -n course-gitops-dev get pods
 ```
 
-**What you should see.** `Synced Healthy` within seconds, the broken pod gone, and the history in `git log`: the bad commit and its revert, both with your name. ArgoCD's UI also has a History and Rollback button, but it only works with automated sync turned off, and it leaves Git saying something different from the cluster. A revert keeps Git the single source of truth.
+**What you should see.** Within seconds the app is `Synced Healthy` and the broken pod is gone. `git log` shows the bad commit and its revert, both with your name. ArgoCD's UI also has a History and Rollback button. It only works with automated sync turned off, and afterwards Git says something different from the cluster. A revert keeps Git the single source of truth.
 
 ### 6. Ordered deploys: hooks and waves
 
@@ -181,7 +212,22 @@ for i in $(seq 1 8); do kubectl -n argocd get app podinfo-dev -o jsonpath='{.sta
 kubectl -n course-gitops-dev logs job/migrate
 ```
 
-**What you should see.** About 15 seconds of `Running: waiting for completion of hook batch/Job/migrate`, then `waiting for healthy state of ...`, then `Succeeded`. The Job printed `migrating the schema` and `done`. ArgoCD ran the PreSync hook first, then the wave `-1` ConfigMap, then everything in wave 0. A **hook** runs at a phase of the sync (PreSync, Sync, PostSync, SyncFail). A **wave** orders normal resources: ArgoCD applies one wave, waits until it's healthy, then moves to the next.
+**What you should see.** The sync status moves through three messages:
+
+1. `Running: waiting for completion of hook batch/Job/migrate`, for about 15 seconds
+2. `waiting for healthy state of ...`
+3. `Succeeded`
+
+The Job printed `migrating the schema` and `done`. ArgoCD applied the resources in this order:
+
+1. the PreSync hook
+2. the ConfigMap in wave `-1`
+3. everything in wave 0
+
+This order matters for database migrations. The new app version needs the new schema, so it must not start before the migration finishes. ArgoCD offers two tools for ordering:
+
+- A **hook** runs at a set phase of the sync: PreSync, Sync, PostSync or SyncFail. The migration Job here is a PreSync hook.
+- A **wave** orders normal resources. ArgoCD applies one wave, waits until it's healthy, and then moves to the next.
 
 Now make the migration fail:
 
@@ -196,7 +242,7 @@ sleep 40; kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.operationS
 kubectl -n course-gitops-dev get deploy podinfo -o jsonpath='{.spec.template.spec.containers[0].env[0].value}{"\n"}'
 ```
 
-**What you should see.** `one or more synchronization tasks completed unsuccessfully. Retrying attempt #...`, and the Deployment still says `hello from commit 3`. The failed migration stopped the release before the new version went out. That's exactly what you want from a schema migration.
+**What you should see.** The message reads `one or more synchronization tasks completed unsuccessfully. Retrying attempt #...`, and the Deployment still says `hello from commit 3`. The failed migration stopped the release before the new version went out. That's exactly what you want from a schema migration.
 
 Undo it, and watch how long the fix waits:
 
@@ -210,18 +256,11 @@ kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.operationState.phase
 
 ### Concept: a sync is an operation with a fixed revision
 
-A sync isn't a loop that always applies the newest commit. ArgoCD writes an **operation** into the Application's `status.operationState`: the Git revision to apply, and how far it got. That revision stays fixed until the operation ends. When an automated sync fails, ArgoCD retries the same operation, with the same old commit, and waits longer before each attempt. Your revert lands in Git, but ArgoCD starts no new sync while the old operation still runs.
+In short, ArgoCD finishes or gives up on one sync before it starts the next. A sync isn't a loop that always applies the newest commit. Instead, ArgoCD writes an **operation** into the Application's `status.operationState`. The operation records the Git revision to apply and how far the sync got. That revision stays fixed until the operation ends. When an automated sync fails, ArgoCD retries the same operation with the same old commit. It waits longer before each attempt. Your revert lands in Git, but ArgoCD starts no new sync while the old operation still runs. The diagram shows the order. Commit B fails and retries, and commit C waits until the retries run out or you terminate the operation.
 
-```mermaid
-flowchart LR
-  bad["commit B<br/>(broken)"] --> op["operation:<br/>sync B"]
-  op -- "fails" --> retry["retry sync B<br/>after a longer pause"]
-  retry -- "fails" --> retry
-  fix["commit C<br/>(revert)"] -. "waits" .-> next["operation:<br/>sync C"]
-  retry -- "retries used up,<br/>or you terminate it" --> next
-```
+![A failing sync operation retries commit B while the revert in commit C waits](../docs/diagrams/chapters/22-sync-operation.svg)
 
-Plain Kubernetes has no such queue: a Deployment controller always works toward the newest spec. With ArgoCD, a failing operation stands between your fix and the cluster, and step 7 shows how to end it.
+Plain Kubernetes has no such queue. A Deployment controller always works toward the newest spec. With ArgoCD, a failing operation blocks your fix from reaching the cluster. Step 7 shows how to end it.
 
 ### 7. Guardrails, and the retry trap
 
@@ -240,7 +279,7 @@ kubectl -n argocd get app podinfo-dev -o jsonpath='{range .status.operationState
 kubectl get clusterrole podinfo-reads-everything
 ```
 
-**What you should see.** `resource rbac.authorization.k8s.io:ClusterRole is not permitted in project team-shop`, and `NotFound` for the ClusterRole. ArgoCD refused the whole sync, so nothing from that commit reached the cluster.
+**What you should see.** The first command prints `resource rbac.authorization.k8s.io:ClusterRole is not permitted in project team-shop`. The second prints `NotFound` for the ClusterRole. ArgoCD refused the whole sync, so nothing from that commit reached the cluster.
 
 Revert it, and look at the operation:
 
@@ -250,14 +289,14 @@ kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --o
 kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.operationState.phase}: {.status.operationState.message}{"\n"}'
 ```
 
-**What you should see.** Still `Running`, still `Retrying attempt #...`, for the *old* commit. An automated sync that fails retries up to 5 times with growing pauses. In the test run the failing operation kept retrying from 20:48:15 to 20:53:25, and a revert pushed in the middle only took effect after that. During an incident, that's 5 minutes you don't have. Stop the retries yourself:
+**What you should see.** The operation is still `Running` and still shows `Retrying attempt #...` for the *old* commit. An automated sync that fails retries up to 5 times, with a longer pause each time. In the test run, the failing operation kept retrying from 20:48:15 to 20:53:25. A revert pushed in the middle only took effect after that. During an incident, you don't have those 5 minutes. Stop the retries yourself:
 
 ```bash
 kubectl -n argocd patch app podinfo-dev --type merge -p '{"status":{"operationState":{"phase":"Terminating"}}}'
 kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.sync.status} {.status.health.status}: {.status.operationState.message}{"\n"}'
 ```
 
-**What you should see.** `Synced Healthy: Operation terminated (retried 2 times).` within a second. With the `argocd` CLI, the same thing is `argocd app terminate-op podinfo-dev`, and the UI has a Terminate button on a running sync.
+**What you should see.** Within a second the command prints `Synced Healthy: Operation terminated (retried 2 times).`. With the `argocd` CLI, `argocd app terminate-op podinfo-dev` does the same thing. The UI also has a Terminate button on a running sync.
 
 ### 8. One template, many environments
 
@@ -270,7 +309,7 @@ kubectl get deploy -A | grep course-gitops-
 kubectl -n argocd get app podinfo-prod -o jsonpath='{.metadata.ownerReferences[0].kind}/{.metadata.ownerReferences[0].name}{"\n"}'
 ```
 
-**What you should see.** Deleting the Application removed its Deployment, Service and pods: that's the finalizer. The ApplicationSet then created `podinfo-dev` and `podinfo-prod` from one template, both `Synced Healthy` within about 20 seconds, with 1 replica in dev and 2 in prod from the overlay. Both Applications carry an owner reference to `ApplicationSet/podinfo`.
+**What you should see.** Deleting the Application removed its Deployment, Service and pods. The finalizer did that. Next, the ApplicationSet created `podinfo-dev` and `podinfo-prod` from one template. An ApplicationSet is a template that generates Applications. Both were `Synced Healthy` within about 20 seconds. The overlays give dev 1 replica and prod 2. Both Applications carry an owner reference to `ApplicationSet/podinfo`.
 
 Delete one and see what happens, then remove a file from Git:
 
@@ -285,9 +324,13 @@ for a in dev prod; do kubectl -n argocd annotate app podinfo-$a argocd.argoproj.
 sleep 25; kubectl get cm -A | grep podinfo-settings
 ```
 
-**What you should see.** `podinfo-prod` is back, `Healthy`, about 20 seconds later: the ApplicationSet owns it and recreates it. And `grep` finds no `podinfo-settings` ConfigMap: `prune: true` deleted it from both namespaces, because it left Git.
+**What you should see.** About 20 seconds later, `podinfo-prod` is back and `Healthy`. The ApplicationSet owns it, so it recreates it. `grep` finds no `podinfo-settings` ConfigMap. The file left Git, so `prune: true` deleted the ConfigMap from both namespaces.
 
-The list generator is the simplest one. Others create Applications from every folder in a repository (`git` generator), every cluster ArgoCD knows (`cluster`), or every open pull request (`pullRequest`), which gives each PR its own preview environment.
+A generator is the part of an ApplicationSet that produces the list of Applications. This module uses the list generator, the simplest one. Other generators create Applications from other sources:
+
+- The `git` generator creates one for every folder in a repository.
+- The `cluster` generator creates one for every cluster ArgoCD knows.
+- The `pullRequest` generator creates one for every open pull request. This gives each PR its own preview environment.
 
 ## Investigate
 
@@ -299,10 +342,18 @@ The list generator is the simplest one. Others create Applications from every fo
 <details>
 <summary>Answers</summary>
 
-1. Change `replicas` in Git and push, which keeps Git the truth, with a refresh annotation or a webhook so it applies in seconds. Or, when Git is slow to change (review rules, a broken pipeline), turn off `selfHeal` for that Application first, scale by hand, and open a follow-up to put the number in Git. Many teams also let an HPA own the replica count and leave `replicas` out of Git altogether, so autoscaling never fights ArgoCD.
-2. Alert on health: an Application that stays `Degraded` (or `Progressing`) for longer than its rollout normally takes. ArgoCD exports `argocd_app_info` with `health_status` and `sync_status` labels for Prometheus. `OutOfSync` happens on every push for a few seconds, and with `selfHeal` off it's often intended, so it makes a noisy alert. A short `OutOfSync` is normal; a long `Degraded` is an outage.
-3. The hook needs credentials to delete things, and it deletes outside ArgoCD's view, so nothing tracks what happened. ArgoCD already removes resources that leave Git, with `prune: true`, and the annotation `argocd.argoproj.io/sync-options: Prune=false` protects single resources from it. For ordering, waves and hooks exist; for clean-up, prune does the job.
-4. The `git` generator stops producing that Application, and the ApplicationSet deletes it. With the resources finalizer, everything in that folder's namespace goes too. Set `syncPolicy.preserveResourcesOnDeletion: true` on the ApplicationSet to keep the workloads when an Application disappears, or `applicationsSync: create-update` to stop the ApplicationSet from deleting Applications at all.
+1. There are two right ways.
+   - Change `replicas` in Git and push. This keeps Git the truth. Add a refresh annotation or use a webhook, so the change applies in seconds.
+   - Sometimes Git is slow to change, for example because of review rules or a broken pipeline. Then turn off `selfHeal` for that Application first and scale by hand. Afterwards, open a follow-up task to put the number in Git.
+
+   At 3 a.m., the Git path is the right default when a push and a refresh take a minute, because nothing drifts and nothing needs cleaning up later. If pushing to Git is blocked, turning off `selfHeal` and scaling by hand is the faster fix. Then the follow-up task is what keeps Git from overwriting your fix at the next sync.
+
+   Many teams also let an HPA own the replica count and leave `replicas` out of Git altogether. That way autoscaling never fights ArgoCD.
+2. Alert on health. Fire the alert when an Application stays `Degraded` or `Progressing` for longer than its rollout normally takes. ArgoCD exports the metric `argocd_app_info` for Prometheus, with `health_status` and `sync_status` labels. `OutOfSync` happens for a few seconds on every push. With `selfHeal` off, it's often intended. So an `OutOfSync` alert is noisy. A short `OutOfSync` is normal, but a long `Degraded` is an outage.
+3. The hook needs credentials to delete things. It also deletes outside ArgoCD's view, so nothing tracks what happened. ArgoCD already removes resources that leave Git, with `prune: true`. The annotation `argocd.argoproj.io/sync-options: Prune=false` protects single resources from pruning. Use waves and hooks for ordering, and prune for clean-up.
+4. The `git` generator stops producing that Application, so the ApplicationSet deletes it. Because of the resources finalizer, everything in that folder's namespace goes too. Two settings on the ApplicationSet protect you:
+   - `syncPolicy.preserveResourcesOnDeletion: true` keeps the workloads when an Application disappears.
+   - `applicationsSync: create-update` stops the ApplicationSet from deleting Applications at all.
 
 </details>
 
@@ -313,4 +364,10 @@ The list generator is the simplest one. Others create Applications from every fo
 kill %1 2>/dev/null; rm -rf /tmp/podinfo-gitops
 ```
 
-This deletes the ApplicationSet and its Applications (and, through their finalizers, the podinfo deployments), the `team-shop` project, Gitea and the three `course-gitops` namespaces.
+This deletes:
+
+- the ApplicationSet and its Applications
+- the podinfo deployments, through the Applications' finalizers
+- the `team-shop` project
+- Gitea
+- the three `course-gitops` namespaces
