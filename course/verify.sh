@@ -1041,6 +1041,8 @@ for m in "${modules[@]}"; do
 done
 
 printf '\nRestoring the baseline\n'
-"$ROOT/course/reset.sh" >/dev/null 2>&1
+# --all also removes the module 7 namespaces and the course client, so the lab ends
+# exactly as a fresh provision leaves it (module 0 expects 3 proxies).
+"$ROOT/course/reset.sh" --all >/dev/null 2>&1
 printf '\n%d checks passed, %d failed\n' "$PASS" "$FAIL"
 (( FAIL == 0 ))

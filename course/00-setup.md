@@ -49,6 +49,14 @@ The "3 proxies" line counts the proxies that take orders from istiod, the Istio 
 
 The shop's own pods are not in the count. Module 1 explains why.
 
+If you see more than 3, something from a later module is still running. Module 7's two sidecar pods, for example, add 2 more, so you'd see 5. To get back to the starting point, run:
+
+```bash
+./course/reset.sh --all
+```
+
+Plain `./course/reset.sh` keeps the module 7 namespaces, so you may return to that module later. `--all` removes them too.
+
 The three version lines come from three places:
 
 1. `istioctl` prints its own version.
