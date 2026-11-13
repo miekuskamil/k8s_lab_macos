@@ -22,6 +22,8 @@ Check the switch with `curl -s localhost:8080/api/model`. Memory is the limit. A
 
 The shop assistant (module 17) and the RAG app (module 27) both have a `PROVIDER` setting. With `PROVIDER=anthropic`, they send the question to Claude through the official Anthropic Python SDK. kagent (module 19) supports Anthropic natively.
 
+The `PROVIDER` setting arrived with the images `assistant:1.1.0` and `rag:1.2.0`. If your lab is older than 13 November 2026, run `./scripts/provision.sh` once to build the new assistant image. Module 27 builds its own image in its steps.
+
 Some things work differently from Ollama:
 
 - **Cost.** Every call costs money. The default model, `claude-opus-5-5`, costs $4 per million input tokens and $20 per million output tokens, and thinking counts as output. A question to the assistant carries the 10 most recent orders, so expect around one cent per answer. The `input_tokens` and `output_tokens` fields in each reply show the real numbers. Set `ANTHROPIC_MODEL=claude-haiku-5-5` for the cheapest model.
