@@ -556,3 +556,17 @@ These terms come from the [CKS track](../certs/cks/README.md) in `certs/cks/`. E
 
 **OrbStack machine.** An OrbStack machine is a lightweight Linux system that OrbStack runs on a Mac. It feels like a virtual machine, but every machine shares one Linux kernel. The CKS track's two nodes, `cks-cp` and `cks-w1`, are OrbStack machines. [certs/README](../certs/README.md).
 
+**Default-deny policy.** A default-deny policy is a NetworkPolicy that selects every pod in a namespace (`podSelector: {}`) and allows nothing, so you open every path on purpose. Smaller policies then add single paths, because NetworkPolicies only ever add to each other. CKS 01.
+
+**ipBlock.** An ipBlock is the part of a NetworkPolicy rule that matches IP ranges instead of pods, with an optional `except` list of ranges to leave out. CKS 01.
+
+**Metadata service.** The metadata service is an HTTP endpoint at `169.254.169.254` on cloud virtual machines that hands out the machine's identity and often temporary cloud credentials. Pods reach it by default, so a NetworkPolicy blocks it. CKS 01.
+
+**CIS Kubernetes Benchmark.** The CIS Kubernetes Benchmark is a checklist from the Center for Internet Security with about 130 settings for the control plane, etcd and the kubelet, each with a reason and a fix. CKS 01.
+
+**kube-bench.** kube-bench is a tool from Aqua Security that checks a node's running Kubernetes components against the CIS benchmark and prints PASS, FAIL or WARN with a remediation per item. CKS 01.
+
+**Ingress and Ingress controller.** An Ingress is a Kubernetes object with HTTP routing rules for traffic entering the cluster: hosts and paths to Services, plus TLS certificates. An Ingress controller, such as ingress-nginx, is the proxy that carries the rules out. Without a matching TLS Secret, ingress-nginx serves a fake certificate instead of failing. CKS 01.
+
+**Checksum (SHA-512).** A checksum is a fingerprint of a file, computed so that changing one byte changes the whole value. Kubernetes publishes a SHA-512 checksum next to every binary on `dl.k8s.io`, and `sha512sum -c` compares a file against it. CKS 01.
+
