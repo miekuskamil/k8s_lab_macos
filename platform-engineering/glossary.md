@@ -11,6 +11,7 @@ Every resource and term the Kubernetes Platform Engineering course and the certi
 - [Envoy response flags](#envoy-response-flags)
 - [Sidecars in depth](#sidecars-in-depth)
 - [Debugging Envoy](#debugging-envoy)
+- [Installing Istio](#installing-istio)
 - [Around the mesh](#around-the-mesh)
 - [AI on Kubernetes](#ai-on-kubernetes)
 - [Kubernetes operations](#kubernetes-operations)
@@ -288,6 +289,24 @@ Modules 4, 5, 6, 8, 31. A flag appears in the log of the proxy that hit the prob
 **istioctl x describe pod.** `istioctl x describe pod` starts from one sidecar pod and lists the Service, DestinationRule, VirtualService and PeerAuthentication that affect it, with warnings such as a route to an unknown subset. It only understands sidecar pods. Modules 7 and 31.
 
 **Envoy log level.** Envoy has one logger per area, such as `router`, `connection`, `rbac` and `upstream`, each with its own level. `istioctl proxy-config log <pod> --level router:debug` changes a level on the running proxy, and `--reset` sets all of them back to `warning`. Module 31.
+
+## Installing Istio
+
+**Install profile.** An install profile is a named set of defaults for `istioctl install` that says which Istio components to turn on and how to size them. `minimal` installs istiod only, `default` adds an ingress gateway, `demo` adds an egress gateway with small requests and access logs, and `ambient` adds istio-cni and ztunnel. Module 32.
+
+**IstioOperator.** IstioOperator (`install.istio.io/v1alpha1`) is the file format `istioctl install` reads, with three main sections: `meshConfig`, `components` and `values`. Since Istio 1.24, no operator runs in the cluster and nothing stores the file there, so keep it in Git. Module 32.
+
+**meshConfig.** meshConfig is the set of mesh-wide settings that istiod reads from the `istio` ConfigMap and pushes to every proxy, such as `accessLogFile`, `outboundTrafficPolicy` and `defaultConfig`. A change reaches running proxies without a restart. Module 32.
+
+**ProxyConfig and holdApplicationUntilProxyStarts.** ProxyConfig is the startup configuration of each proxy, set mesh-wide under `meshConfig.defaultConfig` or per pod with the `proxy.istio.io/config` annotation. Its field `holdApplicationUntilProxyStarts: true` makes the injector put `istio-proxy` first and hold the app until Envoy is ready. Modules 7 and 32.
+
+**istioctl install.** `istioctl install` merges a profile, IstioOperator files and `--set` flags, renders Istio's Helm charts, applies the result and prunes what the new config drops. Each run describes the whole desired state, so a run without your file resets your settings. Module 32.
+
+**istioctl manifest generate and translate.** `manifest generate` prints the YAML `istioctl install` would apply, without touching a cluster. `manifest translate` turns an IstioOperator file into Helm values files, for a move from istioctl to Helm. Module 32.
+
+**istioctl uninstall --purge.** `istioctl uninstall --purge` removes every Istio component and the CRDs from a cluster. It leaves the `istio-system` namespace in place. Module 32.
+
+**Platform setting and cniBinDir.** `values.global.platform` (for example `k3s`) adjusts paths and defaults for one Kubernetes distribution. On k3d, istio-cni also needs `values.cni.cniBinDir` set to the folder containerd searches, read from the node's containerd config, or new pods fail with `failed to find plugin "istio-cni"`. Modules 14 and 32.
 
 ## Around the mesh
 

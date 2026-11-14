@@ -1099,6 +1099,71 @@ module_31() {
   expect "after the reset course-debug is gone" "$("${K[@]}" get ns course-debug 2>&1 | grep -c NotFound)" '^1$'
 }
 
+# Module 32 creates its own k3d cluster and downloads istioctl 1.24.2, so it is not in the
+# default run: ./platform-engineering/verify.sh 32. It never touches k8s-lab's Istio.
+module_32() {
+  section "32: installing Istio with istioctl (throwaway cluster istio-install-lab)"
+  local X=(kubectl --context k3d-istio-install-lab) dir="$HOME/.istioctl/1.24.2" fetched=0 out
+  local IC="$dir/istioctl" op="$M/32-istio-operator.yaml" vals="${TMPDIR:-/tmp}/istio-helm-values-verify"
+  k3d cluster delete istio-install-lab >/dev/null 2>&1
+  k3d cluster create istio-install-lab --image rancher/k3s:v1.31.5-k3s1 --no-lb \
+    --k3s-arg "--disable=traefik@server:0" --kubeconfig-switch-context=false --wait >/dev/null 2>&1
+  expect "the throwaway node is Ready" "$("${X[@]}" get nodes --no-headers 2>/dev/null | awk '{print $2}')" '^Ready$'
+  expect "kubectl still points at k8s-lab" "$(kubectl config current-context)" '^k3d-k8s-lab$'
+  if [[ ! -x "$IC" ]]; then
+    local os arch
+    os="$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/osx/')"; arch="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
+    mkdir -p "$dir"
+    curl -fsSL "https://github.com/istio/istio/releases/download/1.24.2/istioctl-1.24.2-$os-$arch.tar.gz" | tar xz -C "$dir"
+    fetched=1
+  fi
+  expect "istioctl 1.24.2 is ready" "$("$IC" version --remote=false 2>&1)" '1\.24\.2'
+  expect "1.24 removed profile and verify-install" "$("$IC" profile list 2>&1; "$IC" verify-install 2>&1)" 'unknown command "profile".*unknown command "verify-install"'
+  expect "precheck finds no issues" "$("$IC" x precheck --context k3d-istio-install-lab 2>&1)" 'No issues found'
+  local wl=""
+  for p in minimal default demo ambient; do
+    wl="$wl$p:$("$IC" manifest generate --set profile=$p 2>/dev/null | "${X[@]}" create --dry-run=client -o name -f - 2>/dev/null | grep -cE '^(deployment|daemonset)') "
+  done
+  expect "profiles add workloads: minimal 1, default 2, demo 3, ambient 3" "$wl" '^minimal:1 default:2 demo:3 ambient:3 $'
+  expect "manifest generate shows the three mesh settings" "$("$IC" manifest generate -f "$op" 2>/dev/null | grep -cE 'accessLogFile: /dev/stdout|mode: REGISTRY_ONLY|holdApplicationUntilProxyStarts: true$')" '^3$'
+  "$IC" install --context k3d-istio-install-lab -f "$op" -y >/dev/null 2>&1
+  expect "istioctl installed istiod from the Helm chart" "$("${X[@]}" -n istio-system get deploy istiod -o jsonpath='{.metadata.labels.helm\.sh/chart} {.status.readyReplicas}' 2>/dev/null)" '^istiod-1\.24\.2 1$'
+  "${X[@]}" create namespace demo >/dev/null
+  "${X[@]}" label namespace demo istio-injection=enabled >/dev/null
+  "${X[@]}" -n demo run curl --image=curlimages/curl:8.11.1 --command -- sleep infinity >/dev/null
+  "${X[@]}" -n demo wait --for=condition=Ready pod/curl --timeout=180s >/dev/null 2>&1
+  expect "holdApplicationUntilProxyStarts puts istio-proxy first" "$("${X[@]}" -n demo get pod curl -o jsonpath='{.spec.containers[*].name}')" '^istio-proxy curl$'
+  expect "values.global.proxy sets the sidecar requests" "$("${X[@]}" -n demo get pod curl -o jsonpath='{.spec.containers[0].resources.requests}')" '"cpu":"10m","memory":"40Mi"'
+  expect "REGISTRY_ONLY blocks example.com" "$("${X[@]}" -n demo exec curl -c curl -- curl -s -m 5 -o /dev/null -w '%{http_code}' http://example.com 2>/dev/null)" '^000$'
+  settle 2
+  expect "mesh-wide access logs show BlackHoleCluster" "$("${X[@]}" -n demo logs curl -c istio-proxy --tail=1 2>/dev/null)" 'BlackHoleCluster'
+  "$IC" install --context k3d-istio-install-lab -f "$op" --set meshConfig.outboundTrafficPolicy.mode=ALLOW_ANY -y >/dev/null 2>&1
+  out=000
+  for _ in $(seq 1 10); do settle 2; out="$("${X[@]}" -n demo exec curl -c curl -- curl -s -m 5 -o /dev/null -w '%{http_code}' http://example.com 2>/dev/null)"; [[ $out == 200 ]] && break; done
+  expect "--set ALLOW_ANY wins over the file, without a restart" "$out" '^200$'
+  rm -rf "$vals"; mkdir -p "$vals"
+  "$IC" manifest translate -f "$op" -o "$vals" >/dev/null 2>&1
+  expect "manifest translate writes Helm values with the settings" "$(grep -c 'mode: REGISTRY_ONLY' "$vals/base-values.yaml" 2>/dev/null)" '^1$'
+  rm -rf "$vals"
+  local bin; bin="$(docker exec k3d-istio-install-lab-server-0 sed -n 's/^ *bin_dir = "\(.*\)"/\1/p' /var/lib/rancher/k3s/agent/etc/containerd/config.toml)"
+  "$IC" install --context k3d-istio-install-lab --set profile=ambient --set values.global.platform=k3s --set values.cni.cniBinDir="$bin" -y >/dev/null 2>&1
+  expect "ambient runs istio-cni, istiod and ztunnel" "$("${X[@]}" -n istio-system get pods --no-headers 2>/dev/null | awk '$3=="Running" {print $1}' | sed -E 's/-[a-z0-9]{5}$//; s/-[a-z0-9]{8,10}$//' | sort | tr '\n' ' ')" '^istio-cni-node istiod ztunnel $'
+  expect "the reinstall without the file dropped the mesh settings" "$("${X[@]}" -n istio-system get cm istio -o jsonpath='{.data.mesh}' | grep -cE 'accessLogFile|REGISTRY_ONLY')" '^0$'
+  "${X[@]}" -n demo run curl2 --image=curlimages/curl:8.11.1 --command -- sleep infinity >/dev/null
+  "${X[@]}" -n demo wait --for=condition=Ready pod/curl2 --timeout=180s >/dev/null 2>&1
+  expect "with the CNI, new sidecars get istio-validation" "$("${X[@]}" -n demo get pod curl2 -o jsonpath='{.spec.initContainers[*].name}')" '^istio-validation$'
+  "${X[@]}" delete namespace demo >/dev/null 2>&1
+  "$IC" uninstall --context k3d-istio-install-lab --purge -y >/dev/null 2>&1
+  local crds=1
+  for _ in $(seq 1 12); do crds="$("${X[@]}" get crd 2>/dev/null | grep -c 'istio\.io')"; [[ $crds == 0 ]] && break; settle 5; done
+  expect "uninstall --purge removes the CRDs" "$crds" '^0$'
+  expect "istio-system stays, empty" "$("${X[@]}" get ns istio-system --no-headers 2>/dev/null | awk '{print $2}')" '^Active$'
+  k3d cluster delete istio-install-lab >/dev/null 2>&1
+  (( fetched )) && rm -rf "$dir"
+  expect "the throwaway cluster is gone" "$(k3d cluster list 2>/dev/null | grep -c istio-install-lab)" '^0$'
+  expect "k8s-lab still has its 3 proxies" "$("${I[@]}" version 2>/dev/null | grep -o '([0-9]* proxies)')" '^\(3 proxies\)$'
+}
+
 # Module 21 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 21
 module_21() {
   section "21: k3s certificates, backups and upgrades (the upgrade is one-way)"

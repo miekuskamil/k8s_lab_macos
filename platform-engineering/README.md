@@ -38,6 +38,7 @@ Each module takes 30 to 60 minutes. Each one lists the modules and tools it need
 | [29. The life of a request](29-life-of-a-request.md) | Internals: kubectl to API server (authentication, RBAC, admission, kine), controllers, scheduler decisions, kubelet, CRI and CNI; then one request without a mesh and one through ambient Istio, hop by hop, with a large diagram | `kubectl -v`, `iptables`, `conntrack`, `istioctl` |
 | [30. Sidecar mode in depth](30-sidecar-in-depth.md) | The four injection webhooks, iptables traffic capture, excluded ports, the Sidecar resource (measured: 62 clusters down to 16), proxy resources, sidecar against ambient in latency and memory | `istioctl`, `iptables`, `kubectl top` |
 | [31. Debugging Envoy with istioctl](31-debugging-envoy.md) | Listener, route, cluster, endpoint; SYNCED and STALE (a frozen Envoy); `analyze` and `x describe` on broken config; causing `NC`, `URX`, `NR`, `UH`, `UF` and `UO` on purpose; runtime log levels; four break-and-fix exercises | `istioctl proxy-config`, access logs |
+| [32. Installing Istio with istioctl](32-installing-istio.md) | On a throwaway k3d cluster: install profiles, an IstioOperator file with meshConfig, components and values, `manifest generate` and `translate`, reconfiguring in place, switching to ambient, uninstalling. Never touches the lab's Istio | `k3d`, `istioctl` 1.24.2 |
 
 **New to Istio? Read [Start here: Istio in one picture](start-here.md) first.** It takes 15 minutes, needs no cluster, and shows every resource the course uses on one diagram. Every term also has a plain explanation in the [glossary](glossary.md). Keep it open in a tab.
 
@@ -47,7 +48,7 @@ Each module takes 30 to 60 minutes. Each one lists the modules and tools it need
 
 | Route | Modules |
 |---|---|
-| Istio | modules 0 to 8, then 11 to 16, then 30 and 31. Module 9 is a reference, and 10 is theory you read any time after module 7. |
+| Istio | modules 0 to 8, then 11 to 16, then 30 and 31. Module 9 is a reference, and 10 is theory you read any time after module 7. Module 32 installs Istio on a separate throwaway cluster, so take it any time after module 14. |
 | AI on Kubernetes | modules 17 to 19 build on the Istio route, mainly modules 3 to 6 and 12. Each module lists what it needs at the top. |
 | Kubernetes operations | modules 20 and 21 need only module 0. As a CKA, you might take them first. |
 | Platform tools | modules 22 to 26 and 28 need only module 0, though 23 builds on module 6 and 24 on 23. They cover what DevOps and platform job adverts ask for most: GitOps, alerting, dashboards, OpenTelemetry, policy as code and profiling. |
@@ -62,7 +63,8 @@ Each module takes 30 to 60 minutes. Each one lists the modules and tools it need
 5. Modules 22 to 28, the platform tools (27 is AI and needs Ollama).
 6. Module 20.
 7. Module 14, then rebuild the lab: `./scripts/teardown.sh --yes && ./scripts/provision.sh`.
-8. Module 21, then rebuild again.
+8. Module 32, on its own throwaway cluster.
+9. Module 21, then rebuild again.
 
 Module 9 is a reference to keep open, and module 10 is reading for any time after module 7. Modules 14 and 21 come last because they upgrade the lab and there's no way back except a rebuild.
 
@@ -134,6 +136,7 @@ The course changes Istio resources by hand, with `kubectl apply`. ArgoCD manages
 ./platform-engineering/verify.sh 17 18 19  # the AI modules: 17 and 19 need Ollama on your machine, 18 downloads about 900 MB
 ./platform-engineering/verify.sh 27        # RAG: needs Ollama with nomic-embed-text and qwen2.5:3b
 ./platform-engineering/verify.sh 21     # the k3s upgrade, one-way, not part of the full run
+./platform-engineering/verify.sh 32     # creates and deletes its own k3d cluster and downloads istioctl 1.24.2, not part of the full run
 ```
 
 The script applies each module's manifests, checks the results and restores the baseline. It was run against this lab before the course was published. The [last section of module 0](00-setup.md#what-the-verification-run-showed) has the results.

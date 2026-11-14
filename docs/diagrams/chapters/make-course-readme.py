@@ -24,11 +24,11 @@ def routes():
     c.arrow([(220, 300), (220, 420)], "")
 
     c.node(520, 190, 340, 110, BLUE, "Istio core", "shield", "modules 1 to 8")
-    c.node(980, 190, 360, 110, BLUE, "Istio advanced", "shield", "modules 11 to 16")
+    c.node(980, 190, 360, 110, BLUE, "Istio advanced", "shield", "11 to 16, 30 to 32")
     c.node(1460, 190, 280, 110, PURPLE, "AI", "cube", "modules 17 to 19")
     c.arrow([(860, 245), (980, 245)], "")
     c.arrow([(1340, 245), (1460, 245)], "")
-    c.note(980, 335, ["edge TLS, egress, JWT,", "upgrades, resilience,", "Istio API"], 17)
+    c.note(980, 335, ["edge TLS, egress, JWT,", "upgrades, Istio API,", "sidecars, Envoy, istioctl"], 17)
     c.note(1460, 335, ["LLMs, model serving,", "agents"], 17)
 
     c.outline(520, 420, 340, 100, DIM, "Reference\n9 and 10", "doc")

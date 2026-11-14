@@ -82,6 +82,7 @@ At the baseline, Prometheus has no alert rules: the lab turns the chart's defaul
 | Is istiod healthy? | `kubectl -n istio-system get pods` and `kubectl -n istio-system logs deploy/istiod --tail=30` |
 | Which proxies are connected, are they up to date? | `istioctl proxy-status` |
 | Does my config have known problems? | `istioctl analyze -n shop` (or `-A` for every namespace) |
+| What would `istioctl install` apply? (module 32, never on this lab) | `istioctl manifest generate -f <IstioOperator file>` |
 | Is one pod in the mesh, and through which waypoint? | `istioctl ztunnel-config workloads \| grep <pod>` (ambient). Do not use `istioctl x describe pod` for ambient pods: it only understands sidecars, reports "not part of mesh" and then fails. |
 
 ## Layer 4: ambient data plane (ztunnel and the CNI)
