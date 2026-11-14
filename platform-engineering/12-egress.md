@@ -119,46 +119,77 @@ That's deliberate. The only way to httpbin.org now runs through the waypoint, wh
 
 If your lab existed before this module, run `./scripts/provision.sh` once, after `git pull`. It turns on DNS capture and virtual IPs, then restarts istio-cni. Pods pick up DNS capture only when they start. That's why the exercises restart the course client.
 
-```bash
-kubectl apply -f platform-engineering/manifests/03-course-client.yaml
-kubectl -n shop rollout restart deploy/course-client
-kubectl -n shop rollout status deploy/course-client
+```console
+$ kubectl apply -f platform-engineering/manifests/03-course-client.yaml
+serviceaccount/course-client unchanged
+deployment.apps/course-client unchanged
+
+$ kubectl -n shop rollout restart deploy/course-client
+deployment.apps/course-client restarted
+
+$ kubectl -n shop rollout status deploy/course-client
+deployment "course-client" successfully rolled out
 ```
 
 ### 1. See what the mesh knows by default
 
-```bash
-kubectl -n shop exec deploy/course-client -- curl -s -o /dev/null -w "%{http_code}\n" https://example.com
-kubectl -n istio-system logs ds/ztunnel --since=1m | grep course-client | grep outbound | tail -1
+```console
+$ kubectl -n shop exec deploy/course-client -- curl -s -o /dev/null -w "%{http_code}\n" https://example.com
+200
+
+$ kubectl -n istio-system logs ds/ztunnel --since=1m | grep course-client | grep outbound | tail -1
+2026-11-14T23:12:09.638660Z	info	access	connection complete	src.addr=10.42.0.232:48554 src.workload="course-client-595cccd86c-kvzzj" src.namespace="shop" dst.addr=104.20.23.154:443 direction="outbound" bytes_sent=823 bytes_recv=5376 duration="109ms"
 ```
 
 **What you should see.** `200`, and a log line with `dst.addr=` followed by an IP and port 443. No hostname anywhere.
 
 ### 2. Register httpbin.org
 
-```bash
-kubectl apply -f platform-engineering/manifests/12-serviceentry.yaml
-kubectl -n shop get serviceentry httpbin-org -o jsonpath='{.status.addresses}{"\n"}'
-kubectl -n shop exec deploy/course-client -- nslookup httpbin.org
+```console
+$ kubectl apply -f platform-engineering/manifests/12-serviceentry.yaml
+serviceentry.networking.istio.io/httpbin-org created
+destinationrule.networking.istio.io/httpbin-org-tls created
+
+$ kubectl -n shop get serviceentry httpbin-org -o jsonpath='{.status.addresses}{"\n"}'
+[{"host":"httpbin.org","value":"240.240.0.7"},{"host":"httpbin.org","value":"2001:2::7"}]
+
+$ kubectl -n shop exec deploy/course-client -- nslookup httpbin.org
+Server:		10.43.0.10
+Address:	10.43.0.10:53
+
+Name:	httpbin.org
+Address: 2001:2::7
+
+Name:	httpbin.org
+Address: 240.240.0.7
 ```
 
-**What you should see.** istiod gave the ServiceEntry the address `240.240.0.1`. DNS inside the pod now returns that address instead of httpbin's real ones.
+**What you should see.** istiod gave the ServiceEntry an address from its `240.240.0.0/16` range, `240.240.0.7` in this run and `240.240.0.1` in an earlier one, plus an IPv6 twin. DNS inside the pod now returns that address instead of httpbin's real ones.
 
 ### 3. Watch the waypoint add TLS
 
-```bash
-kubectl -n shop exec deploy/course-client -- curl -s http://httpbin.org/get | grep '"url"'
-kubectl -n istio-system logs ds/ztunnel --since=1m | grep course-client | grep httpbin | tail -1
+```console
+$ kubectl -n shop exec deploy/course-client -- curl -s http://httpbin.org/get | grep '"url"'
+  "url": "https://httpbin.org/get"
+
+$ kubectl -n istio-system logs ds/ztunnel --since=1m | grep course-client | grep httpbin | tail -1
+2026-11-14T23:12:18.601862Z	info	access	connection complete	src.addr=10.42.0.232:45856 src.workload="course-client-595cccd86c-kvzzj" src.namespace="shop" src.identity="spiffe://cluster.local/ns/shop/sa/course-client" dst.addr=10.42.0.211:15008 dst.hbone_addr=240.240.0.7:80 dst.service="httpbin.org" dst.workload="waypoint-b9b76876f-f7cpq" dst.namespace="shop" dst.identity="spiffe://cluster.local/ns/shop/sa/waypoint" direction="outbound" bytes_sent=78 bytes_recv=709 duration="499ms"
 ```
 
 **What you should see.** The app asked for `http://`, yet httpbin reports `"url": "https://httpbin.org/get"`. So the request reached httpbin over TLS. The ztunnel line shows `dst.service="httpbin.org"` and `dst.workload="waypoint-..."`. The call went through the waypoint.
 
 ### 4. Lock the course client in
 
-```bash
-kubectl apply -f platform-engineering/manifests/12-egress-lockdown.yaml
-kubectl -n shop exec deploy/course-client -- curl -sS -m 8 -o /dev/null https://example.com
-kubectl -n shop exec deploy/course-client -- curl -s -o /dev/null -w "%{http_code}\n" http://httpbin.org/get
+```console
+$ kubectl apply -f platform-engineering/manifests/12-egress-lockdown.yaml
+networkpolicy.networking.k8s.io/course-client-egress created
+
+$ kubectl -n shop exec deploy/course-client -- curl -sS -m 8 -o /dev/null https://example.com
+curl: (35) TLS connect error: error:00000000:lib(0)::reason(0)
+command terminated with exit code 35
+
+$ kubectl -n shop exec deploy/course-client -- curl -s -o /dev/null -w "%{http_code}\n" http://httpbin.org/get
+200
 ```
 
 **What you should see.** example.com fails with `curl: (35) TLS connect error` or `Connection reset by peer`. httpbin.org, through the waypoint, still returns `200`.
@@ -173,12 +204,19 @@ You met the same effect with Redis in module 3.
 
 ### 5. Put L7 rules on the way out
 
-```bash
-kubectl apply -f platform-engineering/manifests/12-egress-policy.yaml
-for p in get headers ip; do
+```console
+$ kubectl apply -f platform-engineering/manifests/12-egress-policy.yaml
+authorizationpolicy.security.istio.io/httpbin-org-read-only created
+
+$ for p in get headers ip; do
   kubectl -n shop exec deploy/course-client -- curl -s -o /dev/null -w "GET /$p -> %{http_code}\n" http://httpbin.org/$p
 done
-kubectl -n shop exec deploy/course-client -- curl -s -o /dev/null -w "POST /post -> %{http_code}\n" -X POST http://httpbin.org/post
+GET /get -> 200
+GET /headers -> 200
+GET /ip -> 403
+
+$ kubectl -n shop exec deploy/course-client -- curl -s -o /dev/null -w "POST /post -> %{http_code}\n" -X POST http://httpbin.org/post
+POST /post -> 403
 ```
 
 **What you should see.** `200` for `/get` and `/headers`, and `403` for `/ip` and for the POST. The waypoint read each request and checked it against the rule. It did this on traffic bound for the internet.
@@ -205,7 +243,7 @@ sum by (source_workload, response_code) (istio_requests_total{reporter="waypoint
 
 1. The answer depends on when your frontend pod started.
    - If it started before DNS capture was on, the first call returns `200`. That pod still resolves httpbin.org to its real IP. So ztunnel never links the call to the ServiceEntry. The call skips the waypoint, and the rule never runs.
-   - After the restart, the new pod gets DNS capture. It resolves `240.240.0.1` and goes through the waypoint. It gets `403`, because the rule only allows the course client.
+   - After the restart, the new pod gets DNS capture. It resolves the ServiceEntry's `240.240.0.x` address and goes through the waypoint. It gets `403`, because the rule only allows the course client.
 
    The lesson repeats module 3. An L7 rule only applies to traffic that reaches the proxy enforcing it. On a lab built from scratch with this module in place, both calls return `403`.
 2. The connection never leaves the pod as a TCP handshake to example.com. ztunnel answers it inside the pod's network namespace. Then it happens in this order:
@@ -223,8 +261,13 @@ sum by (source_workload, response_code) (istio_requests_total{reporter="waypoint
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh
+```console
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 This removes the ServiceEntry, the AuthorizationPolicy and the NetworkPolicy. DNS capture and virtual IPs stay on, because they belong to the lab's Istio install.
