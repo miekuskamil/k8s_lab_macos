@@ -653,3 +653,19 @@ These terms come from the [CKS track](../certs/cks/README.md) in `certs/cks/`. E
 **Falco list, macro and override.** In a Falco rules file, a list names a set of values, a macro names a piece of condition, and a rule combines them. An `override` block in a later file replaces or extends one field of an existing rule, such as its priority. CKS 06.
 
 **Audit stage.** An audit stage is the point in a request at which the API server writes an audit event: `RequestReceived`, `ResponseStarted`, `ResponseComplete` or `Panic`. Count `ResponseComplete` lines to count requests. CKS 06.
+
+**Lateral movement.** Lateral movement is an attacker's step from the first place they broke into to the next one, such as from one pod to the database or to the node. Default-deny NetworkPolicies and least privilege make each step harder. CKS 01.
+
+**CNI agent (Felix).** A CNI agent is the per-node program of a CNI plugin that turns NetworkPolicies into packet filter rules in the node's kernel. Calico's agent is called Felix and writes iptables rules or eBPF programs. A CNI without such an agent, such as flannel alone, stores policies and enforces nothing. CKS 01.
+
+**Cilium security identity.** A security identity is a number that Cilium gives to every distinct set of pod labels. Its eBPF programs compare identities instead of IP lists, so a policy keeps working when pods move. CKS 01.
+
+**SSRF (server-side request forgery).** SSRF is an attack that tricks a server into fetching a URL the attacker chose. Aimed at the cloud metadata service, it hands the node's cloud credentials to the attacker. CKS 01.
+
+**Link-local address.** A link-local address, such as `169.254.169.254`, only exists on a machine's own network segment and never crosses a router. Clouds serve their metadata service on one. CKS 01.
+
+**Profiling endpoint.** A profiling endpoint, `/debug/pprof`, serves memory and thread details of a running Go program. The CIS benchmark asks for `--profiling=false` on the API server, controller manager and scheduler, because production never needs it. CKS 01.
+
+**TLS handshake.** The TLS handshake is the short negotiation at the start of a TLS connection: the client offers versions and cipher suites, the server picks one of each, sends its certificate, and both agree on keys. CKS 01.
+
+**Downgrade attack.** A downgrade attack makes two sides of a connection settle on an old protocol version or a weak cipher suite, which the attacker then breaks. A minimum TLS version on the server stops it. CKS 01.
