@@ -96,60 +96,103 @@ Open connections keep their old session. New connections get the new certificate
 
 You need port 8443 on your machine. Clusters that `provision.sh` built after this module arrived publish it already. For an older cluster, add it once. k3d rebuilds its load balancer, and the cluster keeps running:
 
-```bash
-docker port k3d-k8s-lab-serverlb | grep 8443 || k3d cluster edit k8s-lab --port-add 8443:8443@loadbalancer
+```console
+$ docker port k3d-k8s-lab-serverlb | grep 8443 || k3d cluster edit k8s-lab --port-add 8443:8443@loadbalancer
+8443/tcp -> 0.0.0.0:8443
+8443/tcp -> [::]:8443
 ```
 
 ### 1. Meet the lab CA
 
-```bash
-kubectl get clusterissuer
-kubectl -n cert-manager get certificate lab-root-ca
+```console
+$ kubectl get clusterissuer
+NAME         READY   AGE
+lab-ca       True    34h
+selfsigned   True    34h
+
+$ kubectl -n cert-manager get certificate lab-root-ca
+NAME          READY   SECRET        AGE
+lab-root-ca   True    lab-root-ca   34h
 ```
 
 **What you should see.** Two issuers, `selfsigned` and `lab-ca`, both `READY True`. The root CA certificate also shows `READY True`. Save the root's public certificate. curl needs it in a moment to trust the gateway:
 
-```bash
-kubectl -n cert-manager get secret lab-root-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/lab-ca.crt
+```console
+$ kubectl -n cert-manager get secret lab-root-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/lab-ca.crt
 ```
 
 ### 2. Ask for a certificate
 
-```bash
-kubectl apply -f platform-engineering/manifests/11-certificate.yaml
-kubectl -n shop-ingress get certificate shop-tls -w      # wait for READY True, then Ctrl-C
-kubectl -n shop-ingress get secret shop-tls -o jsonpath='{.data.tls\.crt}' | base64 -d \
+```console
+$ kubectl apply -f platform-engineering/manifests/11-certificate.yaml
+certificate.cert-manager.io/shop-tls created
+
+$ kubectl -n shop-ingress get certificate shop-tls -w      # wait for READY True, then Ctrl-C
+NAME       READY   SECRET     AGE
+shop-tls   True    shop-tls   8s
+
+$ kubectl -n shop-ingress get secret shop-tls -o jsonpath='{.data.tls\.crt}' | base64 -d \
   | openssl x509 -noout -issuer -ext subjectAltName -dates
+issuer=CN=k8s-lab root CA
+X509v3 Subject Alternative Name: critical
+    DNS:shop.local, DNS:localhost
+notBefore=Nov 14 23:10:34 2026 GMT
+notAfter=Feb 12 23:10:34 2027 GMT
 ```
+
+The `-w` watch keeps running until you press Ctrl-C. The transcript shows what it printed before that.
 
 **What you should see.** The issuer is `CN=k8s-lab root CA`. The names are `shop.local` and `localhost`. The two dates are 90 days apart. It took cert-manager a second or two.
 
 ### 3. Open an HTTPS listener
 
-```bash
-kubectl apply -f platform-engineering/manifests/11-gateway-https.yaml
-kubectl -n shop-ingress get gateway shop-gateway
-curl --cacert /tmp/lab-ca.crt https://localhost:8443/api/version
-curl https://localhost:8443/api/version
+```console
+$ kubectl apply -f platform-engineering/manifests/11-gateway-https.yaml
+gateway.gateway.networking.k8s.io/shop-gateway configured
+
+$ kubectl -n shop-ingress get gateway shop-gateway
+NAME           CLASS   ADDRESS         PROGRAMMED   AGE
+shop-gateway   istio   192.168.107.2   True         34h
+
+$ curl --cacert /tmp/lab-ca.crt https://localhost:8443/api/version
+{"version":"v1","pod":"backend-v1-54c86bf9b-xqdkd"}
+
+$ curl https://localhost:8443/api/version
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
 ```
 
 **What you should see.** The first curl returns the version JSON. The second fails with `SSL certificate problem: unable to get local issuer certificate`. curl doesn't know the lab CA, so it refuses the connection. Your browser behaves the same way and shows a warning page. That's TLS doing its job.
 
 Now look at the handshake itself:
 
-```bash
-openssl s_client -connect 127.0.0.1:8443 -servername shop.local -CAfile /tmp/lab-ca.crt </dev/null 2>/dev/null \
+```console
+$ openssl s_client -connect localhost:8443 -servername shop.local -CAfile /tmp/lab-ca.crt </dev/null 2>/dev/null \
   | grep -E "subject=|issuer=|Verify return code"
+subject=
+issuer=CN=k8s-lab root CA
+Verify return code: 0 (ok)
 ```
 
 One gateway serves many sites from one IP address, so it needs to know which site you want before it picks a certificate. The client tells it during the handshake, with a field called Server Name Indication (SNI). `-servername` sets that field.
 
 ### 4. Send HTTP visitors to HTTPS
 
-```bash
-kubectl apply -f platform-engineering/manifests/11-redirect.yaml
-curl -sI http://localhost:8080/api/orders | grep -iE "^HTTP|^location"
-curl -sL --cacert /tmp/lab-ca.crt -o /dev/null -w "%{http_code} %{url_effective}\n" http://localhost:8080/api/orders
+```console
+$ kubectl apply -f platform-engineering/manifests/11-redirect.yaml
+httproute.gateway.networking.k8s.io/frontend configured
+httproute.gateway.networking.k8s.io/http-to-https created
+
+$ curl -sI http://localhost:8080/api/orders | grep -iE "^HTTP|^location"
+HTTP/1.1 301 Moved Permanently
+location: https://localhost:8443/api/orders
+
+$ curl -sL --cacert /tmp/lab-ca.crt -o /dev/null -w "%{http_code} %{url_effective}\n" http://localhost:8080/api/orders
+200 https://localhost:8443/api/orders
 ```
 
 **What you should see.** First `HTTP/1.1 301 Moved Permanently` with `location: https://localhost:8443/api/orders`. Then `200`, once curl follows the redirect. The redirect route answers on the `http` listener by itself. The request never reaches the frontend.
@@ -158,13 +201,24 @@ curl -sL --cacert /tmp/lab-ca.crt -o /dev/null -w "%{http_code} %{url_effective}
 
 Note the certificate's serial number. Then throw the Secret away and watch cert-manager replace it:
 
-```bash
-serial() { openssl s_client -connect 127.0.0.1:8443 -servername localhost </dev/null 2>/dev/null | openssl x509 -noout -serial; }
-serial
-kubectl -n shop-ingress get pods          # note RESTARTS
-kubectl -n shop-ingress delete secret shop-tls
-sleep 5; serial
-kubectl -n shop-ingress get pods          # RESTARTS has not changed
+```console
+$ serial() { openssl s_client -connect localhost:8443 -servername localhost </dev/null 2>/dev/null | openssl x509 -noout -serial; }
+$ serial
+serial=5F7648A9068121416D3586433BD4A45DC2F05A08
+
+$ kubectl -n shop-ingress get pods          # note RESTARTS
+NAME                                  READY   STATUS    RESTARTS   AGE
+shop-gateway-istio-6cf8f9f67f-fwr6p   1/1     Running   0          16s
+
+$ kubectl -n shop-ingress delete secret shop-tls
+secret "shop-tls" deleted
+
+$ sleep 5; serial
+serial=39EA5C6429D081D3294F265385201B75D3C082ED
+
+$ kubectl -n shop-ingress get pods          # RESTARTS has not changed
+NAME                                  READY   STATUS    RESTARTS   AGE
+shop-gateway-istio-6cf8f9f67f-fwr6p   1/1     Running   0          29s
 ```
 
 **What you should see.** A new serial number appears within a few seconds, and the gateway pod stays untouched. A real renewal works the same way. cert-manager writes a new Secret 30 days before expiry, and SDS carries it into Envoy.
@@ -190,8 +244,13 @@ kubectl -n shop-ingress get pods          # RESTARTS has not changed
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh
+```console
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 This removes the redirect, the HTTPS listener, the Certificate and its Secret. The lab CA and cert-manager stay, because they belong to the lab.

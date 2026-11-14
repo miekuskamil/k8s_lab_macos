@@ -297,11 +297,11 @@ module_11() {
   "${K[@]}" apply -f "$M/11-redirect.yaml" >/dev/null; settle 8
   expect "plain HTTP gets a 301 to HTTPS" "$(curl -s -o /dev/null -m 10 -w '%{http_code} %{redirect_url}' "$BASE/api/orders")" '^301 https://localhost:8443/api/orders$'
   expect "following the redirect reaches the shop" "$(code -L --cacert "$ca" "$BASE/api/orders")" '^200$'
-  before="$(openssl s_client -connect 127.0.0.1:8443 -servername localhost </dev/null 2>/dev/null | openssl x509 -noout -serial 2>/dev/null)"
+  before="$(openssl s_client -connect localhost:8443 -servername localhost </dev/null 2>/dev/null | openssl x509 -noout -serial 2>/dev/null)"
   local restarts; restarts="$("${K[@]}" -n shop-ingress get pods -o jsonpath='{.items[0].status.containerStatuses[0].restartCount}')"
   "${K[@]}" -n shop-ingress delete secret shop-tls >/dev/null
   after="$before"
-  for _ in $(seq 1 20); do settle 3; after="$(openssl s_client -connect 127.0.0.1:8443 -servername localhost </dev/null 2>/dev/null | openssl x509 -noout -serial 2>/dev/null)"; [[ -n "$after" && "$after" != "$before" ]] && break; done
+  for _ in $(seq 1 20); do settle 3; after="$(openssl s_client -connect localhost:8443 -servername localhost </dev/null 2>/dev/null | openssl x509 -noout -serial 2>/dev/null)"; [[ -n "$after" && "$after" != "$before" ]] && break; done
   expect "a deleted Secret brings a new certificate (new serial)" "$([[ -n "$after" && "$after" != "$before" ]] && echo changed || echo "same: $after")" '^changed$'
   expect "the gateway serves it without a restart" "$("${K[@]}" -n shop-ingress get pods -o jsonpath='{.items[0].status.containerStatuses[0].restartCount}')" "^${restarts}\$"
   baseline
