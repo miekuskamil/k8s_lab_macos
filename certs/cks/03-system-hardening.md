@@ -151,8 +151,10 @@ Real platform teams go further than hand-tuning each node. They build node image
 
 **Time budget:** 4 minutes. **Host:** `cks-w1`.
 
-```bash
-./certs/cks/task.sh setup 3.1
+```console
+$ ./certs/cks/task.sh setup 3.1
+== setup task 3.1
+LISTEN 0      32                 *:21               *:*    users:(("vsftpd",pid=68941,fd=3))     
 ```
 
 > Something on `cks-w1` listens on TCP port 21. Find the program and the package it comes from, stop it for good, and remove the package.
@@ -160,33 +162,54 @@ Real platform teams go further than hand-tuning each node. They build node image
 <details>
 <summary>Solution</summary>
 
-```bash
-ss -tlnp | grep ':21 '
-dpkg -S /usr/sbin/vsftpd
-systemctl disable --now vsftpd
-apt-get purge -y vsftpd
-ss -tlnp | grep ':21 '        # prints nothing now
+```console
+root@cks-w1:~# ss -tlnp | grep ':21 '
+LISTEN 0      32                 *:21               *:*    users:(("vsftpd",pid=68941,fd=3))     
+root@cks-w1:~# dpkg -S /usr/sbin/vsftpd
+vsftpd: /usr/sbin/vsftpd
+root@cks-w1:~# systemctl disable --now vsftpd
+Synchronizing state of vsftpd.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
+Executing: /usr/lib/systemd/systemd-sysv-install disable vsftpd
+Removed "/etc/systemd/system/multi-user.target.wants/vsftpd.service".
+root@cks-w1:~# apt-get purge -y vsftpd
+...
+The following packages were automatically installed and are no longer required:
+  libdeflate0 ncurses-term openssh-sftp-server python3-blinker
+  python3-cryptography python3-distro python3-httplib2 python3-jwt
+  python3-launchpadlib python3-lazr.restfulclient python3-lazr.uri
+  python3-oauthlib python3-pyparsing python3-six python3-wadllib spawn-fcgi
+  ssh-import-id ssl-cert wget
+...
+The following packages will be REMOVED:
+  vsftpd*
+0 upgraded, 0 newly installed, 1 to remove and 8 not upgraded.
+...
+Removing vsftpd (3.0.5-0ubuntu3.1)…
+...
+Purging configuration files for vsftpd (3.0.5-0ubuntu3.1)…
+...
+root@cks-w1:~# ss -tlnp | grep ':21 '        # prints nothing now
 ```
 
 In the test run, `ss` showed `users:(("vsftpd",pid=41498,fd=3))` on `*:21`, and `dpkg -S` answered `vsftpd: /usr/sbin/vsftpd`. vsftpd is an FTP server. FTP sends passwords in clear text, so it has no place on a Kubernetes node.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 3.1
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 3.1
+== check task 3.1
   PASS  nothing listens on TCP port 21
   PASS  the package vsftpd is removed
+== task 3.1: 2 passed, 0 failed
 ```
 
 ## Task 2: A user with too much power
 
 **Time budget:** 4 minutes. **Host:** `cks-w1`.
 
-```bash
-./certs/cks/task.sh setup 3.2
+```console
+$ ./certs/cks/task.sh setup 3.2
+== setup task 3.2
 ```
 
 > On `cks-w1`, user `cks-dev` must keep the account but lose every root right. User `old-admin` left the team: lock the account's password without deleting the user.
@@ -194,46 +217,55 @@ In the test run, `ss` showed `users:(("vsftpd",pid=41498,fd=3))` on `*:21`, and 
 <details>
 <summary>Solution</summary>
 
-```bash
-id cks-dev
-gpasswd -d cks-dev sudo
-grep -rl cks-dev /etc/sudoers /etc/sudoers.d/
-rm /etc/sudoers.d/cks-dev
-passwd -l old-admin
-sudo -l -U cks-dev
-passwd -S old-admin
+```console
+root@cks-w1:~# id cks-dev
+uid=1000(cks-dev) gid=1000(cks-dev) groups=1000(cks-dev),27(sudo)
+root@cks-w1:~# gpasswd -d cks-dev sudo
+Removing user cks-dev from group sudo
+root@cks-w1:~# grep -rl cks-dev /etc/sudoers /etc/sudoers.d/
+/etc/sudoers.d/cks-dev
+root@cks-w1:~# rm /etc/sudoers.d/cks-dev
+root@cks-w1:~# passwd -l old-admin
+passwd: password changed.
+root@cks-w1:~# sudo -l -U cks-dev
+User cks-dev is not allowed to run sudo on cks-w1.
+root@cks-w1:~# passwd -S old-admin
+old-admin L 2026-11-14 0 99999 7 -1
 ```
 
 The `grep` finds the second grant, a `NOPASSWD:ALL` line in `/etc/sudoers.d/cks-dev`. Removing only the group membership leaves that file working. In the test run, `sudo -l -U cks-dev` ended with `User cks-dev is not allowed to run sudo on cks-w1.`, and `passwd -S old-admin` showed `L` in the second column.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 3.2
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 3.2
+== check task 3.2
   PASS  cks-dev is no longer in the sudo group
   PASS  sudo grants cks-dev nothing
   PASS  cks-dev still exists
   PASS  old-admin's password is locked
+== task 3.2: 4 passed, 0 failed
 ```
 
 ## Task 3: Limit what a kubelet may change
 
 **Time budget:** 6 minutes. **Hosts:** `cks-cp`, and `cks-w1` to test.
 
-```bash
-./certs/cks/task.sh setup 3.3
+```console
+$ ./certs/cks/task.sh setup 3.3
+== setup task 3.3
+    - --enable-admission-plugins=AlwaysAdmit
 ```
 
 > Someone changed the API server's admission plugins. Restore them so that a kubelet may change only its own Node object and may not set `node-restriction.kubernetes.io/` labels. Remove any plugin that admits everything.
 
 Test with the kubelet's own credentials on `cks-w1`:
 
-```bash
-kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node cks-w1 node-restriction.kubernetes.io/cks=1
-kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node cks-w1 node-restriction.kubernetes.io/cks-
+```console
+root@cks-w1:~# kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node cks-w1 node-restriction.kubernetes.io/cks=1
+node/cks-w1 labeled
+root@cks-w1:~# kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node cks-w1 node-restriction.kubernetes.io/cks-
+node/cks-w1 unlabeled
 ```
 
 <details>
@@ -241,11 +273,14 @@ kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node cks-w1 node-restric
 
 On `cks-cp`:
 
-```bash
-grep admission-plugins /etc/kubernetes/manifests/kube-apiserver.yaml
-cp /etc/kubernetes/manifests/kube-apiserver.yaml /root/
-vim /etc/kubernetes/manifests/kube-apiserver.yaml
+```console
+root@cks-cp:~# grep admission-plugins /etc/kubernetes/manifests/kube-apiserver.yaml
+    - --enable-admission-plugins=AlwaysAdmit
+root@cks-cp:~# cp /etc/kubernetes/manifests/kube-apiserver.yaml /root/
+root@cks-cp:~# vim /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
+
+The transcript leaves out the editor session.
 
 Change the line to:
 
@@ -257,25 +292,26 @@ Change the line to:
 
 </details>
 
-```bash
-./certs/cks/task.sh check 3.3
-```
-
-In the test run, the third check passed even before the fix, for the reason the theory gives. After the fix:
-
-```
+```console
+$ ./certs/cks/task.sh check 3.3
+== check task 3.3
   PASS  the API server enables NodeRestriction
   PASS  the API server no longer enables AlwaysAdmit
   PASS  cks-w1's kubelet may not label node cks-cp (the Node authorizer already blocks this)
   PASS  cks-w1's kubelet may not set a node-restriction label on itself
+== task 3.3: 4 passed, 0 failed
 ```
+
+In the test run, the third check passed even before the fix, for the reason the theory gives.
 
 ## Task 4: A listener that hides
 
 **Time budget:** 5 minutes. **Host:** `cks-w1`.
 
-```bash
-./certs/cks/task.sh setup 3.4
+```console
+$ ./certs/cks/task.sh setup 3.4
+== setup task 3.4
+LISTEN 0      5                  *:4444             *:*    users:(("sysmond",pid=71147,fd=5))    
 ```
 
 > Something on `cks-w1` listens on TCP port 4444. No package owns it. Stop it for good: the process, whatever starts it at boot, and its binary. Leave the system's packages alone.
@@ -283,42 +319,50 @@ In the test run, the third check passed even before the fix, for the reason the 
 <details>
 <summary>Solution</summary>
 
-```bash
-ss -tlnp | grep ':4444 '
-ls -l /proc/<pid>/exe
-systemctl status <pid> | head -1
+```console
+root@cks-w1:~# ss -tlnp | grep ':4444 '
+LISTEN 0      5                  *:4444             *:*    users:(("sysmond",pid=71147,fd=5))    
+root@cks-w1:~# ls -l /proc/<pid>/exe
+lrwxrwxrwx 1 root root 0 Nov 14 23:49 /proc/71147/exe -> /usr/local/lib/.sysmon/sysmond
+root@cks-w1:~# systemctl status <pid> | head -1
+● sysmon.service - System monitor agent
 ```
+
+The transcript ran the last two commands with the PID that `ss` printed.
 
 In the test run, `ss` showed `users:(("sysmond",pid=33256,fd=5))`, the link pointed to `/usr/local/lib/.sysmon/sysmond`, and `systemctl status` named `sysmon.service`. The unit file shows what it does: `sysmond TCP-LISTEN:4444,fork,reuseaddr EXEC:/bin/sh`. That's a copy of `socat` handing a root shell to anybody who connects. `dpkg -S /usr/local/lib/.sysmon/sysmond` finds no package, which is the giveaway.
 
-```bash
-systemctl disable --now sysmon
-rm /etc/systemd/system/sysmon.service
-systemctl daemon-reload
-rm -rf /usr/local/lib/.sysmon
+```console
+root@cks-w1:~# systemctl disable --now sysmon
+Removed "/etc/systemd/system/multi-user.target.wants/sysmon.service".
+root@cks-w1:~# rm /etc/systemd/system/sysmon.service
+root@cks-w1:~# systemctl daemon-reload
+root@cks-w1:~# rm -rf /usr/local/lib/.sysmon
 ```
 
 Kill only the process, and `Restart=always` starts it again a moment later. Delete only the binary, and the next boot fails to start it but the unit stays as a clue for the next attacker. Remove all three.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 3.4
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 3.4
+== check task 3.4
   PASS  nothing listens on TCP port 4444
   PASS  systemd knows no sysmon unit any more
   PASS  the binary behind it is gone
   PASS  the socat package stays installed
+== task 3.4: 4 passed, 0 failed
 ```
 
 ## Task 5: Harden sshd
 
 **Time budget:** 4 minutes. **Host:** `cks-w1`.
 
-```bash
-./certs/cks/task.sh setup 3.5
+```console
+$ ./certs/cks/task.sh setup 3.5
+== setup task 3.5
+permitrootlogin yes
+passwordauthentication yes
 ```
 
 > On `cks-w1`, sshd must refuse root logins and password logins. It must keep running.
@@ -328,38 +372,45 @@ Kill only the process, and `Restart=always` starts it again a moment later. Dele
 
 Ask sshd what it uses before you edit anything, then find where each value comes from:
 
-```bash
-sshd -T | grep -E '^(permitrootlogin|passwordauthentication) '
-grep -rnE '^(PermitRootLogin|PasswordAuthentication)' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/
+```console
+root@cks-w1:~# sshd -T | grep -E '^(permitrootlogin|passwordauthentication) '
+permitrootlogin yes
+passwordauthentication yes
+root@cks-w1:~# grep -rnE '^(PermitRootLogin|PasswordAuthentication)' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/
+/etc/ssh/sshd_config.d/10-legacy.conf:1:PermitRootLogin yes
+/etc/ssh/sshd_config.d/10-legacy.conf:2:PasswordAuthentication yes
 ```
 
 In the test run, both lines came from `/etc/ssh/sshd_config.d/10-legacy.conf`. Change them there to `PermitRootLogin no` and `PasswordAuthentication no`, then test the syntax and restart:
 
-```bash
-sshd -t && systemctl restart ssh
-sshd -T | grep -E '^(permitrootlogin|passwordauthentication) '
+```console
+root@cks-w1:~# sshd -t && systemctl restart ssh
+root@cks-w1:~# sshd -T | grep -E '^(permitrootlogin|passwordauthentication) '
+permitrootlogin no
+passwordauthentication no
 ```
 
 `sshd -t` checks the files first, so a typo doesn't leave the node without SSH. On Ubuntu 24.04 the service's name is `ssh`, not `sshd`.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 3.5
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 3.5
+== check task 3.5
   PASS  sshd's effective config says permitrootlogin no
   PASS  sshd's effective config says passwordauthentication no
   PASS  sshd runs, with the new config loaded
+== task 3.5: 3 passed, 0 failed
 ```
 
 ## Task 6: Admin credentials lying around
 
 **Time budget:** 4 minutes. **Host:** `cks-w1`.
 
-```bash
-./certs/cks/task.sh setup 3.6
+```console
+$ ./certs/cks/task.sh setup 3.6
+== setup task 3.6
+  kubectl auth can-i "*" "*" as cks-ops on cks-w1: yes
 ```
 
 The setup shows what the leak gives away. In the test run: `kubectl auth can-i "*" "*" as cks-ops on cks-w1: yes`.
@@ -371,33 +422,38 @@ The setup shows what the leak gives away. In the test run: `kubectl auth can-i "
 
 An admin kubeconfig embeds its certificate as `client-certificate-data`. The kubelet's own file points to a certificate file instead, so a search for the embedded form finds the copies:
 
-```bash
-grep -rlsE 'client-certificate-data' /home /root /var/backups /tmp /etc
-rm /home/cks-ops/.kube/config /var/backups/k8s/admin.conf.bak
-chmod 600 /etc/kubernetes/kubelet.conf && chown root:root /etc/kubernetes/kubelet.conf
+```console
+root@cks-w1:~# grep -rlsE 'client-certificate-data' /home /root /var/backups /tmp /etc
+/home/cks-ops/.kube/config
+/var/backups/k8s/admin.conf.bak
+root@cks-w1:~# rm /home/cks-ops/.kube/config /var/backups/k8s/admin.conf.bak
+root@cks-w1:~# chmod 600 /etc/kubernetes/kubelet.conf && chown root:root /etc/kubernetes/kubelet.conf
 ```
 
 In the test run, the search found `/home/cks-ops/.kube/config` and `/var/backups/k8s/admin.conf.bak`. The theory explains why deleting the files is only the first half of a real response: the certificate inside stays valid until it expires.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 3.6
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 3.6
+== check task 3.6
   PASS  no file on cks-w1 holds the admin client certificate any more
   PASS  user cks-ops still exists
   PASS  /etc/kubernetes/kubelet.conf is 600 and owned by root
+== task 3.6: 3 passed, 0 failed
 ```
 
 ## Task 7: Keep a kernel module out
 
 **Time budget:** 4 minutes. **Host:** `cks-lima`.
 
-```bash
-./certs/cks/cluster/lima.sh start      # once, when the VM is off
-./certs/cks/task.sh setup 3.7
+```console
+$ ./certs/cks/cluster/lima.sh start      # once, when the VM is off
+cluster ready
+$ ./certs/cks/task.sh setup 3.7
+== setup task 3.7
+dccp                  114688  0
+tipc                  425984  0
 ```
 
 > On `cks-lima`, the kernel holds the modules `dccp` and `tipc`. Unload them, and make sure no later request loads them again. Put the rules in a file under `/etc/modprobe.d/`.
@@ -405,31 +461,31 @@ In the test run, the search found `/home/cks-ops/.kube/config` and `/var/backups
 <details>
 <summary>Solution</summary>
 
-```bash
-cat > /etc/modprobe.d/cks-blacklist.conf <<EOF
+```console
+root@cks-lima:~# cat > /etc/modprobe.d/cks-blacklist.conf <<EOF
 install dccp /bin/false
 blacklist dccp
 install tipc /bin/false
 blacklist tipc
 EOF
-modprobe -r dccp tipc
-lsmod | grep -E '^(dccp|tipc) '       # prints nothing
-modprobe -n -v tipc                    # install /bin/false
+root@cks-lima:~# modprobe -r dccp tipc
+root@cks-lima:~# lsmod | grep -E '^(dccp|tipc) '       # prints nothing
+root@cks-lima:~# modprobe -n -v tipc                    # install /bin/false
+install /bin/false 
 ```
 
 In the test run, a direct `modprobe tipc` afterwards failed with `Error running install command '/bin/false' for module tipc: retcode 1`. The `sctp` module sat in the kernel too, with 8 users, and refused to unload. That's why the task picks two modules nobody uses.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 3.7
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 3.7
+== check task 3.7
   PASS  tipc is not loaded
   PASS  modprobe refuses to load tipc
   PASS  dccp is not loaded, and modprobe refuses it
   PASS  the rule lives in a file under /etc/modprobe.d
+== task 3.7: 4 passed, 0 failed
 ```
 
 ## Clean up
