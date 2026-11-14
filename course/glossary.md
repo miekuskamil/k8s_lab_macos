@@ -614,5 +614,42 @@ These terms come from the [CKS track](../certs/cks/README.md) in `certs/cks/`. E
 
 **seccomp.** seccomp is a Linux kernel feature that filters the system calls a process may make. A profile is a JSON file with a default action and per-syscall actions. Kubernetes loads `Localhost` profiles from `/var/lib/kubelet/seccomp/`, and `RuntimeDefault` uses the container runtime's built-in profile. CKS 06.
 
-**AppArmor.** AppArmor is a Linux security module that limits which files, capabilities and network access a program gets, through a text profile loaded with `apparmor_parser`. A pod asks for a loaded profile with `securityContext.appArmorProfile`. OrbStack's kernel lacks it. CKS 06.
+**AppArmor.** AppArmor is a Linux security module that limits which files, capabilities and network access a program gets, through a text profile loaded with `apparmor_parser`. A pod asks for a loaded profile with `securityContext.appArmorProfile`. OrbStack's kernel lacks it, so the track's AppArmor tasks run on the Lima VM. CKS 03, 06.
 
+**Lima VM.** Lima is a macOS tool that runs Linux virtual machines, each with a kernel of its own. The CKS track's third practice machine, `cks-lima`, is a Lima VM with AppArmor and a one-node kubeadm cluster that runs Cilium. [certs/README](../certs/README.md#the-lima-vm-for-apparmor-and-cilium), CKS 01, 03, 04, 06.
+
+**CiliumNetworkPolicy.** A CiliumNetworkPolicy is Cilium's own policy resource. It selects pods with `endpointSelector` and adds what a NetworkPolicy lacks: HTTP rules at layer 7, named peer groups called entities, and deny rules that beat every allow. CKS 01.
+
+**Entity (Cilium).** An entity is a named group of peers in a CiliumNetworkPolicy, such as `kube-apiserver`, `world` (everything outside the cluster), `host` or `cluster`. Cilium works out the addresses behind each name itself. CKS 01.
+
+**endPort.** endPort is a NetworkPolicy port field that, together with a numeric `port`, opens a whole range of ports in one entry. CKS 01.
+
+**Cipher suite.** A cipher suite is the set of algorithms a TLS connection uses for key exchange, encryption and integrity. The API server picks from `--tls-cipher-suites`, and `--tls-min-version` sets the oldest TLS version it accepts. CKS 01.
+
+**Kubelet read-only port.** The read-only port is an old unauthenticated HTTP port of the kubelet, 10255, that hands out pod specs to anybody. `readOnlyPort: 0` in the kubelet config file turns it off. CKS 01.
+
+**Aggregated ClusterRole.** An aggregated ClusterRole collects its rules from every ClusterRole whose labels match its `aggregationRule`. A controller rewrites its rule list, so you extend it by creating a labelled role, and you take a right away by fixing the source role. CKS 02.
+
+**Bound service account token.** A bound token is a service account token from the TokenRequest API that names an audience and expires. Pods get one through a projected volume, and `kubectl create token` asks for one by hand. CKS 02.
+
+**Projected volume.** A projected volume is a pod volume that the kubelet fills from several sources, such as a fresh service account token, a ConfigMap or the Downward API, and keeps up to date. CKS 02.
+
+**Legacy service account token.** A legacy token is a never-expiring service account token stored in a Secret of type `kubernetes.io/service-account-token`. Deleting the Secret invalidates the token. CKS 02.
+
+**Authorization mode.** The authorization mode is the API server's ordered list of authorizers, set with `--authorization-mode`. kubeadm sets `Node,RBAC`; `AlwaysAllow` lets every authenticated caller do anything. CKS 02.
+
+**crictl.** crictl is the command line client for a node's container runtime. `crictl ps -a` lists containers, the exited ones too, and `crictl logs` prints a container's output, which is how you debug a static pod while the API server is down. CKS 02.
+
+**Kernel module blacklist.** A file under `/etc/modprobe.d/` that keeps the kernel from loading a module: `blacklist` stops loading by alias, and `install <module> /bin/false` makes every load fail. CKS 03.
+
+**Encryption key rotation.** Key rotation replaces the key that encrypts Secrets in etcd: add the new key first in the list, restart the API server, rewrite every Secret, then remove the old key and restart again. CKS 04.
+
+**Pod Security exemption.** An exemption switches Pod Security off for named namespaces, users or RuntimeClasses. It lives in the PodSecurity plugin's configuration, next to the cluster-wide defaults for namespaces without labels. CKS 04.
+
+**WireGuard.** WireGuard is a VPN protocol built into the Linux kernel. Cilium and Calico use it to encrypt pod traffic between nodes. CKS 04.
+
+**Image digest.** An image digest is the SHA-256 checksum of an image's manifest, written `image@sha256:...`. Unlike a tag, it always names exactly one build. CKS 05.
+
+**Falco list, macro and override.** In a Falco rules file, a list names a set of values, a macro names a piece of condition, and a rule combines them. An `override` block in a later file replaces or extends one field of an existing rule, such as its priority. CKS 06.
+
+**Audit stage.** An audit stage is the point in a request at which the API server writes an audit event: `RequestReceived`, `ResponseStarted`, `ResponseComplete` or `Panic`. Count `ResponseComplete` lines to count requests. CKS 06.

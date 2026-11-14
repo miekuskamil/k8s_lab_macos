@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the diagrams for the CKS track (certs/cks) in ByteByteGo style (see ../bbg.py).
 
-  cks-practice-cluster   the two OrbStack machines and what runs on each
+  cks-practice-cluster   the two OrbStack machines, the Lima VM, and what runs on each
   cks-supply-chain       where each supply chain check sits, from Dockerfile to node
   cks-runtime-layers     what seccomp, AppArmor and Falco do with one system call
 
@@ -17,11 +17,11 @@ OUT = Path(__file__).resolve().parent
 
 
 def practice_cluster():
-    c = Canvas(1800, 760)
-    c.title("The CKS", "practice cluster")
-    c.subtitle("Two OrbStack machines, one kernel, built by kubeadm.")
+    c = Canvas(1800, 1000)
+    c.title("The CKS", "practice clusters")
+    c.subtitle("Two OrbStack machines on one kernel, and a Lima VM with its own.")
 
-    c.node(60, 360, 280, 110, SLATE, "Your Mac", "laptop", "orb -m cks-cp")
+    c.node(60, 360, 280, 110, SLATE, "Your Mac", "laptop", "orb, limactl")
 
     c.group(440, 190, 620, 480, "cks-cp, control plane")
     c.node(480, 230, 540, 100, PURPLE, "Static pods", "server", "API server, etcd")
@@ -42,6 +42,13 @@ def practice_cluster():
     c.arrow([(1060, 280), (1160, 280)], "kubelet", dashed=True, pos="above", at=(1110, 280))
     c.rect(440, 690, 1300, 30, DIM, "#2a2b33", rx=8, sw=1.5)
     c.text(1090, 712, "one shared OrbStack kernel: no AppArmor, no WireGuard", 17, SOFT, False, "middle")
+
+    c.group(440, 770, 1300, 190, "cks-lima, one-node cluster in a Lima VM")
+    c.outline(480, 830, 280, 80, PURPLE, "Control plane", "server")
+    c.outline(800, 830, 280, 80, GREEN, "Cilium", "globe")
+    c.outline(1120, 830, 280, 80, RED, "AppArmor", "shield")
+    c.outline(1440, 830, 260, 80, PINK, "WireGuard", "lock")
+    c.arrow([(200, 470), (200, 870), (440, 870)], "limactl shell", dashed=False, pos="above", at=(320, 870))
     c.save(OUT, "cks-practice-cluster")
 
 
