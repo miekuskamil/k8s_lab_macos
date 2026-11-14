@@ -6,6 +6,7 @@ SA_REPORTER=system:serviceaccount:finance:reporter
 setup_2_1() {
   oncp <<'EOF'
 kubectl create ns finance --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+for i in $(seq 1 30); do kubectl -n finance get sa default >/dev/null 2>&1 && break; sleep 1; done
 kubectl -n finance create sa reporter 2>/dev/null
 kubectl -n finance create secret generic report-key --from-literal=key=r3p0rt 2>/dev/null
 kubectl -n finance create secret generic db-password --from-literal=password=s3cr3t 2>/dev/null
@@ -37,6 +38,7 @@ EOF
 setup_2_2() {
   oncp <<'EOF'
 kubectl create ns payments --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+for i in $(seq 1 30); do kubectl -n payments get sa default >/dev/null 2>&1 && break; sleep 1; done
 kubectl -n payments create deploy checkout --image=nginx:1.27-alpine 2>/dev/null
 kubectl -n payments rollout status deploy checkout --timeout=120s
 EOF

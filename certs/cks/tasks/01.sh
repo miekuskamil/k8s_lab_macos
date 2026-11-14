@@ -4,6 +4,7 @@
 setup_1_1() {
   oncp <<'EOF'
 kubectl create ns team-app --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+for i in $(seq 1 30); do kubectl -n team-app get sa default >/dev/null 2>&1 && break; sleep 1; done
 kubectl -n team-app delete networkpolicy --all >/dev/null
 kubectl -n team-app run frontend --image=busybox:1.36 -l app=frontend -- sleep 1d 2>/dev/null
 kubectl -n team-app run api --image=nginx:1.27-alpine -l app=api --port 80 --expose 2>/dev/null
@@ -80,6 +81,7 @@ EOF
 setup_1_2() {
   oncp <<'EOF'
 kubectl create ns batch --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+for i in $(seq 1 30); do kubectl -n batch get sa default >/dev/null 2>&1 && break; sleep 1; done
 kubectl -n batch delete networkpolicy --all >/dev/null
 kubectl -n batch run worker --image=busybox:1.36 -l app=worker -- sleep 1d 2>/dev/null
 kubectl -n batch wait pod worker --for=condition=Ready --timeout=120s
@@ -144,6 +146,7 @@ EOF
 setup_1_4() {
   oncp <<'EOF'
 kubectl create ns web --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+for i in $(seq 1 30); do kubectl -n web get sa default >/dev/null 2>&1 && break; sleep 1; done
 kubectl -n web create deploy shop --image=nginx:1.27-alpine --port 80 2>/dev/null
 kubectl -n web expose deploy shop --port 80 2>/dev/null
 mkdir -p /root/cks

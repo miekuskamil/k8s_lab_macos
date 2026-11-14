@@ -582,3 +582,13 @@ These terms come from the [CKS track](../certs/cks/README.md) in `certs/cks/`. E
 
 **NodeRestriction.** NodeRestriction is an admission plugin that limits what a kubelet may change: only its own Node object and the pods bound to it, and no labels with the `node-restriction.kubernetes.io/` prefix. kubeadm turns it on. CKS 03.
 
+**Attack surface.** The attack surface is everything an attacker might use to get in or move on: listening ports, installed packages, running services and user accounts. Hardening a node means removing what its job doesn't need. CKS 03.
+
+**Pod Security Standards and Pod Security Admission.** The Pod Security Standards are three fixed levels for how much power a pod may ask for: `privileged`, `baseline` and `restricted`. Pod Security Admission is the built-in admission plugin that applies a level per namespace through the labels `pod-security.kubernetes.io/enforce`, `warn` and `audit`. Enforce refuses new pods only, never running ones. CKS 04.
+
+**EncryptionConfiguration.** An EncryptionConfiguration is a file that tells the API server to encrypt chosen resources, usually Secrets, before writing them to etcd. It lists providers such as `aescbc` or `secretbox`; the first one encrypts new writes, and `identity` at the end keeps old plain values readable. The flag is `--encryption-provider-config`. CKS 04.
+
+**RuntimeClass and gVisor.** A RuntimeClass is a cluster object that names a container runtime handler, so a pod picks it with `runtimeClassName`. gVisor is a sandboxed runtime (`runsc`) that answers a container's system calls with its own user-space kernel, so the host kernel sees far fewer of them. CKS 04.
+
+**Pod-to-pod encryption.** Pod-to-pod encryption means traffic between pods crosses the network encrypted. Istio does it with mTLS between proxies and proves the workload; Cilium does it with WireGuard or IPsec between nodes and proves the node. CKS 04, modules 2 and 10.
+
