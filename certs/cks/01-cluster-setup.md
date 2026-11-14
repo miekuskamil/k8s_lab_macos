@@ -133,7 +133,7 @@ The **CIS Kubernetes Benchmark** answers that once for everybody. It's a checkli
 4. It compares the output with the expected value, for example "the flag `--profiling` is set to `false`".
 5. It prints `[PASS]`, `[FAIL]` or `[WARN]` per item, and a remediation for each failure.
 
-On a fresh practice cluster, the test run printed 39 passes, 10 failures and 11 warnings for the master target. Profiling failed on all three components. Profiling is a debug feature that serves `/debug/pprof` with details about the process's memory and threads. That helps an attacker study the process, and production never needs it.
+On a fresh practice cluster, the test runs printed 37 to 39 passes, 10 to 12 failures and 11 warnings for the master target. Profiling failed on all three components. Profiling is a debug feature that serves `/debug/pprof` with details about the process's memory and threads. That helps an attacker study the process, and production never needs it.
 
 **What this stops.** The benchmark stops the slow drift where each cluster gets a slightly different and slightly weaker set of flags. It gives a security team one shared list to argue about, instead of a hundred opinions.
 
@@ -253,8 +253,17 @@ Real platform teams rarely do these by hand on each cluster. They bake them into
 
 Prepare it from your Mac:
 
-```bash
-./certs/cks/task.sh setup 1.1
+```console
+$ ./certs/cks/task.sh setup 1.1
+== setup task 1.1
+pod/frontend created
+pod/api created
+service/api created
+pod/db created
+service/db created
+pod/api condition met
+pod/db condition met
+pod/frontend condition met
 ```
 
 > Namespace `team-app` runs three pods: `frontend` (label `app=frontend`), `api` (`app=api`, port 80) and `db` (`app=db`, port 80), each with a Service of the same name.
@@ -265,11 +274,45 @@ Prepare it from your Mac:
 
 Useful commands:
 
-```bash
-k -n team-app get pods --show-labels
-k -n kube-system get pods -l k8s-app=kube-dns --show-labels
-k explain networkpolicy.spec.egress.to
-k -n team-app exec frontend -- wget -qO- -T 3 http://api
+```console
+root@cks-cp:~# k -n team-app get pods --show-labels
+NAME       READY   STATUS    RESTARTS   AGE   LABELS
+api        1/1     Running   0          1s    app=api
+db         1/1     Running   0          1s    app=db
+frontend   1/1     Running   0          1s    app=frontend
+root@cks-cp:~# k -n kube-system get pods -l k8s-app=kube-dns --show-labels
+NAME                       READY   STATUS    RESTARTS   AGE    LABELS
+coredns-559f6c778d-658ss   1/1     Running   0          119s   k8s-app=kube-dns,pod-template-hash=559f6c778d
+coredns-559f6c778d-vvm8z   1/1     Running   0          119s   k8s-app=kube-dns,pod-template-hash=559f6c778d
+root@cks-cp:~# k explain networkpolicy.spec.egress.to
+GROUP:      networking.k8s.io
+KIND:       NetworkPolicy
+VERSION:    v1
+
+FIELD: to <[]NetworkPolicyPeer>
+
+
+DESCRIPTION:
+    to is a list of destinations for outgoing traffic of pods selected for this
+    rule. Items in this list are combined using a logical OR operation. If this
+    field is empty or missing, this rule matches all destinations (traffic not
+    restricted by destination). If this field is present and contains at least
+    one item, this rule allows traffic only if the traffic matches at least one
+    item in the to list.
+    NetworkPolicyPeer describes a peer to allow traffic to/from. Only certain
+    combinations of fields are allowed
+    
+FIELDS:
+  ipBlock	<IPBlock>
+    ipBlock defines policy on a particular IPBlock. If this field is set then
+    neither of the other fields can be.
+...
+root@cks-cp:~# k -n team-app exec frontend -- wget -qO- -T 3 http://api
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+...
 ```
 
 <details>
@@ -339,25 +382,27 @@ Two details decide whether it works:
 
 Check it:
 
-```bash
-./certs/cks/task.sh check 1.1
-```
-
-In the test run, the check failed three of four items before the solution and passed all four after it:
-
-```
+```console
+$ ./certs/cks/task.sh check 1.1
+== check task 1.1
   PASS  NetworkPolicy default-deny selects every pod, Ingress and Egress
   PASS  frontend reaches api on port 80, by name
   PASS  frontend does not reach db
   PASS  db does not reach api
+== task 1.1: 4 passed, 0 failed
 ```
+
+In the test run, the check failed three of four items before the solution and passed all four after it.
 
 ## Task 2: Block the node metadata endpoint
 
 **Time budget:** 4 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 1.2
+```console
+$ ./certs/cks/task.sh setup 1.2
+== setup task 1.2
+pod/worker created
+pod/worker condition met
 ```
 
 > Pods in namespace `batch` must not reach the node metadata service at `169.254.169.254`. All other egress stays allowed. Create a NetworkPolicy named `deny-metadata`.
@@ -385,47 +430,85 @@ The policy selects every pod for egress, so egress becomes an allow list. The li
 
 </details>
 
-```bash
-./certs/cks/task.sh check 1.2
-```
-
-In the test run, the worker pod reached the API server's port both before and after the policy. The check reads the policy's structure for the block itself, because OrbStack has no metadata service to refuse:
-
-```
+```console
+$ ./certs/cks/task.sh check 1.2
+== check task 1.2
   PASS  NetworkPolicy deny-metadata exists and selects every pod
   PASS  it allows 0.0.0.0/0 except 169.254.169.254/32
   PASS  the worker still resolves names and reaches the API server
+== task 1.2: 3 passed, 0 failed
 ```
+
+In the test run, the worker pod reached the API server's port both before and after the policy. The check reads the policy's structure for the block itself, because OrbStack has no metadata service to refuse.
 
 ## Task 3: Fix CIS findings with kube-bench
 
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 1.3     # seeds nothing: a fresh kubeadm cluster fails these checks already
+```console
+$ ./certs/cks/task.sh setup 1.3     # seeds nothing: a fresh kubeadm cluster fails these checks already
+== setup task 1.3
+  nothing to seed: a fresh kubeadm cluster already fails these checks
 ```
 
 > Run kube-bench against the control plane node `cks-cp` and fix these findings: 1.2.15, 1.3.2 and 1.4.1 (profiling on the API server, controller manager and scheduler), and 4.1.9 (the kubelet's config file permissions). The control plane must keep running.
 
 Start by reading the report:
 
-```bash
-kube-bench run --targets master | grep -E '^\[FAIL\]|checks (PASS|FAIL|WARN)'
-kube-bench run --targets master --check 1.2.15     # one check, with its remediation
-kube-bench run --targets node --check 4.1.9
+```console
+root@cks-cp:~# kube-bench run --targets master | grep -E '^\[FAIL\]|checks (PASS|FAIL|WARN)'
+[FAIL] 1.1.7 Ensure that the etcd pod specification file permissions are set to 600 or more restrictive (Automated)
+[FAIL] 1.1.8 Ensure that the etcd pod specification file ownership is set to root:root (Automated)
+[FAIL] 1.1.12 Ensure that the etcd data directory ownership is set to etcd:etcd (Automated)
+[FAIL] 1.2.5 Ensure that the --kubelet-certificate-authority argument is set as appropriate (Automated)
+[FAIL] 1.2.15 Ensure that the --profiling argument is set to false (Automated)
+[FAIL] 1.2.16 Ensure that the --audit-log-path argument is set (Automated)
+[FAIL] 1.2.17 Ensure that the --audit-log-maxage argument is set to 30 or as appropriate (Automated)
+[FAIL] 1.2.18 Ensure that the --audit-log-maxbackup argument is set to 10 or as appropriate (Automated)
+[FAIL] 1.2.19 Ensure that the --audit-log-maxsize argument is set to 100 or as appropriate (Automated)
+[FAIL] 1.2.30 Ensure that the --service-account-extend-token-expiration parameter is set to false (Automated)
+[FAIL] 1.3.2 Ensure that the --profiling argument is set to false (Automated)
+[FAIL] 1.4.1 Ensure that the --profiling argument is set to false (Automated)
+37 checks PASS
+12 checks FAIL
+11 checks WARN
+37 checks PASS
+12 checks FAIL
+11 checks WARN
+root@cks-cp:~# kube-bench run --targets master --check 1.2.15     # one check, with its remediation
+[INFO] 1 Control Plane Security Configuration
+[INFO] 1.2 API Server
+[FAIL] 1.2.15 Ensure that the --profiling argument is set to false (Automated)
+
+== Remediations master ==
+1.2.15 Edit the API server pod specification file /etc/kubernetes/manifests/kube-apiserver.yaml
+on the control plane node and set the below parameter.
+--profiling=false
+...
+root@cks-cp:~# kube-bench run --targets node --check 4.1.9
+[INFO] 4 Worker Node Security Configuration
+[INFO] 4.1 Worker Node Configuration Files
+[FAIL] 4.1.9 If the kubelet config.yaml configuration file is being used validate permissions set to 600 or more restrictive (Automated)
+
+== Remediations node ==
+4.1.9 Run the following command (using the config file location identified in the Audit step)
+chmod 600 /var/lib/kubelet/config.yaml
+...
 ```
 
-On a fresh cluster, the test run printed 39 passes, 10 failures and 11 warnings for the master target. The failures were profiling on all three components, four audit log flags, etcd's data directory owner, `--kubelet-certificate-authority` and `--service-account-extend-token-expiration`. Audit logging comes in [domain 06](06-monitoring-logging-runtime-security.md#task-1-turn-on-audit-logging).
+On a fresh cluster, the test runs printed 37 to 39 passes, 10 to 12 failures and 11 warnings for the master target. The failures were profiling on all three components, four audit log flags, etcd's data directory owner, `--kubelet-certificate-authority` and `--service-account-extend-token-expiration`. Minutes after a reset, kube-bench also failed 1.1.7 and 1.1.8, the mode and owner of etcd's manifest. Both passed when it ran again later. Audit logging comes in [domain 06](06-monitoring-logging-runtime-security.md#task-1-turn-on-audit-logging).
 
 <details>
 <summary>Solution</summary>
 
 Each profiling fix is one flag in a static pod manifest. Back the files up outside the manifests folder, because the kubelet starts every file inside it, backups included:
 
-```bash
-cp /etc/kubernetes/manifests/kube-{apiserver,controller-manager,scheduler}.yaml /root/
-vim /etc/kubernetes/manifests/kube-apiserver.yaml
+```console
+root@cks-cp:~# cp /etc/kubernetes/manifests/kube-{apiserver,controller-manager,scheduler}.yaml /root/
+root@cks-cp:~# vim /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
+
+The transcript leaves out the editor session.
 
 Add one line under the command, in each of the three files:
 
@@ -437,35 +520,62 @@ Add one line under the command, in each of the three files:
 
 Then fix the kubelet's config file and wait for the control plane:
 
-```bash
-chmod 600 /var/lib/kubelet/config.yaml
-watch crictl ps                                        # the three containers restart
-k -n kube-system get pods -l tier=control-plane
-kube-bench run --targets master,node --check 1.2.15,1.3.2,1.4.1,4.1.9
+```console
+root@cks-cp:~# chmod 600 /var/lib/kubelet/config.yaml
+root@cks-cp:~# watch crictl ps                                        # the three containers restart
+CONTAINER           IMAGE               CREATED             STATE               NAME                      ATTEMPT             POD ID              POD                                       NAMESPACE
+4f12f796cfbbe       98d6e75e244ec       21 seconds ago      Running             kube-apiserver            0                   8f4e3dee2d32d       kube-apiserver-cks-cp                     kube-system
+c2af601e4936d       9b3e36c80c30c       47 seconds ago      Running             kube-controller-manager   0                   f4f4b91a0d99e       kube-controller-manager-cks-cp            kube-system
+3a0934b56ea01       49e9d3ff0096f       48 seconds ago      Running             kube-scheduler            0                   4152f9479e584       kube-scheduler-cks-cp                     kube-system
+...
+root@cks-cp:~# k -n kube-system get pods -l tier=control-plane
+NAME                             READY   STATUS    RESTARTS   AGE
+etcd-cks-cp                      1/1     Running   4          3m20s
+kube-apiserver-cks-cp            1/1     Running   0          21s
+kube-controller-manager-cks-cp   1/1     Running   0          3m20s
+kube-scheduler-cks-cp            1/1     Running   0          2s
+root@cks-cp:~# kube-bench run --targets master,node --check 1.2.15,1.3.2,1.4.1,4.1.9
+...
+[PASS] 1.2.15 Ensure that the --profiling argument is set to false (Automated)
+...
+[PASS] 1.3.2 Ensure that the --profiling argument is set to false (Automated)
+...
+[PASS] 1.4.1 Ensure that the --profiling argument is set to false (Automated)
+...
+[PASS] 4.1.9 If the kubelet config.yaml configuration file is being used validate permissions set to 600 or more restrictive (Automated)
+...
 ```
+
+`watch` redraws its screen every 2 seconds until you press Ctrl-C. The transcript shows one screen.
 
 In the test run, the three pods came back in under a minute, and kube-bench then printed `[PASS]` for all four checks.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 1.3
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 1.3
+== check task 1.3
   PASS  kube-bench 1.2.15 passes
   PASS  kube-bench 1.3.2 passes
   PASS  kube-bench 1.4.1 passes
   PASS  kube-bench 4.1.9 passes
   PASS  every control plane pod runs
+== task 1.3: 5 passed, 0 failed
 ```
 
 ## Task 4: An Ingress with TLS
 
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 1.4
+```console
+$ ./certs/cks/task.sh setup 1.4
+== setup task 1.4
+deployment.apps/shop created
+service/shop exposed
+Waiting for deployment "shop" rollout to finish: 0 of 1 updated replicas are available...
+deployment "shop" successfully rolled out
+-rw-r--r-- 1 root root 1164 Nov 14 22:51 /root/cks/shop.crt
+-rw------- 1 root root 1704 Nov 14 22:51 /root/cks/shop.key
 ```
 
 > Namespace `web` runs Deployment `shop` behind Service `shop` on port 80. A certificate and key for `shop.cks.local` wait in `/root/cks/shop.crt` and `/root/cks/shop.key`.
@@ -481,42 +591,50 @@ The ingress controller listens on NodePort 30443 for HTTPS and 30080 for HTTP, o
 
 Two imperative commands do it:
 
-```bash
-k -n web create secret tls shop-tls --cert=/root/cks/shop.crt --key=/root/cks/shop.key
-k -n web create ingress shop --class=nginx --rule="shop.cks.local/*=shop:80,tls=shop-tls"
+```console
+root@cks-cp:~# k -n web create secret tls shop-tls --cert=/root/cks/shop.crt --key=/root/cks/shop.key
+secret/shop-tls created
+root@cks-cp:~# k -n web create ingress shop --class=nginx --rule="shop.cks.local/*=shop:80,tls=shop-tls"
+ingress.networking.k8s.io/shop created
 ```
 
 The `tls=shop-tls` part of `--rule` writes the Ingress's `tls` section. ingress-nginx redirects HTTP to HTTPS by itself for every host that has TLS, with status 308, so step 3 needs nothing extra.
 
 Test it from the node. `--resolve` makes curl send the right host name to an IP address without touching DNS:
 
-```bash
-curl -sk -o /dev/null -w '%{http_code}\n' --resolve shop.cks.local:30443:127.0.0.1 https://shop.cks.local:30443/
-echo | openssl s_client -connect 127.0.0.1:30443 -servername shop.cks.local 2>/dev/null | openssl x509 -noout -subject
-curl -s -o /dev/null -w '%{http_code}\n' --resolve shop.cks.local:30080:127.0.0.1 http://shop.cks.local:30080/
+```console
+root@cks-cp:~# curl -sk -o /dev/null -w '%{http_code}\n' --resolve shop.cks.local:30443:127.0.0.1 https://shop.cks.local:30443/
+200
+root@cks-cp:~# echo | openssl s_client -connect 127.0.0.1:30443 -servername shop.cks.local 2>/dev/null | openssl x509 -noout -subject
+subject=CN = shop.cks.local
+root@cks-cp:~# curl -s -o /dev/null -w '%{http_code}\n' --resolve shop.cks.local:30080:127.0.0.1 http://shop.cks.local:30080/
+308
 ```
 
 In the test run, these printed `200`, `subject=CN = shop.cks.local` and `308`. The controller reloaded nginx about 3 seconds after the Ingress appeared.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 1.4
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 1.4
+== check task 1.4
   PASS  Secret shop-tls has type kubernetes.io/tls
   PASS  HTTPS on shop.cks.local:30443 answers 200
   PASS  the certificate served is CN=shop.cks.local, not the controller's fake one
   PASS  plain HTTP redirects to HTTPS (308)
+== task 1.4: 4 passed, 0 failed
 ```
 
 ## Task 5: Verify a platform binary
 
 **Time budget:** 3 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 1.5
+```console
+$ ./certs/cks/task.sh setup 1.5
+== setup task 1.5
+total 98120
+-rwxr-xr-x 1 root root 57868450 Nov 14 22:51 kubectl
+-rwxr-xr-x 1 root root 42598565 Nov 14 22:52 kube-proxy
 ```
 
 > `/opt/cks/bin` holds `kubectl` and `kube-proxy`, both claiming to be Kubernetes v1.37.1 for linux/arm64. Delete every binary that doesn't match the official release.
@@ -526,16 +644,11 @@ In the test run, these printed `200`, `subject=CN = shop.cks.local` and `308`. T
 
 The checksum file on `dl.k8s.io` holds only the hash, so add the file name for `sha512sum -c`:
 
-```bash
-cd /opt/cks/bin
-for b in kubectl kube-proxy; do
+```console
+root@cks-cp:~# cd /opt/cks/bin
+root@cks-cp:/opt/cks/bin# for b in kubectl kube-proxy; do
   echo "$(curl -fsSL https://dl.k8s.io/release/v1.37.1/bin/linux/arm64/$b.sha512) $b" | sha512sum -c || rm -f "$b"
 done
-```
-
-In the test run:
-
-```
 kubectl: OK
 kube-proxy: FAILED
 sha512sum: WARNING: 1 computed checksum did NOT match
@@ -545,21 +658,26 @@ The setup had appended three bytes to `kube-proxy`. In the exam, the task often 
 
 </details>
 
-```bash
-./certs/cks/task.sh check 1.5
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 1.5
+== check task 1.5
   PASS  the tampered kube-proxy is gone
   PASS  kubectl stays, and matches the official v1.37.1 sha512
+== task 1.5: 2 passed, 0 failed
 ```
 
 ## Task 6: Egress to DNS and the API server only
 
 **Time budget:** 7 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 1.6
+```console
+$ ./certs/cks/task.sh setup 1.6
+== setup task 1.6
+pod/agent created
+pod/web created
+service/web created
+pod/agent condition met
+pod/web condition met
 ```
 
 > Namespace `egress-lab` runs pod `agent` (label `app=agent`) and pod `web` (label `app=web`, with a Service `web`).
@@ -572,8 +690,10 @@ The setup had appended three bytes to `kube-proxy`. In the exam, the task often 
 
 Find the API server's real address first. The theory explains why the Service address doesn't work:
 
-```bash
-k get endpointslice -n default -l kubernetes.io/service-name=kubernetes
+```console
+root@cks-cp:~# k get endpointslice -n default -l kubernetes.io/service-name=kubernetes
+NAME         ADDRESSTYPE   PORTS   ENDPOINTS         AGE
+kubernetes   IPv4          6443    192.168.139.194   4m26s
 ```
 
 In the test run, that printed the control plane's address with port 6443. Use it in the policy:
@@ -615,35 +735,45 @@ spec:
 
 Test from the pod:
 
-```bash
-k -n egress-lab exec agent -- nc -z -w 3 kubernetes.default.svc.cluster.local 443 && echo api ok
-k -n egress-lab exec agent -- wget -qO- -T 3 http://web      # download timed out
+```console
+root@cks-cp:~# k -n egress-lab exec agent -- nc -z -w 3 kubernetes.default.svc.cluster.local 443 && echo api ok
+api ok
+root@cks-cp:~# k -n egress-lab exec agent -- wget -qO- -T 3 http://web      # download timed out
+wget: download timed out
+command terminated with exit code 1
 ```
 
 The `nc` goes to the Service's port 443, and the policy names port 6443. Both are right: kube-proxy rewrites the packet to port 6443 before Calico looks at it. In the test run, the same policy with `cidr: 10.96.0.1/32` and port 443 left `nc` waiting until its timeout.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 1.6
-```
-
-In the test run, the check failed three of five items before the solution and passed all five after it:
-
-```
+```console
+$ ./certs/cks/task.sh check 1.6
+== check task 1.6
   PASS  NetworkPolicy deny-all-egress selects every pod for Egress and allows nothing
   PASS  agent resolves kubernetes.default
   PASS  agent reaches the API server through the kubernetes Service
   PASS  agent does not reach web
   PASS  web reaches nothing, not even the API server
+== task 1.6: 5 passed, 0 failed
 ```
+
+In the test run, the check failed three of five items before the solution and passed all five after it.
 
 ## Task 7: One rule or two
 
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 1.7
+```console
+$ ./certs/cks/task.sh setup 1.7
+== setup task 1.7
+pod/db created
+service/db created
+pod/api created
+pod/debug created
+pod/api created
+networkpolicy.networking.k8s.io/db-ingress created
+  db-ingress is in place; debug in team-api reaches db: yes
 ```
 
 > NetworkPolicy `db-ingress` in namespace `team-db` should let only pods labelled `app=api` in namespaces labelled `team=api` reach pod `db` on TCP port 80. Pod `debug` in `team-api` still gets in. Fix the policy and keep its name.
@@ -653,8 +783,36 @@ In the test run, the check failed three of five items before the solution and pa
 
 Read the policy and count the dashes under `from`:
 
-```bash
-k -n team-db get netpol db-ingress -o yaml
+```console
+root@cks-cp:~# k -n team-db get netpol db-ingress -o yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+...
+  creationTimestamp: "2026-11-14T22:52:15Z"
+  generation: 1
+  name: db-ingress
+  namespace: team-db
+  resourceVersion: "1415"
+  uid: 20ccfe40-9c27-4be2-90e3-e8da848c4162
+spec:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          team: api
+    - podSelector:
+        matchLabels:
+          app: api
+    ports:
+    - port: 80
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: db
+  policyTypes:
+  - Ingress
 ```
 
 The `from` list has two items, so either selector lets a pod in, and `debug` lives in a `team=api` namespace. Merge them into one item with `k -n team-db edit netpol db-ingress`:
@@ -672,32 +830,42 @@ The `from` list has two items, so either selector lets a pod in, and `debug` liv
 
 The only change is the dash before `podSelector`, which goes away. Then test both sides:
 
-```bash
-k -n team-api exec api -- wget -qO- -T 3 http://db.team-db | head -4
-k -n team-api exec debug -- wget -qO- -T 3 http://db.team-db       # download timed out
+```console
+root@cks-cp:~# k -n team-api exec api -- wget -qO- -T 3 http://db.team-db | head -4
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+root@cks-cp:~# k -n team-api exec debug -- wget -qO- -T 3 http://db.team-db       # download timed out
+wget: download timed out
+command terminated with exit code 1
 ```
 
 </details>
 
-```bash
-./certs/cks/task.sh check 1.7
-```
-
-In the test run, the setup printed `debug in team-api reaches db: yes`, and the check failed one item. After the fix:
-
-```
+```console
+$ ./certs/cks/task.sh check 1.7
+== check task 1.7
   PASS  NetworkPolicy db-ingress still exists
   PASS  api in team-api reaches db
   PASS  debug in team-api does not reach db
   PASS  api in team-web does not reach db
+== task 1.7: 4 passed, 0 failed
 ```
+
+In the test run, the setup printed `debug in team-api reaches db: yes`, and the check failed one item before the fix.
 
 ## Task 8: A port range
 
 **Time budget:** 4 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 1.8
+```console
+$ ./certs/cks/task.sh setup 1.8
+== setup task 1.8
+pod/server created
+pod/client created
+pod/client condition met
+pod/server condition met
 ```
 
 > Pod `server` in namespace `ports` listens on TCP ports 7000, 7050, 7100 and 8000. Create a NetworkPolicy `server-ports` so that `server` accepts TCP ports 7000 to 7100 from pods in its own namespace, and nothing else. Use one port entry for the whole range.
@@ -724,31 +892,44 @@ spec:
 
 `podSelector: {}` inside `from` means every pod in the policy's namespace. Test with the pod's address, because `server` has no Service:
 
-```bash
-IP=$(k -n ports get pod server -o jsonpath='{.status.podIP}')
-k -n ports exec client -- wget -qO- -T 3 http://$IP:7050/       # ok
-k -n ports exec client -- wget -qO- -T 3 http://$IP:8000/       # download timed out
+```console
+root@cks-cp:~# IP=$(k -n ports get pod server -o jsonpath='{.status.podIP}')
+root@cks-cp:~# k -n ports exec client -- wget -qO- -T 3 http://$IP:7050/       # ok
+ok
+root@cks-cp:~# k -n ports exec client -- wget -qO- -T 3 http://$IP:8000/       # download timed out
+wget: download timed out
+command terminated with exit code 1
 ```
 
 </details>
 
-```bash
-./certs/cks/task.sh check 1.8
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 1.8
+== check task 1.8
   PASS  NetworkPolicy server-ports opens one port entry, 7000 to 7100 with endPort
   PASS  client reaches server on 7000, 7050 and 7100
   PASS  client does not reach server on 8000
+== task 1.8: 3 passed, 0 failed
 ```
 
 ## Task 9: A CiliumNetworkPolicy at layers 3 and 4
 
 **Time budget:** 5 minutes. **Host:** `cks-lima`.
 
-```bash
-./certs/cks/cluster/lima.sh start      # once, when the VM is off
-./certs/cks/task.sh setup 1.9
+```console
+$ ./certs/cks/cluster/lima.sh start      # once, when the VM is off
+...
+time="2026-11-14T22:52:45Z" level=info msg="READY. Run `limactl shell cks-lima` to open the shell."
+cluster ready
+$ ./certs/cks/task.sh setup 1.9
+== setup task 1.9
+pod/backend created
+service/backend created
+pod/frontend created
+pod/other created
+pod/backend condition met
+pod/frontend condition met
+pod/other condition met
 ```
 
 > Namespace `cilium-l4` runs pods `backend` (label `app=backend`, Service `backend` on port 80), `frontend` (`app=frontend`) and `other` (`app=other`). Create a CiliumNetworkPolicy `backend-ingress` so that `backend` accepts only TCP port 80, and only from `frontend`.
@@ -777,30 +958,45 @@ spec:
 
 The port is a string in a CiliumNetworkPolicy. A peer in `fromEndpoints` without a namespace label matches pods in the policy's own namespace, like a plain `podSelector`.
 
-```bash
-k -n cilium-l4 get cnp
-k -n cilium-l4 exec frontend -- wget -qO- -T 3 http://backend | head -4
-k -n cilium-l4 exec other -- wget -qO- -T 3 http://backend          # download timed out
+```console
+root@cks-lima:~# k -n cilium-l4 get cnp
+NAME              AGE   VALID
+backend-ingress   20s   True
+root@cks-lima:~# k -n cilium-l4 exec frontend -- wget -qO- -T 3 http://backend | head -4
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+root@cks-lima:~# k -n cilium-l4 exec other -- wget -qO- -T 3 http://backend          # download timed out
+wget: download timed out
+command terminated with exit code 1
 ```
 
 </details>
 
-```bash
-./certs/cks/task.sh check 1.9
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 1.9
+== check task 1.9
   PASS  CiliumNetworkPolicy backend-ingress selects app=backend and opens only TCP 80
   PASS  frontend reaches backend on port 80
   PASS  other does not reach backend
+== task 1.9: 3 passed, 0 failed
 ```
 
 ## Task 10: An HTTP rule with Cilium
 
 **Time budget:** 6 minutes. **Host:** `cks-lima`.
 
-```bash
-./certs/cks/task.sh setup 1.10
+```console
+$ ./certs/cks/task.sh setup 1.10
+== setup task 1.10
+pod/api created
+service/api created
+pod/client created
+pod/other created
+pod/api condition met
+pod/client condition met
+pod/other condition met
 ```
 
 > Pod `api` in namespace `cilium-l7` serves `/public/` and `/admin/` on port 80. Create a CiliumNetworkPolicy `api-l7`:
@@ -837,36 +1033,47 @@ spec:
 
 `path` is a regular expression, so `/public/.*` covers everything under the folder. Test three requests:
 
-```bash
-k -n cilium-l7 exec client -- wget -qO- -T 5 http://api/public/                  # public
-k -n cilium-l7 exec client -- wget -qO- -T 5 http://api/admin/                   # 403
-k -n cilium-l7 exec client -- wget -qO- -T 5 --post-data=x http://api/public/    # 403
+```console
+root@cks-lima:~# k -n cilium-l7 exec client -- wget -qO- -T 5 http://api/public/                  # public
+public
+root@cks-lima:~# k -n cilium-l7 exec client -- wget -qO- -T 5 http://api/admin/                   # 403
+wget: server returned error: HTTP/1.1 403 Forbidden
+command terminated with exit code 1
+root@cks-lima:~# k -n cilium-l7 exec client -- wget -qO- -T 5 --post-data=x http://api/public/    # 403
+wget: server returned error: HTTP/1.1 403 Forbidden
+command terminated with exit code 1
 ```
 
 In the test run, the second and third commands printed `wget: server returned error: HTTP/1.1 403 Forbidden`. That answer came from Cilium's Envoy proxy, not from nginx. A request from `other` printed `wget: download timed out` instead, because layer 4 dropped it before any HTTP happened.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 1.10
-```
-
-In the test run, the check failed four of five items before the solution:
-
-```
+```console
+$ ./certs/cks/task.sh check 1.10
+== check task 1.10
   PASS  CiliumNetworkPolicy api-l7 has an HTTP rule
   PASS  client gets /public/ with GET
   PASS  client gets 403 for /admin/
   PASS  client gets 403 for a POST to /public/
   PASS  other does not reach api at all
+== task 1.10: 5 passed, 0 failed
 ```
+
+In the test run, the check failed four of five items before the solution.
 
 ## Task 11: Entities and an explicit deny with Cilium
 
 **Time budget:** 6 minutes. **Host:** `cks-lima`.
 
-```bash
-./certs/cks/task.sh setup 1.11
+```console
+$ ./certs/cks/task.sh setup 1.11
+== setup task 1.11
+pod/agent created
+pod/web created
+service/web created
+pod/agent condition met
+pod/web condition met
+  web reaches 1.1.1.1:443 before any policy: yes
 ```
 
 > In namespace `cilium-egress`:
@@ -913,33 +1120,39 @@ Three things to notice:
 - `kube-apiserver` matches the API server wherever it runs, so the Service-address trap of task 6 doesn't exist here. Cilium works out the real address itself.
 - `protocol: ANY` covers DNS over UDP and TCP in one entry.
 
-```bash
-k -n cilium-egress exec agent -- nc -z -w 3 kubernetes.default.svc.cluster.local 443 && echo api ok
-k -n cilium-egress exec web -- nc -z -w 3 1.1.1.1 443 || echo world blocked
+```console
+root@cks-lima:~# k -n cilium-egress exec agent -- nc -z -w 3 kubernetes.default.svc.cluster.local 443 && echo api ok
+api ok
+root@cks-lima:~# k -n cilium-egress exec web -- nc -z -w 3 1.1.1.1 443 || echo world blocked
+command terminated with exit code 1
+world blocked
 ```
 
 In the test run, the setup printed `web reaches 1.1.1.1:443 before any policy: yes`, and after the solution the second command printed `world blocked`.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 1.11
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 1.11
+== check task 1.11
   PASS  CiliumNetworkPolicy deny-world denies egress to the world entity for every pod
   PASS  CiliumNetworkPolicy agent-egress uses the kube-apiserver entity
   PASS  agent resolves names and reaches the API server
   PASS  agent does not reach web
   PASS  web reaches nothing outside the cluster
+== task 1.11: 5 passed, 0 failed
 ```
 
 ## Task 12: TLS versions and ciphers for the API server and etcd
 
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 1.12
+```console
+$ ./certs/cks/task.sh setup 1.12
+== setup task 1.12
+/etc/kubernetes/manifests/kube-apiserver.yaml:    - --tls-cert-file=/etc/kubernetes/pki/apiserver.crt
+/etc/kubernetes/manifests/kube-apiserver.yaml:    - --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
+New, TLSv1.2, Cipher is ECDHE-RSA-CHACHA20-POLY1305
 ```
 
 The setup shows that the API server still accepts an old suite. In the test run: `New, TLSv1.2, Cipher is ECDHE-RSA-CHACHA20-POLY1305`.
@@ -953,10 +1166,12 @@ The setup shows that the API server still accepts an old suite. In the test run:
 
 Back up both manifests, then change etcd first. The API server is etcd's client, and it speaks TLS 1.3 already, so it keeps working when etcd moves:
 
-```bash
-cp /etc/kubernetes/manifests/{etcd,kube-apiserver}.yaml /root/
-vim /etc/kubernetes/manifests/etcd.yaml
+```console
+root@cks-cp:~# cp /etc/kubernetes/manifests/{etcd,kube-apiserver}.yaml /root/
+root@cks-cp:~# vim /etc/kubernetes/manifests/etcd.yaml
 ```
+
+The transcript leaves out the editor session.
 
 ```yaml
   - command:
@@ -975,21 +1190,22 @@ Wait until `crictl ps --name etcd` shows a new container, then edit the API serv
 
 Test both from the node:
 
-```bash
-echo | openssl s_client -connect 127.0.0.1:6443 -tls1_2 -cipher ECDHE-RSA-CHACHA20-POLY1305 2>/dev/null | grep 'Cipher is'
-echo | openssl s_client -connect 127.0.0.1:6443 -tls1_2 -cipher ECDHE-RSA-AES128-GCM-SHA256 2>/dev/null | grep 'Cipher is'
-echo | openssl s_client -connect 127.0.0.1:2379 -tls1_2 2>/dev/null | grep 'Cipher is'
+```console
+root@cks-cp:~# echo | openssl s_client -connect 127.0.0.1:6443 -tls1_2 -cipher ECDHE-RSA-CHACHA20-POLY1305 2>/dev/null | grep 'Cipher is'
+New, (NONE), Cipher is (NONE)
+root@cks-cp:~# echo | openssl s_client -connect 127.0.0.1:6443 -tls1_2 -cipher ECDHE-RSA-AES128-GCM-SHA256 2>/dev/null | grep 'Cipher is'
+New, TLSv1.2, Cipher is ECDHE-RSA-AES128-GCM-SHA256
+root@cks-cp:~# echo | openssl s_client -connect 127.0.0.1:2379 -tls1_2 2>/dev/null | grep 'Cipher is'
+New, (NONE), Cipher is (NONE)
 ```
 
 OpenSSL names the suites differently from Go: `ECDHE-RSA-AES128-GCM-SHA256` is `TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256`. In the test run, the first and third commands printed `Cipher is (NONE)`, and the second printed `Cipher is ECDHE-RSA-AES128-GCM-SHA256`. Both restarts together took 2 minutes 24 seconds before the pods were Ready again.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 1.12
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 1.12
+== check task 1.12
   PASS  the API server sets --tls-min-version=VersionTLS12 and the two cipher suites
   PASS  the API server accepts ECDHE-RSA-AES128-GCM-SHA256 on TLS 1.2
   PASS  the API server refuses ECDHE-RSA-CHACHA20-POLY1305 on TLS 1.2
@@ -997,14 +1213,18 @@ OpenSSL names the suites differently from Go: `ECDHE-RSA-AES128-GCM-SHA256` is `
   PASS  etcd refuses TLS 1.2 on 2379
   PASS  etcd accepts TLS 1.3 on 2379
   PASS  the API server and etcd pods are Ready
+== task 1.12: 7 passed, 0 failed
 ```
 
 ## Task 13: Harden the kubelet
 
 **Time budget:** 6 minutes. **Host:** `cks-w1`.
 
-```bash
-./certs/cks/task.sh setup 1.13
+```console
+$ ./certs/cks/task.sh setup 1.13
+== setup task 1.13
+  read-only port /pods: 200
+  anonymous /pods on 10250: 200
 ```
 
 The setup prints what a stranger gets from the kubelet. In the test run: `read-only port /pods: 200` and `anonymous /pods on 10250: 200`.
@@ -1023,10 +1243,12 @@ The setup prints what a stranger gets from the kubelet. In the test run: `read-o
 
 `systemctl cat kubelet` shows where the config file is: `--config=/var/lib/kubelet/config.yaml`. Back it up and edit it:
 
-```bash
-cp /var/lib/kubelet/config.yaml /root/
-vim /var/lib/kubelet/config.yaml
+```console
+root@cks-w1:~# cp /var/lib/kubelet/config.yaml /root/
+root@cks-w1:~# vim /var/lib/kubelet/config.yaml
 ```
+
+The transcript leaves out the editor session.
 
 ```yaml
 authentication:
@@ -1042,33 +1264,65 @@ tlsMinVersion: VersionTLS13
 
 Then restart the kubelet and test:
 
-```bash
-systemctl restart kubelet
-curl -s http://127.0.0.1:10255/pods; echo "rc=$?"                     # rc=7, connection refused
-curl -sk -o /dev/null -w '%{http_code}\n' https://127.0.0.1:10250/pods  # 401
+```console
+root@cks-w1:~# systemctl restart kubelet
+root@cks-w1:~# curl -s http://127.0.0.1:10255/pods; echo "rc=$?"                     # rc=7, connection refused
+rc=7
+root@cks-w1:~# curl -sk -o /dev/null -w '%{http_code}\n' https://127.0.0.1:10250/pods  # 401
+401
 ```
 
 `kubectl logs` keeps working because the API server logs in to the kubelet with a client certificate, and kubeadm granted that identity the `system:kubelet-api-admin` ClusterRole. With `mode: Webhook`, the kubelet asks the API server, and RBAC says yes. In the test run, the kubelet answered again 2 seconds after the restart.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 1.13
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 1.13
+== check task 1.13
   PASS  nothing answers on the read-only port 10255
   PASS  an anonymous request to the kubelet API gets 401
   PASS  the kubelet config sets authorization mode Webhook
   PASS  the kubelet refuses TLS 1.2
   PASS  cks-w1 is Ready and kubectl logs still works for its pods
+== task 1.13: 5 passed, 0 failed
 ```
 
 ## Clean up
 
 Tasks 1, 2, 4 to 8 leave only namespaces and files. Tasks 3 and 12 changed static pods, and task 13 changed the kubelet on `cks-w1`. To start the next domain from a fresh cluster:
 
-```bash
-./certs/cks/cluster/reset.sh
-./certs/cks/cluster/lima.sh reset     # only when you did tasks 9 to 11; takes about 2 minutes
+```console
+$ ./certs/cks/cluster/reset.sh
+=== wiping cks-w1
+=== wiping cks-cp
+...
+=== 1/7 machines
+...
+=== 2/7 containerd and kubeadm 1.37.1 on both nodes
+...
+=== 3/7 kubeadm init on cks-cp
+...
+=== 4/7 Calico 3.32.3 (enforces NetworkPolicy)
+...
+=== 5/7 join cks-w1
+...
+=== 6/7 security tools
+...
+=== 7/7 ingress-nginx 1.15.1 on NodePorts 30080 and 30443
+...
+=== ready
+NAME     STATUS   ROLES           AGE     VERSION   INTERNAL-IP       EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION                                CONTAINER-RUNTIME
+cks-cp   Ready    control-plane   2m11s   v1.37.1   192.168.139.194   <none>        Ubuntu 24.04.5 LTS   7.2.12-orbstack-00394-gbecdd6130068 (arm64)   containerd://2.2.10
+cks-w1   Ready    <none>          76s     v1.37.1   192.168.139.60    <none>        Ubuntu 24.04.5 LTS   7.2.12-orbstack-00394-gbecdd6130068 (arm64)   containerd://2.2.10
+...
+$ ./certs/cks/cluster/lima.sh reset     # only when you did tasks 9 to 11; takes about 2 minutes
+=== wiping the cluster on cks-lima
+...
+=== 2/4 containerd and kubeadm 1.37.1
+...
+=== 3/4 kubeadm init
+...
+=== 4/4 Cilium 1.20.4
+cilium 1.20.4 ready
+cluster ready
 ```

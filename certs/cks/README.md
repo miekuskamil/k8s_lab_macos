@@ -95,7 +95,9 @@ The plan below takes about four weeks at an hour a day. The order follows how th
 6. Take the mock exams in order, each on freshly reset clusters, each with its 2-hour clock: [mock exam 1](mock-exam.md), then [mock exam 2](mock-exam-2.md), then [mock exam 3](mock-exam-3.md). `score.sh` prints the minutes since `setup.sh` and flags a run over 120. Leave a few days between them, and review every lost point before the next one.
 7. Aim for 80 points or more on mock 3 inside the time. A margin above the pass mark matters, because the exam clusters are less familiar than these.
 
-Every command in the track runs on a node. Open a shell with `orb -m cks-cp`, `orb -m cks-w1` or `./certs/cks/cluster/lima.sh shell`. The track files sit in your Mac's home folder, and OrbStack and Lima both show that folder at the same path inside the machines. So `cd` to the repo inside the node, and the paths in the text work there too.
+Every command except `task.sh` and the cluster scripts runs on a node. Open a shell with `orb -m cks-cp`, `orb -m cks-w1` or `./certs/cks/cluster/lima.sh shell`. The track files sit in your Mac's home folder, and OrbStack and Lima both show that folder at the same path inside the machines. So `cd` to the repo inside the node, and the paths in the text work there too.
+
+The command blocks are terminal transcripts. Each prompt line holds a command, and the lines under it hold the real output of the test run. The prompt says where to type. `$` is your Mac, in the repo folder. `root@cks-cp:~#`, `root@cks-w1:~#` and `root@cks-lima:~#` are root shells on the nodes, so run `sudo -i` after `orb -m cks-cp` or `orb -m cks-w1`. A line with only `...` marks output the transcript leaves out. Pod names, container IDs, ages and keys differ on your run.
 
 ## Exam habits worth drilling
 
