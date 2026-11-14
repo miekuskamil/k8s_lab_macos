@@ -11,6 +11,11 @@ echo "Removing course rules from the shop namespace"
 "${K[@]}" -n shop delete telemetry waypoint-access-logs --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy backend-allow-course-client --ignore-not-found >/dev/null
 "${K[@]}" -n course-sidecar delete virtualservice,destinationrule,peerauthentication --all --ignore-not-found >/dev/null 2>&1 || true
+# Module 31: the debugging namespace, with its access logs, routes and break files inside
+"${K[@]}" delete namespace course-debug --ignore-not-found >/dev/null
+# Module 30: the sidecar and ambient test namespaces, with the Sidecar resource and patches.
+# Module 32 needs nothing here: it runs on its own k3d cluster and deletes it at the end.
+"${K[@]}" delete namespace course-proxy course-ambient --ignore-not-found >/dev/null
 # Module 29: the plain app and its client
 "${K[@]}" delete namespace course-life --ignore-not-found >/dev/null
 # Module 28: the release first (Alloy's ClusterRole outlives the namespace), then the

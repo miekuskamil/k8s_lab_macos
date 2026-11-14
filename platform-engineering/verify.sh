@@ -927,6 +927,82 @@ module_29() {
   expect "after the reset course-life is gone" "$("${K[@]}" get ns course-life 2>&1 | grep -c NotFound)" '^1$'
 }
 
+module_30() {
+  section "30: sidecar mode in depth"
+  baseline
+  local P=(-n course-proxy) node="k3d-${CLUSTER_NAME:-k8s-lab}-server-0"
+  expect "istiod registers four injection webhooks" "$("${K[@]}" get mutatingwebhookconfiguration istio-sidecar-injector -o jsonpath='{.webhooks[*].name}' | wc -w | tr -d ' ')" '^4$'
+  "${K[@]}" apply -f "$M/30-apps.yaml" >/dev/null
+  "${K[@]}" "${P[@]}" rollout status deploy/client --timeout=180s >/dev/null 2>&1
+  "${K[@]}" "${P[@]}" rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1
+  "${K[@]}" label namespace course-proxy istio-injection=enabled >/dev/null
+  expect "labelling the namespace leaves the running pod alone" "$("${K[@]}" "${P[@]}" get pod -l app=httpbin -o jsonpath='{.items[0].spec.containers[*].name}')" '^httpbin$'
+  expect "check-inject predicts injection from the namespace label" "$("${I[@]}" x check-inject -n course-proxy deploy/httpbin 2>/dev/null)" 'istio-injection=enabled matches'
+  "${K[@]}" "${P[@]}" rollout restart deploy >/dev/null
+  "${K[@]}" "${P[@]}" rollout status deploy/client --timeout=180s >/dev/null 2>&1
+  "${K[@]}" "${P[@]}" rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1
+  local n
+  for _ in $(seq 1 24); do n="$("${K[@]}" "${P[@]}" get pods --no-headers 2>/dev/null | wc -l | tr -d ' ')"; [[ $n == 2 ]] && break; settle 5; done
+  expect "after a restart the pods carry istio-proxy" "$("${K[@]}" "${P[@]}" get pod -l app=httpbin -o jsonpath='{.items[0].spec.containers[*].name}')" 'httpbin istio-proxy'
+  local img=curlimages/curl:8.11.1
+  "${K[@]}" "${P[@]}" run opt-out-label --image=$img --labels=sidecar.istio.io/inject=false --command -- sleep infinity >/dev/null
+  "${K[@]}" "${P[@]}" run opt-out-annotation --image=$img --annotations=sidecar.istio.io/inject=false --command -- sleep infinity >/dev/null
+  "${K[@]}" label namespace course-proxy istio-injection- >/dev/null
+  "${K[@]}" label namespace course-proxy istio.io/rev=default >/dev/null
+  "${K[@]}" "${P[@]}" run by-revision --image=$img --command -- sleep infinity >/dev/null
+  "${K[@]}" label namespace course-proxy istio-injection=disabled >/dev/null
+  "${K[@]}" "${P[@]}" run disabled-wins --image=$img --command -- sleep infinity >/dev/null
+  "${K[@]}" label namespace course-proxy istio.io/rev- istio-injection- >/dev/null
+  "${K[@]}" "${P[@]}" run no-label --image=$img --command -- sleep infinity >/dev/null
+  "${K[@]}" "${P[@]}" run opt-in --image=$img --labels=sidecar.istio.io/inject=true --command -- sleep infinity >/dev/null
+  "${K[@]}" label namespace course-proxy istio-injection=enabled >/dev/null
+  local cols='custom-columns=N:.metadata.name,C:.spec.containers[*].name'
+  expect "injection follows the webhook table" "$("${K[@]}" "${P[@]}" get pod opt-out-label opt-out-annotation by-revision disabled-wins no-label opt-in --no-headers -o "$cols" | awk '{print $1 "=" ($2 ~ /istio-proxy/ ? "yes" : "no")}' | tr '\n' ' ')" '^opt-out-label=no opt-out-annotation=no by-revision=yes disabled-wins=no no-label=no opt-in=yes $'
+  expect "check-inject misses the annotation opt-out" "$("${I[@]}" x check-inject -n course-proxy opt-out-annotation 2>/dev/null)" 'istio-injection=enabled matches'
+  "${K[@]}" "${P[@]}" delete pod opt-out-label opt-out-annotation by-revision disabled-wins no-label opt-in --wait=false >/dev/null
+  expect "istio-init redirects to 15001 and 15006, skipping uid 1337" "$("${K[@]}" "${P[@]}" get pod -l app=client -o jsonpath='{.items[0].spec.initContainers[0].args}')" '"-p","15001","-z","15006","-u","1337"'
+  local pod cid pid rules
+  pod="$("${K[@]}" "${P[@]}" get pod -l app=client -o jsonpath='{.items[0].metadata.name}')"
+  cid="$(docker exec "$node" crictl ps --name curl --label "io.kubernetes.pod.name=$pod" -q 2>/dev/null | head -1)"
+  pid="$(docker exec "$node" crictl inspect --output go-template --template '{{.info.pid}}' "$cid" 2>/dev/null)"
+  rules="$(docker exec "$node" nsenter -t "$pid" -n iptables-legacy-save -t nat 2>/dev/null)"
+  expect "the pod's legacy NAT table redirects outbound to 15001" "$(echo "$rules" | grep -c 'ISTIO_REDIRECT -p tcp -j REDIRECT --to-ports 15001')" '^1$'
+  expect "and inbound to 15006" "$(echo "$rules" | grep -c 'ISTIO_IN_REDIRECT -p tcp -j REDIRECT --to-ports 15006')" '^1$'
+  local cp=(-n course-proxy exec deploy/client -c curl --)
+  expect "through the client's Envoy httpbin sees the client certificate" "$("${K[@]}" "${cp[@]}" curl -s -m 5 http://httpbin:8000/headers 2>/dev/null | grep -c X-Forwarded-Client-Cert)" '^1$'
+  "${K[@]}" "${P[@]}" patch deploy client --patch-file "$M/30-exclude-port.yaml" >/dev/null
+  "${K[@]}" "${P[@]}" rollout status deploy/client --timeout=180s >/dev/null 2>&1
+  for _ in $(seq 1 24); do n="$("${K[@]}" "${P[@]}" get pods -l app=client --no-headers 2>/dev/null | wc -l | tr -d ' ')"; [[ $n == 1 ]] && break; settle 5; done
+  expect "the annotation adds -o 8000 to istio-init" "$("${K[@]}" "${P[@]}" get pod -l app=client -o jsonpath='{.items[0].spec.initContainers[0].args}')" '"-o","8000"'
+  expect "an excluded port skips the client's Envoy (no XFCC)" "$("${K[@]}" "${cp[@]}" curl -s -m 5 http://httpbin:8000/headers 2>/dev/null | grep -c X-Forwarded-Client-Cert)" '^0$'
+  "${K[@]}" "${P[@]}" rollout undo deploy/client >/dev/null
+  "${K[@]}" "${P[@]}" rollout status deploy/client --timeout=180s >/dev/null 2>&1
+  for _ in $(seq 1 24); do n="$("${K[@]}" "${P[@]}" get pods -l app=client --no-headers 2>/dev/null | wc -l | tr -d ' ')"; [[ $n == 1 ]] && break; settle 5; done
+  local before after
+  before="$("${I[@]}" proxy-config cluster deploy/client -n course-proxy 2>/dev/null | tail -n +2 | wc -l | tr -d ' ')"
+  between "without a Sidecar resource the client knows every Service (clusters)" "$before" 40 200
+  "${K[@]}" apply -f "$M/30-sidecar-scope.yaml" >/dev/null
+  for _ in $(seq 1 12); do settle 3; after="$("${I[@]}" proxy-config cluster deploy/client -n course-proxy 2>/dev/null | tail -n +2 | wc -l | tr -d ' ')"; (( after < 30 )) && break; done
+  between "the Sidecar resource cuts the clusters" "$after" 8 29
+  expect "an unknown destination passes through (ALLOW_ANY)" "$("${K[@]}" "${cp[@]}" curl -s -m 5 -o /dev/null -w '%{http_code}' http://headlamp.headlamp/ 2>/dev/null)" '^200$'
+  expect "the ambient frontend refuses the passthrough plain text" "$("${K[@]}" "${cp[@]}" curl -s -m 5 -o /dev/null -w '%{http_code}' http://frontend.shop:3000/healthz 2>/dev/null)" '^000$'
+  "${K[@]}" apply -f "$M/30-sidecar-registry-only.yaml" >/dev/null; settle 5
+  expect "REGISTRY_ONLY blocks the unknown destination" "$("${K[@]}" "${cp[@]}" curl -s -m 5 -o /dev/null -w '%{http_code}' http://headlamp.headlamp/ 2>/dev/null)" '^000$'
+  expect "REGISTRY_ONLY still allows httpbin" "$("${K[@]}" "${cp[@]}" curl -s -m 5 -o /dev/null -w '%{http_code}' http://httpbin:8000/status/200 2>/dev/null)" '^200$'
+  "${K[@]}" "${P[@]}" patch deploy httpbin --patch-file "$M/30-proxy-resources.yaml" >/dev/null
+  "${K[@]}" "${P[@]}" rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1
+  for _ in $(seq 1 24); do n="$("${K[@]}" "${P[@]}" get pods -l app=httpbin --no-headers 2>/dev/null | wc -l | tr -d ' ')"; [[ $n == 1 ]] && break; settle 5; done
+  expect "the annotations set the sidecar's resources" "$("${K[@]}" "${P[@]}" get pod -l app=httpbin -o jsonpath='{.items[0].spec.containers[?(@.name=="istio-proxy")].resources}')" '"limits":\{"cpu":"200m","memory":"128Mi"\},"requests":\{"cpu":"50m","memory":"64Mi"\}'
+  "${K[@]}" apply -f "$M/30-ambient-apps.yaml" >/dev/null
+  "${K[@]}" -n course-ambient rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1
+  "${K[@]}" -n course-ambient rollout status deploy/client --timeout=180s >/dev/null 2>&1
+  expect "ambient pods keep one container" "$("${K[@]}" -n course-ambient get pod -l app=httpbin -o jsonpath='{.items[0].spec.containers[*].name}')" '^httpbin$'
+  expect "ambient client reaches httpbin through ztunnel" "$("${K[@]}" -n course-ambient exec deploy/client -c curl -- curl -s -m 5 -o /dev/null -w '%{http_code}' http://httpbin:8000/get 2>/dev/null)" '^200$'
+  expect "ztunnel lists the ambient pods as HBONE" "$("${I[@]}" ztunnel-config workloads 2>/dev/null | awk '$1=="course-ambient" {print $NF}' | sort -u | tr -d '\n')" '^HBONE$'
+  baseline
+  expect "after the reset course-proxy and course-ambient are gone" "$("${K[@]}" get ns course-proxy course-ambient 2>&1 | grep -c NotFound)" '^2$'
+}
+
 # Module 21 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 21
 module_21() {
   section "21: k3s certificates, backups and upgrades (the upgrade is one-way)"
@@ -1035,7 +1111,7 @@ module_14() {
 }
 
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16 20 22 23 24 25 26 28 29); fi
+if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16 20 22 23 24 25 26 28 29 30); fi
 # Start from the Git baseline, in case an exercise is still applied.
 printf 'Restoring the baseline before the checks\n'
 "$ROOT/platform-engineering/reset.sh" >/dev/null 2>&1

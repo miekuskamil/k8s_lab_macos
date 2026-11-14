@@ -36,6 +36,7 @@ Each module takes 30 to 60 minutes. Each one lists the modules and tools it need
 | [27. RAG on Kubernetes](27-rag-on-kubernetes.md) | AI: Qdrant, embeddings from your Ollama, ingesting the course, retrieval misses and wrong answers, top-k against tokens. Needs Ollama | `docker`, `k3d`, `curl` |
 | [28. Continuous profiling with Pyroscope](28-continuous-profiling.md) | Platform: annotation opt-in, flame graphs, self against total time, memory allocations, the cost of profiling | `helm`, Grafana |
 | [29. The life of a request](29-life-of-a-request.md) | Internals: kubectl to API server (authentication, RBAC, admission, kine), controllers, scheduler decisions, kubelet, CRI and CNI; then one request without a mesh and one through ambient Istio, hop by hop, with a large diagram | `kubectl -v`, `iptables`, `conntrack`, `istioctl` |
+| [30. Sidecar mode in depth](30-sidecar-in-depth.md) | The four injection webhooks, iptables traffic capture, excluded ports, the Sidecar resource (measured: 62 clusters down to 16), proxy resources, sidecar against ambient in latency and memory | `istioctl`, `iptables`, `kubectl top` |
 
 **New to Istio? Read [Start here: Istio in one picture](start-here.md) first.** It takes 15 minutes, needs no cluster, and shows every resource the course uses on one diagram. Every term also has a plain explanation in the [glossary](glossary.md). Keep it open in a tab.
 
@@ -45,7 +46,7 @@ Each module takes 30 to 60 minutes. Each one lists the modules and tools it need
 
 | Route | Modules |
 |---|---|
-| Istio | modules 0 to 8, then 11 to 16. Module 9 is a reference, and 10 is theory you read any time after module 7. |
+| Istio | modules 0 to 8, then 11 to 16, then 30. Module 9 is a reference, and 10 is theory you read any time after module 7. |
 | AI on Kubernetes | modules 17 to 19 build on the Istio route, mainly modules 3 to 6 and 12. Each module lists what it needs at the top. |
 | Kubernetes operations | modules 20 and 21 need only module 0. As a CKA, you might take them first. |
 | Platform tools | modules 22 to 26 and 28 need only module 0, though 23 builds on module 6 and 24 on 23. They cover what DevOps and platform job adverts ask for most: GitOps, alerting, dashboards, OpenTelemetry, policy as code and profiling. |
@@ -55,7 +56,7 @@ Each module takes 30 to 60 minutes. Each one lists the modules and tools it need
 
 1. [Start here](start-here.md), then module 0.
 2. Modules 1 to 7, then 29 (the life of a request) to tie them together, then 8 to test yourself.
-3. Modules 11, 12, 13, 15 and 16.
+3. Modules 11, 12, 13, 15 and 16, then 30.
 4. Modules 17 to 19, the AI track.
 5. Modules 22 to 28, the platform tools (27 is AI and needs Ollama).
 6. Module 20.

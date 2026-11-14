@@ -1,0 +1,8 @@
+# Module 30: a patch for the client Deployment. It tells istio-init to leave outgoing
+# connections to port 8000 alone, so they skip the client's own Envoy. Apply it with
+#   kubectl -n course-proxy patch deploy client --patch-file platform-engineering/manifests/30-exclude-port.yaml
+spec:
+  template:
+    metadata:
+      annotations:
+        traffic.sidecar.istio.io/excludeOutboundPorts: "8000"
