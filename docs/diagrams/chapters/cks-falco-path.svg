@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="740" viewBox="0 0 1800 740" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1800" height="740" fill="#1e1f24"/>
+<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
+<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">From syscall</text>
+<rect x="313.8" y="26.0" width="189.1" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<text x="327.8" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">to alert</text>
+<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">Falco reads a copy of each event. It never blocks the call.</text>
+<rect x="60.0" y="216.0" width="240.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="60.0" y="210.0" width="240.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="60.0" y="318.0" width="240.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="100.0,245.0 118.0,255.0 100.0,265.0 82.0,255.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="82.0,255.0 100.0,265.0 100.0,286.0 82.0,276.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="118.0,255.0 100.0,265.0 100.0,286.0 118.0,276.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="138.0" y="257.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Container</text>
+<text x="138.0" y="285.0" font-size="16" fill="#ffffffcc" text-anchor="start">runs bash</text>
+<rect x="440.0" y="170.0" width="820.0" height="190.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="850.0" y="158.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">kernel space</text>
+<rect x="480.0" y="216.0" width="340.0" height="110.0" rx="16" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<rect x="480.0" y="210.0" width="340.0" height="110.0" rx="16" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<rect x="480.0" y="318.0" width="340.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="501.0" y="245.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="508.0" cy="250.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<rect x="501.0" y="259.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="508.0" cy="264.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<rect x="501.0" y="273.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="508.0" cy="278.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<text x="558.0" y="257.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Kernel</text>
+<text x="558.0" y="285.0" font-size="16" fill="#ffffffcc" text-anchor="start">execve()</text>
+<rect x="880.0" y="216.0" width="340.0" height="110.0" rx="16" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<rect x="880.0" y="210.0" width="340.0" height="110.0" rx="16" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<rect x="880.0" y="318.0" width="340.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="920.0" cy="265.0" rx="20" ry="11" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
+<ellipse cx="920.0" cy="265.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<text x="958.0" y="257.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">eBPF probe</text>
+<text x="958.0" y="285.0" font-size="16" fill="#ffffffcc" text-anchor="start">modern_ebpf</text>
+<polyline points="300.0,265.0 480.0,265.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="370.0" cy="265.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="370.0" y="272.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
+<text x="370.0" y="236.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">syscall</text>
+<polyline points="820.0,265.0 880.0,265.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="850.0" cy="265.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="850.0" y="272.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
+<rect x="440.0" y="440.0" width="820.0" height="190.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="850.0" y="428.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">user space</text>
+<rect x="880.0" y="486.0" width="340.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="880.0" y="480.0" width="340.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="880.0" y="588.0" width="340.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="920.0,515.0 938.0,522.0 935.0,543.0 920.0,556.0 905.0,543.0 902.0,522.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="912.0,535.0 918.0,542.0 929.0,529.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="958.0" y="527.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Rule engine</text>
+<text x="958.0" y="555.0" font-size="16" fill="#ffffffcc" text-anchor="start">lists, macros, rules</text>
+<rect x="480.0" y="486.0" width="340.0" height="110.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
+<rect x="480.0" y="480.0" width="340.0" height="110.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
+<rect x="480.0" y="588.0" width="340.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="506.0,515.0 526.0,515.0 536.0,525.0 536.0,555.0 506.0,555.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="513.0,533.0 529.0,533.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="513.0,541.0 529.0,541.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="513.0,549.0 524.0,549.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="558.0" y="527.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Outputs</text>
+<text x="558.0" y="555.0" font-size="16" fill="#ffffffcc" text-anchor="start">journal, HTTP</text>
+<polyline points="1050.0,320.0 1050.0,480.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<ellipse cx="1050.0" cy="400.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1050.0" y="407.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
+<text x="1077.0" y="406.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="start">copy of event</text>
+<polyline points="880.0,535.0 820.0,535.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="850.0" cy="535.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="850.0" y="542.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">4</text>
+<rect x="1380.0" y="486.0" width="340.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="1380.0" y="480.0" width="340.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="1380.0" y="588.0" width="340.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="1420.0" cy="525.0" rx="10" ry="10" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<rect x="1404.0" y="538.0" width="32.0" height="19.0" rx="10" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<text x="1458.0" y="527.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">You</text>
+<text x="1458.0" y="555.0" font-size="16" fill="#ffffffcc" text-anchor="start">read alert</text>
+<polyline points="650.0,590.0 650.0,690.0 1550.0,690.0 1550.0,590.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="1100.0" cy="690.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1100.0" y="697.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">5</text>
+<text x="1100.0" y="661.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">alert line</text>
+</svg>

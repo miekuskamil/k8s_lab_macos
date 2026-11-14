@@ -8,60 +8,144 @@ Kubernetes runs on ordinary Linux machines. An attacker who escapes a container 
 
 The curriculum lists AppArmor and seccomp under domain 06, so they live in [06, tasks 4 and 5](06-monitoring-logging-runtime-security.md#task-4-a-seccomp-profile).
 
-## Theory: less on the node, fewer rights for everyone on it
+## The domain in one table
 
-### Attack surface
+Kubernetes security usually starts at the API. This domain starts one floor lower, at the Linux machine under the kubelet. Each task answers one question about that machine:
 
-The **attack surface** is everything an attacker might use to get in or move on: listening ports, installed packages, running services, user accounts. Every item is a door. A node needs very few doors: the kubelet, the container runtime, SSH for the admins, and the CNI agent. Everything else is risk without benefit.
+| Question | Tool | Task |
+|---|---|---|
+| Which services listen, and does the node need them? | `ss`, `systemctl`, `apt-get purge` | 1, 4 |
+| Who has root on the node? | `sudo -l`, `/etc/sudoers.d/`, `passwd -l` | 2 |
+| What may a kubelet change in the cluster? | NodeRestriction | 3 |
+| Who may log in, and how? | `sshd -T` | 5 |
+| Which files on the node hold cluster keys? | `grep`, `chmod` | 6 |
+| Which kernel code may load at all? | `/etc/modprobe.d/` | 7 |
 
-Shrinking the surface follows the same steps every time:
+## Concept: the node is the last wall
+
+A container is a normal Linux process with a few fences around it. It shares the node's kernel with every other container. When an attacker escapes a container, through a kernel bug, a privileged pod or a `hostPath` mount, they land on the node itself. From there, the node decides how far they get.
+
+Think of the container as a hotel room and the node as the hotel. A guest who climbs out of the window lands in the corridor. A hardened hotel has locked service doors, no master keys lying on trolleys, and staff who carry only the keys for their own floor. A soft hotel hands the intruder the whole building.
+
+The **attack surface** is everything an attacker might use to get in or move on: listening ports, installed packages, running services, user accounts, files with credentials, kernel features. Every item is a door. A Kubernetes node needs very few doors: the kubelet, the container runtime, the CNI agent, and SSH for the admins. Everything else is risk without benefit.
+
+**Least privilege** is the rule that closes the remaining doors as far as the job allows. Each user, each program and each credential gets the rights its job needs and nothing more. The rest of this domain applies those two ideas, a small surface and least privilege, to services, kernel modules, logins, users, kubeconfig files and the kubelet's own identity.
+
+## Concept: services nobody needs
+
+Every listening service is a program that accepts input from the network. A bug in that program, or a weak setting such as clear text passwords, gives an attacker a way in or a way to stay. Shrinking the surface follows the same four steps every time:
 
 1. List what listens: `ss -tlnp` shows TCP sockets with the owning process.
 2. Find which package owns the program: `dpkg -S /usr/sbin/vsftpd`.
 3. Stop and disable the service: `systemctl disable --now vsftpd`.
 4. Remove the package: `apt-get purge vsftpd`, so a later reboot or upgrade doesn't bring it back.
 
-Step 4 matters. A disabled service is still on disk, and the next `apt-get upgrade` or a careless `systemctl start` revives it.
+Step 4 matters. A disabled service is still on disk, and the next `apt-get upgrade` or a careless `systemctl start` revives it. In task 1, `ss` showed vsftpd on port 21. vsftpd is an FTP server, and FTP sends passwords in clear text, so it has no place on a Kubernetes node.
 
-A service doesn't need a package to exist. An attacker who got root once often leaves a backdoor: a copied binary with an innocent name, started by a systemd unit so it survives a reboot. `ss -tlnp` names the process and its PID, and `/proc/<pid>/exe` points to the file that really runs, whatever the process calls itself. `systemctl status <pid>` names the unit that started it. Task 4 follows that trail.
+A service doesn't need a package to exist. An attacker who got root once often leaves a **backdoor**: a hidden way back in, such as a copied binary with an innocent name, started by a systemd unit so it survives a reboot. Three commands follow the trail:
 
-### Kernel modules
+1. `ss -tlnp` names the process and its PID.
+2. `/proc/<pid>/exe` points to the file that really runs, whatever the process calls itself.
+3. `systemctl status <pid>` names the unit that started it.
 
-The kernel loads modules on demand. A program that opens a socket for an unusual protocol, such as DCCP or TIPC, makes the kernel load that protocol's module, with all its code and its bugs. Several kernel exploits started exactly so. The CIS benchmark for Linux lists modules a server never needs and asks you to block them.
+In task 4, that trail led from a process called `sysmond` to `/usr/local/lib/.sysmon/sysmond`, a renamed copy of `socat` that handed a root shell to anybody on port 4444. `dpkg -S` found no package for it, which is a warning sign on its own.
 
-A file in `/etc/modprobe.d/` does it with two kinds of lines:
+**What this stops.** Removing services stops attacks on software the node never needed, and finding backdoors stops an attacker who already got in once from coming back.
+
+**Exam traps.** Disabling is not removing. Also check that the port is really closed afterwards with `ss -tlnp` again, because a socket-activated unit keeps listening even after you stop its service.
+
+## Concept: kernel modules
+
+The kernel is the one program every container shares, so its size matters most. The kernel loads **modules**, pieces of kernel code, on demand. A program that opens a socket for an unusual protocol, such as DCCP or TIPC, makes the kernel load that protocol's module, with all its code and its bugs. Any process on the node triggers such a load, including one inside a container. Several kernel exploits started exactly so: an old, rarely used network protocol with a bug, loaded by an unprivileged process that asked for it.
+
+The CIS benchmark for Linux lists modules a server never needs and asks you to block them. A file in `/etc/modprobe.d/` does it with two kinds of lines:
 
 | Line | Effect |
 |---|---|
 | `blacklist dccp` | stops loading by alias, for example when hardware or a socket asks for it. A direct `modprobe dccp` still works |
 | `install dccp /bin/false` | replaces the load command with one that fails. Every load fails, direct ones too |
 
-Use both. The file stops future loads only, so also unload a module that's already in: `modprobe -r dccp`. A module that something uses refuses to unload, and `lsmod` shows its users count in the third column. `modprobe -n -v dccp` shows what a load would do without doing it.
+Use both. The file stops future loads only, so also unload a module that's already in: `modprobe -r dccp`. `modprobe -n -v dccp` shows what a load would do without doing it.
 
 OrbStack machines share one kernel and may not load modules, so task 7 runs on the Lima VM.
 
-### Remote logins
+**What this stops.** A blocked module stops an unprivileged process from pulling buggy kernel code into the kernel that every pod shares.
 
-An exam node usually runs `sshd`, the SSH server. Two of its settings matter most. `PermitRootLogin no` stops direct root logins, so every admin logs in as themselves and the logs show who did what. `PasswordAuthentication no` leaves only keys, so guessing a password gets an attacker nowhere.
+**Exam traps.** A module that something uses refuses to unload, and `lsmod` shows its users count in the third column. In the test run, `sctp` had 8 users and stayed, which is why the task picks modules nobody uses. After the fix, a direct `modprobe tipc` failed with `Error running install command '/bin/false' for module tipc: retcode 1`.
 
-Ubuntu's `/etc/ssh/sshd_config` starts with `Include /etc/ssh/sshd_config.d/*.conf`, and for most settings sshd keeps the first value it reads. So a line in a drop-in file beats the same setting further down the main file. An edit to the main file that seems right changes nothing. `sshd -T` prints the configuration sshd really uses, and settles the question.
+## Concept: remote logins
 
-### Least privilege for people on the node
+An exam node usually runs `sshd`, the SSH server. It's the main door for people, so it's also the main door for password guessing. Two settings matter most:
 
-**Least privilege** means each user and each program gets the rights its job needs and nothing more. On a Linux node, the big right is `sudo`. Two places grant it on Ubuntu: membership in the `sudo` group, and files under `/etc/sudoers.d/`. A user who needs no root keeps the account but loses both. A user who left keeps the files for the audit trail, but the account gets locked with `passwd -l`.
+1. `PermitRootLogin no` stops direct root logins. Every admin logs in as themselves and uses `sudo`, so the logs show who did what.
+2. `PasswordAuthentication no` leaves only keys. A key is a long random secret that never crosses the network, so guessing gets an attacker nowhere.
 
-A kubeconfig file is also a key. `/etc/kubernetes/admin.conf` holds a client certificate for a cluster administrator, and Kubernetes has no revocation list, so nothing stops a client certificate before it expires. A copy in somebody's home folder or a backup folder stays a full admin key for up to a year. Delete every copy you find, and keep the node's own kubeconfig files readable by root only. In a real incident, you'd also rotate the certificate authority, which is beyond the exam.
+Ubuntu's `/etc/ssh/sshd_config` starts with `Include /etc/ssh/sshd_config.d/*.conf`, and for most settings sshd keeps the first value it reads. So a line in a drop-in file beats the same setting further down the main file.
 
-### Least privilege for the kubelet
+**What this stops.** These two lines stop password guessing against the node and stop anonymous root sessions that leave no trace of who acted.
 
-Every kubelet holds a client certificate for `system:node:<name>`, and every node stores it in `/var/lib/kubelet/pki/`. Anybody root on one node owns that identity. Two layers limit what it does:
+**Exam traps.** An edit to the main file that seems right changes nothing when a drop-in file sets the value first. In task 5, both lines came from `/etc/ssh/sshd_config.d/10-legacy.conf`. `sshd -T` prints the configuration sshd really uses, and settles the question. Test the syntax with `sshd -t` before a restart, so a typo doesn't lock you out.
 
-1. The **Node authorizer** lets a kubelet read only the objects its own pods need, and in 1.37 only its own Node object.
-2. The **NodeRestriction** admission plugin limits writes: a kubelet changes only its own Node and the pods bound to it, and never sets labels with the `node-restriction.kubernetes.io/` prefix.
+## Concept: people on the node
 
-That prefix exists for a reason. Admins use labels under it to steer sensitive workloads to trusted nodes. If a kubelet set such a label on itself, a compromised node would attract the very workloads meant to avoid it.
+On a Linux node, the big right is root, and `sudo` hands it out. Two places grant it on Ubuntu:
 
-The test run measured both layers. With NodeRestriction off, the kubelet of `cks-w1` still failed to touch `cks-cp`, because the Node authorizer refused the read first: `node 'cks-w1' cannot read 'cks-cp', only its own Node object`. But it set `node-restriction.kubernetes.io/cks=1` on itself without complaint. With NodeRestriction back, the same label failed: `is not allowed to modify labels: node-restriction.kubernetes.io/cks`.
+1. Membership in the `sudo` group.
+2. Files under `/etc/sudoers.d/`, which grant rights to single users, sometimes with `NOPASSWD:ALL`, meaning any command without a password.
+
+A user who needs no root keeps the account but loses both. Removing only one leaves the other working. A user who left keeps the files for the audit trail, but the account gets locked with `passwd -l`, so nobody logs in as them again.
+
+**What this stops.** Fewer root users means fewer accounts whose stolen password or key turns into root on a node, and from there into every container on it.
+
+**Exam traps.** In task 2, the group membership was the obvious grant and a `NOPASSWD:ALL` file in `/etc/sudoers.d/cks-dev` was the hidden one. `sudo -l -U cks-dev` shows the effective rights after the fix: the test run ended with `User cks-dev is not allowed to run sudo on cks-w1.`
+
+## Concept: kubeconfig files are keys
+
+A **kubeconfig** file tells kubectl where the API server is and how to log in. Many kubeconfig files embed a client certificate and its private key. Whoever holds the file is that user, from any machine that reaches the API server.
+
+`/etc/kubernetes/admin.conf` holds a client certificate for a cluster administrator. kubeadm also writes `super-admin.conf`, whose certificate sits in the group `system:masters`, a group that skips authorization entirely. Both belong on the control plane, readable by root only. A copy in somebody's home folder or a backup folder is a full admin key lying in the corridor.
+
+Kubernetes has no revocation list for client certificates. A revocation list is a list of certificates that a server refuses even though they haven't expired. Without one, nothing stops a leaked certificate before its expiry date, which kubeadm sets a year out. Deleting the leaked file stops the next person from finding it. It doesn't stop the person who already copied it.
+
+**What this stops.** Removing copies and tightening file modes stops a local user, a backup reader or a container with a `hostPath` mount from picking up cluster admin rights.
+
+**Exam traps.** In task 6, the setup's leaked file let user `cks-ops` answer `yes` to `kubectl auth can-i "*" "*"`. The search for `client-certificate-data` found two copies: `/home/cks-ops/.kube/config` and `/var/backups/k8s/admin.conf.bak`. The kubelet's own `kubelet.conf` points to certificate files instead of embedding them, so the same search skips it, and you fix its mode separately. In a real incident, you'd also rotate the cluster's certificate authority so the leaked certificate dies, which is beyond the exam.
+
+## Concept: a stolen kubelet identity
+
+Every kubelet holds a client certificate for the user `system:node:<name>` in the group `system:nodes`. It stores it in `/var/lib/kubelet/pki/`. The kubelet needs real rights: it reads the pods scheduled to its node, their Secrets and ConfigMaps, and writes their status. So anybody who is root on one node owns that identity, and with it the kubelet's rights.
+
+The question is how far those rights reach. Suppose every kubelet read every Secret in the cluster. Then one escaped container would read them all. Two layers stop that:
+
+![The kubelet's request passes the Node authorizer, which refuses objects of other nodes, and NodeRestriction, which refuses protected labels, before it reaches etcd](../../docs/diagrams/chapters/cks-node-limits.svg)
+
+1. The kubelet sends a request with its node certificate.
+2. The **Node authorizer** checks reads and writes against the node's own pods. A kubelet reads only the Secrets, ConfigMaps and volumes that pods on its own node use, and in 1.37 only its own Node object.
+3. The **NodeRestriction** admission plugin checks the object of every write. A kubelet changes only its own Node and the pods bound to it, and never sets labels with the `node-restriction.kubernetes.io/` prefix.
+
+The two layers split the work along the request chain from [domain 02](02-cluster-hardening.md#concept-one-request-six-steps). The Node authorizer works at step 2 and sees the verb and the target. NodeRestriction works at step 5 and sees the object's contents, such as which labels a Node update sets.
+
+The label prefix exists for a reason. Admins use labels under it to steer sensitive workloads to trusted nodes, with a nodeSelector or node affinity. If a kubelet set such a label on itself, a compromised node would attract the very workloads meant to avoid it.
+
+**What this stops.** Together, the two layers turn "root on one node" into "root on one node and the Secrets of the pods already there", instead of "every Secret in the cluster". They also stop a node from lying about itself to attract sensitive pods.
+
+**Exam traps.** The test run measured both layers. With NodeRestriction off, the kubelet of `cks-w1` still failed to touch `cks-cp`, because the Node authorizer refused the read first: `node 'cks-w1' cannot read 'cks-cp', only its own Node object`. That's why one check in task 3 passes even before the fix. But the kubelet set `node-restriction.kubernetes.io/cks=1` on itself without complaint. With NodeRestriction back, the same label failed: `is not allowed to modify labels: node-restriction.kubernetes.io/cks`. Also remove `AlwaysAdmit` when you find it, an old plugin that admits everything.
+
+## The bigger picture: defence in depth on the node
+
+No single control in this domain stops a determined attacker. Together they make each step costly. An attacker who escapes a container finds no extra services to abuse, no buggy kernel modules to load, no admin kubeconfig to pick up, no sudo rights for the account they stole, and a kubelet identity that reaches only its own node. Security people call that **defence in depth**: several independent layers, so one failure doesn't decide the outcome.
+
+Real platform teams go further than hand-tuning each node. They build node images with a minimal operating system, often one made only for containers, such as Talos, which has no package manager and no SSH at all. They replace nodes instead of patching them, so any backdoor dies with the old machine. And they log every sudo and SSH session centrally, so the record survives an attacker who wipes the node's own logs.
+
+## Why this way
+
+**Why remove packages instead of only stopping services?** A stopped service waits on disk for the next upgrade, reboot script or tired admin to start it again. A removed package is gone.
+
+**Why does Kubernetes split the kubelet's limits across two components?** Authorization sees the request, not the object. "Update Node cks-w1" looks the same whether it changes a status field or adds a protected label. Only admission reads the object, so the label rule has to live there.
+
+**Why not just revoke a leaked client certificate?** Kubernetes never built certificate revocation into the API server. Short-lived credentials, such as bound tokens and OIDC logins, avoid the problem, which is why production clusters keep long-lived client certificates for break-glass use only.
+
+**Why block kernel modules at all, if root on the node loads them anyway?** The block matters for processes that are not root, such as containers. Their socket calls trigger automatic loads, and the `install` line stops exactly that path.
 
 ## Task 1: Remove a service nobody needs
 

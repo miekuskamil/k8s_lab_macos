@@ -653,3 +653,77 @@ These terms come from the [CKS track](../certs/cks/README.md) in `certs/cks/`. E
 **Falco list, macro and override.** In a Falco rules file, a list names a set of values, a macro names a piece of condition, and a rule combines them. An `override` block in a later file replaces or extends one field of an existing rule, such as its priority. CKS 06.
 
 **Audit stage.** An audit stage is the point in a request at which the API server writes an audit event: `RequestReceived`, `ResponseStarted`, `ResponseComplete` or `Panic`. Count `ResponseComplete` lines to count requests. CKS 06.
+
+**Lateral movement.** Lateral movement is an attacker's step from the first place they broke into to the next one, such as from one pod to the database or to the node. Default-deny NetworkPolicies and least privilege make each step harder. CKS 01.
+
+**CNI agent (Felix).** A CNI agent is the per-node program of a CNI plugin that turns NetworkPolicies into packet filter rules in the node's kernel. Calico's agent is called Felix and writes iptables rules or eBPF programs. A CNI without such an agent, such as flannel alone, stores policies and enforces nothing. CKS 01.
+
+**Cilium security identity.** A security identity is a number that Cilium gives to every distinct set of pod labels. Its eBPF programs compare identities instead of IP lists, so a policy keeps working when pods move. CKS 01.
+
+**SSRF (server-side request forgery).** SSRF is an attack that tricks a server into fetching a URL the attacker chose. Aimed at the cloud metadata service, it hands the node's cloud credentials to the attacker. CKS 01.
+
+**Link-local address.** A link-local address, such as `169.254.169.254`, only exists on a machine's own network segment and never crosses a router. Clouds serve their metadata service on one. CKS 01.
+
+**Profiling endpoint.** A profiling endpoint, `/debug/pprof`, serves memory and thread details of a running Go program. The CIS benchmark asks for `--profiling=false` on the API server, controller manager and scheduler, because production never needs it. CKS 01.
+
+**TLS handshake.** The TLS handshake is the short negotiation at the start of a TLS connection: the client offers versions and cipher suites, the server picks one of each, sends its certificate, and both agree on keys. CKS 01.
+
+**Downgrade attack.** A downgrade attack makes two sides of a connection settle on an old protocol version or a weak cipher suite, which the attacker then breaks. A minimum TLS version on the server stops it. CKS 01.
+
+**Mutating and validating admission.** These are the two phases of admission control. Mutating admission controllers run first and may change the object, for example to add defaults. Validating admission controllers run after schema validation and only accept or refuse, so they judge the final object that etcd stores. Reads skip admission. CKS 02.
+
+**Authorizer and SubjectAccessReview.** An authorizer is one entry in the API server's `--authorization-mode` list: `Node`, `RBAC`, `Webhook`, `ABAC`, `AlwaysAllow` or `AlwaysDeny`. Each answers allow, deny or no opinion, and the first opinion wins. A SubjectAccessReview is the question "may this user do this?" sent as an object, which the kubelet and webhook authorizers use. CKS 02.
+
+**escalate, bind and impersonate.** These are the three RBAC verbs that unlock other rights. `escalate` lets a subject write a role with rights it lacks, `bind` lets it bind such a role, and `impersonate` lets it act as another user. Treat each as cluster admin. CKS 02.
+
+**TokenRequest API and token audience.** The TokenRequest API is the API server endpoint that mints a bound service account token on demand, with an expiry and a binding to one pod. The audience (`aud` claim) names the service that should accept the token, so a token minted for Vault fails against the Kubernetes API. CKS 02.
+
+**Mirror pod.** A mirror pod is the read-only copy of a static pod that the kubelet creates in the API server, so `kubectl get pods` shows it. Deleting or editing the mirror changes nothing: the manifest file on the node is the truth. CKS 02.
+
+**OIDC authentication.** OIDC (OpenID Connect) is a login standard that lets the API server trust tokens from a company identity provider. People then log in with their company account, and lose access when the company removes it. CKS 02.
+
+**Backdoor.** A backdoor is a hidden way back into a machine that an attacker leaves behind, such as a renamed binary started by a systemd unit. `/proc/<pid>/exe` shows the real file behind a process, whatever it calls itself. CKS 03.
+
+**Least privilege and defence in depth.** Least privilege means each user, program and credential gets only the rights its job needs. Defence in depth means several independent layers of protection, so one failure doesn't decide the outcome. CKS 03.
+
+**super-admin.conf and system:masters.** `system:masters` is a group that skips authorization entirely. kubeadm puts it only in `super-admin.conf`, and gives `admin.conf` a group with a normal ClusterRoleBinding instead. Both files stay on the control plane, readable by root only. CKS 03.
+
+**Linux capability.** A capability is one slice of root's power, such as `NET_ADMIN` (change network settings), `SYS_ADMIN` (mount and much more) or `NET_BIND_SERVICE` (listen below port 1024). `capabilities.drop: [ALL]` takes every slice away from a container. CKS 04.
+
+**securityContext and no_new_privs.** The securityContext is the part of a pod or container spec that sets its user, capabilities, privilege escalation, read-only root and seccomp profile. `allowPrivilegeEscalation: false` sets the kernel flag `no_new_privs`, so no child process gains rights, not even through a setuid binary such as `sudo`. CKS 04.
+
+**Namespaces and cgroups (Linux).** Linux namespaces give a process its own view of processes, network, mounts and host name. cgroups limit its CPU and memory. Together they make a container, but every container still shares the node's kernel. CKS 04.
+
+**Envelope encryption (KMS provider).** Envelope encryption encrypts data with a data encryption key (DEK) and encrypts that DEK with a key encryption key (KEK) held in an outside key service. The `kms` provider of an EncryptionConfiguration works this way, so the master key never sits on the control plane node. CKS 04.
+
+**Container escape.** A container escape is an attack that breaks out of a container's fences onto the node, usually through a kernel bug, a privileged pod or a `hostPath` mount. CKS 04.
+
+**gVisor Sentry and Kata Containers.** The Sentry is gVisor's user-space kernel: it answers a sandboxed container's syscalls itself and calls the host kernel with only a small set. Kata Containers takes the other route and runs each pod in a lightweight virtual machine with its own kernel. CKS 04.
+
+**Software supply chain.** The software supply chain is everything that touches code on its way from a developer's editor to a running pod: base images, packages, libraries, build systems and registries. CKS 05.
+
+**Image layer.** An image layer is one tar archive of files that a Dockerfile instruction added or changed. The runtime stacks the layers into one file system. A file deleted in a later layer still ships in the earlier one. CKS 05.
+
+**Distroless image and multi-stage build.** A distroless image holds only an app's runtime and libraries, with no shell, package manager or tools. A multi-stage build compiles in one stage and copies only the finished program into a minimal last stage, so build tools never ship. CKS 05.
+
+**Fixable and unfixable vulnerability.** A fixable finding has a newer package version that closes the bug, so a rebuild removes it. An unfixable one has no fix yet. `trivy --ignore-unfixed` hides the second kind. CKS 05.
+
+**Static analysis.** Static analysis checks a file without running it, such as kubesec or KubeLinter on a manifest, or hadolint on a Dockerfile. It runs earliest in the supply chain, where a fix is cheapest. CKS 05.
+
+**Fail closed and fail open.** These describe what a check does when it breaks. Fail closed refuses everything until the check works again. Fail open lets everything through. ImagePolicyWebhook's `defaultAllow: false` fails closed. CKS 05.
+
+**Keyless signing and transparency log.** Keyless signing with cosign uses a short-lived certificate tied to an identity, such as a CI login, instead of a long-lived key. The signature goes to a public transparency log, an append-only record anybody checks later. CKS 05.
+
+**Provenance and SLSA.** Provenance is a verifiable record of where an artifact came from and how it was built. SLSA (Supply-chain Levels for Software Artifacts) is a framework that grades how trustworthy that record is. CKS 05.
+
+**Prevention and detection.** Prevention blocks an action before it happens, as seccomp and AppArmor do. Detection notices an action and reports it, as Falco and audit logs do. Prevention needs you to know what to forbid; detection tolerates surprises but acts after the fact. CKS 06.
+
+**seccomp action.** A seccomp action is what the kernel does with a matching syscall: `SCMP_ACT_ALLOW` runs it, `SCMP_ACT_ERRNO` fails it with an error, `SCMP_ACT_KILL_PROCESS` kills the process, and `SCMP_ACT_LOG` runs and logs it. Without a profile, a pod runs `Unconfined` unless the kubelet sets `seccompDefault: true`. CKS 06.
+
+**AppArmor enforce and complain mode.** In enforce mode, an AppArmor profile blocks what its rules deny and logs it. In complain mode, it blocks nothing and only logs, which teams use to learn what an app does before they enforce. CKS 06.
+
+**Audit level and audit backend.** An audit level (`None`, `Metadata`, `Request`, `RequestResponse`) says how much of a request the API server records. The first policy rule that matches sets it. An audit backend writes the events: the log backend to a file, the webhook backend to an outside service. CKS 06.
+
+**Falco driver, priority and output.** Falco's driver is the kernel part that collects syscall events: the modern eBPF probe, an older eBPF probe, or a kernel module. A rule's priority ranges from `EMERGENCY` down to `DEBUG`. Outputs send alerts to standard output, a file, syslog, a program or HTTP, and Falcosidekick forwards them further. CKS 06.
+
+**Assume breach and SIEM.** Assume breach is the stance of planning as if an attacker is already inside, so you focus on limiting and seeing them. A SIEM (security information and event management system) is the central store where teams collect audit logs and alerts off the nodes. CKS 06.

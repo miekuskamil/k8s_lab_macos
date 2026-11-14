@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="640" viewBox="0 0 1800 640" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1800" height="640" fill="#1e1f24"/>
+<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
+<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">A kubelet&#x27;s</text>
+<rect x="293.7" y="26.0" width="229.4" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<text x="307.7" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">two limits</text>
+<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">The Node authorizer limits reads. NodeRestriction limits writes.</text>
+<rect x="60.0" y="206.0" width="320.0" height="110.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
+<rect x="60.0" y="200.0" width="320.0" height="110.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
+<rect x="60.0" y="308.0" width="320.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="100.0" cy="255.0" rx="16" ry="16" fill="none" stroke="#f5f5f7" stroke-width="3"/>
+<ellipse cx="100.0" cy="255.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<polyline points="100.0,234.0 100.0,241.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="100.0,269.0 100.0,276.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="79.0,255.0 86.0,255.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="114.0,255.0 121.0,255.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="138.0" y="247.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">kubelet</text>
+<text x="138.0" y="275.0" font-size="16" fill="#ffffffcc" text-anchor="start">system:node:cks-w1</text>
+<rect x="520.0" y="206.0" width="320.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="520.0" y="200.0" width="320.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="520.0" y="308.0" width="320.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="560.0,235.0 578.0,242.0 575.0,263.0 560.0,276.0 545.0,263.0 542.0,242.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="552.0,255.0 558.0,262.0 569.0,249.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="598.0" y="247.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Node authorizer</text>
+<text x="598.0" y="275.0" font-size="16" fill="#ffffffcc" text-anchor="start">which objects?</text>
+<rect x="980.0" y="206.0" width="320.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="980.0" y="200.0" width="320.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="980.0" y="308.0" width="320.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="1020.0,235.0 1038.0,242.0 1035.0,263.0 1020.0,276.0 1005.0,263.0 1002.0,242.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="1012.0,255.0 1018.0,262.0 1029.0,249.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1058.0" y="247.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">NodeRestriction</text>
+<text x="1058.0" y="275.0" font-size="16" fill="#ffffffcc" text-anchor="start">which changes?</text>
+<rect x="1440.0" y="206.0" width="300.0" height="110.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
+<rect x="1440.0" y="200.0" width="300.0" height="110.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
+<rect x="1440.0" y="308.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="1464.0" y="241.0" width="32.0" height="30.0" rx="2" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="1480.0" cy="241.0" rx="16" ry="6" fill="#1e1f24" stroke="#f5f5f7" stroke-width="2.2"/>
+<polyline points="1464.0,256.0 1496.0,256.0" fill="none" stroke="#f5f5f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1518.0" y="247.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">etcd</text>
+<text x="1518.0" y="275.0" font-size="16" fill="#ffffffcc" text-anchor="start">own Node, own pods</text>
+<polyline points="380.0,255.0 520.0,255.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="450.0" cy="255.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="450.0" y="262.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
+<text x="450.0" y="226.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">request</text>
+<polyline points="840.0,255.0 980.0,255.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="910.0" cy="255.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="910.0" y="262.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
+<text x="910.0" y="226.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">allowed</text>
+<polyline points="1300.0,255.0 1440.0,255.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="1370.0" cy="255.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1370.0" y="262.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
+<text x="1370.0" y="226.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">allowed</text>
+<rect x="520.0" y="440.0" width="320.0" height="90.0" rx="12" fill="#2a2b33" stroke="#e5484d" stroke-width="2.5"/>
+<rect x="540.0" y="483.0" width="28.0" height="22.0" rx="4" fill="#e5484d" stroke="#e5484d" stroke-width="2.5"/>
+<rect x="545.0" y="467.0" width="18.0" height="24.0" rx="9" fill="none" stroke="#e5484d" stroke-width="3"/>
+<ellipse cx="554.0" cy="494.0" rx="3" ry="3" fill="#1e1f24" stroke="#1e1f24" stroke-width="1"/>
+<text x="586.0" y="489.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">Other node</text>
+<rect x="980.0" y="440.0" width="320.0" height="90.0" rx="12" fill="#2a2b33" stroke="#e5484d" stroke-width="2.5"/>
+<rect x="1000.0" y="483.0" width="28.0" height="22.0" rx="4" fill="#e5484d" stroke="#e5484d" stroke-width="2.5"/>
+<rect x="1005.0" y="467.0" width="18.0" height="24.0" rx="9" fill="none" stroke="#e5484d" stroke-width="3"/>
+<ellipse cx="1014.0" cy="494.0" rx="3" ry="3" fill="#1e1f24" stroke="#1e1f24" stroke-width="1"/>
+<text x="1046.0" y="489.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">Protected label</text>
+<polyline points="680.0,310.0 680.0,440.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<text x="690.0" y="381.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="start">403</text>
+<polyline points="1140.0,310.0 1140.0,440.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<text x="1150.0" y="381.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="start">403</text>
+</svg>

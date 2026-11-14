@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="700" viewBox="0 0 1800 700" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1800" height="700" fill="#1e1f24"/>
+<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
+<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">The audit</text>
+<rect x="253.4" y="26.0" width="189.1" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<text x="267.4" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">pipeline</text>
+<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">Each request makes events. The policy picks a level. A backend keeps them.</text>
+<rect x="60.0" y="296.0" width="260.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="60.0" y="290.0" width="260.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="60.0" y="398.0" width="260.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="100.0" cy="335.0" rx="10" ry="10" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<rect x="84.0" y="348.0" width="32.0" height="19.0" rx="10" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<text x="138.0" y="337.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Request</text>
+<text x="138.0" y="365.0" font-size="16" fill="#ffffffcc" text-anchor="start">kubectl get</text>
+<rect x="420.0" y="170.0" width="480.0" height="460.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="660.0" y="158.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">API server</text>
+<rect x="450.0" y="210.0" width="420.0" height="80.0" rx="12" fill="#2a2b33" stroke="#7c3aed" stroke-width="2.5"/>
+<polygon points="470.0,230.0 490.0,230.0 500.0,240.0 500.0,270.0 470.0,270.0" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="477.0,248.0 493.0,248.0" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="477.0,256.0 493.0,256.0" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="477.0,264.0 488.0,264.0" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="516.0" y="254.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">RequestReceived</text>
+<rect x="450.0" y="320.0" width="420.0" height="80.0" rx="12" fill="#2a2b33" stroke="#7c3aed" stroke-width="2.5"/>
+<polygon points="470.0,340.0 490.0,340.0 500.0,350.0 500.0,380.0 470.0,380.0" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="477.0,358.0 493.0,358.0" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="477.0,366.0 493.0,366.0" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="477.0,374.0 488.0,374.0" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="516.0" y="364.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">ResponseStarted</text>
+<rect x="450.0" y="430.0" width="420.0" height="80.0" rx="12" fill="#2a2b33" stroke="#7c3aed" stroke-width="2.5"/>
+<polygon points="470.0,450.0 490.0,450.0 500.0,460.0 500.0,490.0 470.0,490.0" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="477.0,468.0 493.0,468.0" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="477.0,476.0 493.0,476.0" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="477.0,484.0 488.0,484.0" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="516.0" y="474.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">ResponseComplete</text>
+<text x="470.0" y="560.0" font-size="16" fill="#c9cbd3" text-anchor="start">Panic, only on a crash</text>
+<text x="470.0" y="583.0" font-size="16" fill="#c9cbd3" text-anchor="start">Started, only for watches</text>
+<polyline points="320.0,345.0 420.0,345.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="370.0" cy="345.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="370.0" y="352.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
+<rect x="1000.0" y="296.0" width="320.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="1000.0" y="290.0" width="320.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="1000.0" y="398.0" width="320.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="1026.0,325.0 1046.0,325.0 1056.0,335.0 1056.0,365.0 1026.0,365.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="1033.0,343.0 1049.0,343.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1033.0,351.0 1049.0,351.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1033.0,359.0 1044.0,359.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1078.0" y="337.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Audit policy</text>
+<text x="1078.0" y="365.0" font-size="16" fill="#ffffffcc" text-anchor="start">first match wins</text>
+<polyline points="900.0,345.0 1000.0,345.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="950.0" cy="345.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="950.0" y="352.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
+<rect x="1480.0" y="220.0" width="280.0" height="90.0" rx="12" fill="#2a2b33" stroke="#ea7a17" stroke-width="2.5"/>
+<polygon points="1500.0,245.0 1520.0,245.0 1530.0,255.0 1530.0,285.0 1500.0,285.0" fill="none" stroke="#ea7a17" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="1507.0,263.0 1523.0,263.0" fill="none" stroke="#ea7a17" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1507.0,271.0 1523.0,271.0" fill="none" stroke="#ea7a17" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1507.0,279.0 1518.0,279.0" fill="none" stroke="#ea7a17" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1546.0" y="269.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">Log file</text>
+<rect x="1480.0" y="400.0" width="280.0" height="90.0" rx="12" fill="#2a2b33" stroke="#ea7a17" stroke-width="2.5"/>
+<ellipse cx="1514.0" cy="445.0" rx="19" ry="19" fill="none" stroke="#ea7a17" stroke-width="2.5"/>
+<ellipse cx="1514.0" cy="445.0" rx="8" ry="19" fill="none" stroke="#ea7a17" stroke-width="2"/>
+<polyline points="1495.0,445.0 1533.0,445.0" fill="none" stroke="#ea7a17" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1546.0" y="449.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">Webhook</text>
+<polyline points="1320.0,345.0 1420.0,345.0 1420.0,265.0 1480.0,265.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="1370.0" cy="345.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1370.0" y="352.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
+<text x="1370.0" y="316.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">level</text>
+<polyline points="1420.0,345.0 1420.0,445.0 1480.0,445.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<text x="1010.0" y="450.0" font-size="16" fill="#c9cbd3" text-anchor="start">level None: dropped</text>
+</svg>

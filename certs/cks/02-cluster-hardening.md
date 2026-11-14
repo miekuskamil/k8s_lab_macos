@@ -6,15 +6,9 @@
 
 Every attack on a cluster ends at the API server. A stolen service account token, a forgotten anonymous binding or a known bug in an old version all turn into API calls that change something. This domain shrinks what each caller may do, repairs a control plane that a bad edit broke, and keeps the API server patched. It has 12 tasks and takes about 2 hours.
 
-## Theory: who may call the API, and with what power
+## The domain in one table
 
-A request passes three gates in order, as module 29 shows:
-
-1. Authentication decides who the caller is: a client certificate, a token, or nobody (`system:anonymous`).
-2. Authorization decides whether that caller may do this verb on this resource. kubeadm turns on the Node authorizer and RBAC.
-3. Admission decides whether the object is acceptable, and may change it.
-
-The tasks map onto those gates:
+Every request to the API server passes the same gates, and this domain changes each of them. The tasks map onto the gates like this:
 
 | Gate or job | Tasks |
 |---|---|
@@ -23,9 +17,99 @@ The tasks map onto those gates:
 | Admission, and a control plane that runs at all | 9, 10, 11 |
 | A patched API server | 4 |
 
-### RBAC: grant the verb, the resource, and sometimes the name
+The sections below follow one request through the gates, then look at the identities that pods carry, the static pods that run the control plane, and the upgrades that keep it patched.
 
-**RBAC** (role-based access control) has four objects. A Role lists permissions inside one namespace, and a ClusterRole lists them cluster-wide. A RoleBinding or ClusterRoleBinding hands a role to users, groups or service accounts. Permissions only add: no rule ever takes a right away.
+## Concept: one request, six steps
+
+The API server is the only door into the cluster's state. kubectl, controllers, kubelets and your own pods all go through it, and nothing writes to etcd any other way. So every security control for the API sits somewhere on the path of a single request.
+
+![A request passes authentication, authorization, mutating admission, schema validation and validating admission before the API server writes it to etcd](../../docs/diagrams/chapters/cks-api-chain.svg)
+
+A request that changes something passes six steps, in this order:
+
+1. **Authentication** finds out who the caller is. It fails with `401 Unauthorized`.
+2. **Authorization** decides whether that caller may do this verb on this resource. It fails with `403 Forbidden`.
+3. **Mutating admission** may change the object, for example add a default or inject a sidecar.
+4. **Schema validation** checks that the object is a well-formed object of its kind.
+5. **Validating admission** accepts or refuses the final object, but never changes it.
+6. The API server writes the object to etcd and answers the client.
+
+Think of an airport. Passport control checks who you are. The boarding pass decides whether you may board this flight. Security screening looks inside your bag, and may take something out. Only then do you board. A read, such as `get` or `list`, skips the admission steps, because it changes nothing.
+
+### Step 1: authentication
+
+Kubernetes has no user database. A "user" is whatever name a trusted credential carries. The API server tries each configured method in turn, and the first one that recognizes the credential wins:
+
+| Method | What the caller shows | Typical caller |
+|---|---|---|
+| Client certificate | a certificate signed by the cluster's CA. The common name (CN) becomes the user name, and each organization (O) becomes a group | kubelets, admins with a kubeconfig |
+| Service account token | a signed token (a JWT) for a ServiceAccount | pods |
+| OIDC token | a token from a company identity provider | people in a company with single sign-on |
+| Webhook | any token, checked by an outside service | special setups |
+
+When the request carries no credential at all, and **anonymous authentication** is on, the API server calls the caller `system:anonymous` in the group `system:unauthenticated`. A request with a wrong credential never becomes anonymous. It gets `401` at once.
+
+kubeadm leaves anonymous authentication on, because its health probes call `/livez`, `/readyz` and the startup endpoint without credentials. Out of the box, RBAC lets anonymous callers read only health and version endpoints. One careless ClusterRoleBinding to `system:anonymous` opens the cluster to everybody who reaches port 6443.
+
+Turning anonymous access off completely breaks the cluster in a slow way. The test run measured it:
+
+1. The kubelet restarts the API server, and the new process starts serving within seconds.
+2. The startup probe keeps failing with `HTTP probe failed with statuscode: 401`, so the pod stays `Ready: False`.
+3. After 24 failures, 10 seconds apart, the kubelet kills the API server. In the test run, that took 4 minutes, and the loop repeats forever.
+
+The **AuthenticationConfiguration** file fixes this. It keeps anonymous access only for named paths. The API server reads it from the `--authentication-config` flag. Think of a shop that lets anyone read the opening hours on the door, but lets nobody walk in without a badge.
+
+**What this stops.** A narrow anonymous rule stops a forgotten binding to `system:anonymous` from turning into a public read of the whole cluster. In the test run, the setup's binding gave an anonymous caller `200` on a list of pods. After the fix, the same request got `401`.
+
+**Exam traps.** Never set `--anonymous-auth` together with an `anonymous` block in the file. The API server exits at once with `--anonymous-auth flag cannot be set when anonymous field is configured in authentication configuration file`. And the file lives on the node, so the API server pod needs a `hostPath` volume and a mount for its folder.
+
+### Step 2: authorization
+
+Authorization takes the user, the groups, the verb, the resource and the namespace, and returns a verdict. The API server's `--authorization-mode` flag lists **authorizers** in order, and each one answers allow, deny, or "no opinion":
+
+| Authorizer | What it decides |
+|---|---|
+| `Node` | requests from kubelets: a kubelet may read only what its own pods need. [Domain 03](03-system-hardening.md#concept-a-stolen-kubelet-identity) explains it |
+| `RBAC` | everything else, from Roles and bindings stored in the cluster |
+| `Webhook` | asks an outside service with a SubjectAccessReview |
+| `ABAC` | an old file of policies, read at start. Nobody uses it any more |
+| `AlwaysAllow` | says yes to everything |
+| `AlwaysDeny` | says no to everything, for tests |
+
+The first authorizer with an opinion decides. When every authorizer says "no opinion", the answer is `403`. kubeadm sets `Node,RBAC`. RBAC never says "deny". It either finds a rule that allows the request or has no opinion. So in practice, a request passes when some rule allows it, and fails otherwise.
+
+`AlwaysAllow` has an opinion on everything: yes. With it, every authenticated caller does anything. Task 12 finds it on the practice cluster, where the setup printed `may the default ServiceAccount list every Secret? yes`.
+
+**What this stops.** Authorization stops an authenticated caller from doing more than its job. A stolen CI token that may only update one Deployment stays a stolen CI token, not a stolen cluster.
+
+**Exam traps.** Under `AlwaysAllow` alone, the API server turns anonymous access off by itself. In the test run, an anonymous request got `401`, and kubeadm's health probes got `401` too. The pod stayed `0/1`, and the kubelet restarted the API server after its 24 failed probes. So `AlwaysAllow` shows up as a restart loop, not only as an open door.
+
+### Steps 3 to 5: admission
+
+Authorization looks at the request: verb, resource, name. It never looks inside the object. A user allowed to create pods may create a privileged pod with the node's root folder mounted, and RBAC has nothing to say about it. **Admission control** closes that gap. An **admission controller** is a piece of code that sees the full object after authorization and before storage.
+
+Admission runs in two phases, so that checks see the final object:
+
+1. Mutating controllers run first. They change the object: set a default ServiceAccount, add a toleration, inject a sidecar.
+2. Schema validation checks the result.
+3. Validating controllers run last. They accept or refuse, and never change anything. Because they run after every mutation, they judge exactly what etcd will store.
+
+Kubernetes compiles some admission controllers into the API server, and `--enable-admission-plugins` turns them on. kubeadm adds `NodeRestriction`, and Kubernetes turns on a default set, including `ServiceAccount` and `PodSecurity`. Others live outside as **admission webhooks**: the API server sends the object to an HTTPS service and waits for its verdict. Kyverno works this way, and so does the back end behind the ImagePolicyWebhook of [domain 05](05-supply-chain-security.md#concept-admission-the-clusters-front-door), and the course's [module 26](../../platform-engineering/26-kyverno-policy-as-code.md#concept-where-kyverno-sits) shows one in action. A ValidatingAdmissionPolicy is a third kind: a rule written in the CEL expression language that the API server runs itself, with no webhook to call.
+
+**What this stops.** Admission stops dangerous objects that a caller may legally create: privileged pods, images from unknown registries, missing labels. It's the only gate that reads the object.
+
+## Concept: RBAC, the permission model
+
+**RBAC** (role-based access control) answers one question: may this subject do this verb on this resource? A subject is a user, a group or a ServiceAccount. RBAC has four objects:
+
+| Object | Scope | Job |
+|---|---|---|
+| Role | one namespace | lists permissions |
+| ClusterRole | the whole cluster | lists permissions, for cluster-wide resources or for reuse in many namespaces |
+| RoleBinding | one namespace | hands a Role or a ClusterRole to subjects, inside that namespace |
+| ClusterRoleBinding | the whole cluster | hands a ClusterRole to subjects, everywhere |
+
+Permissions only add. No rule ever takes a right away. A RoleBinding that points to a ClusterRole grants that role's rules only inside the binding's namespace, which lets one `pod-reader` ClusterRole serve fifty namespaces.
 
 A rule has three parts, and each one narrows the grant:
 
@@ -35,13 +119,15 @@ A rule has three parts, and each one narrows the grant:
 | `resources` | `pods` | `*`, which includes Secrets |
 | `resourceNames` | `report-key` | missing, which means every object of that kind |
 
-Two details trip people up. First, `list` on Secrets returns their contents, not only their names. So "may list secrets" equals "may read every secret". Second, `resourceNames` covers `get`, `update` and `delete` on the named object. It never covers `create`, and it covers a plain `list` or `watch` neither, because those requests name no single object.
+Three verbs deserve their own warning. `escalate` lets a subject write a Role with rights it doesn't hold itself. `bind` lets it bind roles it doesn't hold. `impersonate` lets it act as another user. RBAC refuses role edits that grant more than the editor holds, unless the editor has `escalate` or `bind`. So those two verbs are keys to every other right.
 
-`kubectl auth can-i` answers the question for any caller, without becoming that caller: `k auth can-i list secrets --as=system:serviceaccount:finance:reporter -n finance`.
+**What this stops.** Narrow RBAC stops a compromised workload or a leaked credential from reading Secrets, creating privileged pods or deleting namespaces it never needed.
+
+**Exam traps.** `list` on Secrets returns their contents, not only their names. So "may list secrets" equals "may read every secret". And `resourceNames` covers `get`, `update` and `delete` on the named object. It never covers `create`, and it covers a plain `list` or `watch` neither, because those requests name no single object. In task 1, the setup's Role failed three of seven checks, among them listing Secrets.
 
 ### Aggregated ClusterRoles
 
-Some ClusterRoles collect their rules from other ClusterRoles. Such a role has an `aggregationRule` with a label selector and no rules of its own. A controller in the controller manager finds every ClusterRole with a matching label and copies their rules in. The built-in `admin`, `edit` and `view` roles work this way: a ClusterRole labelled `rbac.authorization.k8s.io/aggregate-to-view: "true"` adds its rules to `view`.
+Some ClusterRoles collect their rules from other ClusterRoles. Such a role has an `aggregationRule` with a label selector and no rules of its own. A controller in the controller manager finds every ClusterRole with a matching label and copies their rules in. The built-in `admin`, `edit` and `view` roles work this way: a ClusterRole labelled `rbac.authorization.k8s.io/aggregate-to-view: "true"` adds its rules to `view`. That's how a CRD installer gives every viewer read access to its new resource without touching `view` itself.
 
 Two consequences matter:
 
@@ -50,26 +136,34 @@ Two consequences matter:
 
 ### Finding out who may do what
 
-`kubectl auth can-i` answers one question at a time. Two forms help in an investigation:
+`kubectl auth can-i` answers the question for any caller, without becoming that caller. It asks the API server's own authorizers, so the answer is exact. Two forms help in an investigation:
 
 ```bash
 k auth can-i get secrets -n kube-system --as=system:serviceaccount:apps:cleaner   # one verb, one caller
 k auth can-i --list -n apps --as=system:serviceaccount:apps:viewer                 # everything one caller may do
 ```
 
-`--list` prints a table of resources, resource names, non-resource URLs and verbs. It lists the rules that apply in the namespace you name, from Roles and ClusterRoles together. To find which binding grants a right, search the bindings for the subject: `k get rolebinding,clusterrolebinding -A -o wide | grep apps/cleaner`.
+`--list` prints a table of resources, resource names, non-resource URLs and verbs. It lists the rules that apply in the namespace you name, from Roles and ClusterRoles together. To find which binding grants a right, search the bindings for the subject: `k get rolebinding,clusterrolebinding -A -o wide | grep apps/cleaner`. In task 6, the culprit was a ClusterRoleBinding named `log-cleanup`, a harmless name for a role that may get, list and delete every Secret in the cluster.
 
-### Service account tokens
+## Concept: the identity every pod carries
 
-Every pod runs as a **service account**. Unless told otherwise, the kubelet mounts a short-lived token for that account into `/var/run/secrets/kubernetes.io/serviceaccount/`. Most applications never call the Kubernetes API, yet each one carries a key to it. An attacker who gets a shell in the pod picks up the key.
+Every pod runs as a **service account**, an identity for software instead of a person. Unless told otherwise, the kubelet mounts a token for that account into `/var/run/secrets/kubernetes.io/serviceaccount/`. Most applications never call the Kubernetes API, yet each one carries a key to it. An attacker who gets a shell in the pod picks up the key.
 
-Two settings remove it. `automountServiceAccountToken: false` on the ServiceAccount stops the mount for every pod that uses the account. The same field on a pod spec overrides the account's setting for that pod. Give each application its own account, too. Then a permission granted to one app never leaks to the others through the shared `default` account.
+### How tokens evolved
 
-### Bound tokens and legacy tokens
+Kubernetes has issued service account tokens in two ways, and both still appear in the exam.
 
-Kubernetes has issued two kinds of service account token over the years.
+The old way was the **legacy token**. A controller created a Secret of type `kubernetes.io/service-account-token` for every ServiceAccount, and pods mounted that Secret. The token had no audience and no expiry. Anybody who read the Secret once, from etcd, a backup or a `kubectl get secret -o yaml`, held a key that worked forever.
 
-A **bound token** comes from the TokenRequest API. It names an audience, the service that should accept it, and expires. Since 1.22 every pod gets one through a **projected volume**: a volume that the kubelet fills with a fresh token and renews before it expires. `kubectl create token <sa> --audience=vault --duration=2h` asks for one by hand. A pod asks for an extra one, for another audience, with a `serviceAccountToken` source in a projected volume:
+The new way is the **bound token**, issued by the **TokenRequest API**. The API server mints a token on demand, signs it, and writes three limits into it:
+
+1. An **audience**: the service that should accept the token. The Kubernetes API server accepts only tokens whose audience is its own.
+2. An **expiry**: a time after which the token stops working.
+3. A **binding** to one pod: when somebody deletes the pod, the token stops working too, even before it expires.
+
+Since 1.22, every pod gets a bound token through a **projected volume**: a volume that the kubelet fills with a fresh token and renews before it expires. The kubelet renews the token once it's older than 80 percent of its lifetime, or older than 24 hours. Kubernetes stopped creating legacy token Secrets by itself in 1.24, and since 1.30 a controller labels, invalidates and finally deletes legacy tokens nobody used for a year.
+
+`kubectl create token <sa> --audience=vault --duration=2h` asks for a bound token by hand. A pod asks for an extra one, for another audience, with a `serviceAccountToken` source in a projected volume:
 
 ```yaml
   volumes:
@@ -82,33 +176,34 @@ A **bound token** comes from the TokenRequest API. It names an audience, the ser
           path: token
 ```
 
-The audience protects you from a replay. A token minted for Vault carries `aud: ["vault"]`, so the Kubernetes API server refuses it, and a stolen Vault token gets the thief nothing in the cluster.
+The audience protects you from a replay, which means reusing a stolen token somewhere else. A token minted for Vault carries `aud: ["vault"]`, so the Kubernetes API server refuses it, and a stolen Vault token gets the thief nothing in the cluster. In task 7, the claims held `"aud":["vault"]`, and `exp` minus `iat` was exactly 7200 seconds.
 
-A **legacy token** lives in a Secret of type `kubernetes.io/service-account-token`. It has no audience and never expires. Kubernetes stopped creating these Secrets by itself in 1.24, but old clusters and old Helm charts still carry them. Since 1.30, the API server labels each one with `kubernetes.io/legacy-token-last-used` when it authenticates, and the LegacyServiceAccountTokenCleanUp controller marks a token unused for a year as invalid and later deletes it. A year is a long time to wait. Deleting the Secret makes the token stop working at once:
+### Two settings that shrink the risk
 
-```bash
-k get secrets -A --field-selector type=kubernetes.io/service-account-token
-```
+`automountServiceAccountToken: false` on the ServiceAccount stops the mount for every pod that uses the account. The same field on a pod spec overrides the account's setting for that pod. Give each application its own account, too. Then a permission granted to one app never leaks to the others through the shared `default` account.
 
-### Anonymous requests
+**What this stops.** No token in the pod means nothing for an attacker to steal. Bound tokens mean a stolen token dies with its pod and its expiry, and never works against a service it wasn't minted for.
 
-kubeadm leaves anonymous authentication on. A request without credentials becomes the user `system:anonymous` in the group `system:unauthenticated`. Out of the box, RBAC lets that user read only health and version endpoints. One careless ClusterRoleBinding to `system:anonymous` opens the cluster to the internet.
+**Exam traps.** A legacy token keeps working until somebody deletes its Secret. In task 8, the setup's legacy token answered `200`, and after the delete it got `401` 8 seconds later, once the API server's token cache expired. Find them all with `k get secrets -A --field-selector type=kubernetes.io/service-account-token`. And the API server's `--service-account-extend-token-expiration`, on by default, stretches the tokens that pods get to a year, which kube-bench flags in [domain 01](01-cluster-setup.md#concept-a-checklist-for-the-control-plane).
 
-Turning anonymous access off completely breaks the cluster in a slow way. The test run measured it. kubeadm's probes for the API server call `/livez`, `/readyz` and the startup endpoint without credentials. With anonymous access off, they get `401`:
+## Concept: static pods and control plane repair
 
-1. The kubelet restarts the API server, and the new process starts serving within seconds.
-2. The startup probe keeps failing with `HTTP probe failed with statuscode: 401`, so the pod stays `Ready: False`.
-3. After 24 failures, 10 seconds apart, the kubelet kills the API server. In the test run, that took 4 minutes, and the loop repeats forever.
+A kubeadm cluster runs its own control plane as pods. That raises a puzzle: pods need the API server, and the API server is a pod. **Static pods** solve it. A static pod is a pod that the kubelet starts from a YAML file on its own disk, with no API server involved.
 
-The **AuthenticationConfiguration** file fixes this. It lets you keep anonymous access only for named paths. The API server reads it from the `--authentication-config` flag. Think of a shop that lets anyone read the opening hours on the door, but lets nobody walk in without a badge.
+![You edit a manifest, the kubelet reads the folder and asks containerd to start the container, the container writes logs to /var/log/pods, and you read them with crictl](../../docs/diagrams/chapters/cks-static-pod-loop.svg)
 
-### Authorization modes
+The loop has six steps:
 
-The API server's `--authorization-mode` flag lists the authorizers in order, and kubeadm sets `Node,RBAC`. The first authorizer with an opinion decides. `AlwaysAllow` has an opinion on everything: yes. With it, every authenticated caller, and with anonymous access on every stranger too, does anything. Task 12 finds it on the practice cluster.
+1. You edit a file in `/etc/kubernetes/manifests`, for example `kube-apiserver.yaml`.
+2. The kubelet watches that folder and notices the change.
+3. The kubelet stops the old container and asks containerd, the container runtime, to start a new one.
+4. containerd runs the container with the new flags.
+5. The container writes its output to `/var/log/pods/`.
+6. You read that output with `crictl`, a command-line tool that talks to the container runtime directly.
 
-### When a static pod doesn't come back
+The kubelet also creates a **mirror pod** in the API server for each static pod, so `kubectl get pods -n kube-system` shows it. The mirror is only a reflection. Deleting it with `kubectl` doesn't stop the container, and `kubectl edit` on it changes nothing. The file is the truth. To stop a static pod, move its file out of the folder. To restart it without a change, move the file out and back.
 
-Most tasks in this track edit a file in `/etc/kubernetes/manifests`. One wrong character, and the component doesn't start. When the API server is the one that's down, `kubectl` fails too, so the tools come from the node:
+This design is why control plane repair works the way it does. When the API server is down, `kubectl` fails too, so the tools come from the node:
 
 1. `crictl ps -a --name kube-apiserver` lists the containers, the exited ones too. A container that keeps exiting points to a bad flag or a missing file.
 2. `crictl logs <container id>` prints that container's last words. They name the problem almost every time.
@@ -124,19 +219,60 @@ A broken scheduler or controller manager hides better, because `kubectl` keeps w
 | kube-scheduler | new pods stay `Pending` with no events |
 | kube-controller-manager | a new Deployment gets no ReplicaSet, so no pods appear at all |
 
-### Upgrades
+**Exam traps.** Back up a manifest outside the folder, never as `kube-apiserver.yaml.bak` inside it, because the kubelet reads every file there. A new flag that names a file needs a `volumeMount` and a `hostPath` volume too, or the API server exits with "no such file". And give the kubelet up to a minute: in the test run, the API server answered again within a minute of a manifest change.
 
-Each Kubernetes minor release gets patches for about 14 months. A patch release such as 1.37.2 fixes bugs and security holes without changing APIs, so patch upgrades are cheap and urgent. kubeadm upgrades one node at a time, control plane first, and keeps the kubelet's version skew rule: a kubelet must never be newer than the API server.
+## Concept: upgrades and version skew
 
-The order on each node is the same:
+A known security bug in the API server gets a CVE number, a fix and a public write-up. From that day, attackers know exactly what to try against clusters that didn't upgrade. So keeping up with patch releases is a security control, not housekeeping.
+
+Each Kubernetes minor release, such as 1.37, gets patches for about 14 months. A patch release such as 1.37.2 fixes bugs and security holes without changing APIs, so patch upgrades are cheap and urgent. Minor upgrades go one minor at a time: from 1.36 to 1.37, never from 1.35 straight to 1.37.
+
+The components may run different versions for a while, within the **version skew** rules:
+
+| Component | Allowed versions, compared with the API server |
+|---|---|
+| kube-controller-manager, kube-scheduler | the same, or one minor older |
+| kubelet, kube-proxy | the same, or up to three minors older. Never newer |
+| kubectl | one minor older, the same, or one minor newer |
+
+That's why kubeadm upgrades the control plane first: the rules allow a newer API server with older kubelets, never the other way round.
+
+kubeadm upgrades one node at a time, in the same order on each node:
 
 1. Upgrade the `kubeadm` package.
-2. Run `kubeadm upgrade apply` on the first control plane node, or `kubeadm upgrade node` on every other node.
-3. Drain the node.
+2. Run `kubeadm upgrade apply` on the first control plane node, or `kubeadm upgrade node` on every other node. `kubeadm upgrade plan` shows the target versions first.
+3. Drain the node, so its pods move elsewhere.
 4. Upgrade the `kubelet` and `kubectl` packages and restart the kubelet.
-5. Uncordon the node.
+5. Uncordon the node, so it accepts pods again.
 
-The test run found a trap. `kubeadm upgrade apply` rewrites every static pod manifest from the cluster's stored kubeadm configuration. Flags you added by hand disappear. After the upgrade, `--profiling=false` from domain 01 and `--authentication-config` from task 3 were gone, and an anonymous request for pods got `403` again instead of `401`. To make a flag survive upgrades, add it to the `kubeadm-config` ConfigMap in `kube-system` under `apiServer.extraArgs`, with `extraVolumes` for any file it reads.
+`kubeadm upgrade apply` rewrites every static pod manifest and renews the control plane certificates. Before a minor upgrade, also point the package source at the new minor's repository on `pkgs.k8s.io`, because each minor has its own.
+
+**What this stops.** Patching stops attacks that use published bugs, which are the cheapest attacks there are.
+
+**Exam traps.** The test run found the biggest trap of this domain. `kubeadm upgrade apply` rewrites every static pod manifest from the cluster's stored kubeadm configuration, and flags you added by hand disappear. After the upgrade, `--profiling=false` from domain 01 and `--authentication-config` from task 3 were gone, and an anonymous request for pods got `403` again instead of `401`. To make a flag survive upgrades, add it to the `kubeadm-config` ConfigMap in `kube-system` under `apiServer.extraArgs`, with `extraVolumes` for any file it reads. Also keep the packages on hold with `apt-mark hold`, so a routine `apt-get upgrade` never moves the kubelet past the API server.
+
+## The bigger picture: the API is the cluster
+
+Every attack on a cluster ends at the API server. A stolen token, a forgotten anonymous binding, a pod that may create privileged pods, or a known bug in an old version all turn into API calls that change something. The gates in this domain give defenders four separate chances to stop such a call:
+
+1. Authentication rejects credentials that are fake, expired or minted for another audience.
+2. Authorization rejects callers who hold a real credential with too little right.
+3. Admission rejects objects that are dangerous even for a caller with the right.
+4. Patching removes bugs that would skip all three.
+
+Real platform teams rarely hand out client certificates to people. They connect the API server to the company's identity provider with OIDC, so a person who leaves the company loses access the same day. They give each workload its own ServiceAccount with a narrow Role, review RBAC with tools that list who may read Secrets, and upgrade on a schedule with the flags stored in the kubeadm configuration, not in the manifests.
+
+## Why this way
+
+**Why does Kubernetes have no user database?** Companies already have one. Kubernetes trusts certificates and tokens from systems that manage people, and only stores what those people may do. A user database inside every cluster would drift out of date the day somebody leaves.
+
+**Why does RBAC have no deny rule?** An allow-only model has one simple answer to "why may this caller do this?": find the rule that allows it. Deny rules create order problems, where the outcome depends on which rule wins. Kubernetes keeps deny decisions for admission and for authorizer webhooks.
+
+**Why does admission run after authorization?** Admission reads the whole object, which costs more than reading the verb and resource. Running it only for callers who may make the request saves that work, and keeps strangers from probing admission webhooks.
+
+**Why do static pods exist at all?** Something has to start the API server before there is an API server. The kubelet already knows how to run pods, so kubeadm hands it files instead of objects. The price is that the files on the node, not the API, are the source of truth for the control plane.
+
+**Why bound tokens instead of a better Secret?** A Secret is a stored value, and stored values leak through backups, logs and over-broad RBAC. The API server mints a bound token for one pod and one audience, and it expires on its own, so a leak has a short life.
 
 ## Task 1: Trim an over-broad Role
 
