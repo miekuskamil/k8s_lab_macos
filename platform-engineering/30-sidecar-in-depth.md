@@ -107,53 +107,75 @@ Ambient mode attacks the same problem from another side. ztunnel holds only the 
 
 ### 1. Look at the four webhooks
 
-```bash
-kubectl get mutatingwebhookconfiguration istio-sidecar-injector \
+```console
+$ kubectl get mutatingwebhookconfiguration istio-sidecar-injector \
   -o jsonpath='{range .webhooks[*]}{.name}{"\n  ns:  "}{.namespaceSelector.matchExpressions}{"\n  pod: "}{.objectSelector.matchExpressions}{"\n"}{end}'
-```
-
-**What you should see.** Four webhooks, each with a namespace selector and a pod selector. The first one, shortened:
-
-```text
 rev.namespace.sidecar-injector.istio.io
   ns:  [{"key":"istio.io/rev","operator":"In","values":["default"]},{"key":"istio-injection","operator":"DoesNotExist"}]
   pod: [{"key":"sidecar.istio.io/inject","operator":"NotIn","values":["false"]}]
+rev.object.sidecar-injector.istio.io
+  ns:  [{"key":"istio.io/rev","operator":"DoesNotExist"},{"key":"istio-injection","operator":"DoesNotExist"}]
+  pod: [{"key":"sidecar.istio.io/inject","operator":"NotIn","values":["false"]},{"key":"istio.io/rev","operator":"In","values":["default"]}]
+namespace.sidecar-injector.istio.io
+  ns:  [{"key":"istio-injection","operator":"In","values":["enabled"]}]
+  pod: [{"key":"sidecar.istio.io/inject","operator":"NotIn","values":["false"]}]
+object.sidecar-injector.istio.io
+  ns:  [{"key":"istio-injection","operator":"DoesNotExist"},{"key":"istio.io/rev","operator":"DoesNotExist"}]
+  pod: [{"key":"sidecar.istio.io/inject","operator":"In","values":["true"]},{"key":"istio.io/rev","operator":"DoesNotExist"}]
 ```
+
+**What you should see.** Four webhooks, each with a namespace selector and a pod selector.
 
 The four match the table in the first concept section. All four point at the same istiod Service. They differ only in who they catch.
 
 ### 2. Label a namespace, then restart its pods
 
-```bash
-kubectl apply -f platform-engineering/manifests/30-apps.yaml
-kubectl -n course-proxy rollout status deploy/client
-kubectl label namespace course-proxy istio-injection=enabled
-kubectl -n course-proxy get pods
-istioctl x check-inject -n course-proxy deploy/httpbin
-```
+```console
+$ kubectl apply -f platform-engineering/manifests/30-apps.yaml
+namespace/course-proxy created
+serviceaccount/httpbin created
+serviceaccount/client created
+deployment.apps/httpbin created
+service/httpbin created
+deployment.apps/client created
 
-**What you should see.** The pods show `1/1` both before and after the label:
+$ kubectl -n course-proxy rollout status deploy/client
+deployment "client" successfully rolled out
 
-```text
+$ kubectl label namespace course-proxy istio-injection=enabled
+namespace/course-proxy labeled
+
+$ kubectl -n course-proxy get pods
 NAME                      READY   STATUS    RESTARTS   AGE
-client-57854fb759-md2b5   1/1     Running   0          2s
-httpbin-fb884c77d-5nmf5   1/1     Running   0          2s
-```
+client-57854fb759-7wzht   1/1     Running   0          17s
+httpbin-fb884c77d-tq667   1/1     Running   0          17s
 
-`check-inject` says the next pod will get a sidecar, and why:
-
-```text
+$ istioctl x check-inject -n course-proxy deploy/httpbin
 WEBHOOK                 REVISION  INJECTED      REASON
 istio-sidecar-injector  default   ✔             Namespace label istio-injection=enabled matches
 ```
 
+**What you should see.** The pods show `1/1` both before and after the label.
+
+`check-inject` says the next pod will get a sidecar, and why.
+
 The label only affects pods created from now on. Restart the Deployments:
 
-```bash
-kubectl -n course-proxy rollout restart deploy
-kubectl -n course-proxy rollout status deploy/client
-kubectl -n course-proxy get pods
-kubectl -n course-proxy get pod -l app=client -o jsonpath='{.items[0].metadata.annotations.sidecar\.istio\.io/status}{"\n"}'
+```console
+$ kubectl -n course-proxy rollout restart deploy
+deployment.apps/client restarted
+deployment.apps/httpbin restarted
+
+$ kubectl -n course-proxy rollout status deploy/client
+deployment "client" successfully rolled out
+
+$ kubectl -n course-proxy get pods
+NAME                       READY   STATUS    RESTARTS   AGE
+client-5d5c9576c7-ngbkf    2/2     Running   0          23s
+httpbin-69c6848488-qqptt   2/2     Running   0          23s
+
+$ kubectl -n course-proxy get pod -l app=client -o jsonpath='{.items[0].metadata.annotations.sidecar\.istio\.io/status}{"\n"}'
+{"initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["workload-socket","credential-socket","workload-certs","istio-envoy","istio-data","istio-podinfo","istio-token","istiod-ca-cert"],"imagePullSecrets":null,"revision":"default"}
 ```
 
 **What you should see.** New pods with `2/2`. The annotation `sidecar.istio.io/status` is the injector's receipt. It lists what it added: `"initContainers":["istio-init"],"containers":["istio-proxy"]`, eight volumes, and `"revision":"default"`.
@@ -162,28 +184,45 @@ kubectl -n course-proxy get pod -l app=client -o jsonpath='{.items[0].metadata.a
 
 Each pod below tests one row of the webhook table. Run them in order, because the namespace labels change in between:
 
-```bash
-kubectl -n course-proxy run opt-out-label --image=curlimages/curl:8.11.1 \
+```console
+$ kubectl -n course-proxy run opt-out-label --image=curlimages/curl:8.11.1 \
   --labels=sidecar.istio.io/inject=false --command -- sleep infinity
-kubectl -n course-proxy run opt-out-annotation --image=curlimages/curl:8.11.1 \
+pod/opt-out-label created
+
+$ kubectl -n course-proxy run opt-out-annotation --image=curlimages/curl:8.11.1 \
   --annotations=sidecar.istio.io/inject=false --command -- sleep infinity
-kubectl label namespace course-proxy istio-injection-
-kubectl label namespace course-proxy istio.io/rev=default
-kubectl -n course-proxy run by-revision --image=curlimages/curl:8.11.1 --command -- sleep infinity
-kubectl label namespace course-proxy istio-injection=disabled
-kubectl -n course-proxy run disabled-wins --image=curlimages/curl:8.11.1 --command -- sleep infinity
-kubectl label namespace course-proxy istio.io/rev- istio-injection-
-kubectl -n course-proxy run no-label --image=curlimages/curl:8.11.1 --command -- sleep infinity
-kubectl -n course-proxy run opt-in --image=curlimages/curl:8.11.1 \
+pod/opt-out-annotation created
+
+$ kubectl label namespace course-proxy istio-injection-
+namespace/course-proxy unlabeled
+
+$ kubectl label namespace course-proxy istio.io/rev=default
+namespace/course-proxy labeled
+
+$ kubectl -n course-proxy run by-revision --image=curlimages/curl:8.11.1 --command -- sleep infinity
+pod/by-revision created
+
+$ kubectl label namespace course-proxy istio-injection=disabled
+namespace/course-proxy labeled
+
+$ kubectl -n course-proxy run disabled-wins --image=curlimages/curl:8.11.1 --command -- sleep infinity
+pod/disabled-wins created
+
+$ kubectl label namespace course-proxy istio.io/rev- istio-injection-
+namespace/course-proxy unlabeled
+
+$ kubectl -n course-proxy run no-label --image=curlimages/curl:8.11.1 --command -- sleep infinity
+pod/no-label created
+
+$ kubectl -n course-proxy run opt-in --image=curlimages/curl:8.11.1 \
   --labels=sidecar.istio.io/inject=true --command -- sleep infinity
-kubectl label namespace course-proxy istio-injection=enabled
-kubectl -n course-proxy get pod opt-out-label opt-out-annotation by-revision disabled-wins no-label opt-in \
+pod/opt-in created
+
+$ kubectl label namespace course-proxy istio-injection=enabled
+namespace/course-proxy labeled
+
+$ kubectl -n course-proxy get pod opt-out-label opt-out-annotation by-revision disabled-wins no-label opt-in \
   -o custom-columns='NAME:.metadata.name,CONTAINERS:.spec.containers[*].name'
-```
-
-**What you should see.**
-
-```text
 NAME                 CONTAINERS
 opt-out-label        opt-out-label
 opt-out-annotation   opt-out-annotation
@@ -193,7 +232,7 @@ no-label             no-label
 opt-in               opt-in,istio-proxy
 ```
 
-Each line matches a rule from the concept section:
+**What you should see.** Each line matches a rule from the concept section:
 
 1. The label and the annotation both keep the sidecar out.
 2. `istio.io/rev=default` injects on its own.
@@ -202,37 +241,42 @@ Each line matches a rule from the concept section:
 
 Now ask `check-inject` about the two opt-out pods:
 
-```bash
-istioctl x check-inject -n course-proxy opt-out-label
-istioctl x check-inject -n course-proxy opt-out-annotation
-kubectl -n course-proxy delete pod opt-out-label opt-out-annotation by-revision disabled-wins no-label opt-in --wait=false
+```console
+$ istioctl x check-inject -n course-proxy opt-out-label
+WEBHOOK                 REVISION  INJECTED      REASON
+istio-sidecar-injector  default   ✘             Pod has sidecar.istio.io/inject=false label, preventing injection
+
+$ istioctl x check-inject -n course-proxy opt-out-annotation
+WEBHOOK                 REVISION  INJECTED      REASON
+istio-sidecar-injector  default   ✔             Namespace label istio-injection=enabled matches
+
+$ kubectl -n course-proxy delete pod opt-out-label opt-out-annotation by-revision disabled-wins no-label opt-in --wait=false
+pod "opt-out-label" deleted
+pod "opt-out-annotation" deleted
+pod "by-revision" deleted
+pod "disabled-wins" deleted
+pod "no-label" deleted
+pod "opt-in" deleted
 ```
 
 **What you should see.** The label case shows `✘` with `Pod has sidecar.istio.io/inject=false label, preventing injection`. The annotation case shows `✔` with `Namespace label istio-injection=enabled matches`, although that pod has no sidecar. `check-inject` reads only the webhook selectors, and the annotation lives one level deeper, inside istiod. Prefer the label: the API server then skips the webhook call entirely, and tools report the truth.
 
 ### 4. Read the iptables rules inside the pod
 
-```bash
-kubectl -n course-proxy get pod -l app=client -o jsonpath='{.items[0].spec.initContainers[0].args}{"\n"}'
-NODE=k3d-k8s-lab-server-0
-POD=$(kubectl -n course-proxy get pod -l app=client -o jsonpath='{.items[0].metadata.name}')
-CID=$(docker exec $NODE crictl ps --name curl --label io.kubernetes.pod.name=$POD -q)
-PID=$(docker exec $NODE crictl inspect --output go-template --template '{{.info.pid}}' $CID)
-docker exec $NODE nsenter -t $PID -n iptables-save -t nat | tail -2
-docker exec $NODE nsenter -t $PID -n iptables-legacy-save -t nat | grep -E '^-A'
-```
-
-The middle lines find the app container's process ID, the same way module 29 did. `nsenter -n` then runs iptables inside that process's network namespace.
-
-**What you should see.** First the arguments from the concept table:
-
-```text
+```console
+$ kubectl -n course-proxy get pod -l app=client -o jsonpath='{.items[0].spec.initContainers[0].args}{"\n"}'
 ["istio-iptables","-p","15001","-z","15006","-u","1337","-m","REDIRECT","-i","*","-x","","-b","*","-d","15090,15021,15020","--log_output_level=default:info"]
-```
 
-Then a surprise. `iptables-save` shows an empty NAT table and a warning: `iptables-legacy tables present, use iptables-legacy-save to see them`. Linux has two iptables back ends, the older legacy one and the newer nftables one. `istio-init` in Istio 1.24 picked legacy, while the node's own tools default to nftables. So the rules exist, but in the other back end. `iptables-legacy-save` shows them:
+$ NODE=k3d-k8s-lab-server-0
+$ POD=$(kubectl -n course-proxy get pod -l app=client -o jsonpath='{.items[0].metadata.name}')
+$ CID=$(docker exec $NODE crictl ps --name curl --label io.kubernetes.pod.name=$POD -q)
+$ PID=$(docker exec $NODE crictl inspect --output go-template --template '{{.info.pid}}' $CID)
+$ docker exec $NODE nsenter -t $PID -n iptables-save -t nat | tail -2
+# Warning: iptables-legacy tables present, use iptables-legacy-save to see them
+COMMIT
+# Completed on Sat Nov 14 23:23:18 2026
 
-```text
+$ docker exec $NODE nsenter -t $PID -n iptables-legacy-save -t nat | grep -E '^-A'
 -A PREROUTING -p tcp -j ISTIO_INBOUND
 -A OUTPUT -p tcp -j ISTIO_OUTPUT
 -A ISTIO_INBOUND -p tcp -m tcp --dport 15008 -j RETURN
@@ -245,11 +289,19 @@ Then a surprise. `iptables-save` shows an empty NAT table and a warning: `iptabl
 -A ISTIO_OUTPUT ! -d 127.0.0.1/32 -o lo -p tcp -m tcp ! --dport 15008 -m owner --uid-owner 1337 -j ISTIO_IN_REDIRECT
 -A ISTIO_OUTPUT -o lo -m owner ! --uid-owner 1337 -j RETURN
 -A ISTIO_OUTPUT -m owner --uid-owner 1337 -j RETURN
-...
+-A ISTIO_OUTPUT ! -d 127.0.0.1/32 -o lo -p tcp -m tcp ! --dport 15008 -m owner --gid-owner 1337 -j ISTIO_IN_REDIRECT
+-A ISTIO_OUTPUT -o lo -m owner ! --gid-owner 1337 -j RETURN
+-A ISTIO_OUTPUT -m owner --gid-owner 1337 -j RETURN
 -A ISTIO_OUTPUT -d 127.0.0.1/32 -j RETURN
 -A ISTIO_OUTPUT -j ISTIO_REDIRECT
 -A ISTIO_REDIRECT -p tcp -j REDIRECT --to-ports 15001
 ```
+
+The middle lines find the app container's process ID, the same way module 29 did. `nsenter -n` then runs iptables inside that process's network namespace.
+
+**What you should see.** First the arguments from the concept table.
+
+Then a surprise. `iptables-save` shows an empty NAT table and a warning: `iptables-legacy tables present, use iptables-legacy-save to see them`. Linux has two iptables back ends, the older legacy one and the newer nftables one. `istio-init` in Istio 1.24 picked legacy, while the node's own tools default to nftables. So the rules exist, but in the other back end. `iptables-legacy-save` shows them, as the last command above prints.
 
 Read it in the diagram's order:
 
@@ -263,13 +315,32 @@ Read it in the diagram's order:
 
 Some traffic shouldn't pass through Envoy. A database driver with its own TLS is a common example. The annotation `traffic.sidecar.istio.io/excludeOutboundPorts` tells `istio-init` to leave those ports alone. First check what httpbin sees today, then add the annotation:
 
-```bash
-kubectl -n course-proxy exec deploy/client -c curl -- curl -s http://httpbin:8000/headers | grep -oE '"(X-Forwarded-Client-Cert|X-Envoy-Attempt-Count)"'
-cat platform-engineering/manifests/30-exclude-port.yaml
-kubectl -n course-proxy patch deploy client --patch-file platform-engineering/manifests/30-exclude-port.yaml
-kubectl -n course-proxy rollout status deploy/client
-kubectl -n course-proxy get pod -l app=client -o jsonpath='{.items[*].spec.initContainers[0].args}{"\n"}'
-kubectl -n course-proxy exec deploy/client -c curl -- curl -s http://httpbin:8000/headers | grep -oE '"(X-Forwarded-Client-Cert|X-Envoy-Attempt-Count|Traceparent)"'
+```console
+$ kubectl -n course-proxy exec deploy/client -c curl -- curl -s http://httpbin:8000/headers | grep -oE '"(X-Forwarded-Client-Cert|X-Envoy-Attempt-Count)"'
+"X-Envoy-Attempt-Count"
+"X-Forwarded-Client-Cert"
+
+$ cat platform-engineering/manifests/30-exclude-port.yaml
+# Module 30: a patch for the client Deployment. It tells istio-init to leave outgoing
+# connections to port 8000 alone, so they skip the client's own Envoy. Apply it with
+#   kubectl -n course-proxy patch deploy client --patch-file platform-engineering/manifests/30-exclude-port.yaml
+spec:
+  template:
+    metadata:
+      annotations:
+        traffic.sidecar.istio.io/excludeOutboundPorts: "8000"
+
+$ kubectl -n course-proxy patch deploy client --patch-file platform-engineering/manifests/30-exclude-port.yaml
+deployment.apps/client patched
+
+$ kubectl -n course-proxy rollout status deploy/client
+deployment "client" successfully rolled out
+
+$ kubectl -n course-proxy get pod -l app=client -o jsonpath='{.items[*].spec.initContainers[0].args}{"\n"}'
+["istio-iptables","-p","15001","-z","15006","-u","1337","-m","REDIRECT","-i","*","-x","","-b","*","-d","15090,15021,15020","-o","8000","--log_output_level=default:info"]
+
+$ kubectl -n course-proxy exec deploy/client -c curl -- curl -s http://httpbin:8000/headers | grep -oE '"(X-Forwarded-Client-Cert|X-Envoy-Attempt-Count|Traceparent)"'
+"Traceparent"
 ```
 
 **What you should see.** Before the patch, httpbin sees `X-Envoy-Attempt-Count` and `X-Forwarded-Client-Cert`, the headers the client's Envoy adds. After the patch, the new pod's `istio-init` carries one extra pair of arguments, `"-o","8000"`. The same request now arrives with only `Traceparent`.
@@ -278,107 +349,176 @@ The connection skipped the client's Envoy, so no mTLS and no client identity rea
 
 Undo the patch:
 
-```bash
-kubectl -n course-proxy rollout undo deploy/client
-kubectl -n course-proxy rollout status deploy/client
+```console
+$ kubectl -n course-proxy rollout undo deploy/client
+deployment.apps/client rolled back
+
+$ kubectl -n course-proxy rollout status deploy/client
+Waiting for deployment "client" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "client" rollout to finish: 1 old replicas are pending termination...
+deployment "client" successfully rolled out
 ```
 
 ### 6. Measure the config, then cut it with a Sidecar resource
 
 Wait until `kubectl -n course-proxy get pods` shows one client pod, then count what the client's Envoy holds:
 
-```bash
-for t in cluster listener route endpoint; do printf "%-9s" $t; istioctl proxy-config $t deploy/client -n course-proxy | tail -n +2 | wc -l; done
-kubectl -n course-proxy exec deploy/client -c istio-proxy -- pilot-agent request GET config_dump | wc -c
-kubectl -n course-proxy exec deploy/client -c istio-proxy -- pilot-agent request GET memory | grep allocated
+```console
+$ for t in cluster listener route endpoint; do printf "%-9s" $t; istioctl proxy-config $t deploy/client -n course-proxy | tail -n +2 | wc -l; done
+cluster        61
+listener       75
+route          45
+endpoint       51
+
+$ kubectl -n course-proxy exec deploy/client -c istio-proxy -- pilot-agent request GET config_dump | wc -c
+  718023
+
+$ kubectl -n course-proxy exec deploy/client -c istio-proxy -- pilot-agent request GET memory | grep allocated
+ "allocated": "11477520",
 ```
 
 `pilot-agent request` asks Envoy's admin port from inside the pod. `config_dump` is Envoy's whole running config, and `memory` reports its heap.
 
-**What you should see.** In the test run:
+**What you should see.** The counts above, from this run.
 
-```text
-cluster       62
-listener      75
-route         46
-endpoint      53
-  724549
- "allocated": "11774760",
+That's 61 clusters and 718 KB of config for a client that calls one Service. An earlier run counted 62 clusters and 725 KB. Now apply the Sidecar resource and count again:
+
+```console
+$ cat platform-engineering/manifests/30-sidecar-scope.yaml
+# Module 30: limit what every sidecar in course-proxy hears about.
+# A Sidecar named "default" with no workloadSelector applies to the whole namespace.
+# egress.hosts lists "namespace/host" patterns: "./*" means every Service in this
+# namespace, "istio-system/*" keeps istiod reachable. Everything else drops out of the
+# proxies' config, which shrinks it and the memory it needs.
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: default
+  namespace: course-proxy
+spec:
+  egress:
+    - hosts:
+        - "./*"
+        - "istio-system/*"
+
+$ kubectl apply -f platform-engineering/manifests/30-sidecar-scope.yaml
+sidecar.networking.istio.io/default created
+
+$ for t in cluster listener route endpoint; do printf "%-9s" $t; istioctl proxy-config $t deploy/client -n course-proxy | tail -n +2 | wc -l; done
+cluster        16
+listener       26
+route          11
+endpoint       12
+
+$ kubectl -n course-proxy exec deploy/client -c istio-proxy -- pilot-agent request GET config_dump | wc -c
+  453599
+
+$ istioctl proxy-config cluster deploy/client -n course-proxy --direction outbound
+SERVICE FQDN                               PORT      SUBSET     DIRECTION     TYPE     DESTINATION RULE
+httpbin.course-proxy.svc.cluster.local     8000      -          outbound      EDS
+istiod.istio-system.svc.cluster.local      443       -          outbound      EDS
+istiod.istio-system.svc.cluster.local      15010     -          outbound      EDS
+istiod.istio-system.svc.cluster.local      15012     -          outbound      EDS
+istiod.istio-system.svc.cluster.local      15014     -          outbound      EDS
+kiali.istio-system.svc.cluster.local       9090      -          outbound      EDS
+kiali.istio-system.svc.cluster.local       20001     -          outbound      EDS
 ```
 
-That's 62 clusters and 725 KB of config for a client that calls one Service. Now apply the Sidecar resource and count again:
-
-```bash
-cat platform-engineering/manifests/30-sidecar-scope.yaml
-kubectl apply -f platform-engineering/manifests/30-sidecar-scope.yaml
-for t in cluster listener route endpoint; do printf "%-9s" $t; istioctl proxy-config $t deploy/client -n course-proxy | tail -n +2 | wc -l; done
-kubectl -n course-proxy exec deploy/client -c istio-proxy -- pilot-agent request GET config_dump | wc -c
-istioctl proxy-config cluster deploy/client -n course-proxy --direction outbound
-```
-
-**What you should see.** Within seconds, and without a restart:
-
-```text
-cluster       16
-listener      26
-route         11
-endpoint      13
-  453598
-```
+**What you should see.** Within seconds, and without a restart, the counts drop to the ones above.
 
 The outbound clusters shrink to httpbin, istiod and Kiali, which also lives in `istio-system`. The config dump drops by about a third, not more, because the inbound listener on 15006 and Envoy's bootstrap stay the same size whatever the Sidecar says.
 
 Envoy rarely hands memory back, so the heap only shows the saving in a fresh pod. Restart the client, wait a minute, and measure again:
 
-```bash
-kubectl -n course-proxy rollout restart deploy/client
-kubectl -n course-proxy rollout status deploy/client
-kubectl -n course-proxy exec deploy/client -c istio-proxy -- pilot-agent request GET memory | grep allocated
+```console
+$ kubectl -n course-proxy rollout restart deploy/client
+deployment.apps/client restarted
+
+$ kubectl -n course-proxy rollout status deploy/client
+deployment "client" successfully rolled out
+
+$ kubectl -n course-proxy exec deploy/client -c istio-proxy -- pilot-agent request GET memory | grep allocated
+ "allocated": "6983624",
 ```
 
-**What you should see.** `"allocated": "7107016"` in the test run, so 7.1 MB against 11.8 MB before. That's 40% less Envoy heap on a small lab. `kubectl top` showed the whole `istio-proxy` container at 29 MiB with the Sidecar and 35 MiB without.
+**What you should see.** `"allocated": "6983624"` in this run and `"7107016"` in an earlier one, so about 7 MB against 11.5 to 11.8 MB before. That's about 40% less Envoy heap on a small lab. `kubectl top` showed the whole `istio-proxy` container at 29 MiB with the Sidecar and 35 MiB without.
 
 Now the catch. Call a Service outside the list:
 
-```bash
-kubectl -n course-proxy exec deploy/client -c curl -- curl -s -m 5 -o /dev/null -w "headlamp %{http_code}\n" http://headlamp.headlamp/
-kubectl -n course-proxy exec deploy/client -c curl -- curl -s -m 5 -o /dev/null -w "frontend %{http_code}\n" http://frontend.shop:3000/healthz
+```console
+$ kubectl -n course-proxy exec deploy/client -c curl -- curl -s -m 5 -o /dev/null -w "headlamp %{http_code}\n" http://headlamp.headlamp/
+headlamp 200
+
+$ kubectl -n course-proxy exec deploy/client -c curl -- curl -s -m 5 -o /dev/null -w "frontend %{http_code}\n" http://frontend.shop:3000/healthz
+frontend 000
+command terminated with exit code 52
 ```
 
 **What you should see.** `headlamp 200`, then `frontend 000` with `command terminated with exit code 52`, an empty reply. Both calls left through `PassthroughCluster`, as plain TCP with no mTLS. Headlamp sits outside the mesh and doesn't care. The frontend lives in the ambient `shop` namespace, where a STRICT PeerAuthentication refuses plain text. Before the Sidecar, the client's Envoy knew the frontend and spoke mTLS to it. Now it knows nothing about it and passes the bytes through blind.
 
 ### 7. Block unknown destinations
 
-```bash
-diff platform-engineering/manifests/30-sidecar-scope.yaml platform-engineering/manifests/30-sidecar-registry-only.yaml
-kubectl apply -f platform-engineering/manifests/30-sidecar-registry-only.yaml
-kubectl -n course-proxy exec deploy/client -c curl -- curl -s -m 5 -o /dev/null -w "headlamp %{http_code}\n" http://headlamp.headlamp/
-kubectl -n course-proxy exec deploy/client -c curl -- curl -s -o /dev/null -w "httpbin %{http_code}\n" http://httpbin:8000/status/200
+```console
+$ diff platform-engineering/manifests/30-sidecar-scope.yaml platform-engineering/manifests/30-sidecar-registry-only.yaml
+1,5c1,3
+< # Module 30: limit what every sidecar in course-proxy hears about.
+< # A Sidecar named "default" with no workloadSelector applies to the whole namespace.
+< # egress.hosts lists "namespace/host" patterns: "./*" means every Service in this
+< # namespace, "istio-system/*" keeps istiod reachable. Everything else drops out of the
+< # proxies' config, which shrinks it and the memory it needs.
+---
+> # Module 30: the same Sidecar as 30-sidecar-scope.yaml, plus an outbound policy.
+> # REGISTRY_ONLY sends any destination the proxy doesn't know to BlackHoleCluster,
+> # so a pod in course-proxy reaches only the hosts listed under egress.
+15a14,15
+>   outboundTrafficPolicy:
+>     mode: REGISTRY_ONLY
+
+$ kubectl apply -f platform-engineering/manifests/30-sidecar-registry-only.yaml
+sidecar.networking.istio.io/default configured
+
+$ kubectl -n course-proxy exec deploy/client -c curl -- curl -s -m 5 -o /dev/null -w "headlamp %{http_code}\n" http://headlamp.headlamp/
+headlamp 000
+command terminated with exit code 56
+
+$ kubectl -n course-proxy exec deploy/client -c curl -- curl -s -o /dev/null -w "httpbin %{http_code}\n" http://httpbin:8000/status/200
+httpbin 200
 ```
 
 **What you should see.** `headlamp 000` with `command terminated with exit code 56`, a reset connection, and `httpbin 200`. The unknown destination now goes to `BlackHoleCluster`, which drops it. Port 80 on Headlamp isn't a port Envoy knows as HTTP for this pod, so Envoy treats the call as TCP and resets it instead of answering with an HTTP error. Module 32 sets the same policy mesh-wide, in istiod's config.
 
 ### 8. Set the sidecar's own resources
 
-```bash
-kubectl -n course-proxy get pod -l app=httpbin -o jsonpath='{.items[0].spec.containers[?(@.name=="istio-proxy")].resources}{"\n"}'
-cat platform-engineering/manifests/30-proxy-resources.yaml
-kubectl -n course-proxy patch deploy httpbin --patch-file platform-engineering/manifests/30-proxy-resources.yaml
-kubectl -n course-proxy rollout status deploy/httpbin
-kubectl -n course-proxy get pod -l app=httpbin -o jsonpath='{.items[0].spec.containers[?(@.name=="istio-proxy")].resources}{"\n"}'
-```
-
-**What you should see.** The lab's default first:
-
-```text
+```console
+$ kubectl -n course-proxy get pod -l app=httpbin -o jsonpath='{.items[0].spec.containers[?(@.name=="istio-proxy")].resources}{"\n"}'
 {"limits":{"cpu":"2","memory":"1Gi"},"requests":{"cpu":"100m","memory":"128Mi"}}
-```
 
-Then, once the old pod is gone, the new pod's values:
+$ cat platform-engineering/manifests/30-proxy-resources.yaml
+# Module 30: a patch for the httpbin Deployment. The annotations sit on the pod
+# template, because the injector reads them from each new pod. Apply it with
+#   kubectl -n course-proxy patch deploy httpbin --patch-file platform-engineering/manifests/30-proxy-resources.yaml
+spec:
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/proxyCPU: "50m"
+        sidecar.istio.io/proxyMemory: "64Mi"
+        sidecar.istio.io/proxyCPULimit: "200m"
+        sidecar.istio.io/proxyMemoryLimit: "128Mi"
 
-```text
+$ kubectl -n course-proxy patch deploy httpbin --patch-file platform-engineering/manifests/30-proxy-resources.yaml
+deployment.apps/httpbin patched
+
+$ kubectl -n course-proxy rollout status deploy/httpbin
+deployment "httpbin" successfully rolled out
+
+$ kubectl -n course-proxy get pod -l app=httpbin -o jsonpath='{.items[0].spec.containers[?(@.name=="istio-proxy")].resources}{"\n"}'
 {"limits":{"cpu":"200m","memory":"128Mi"},"requests":{"cpu":"50m","memory":"64Mi"}}
 ```
+
+**What you should see.** The lab's default first.
+
+Then, once the old pod is gone, the new pod's values appear in the last line.
 
 The default request of 128 MiB is about four times what the proxy really uses here. On a node with 50 sidecar pods, those requests reserve over 6 GiB that the scheduler never hands to anyone else. The limit matters too. If you set the memory limit below what the proxy needs for its config, the kernel kills Envoy, and the pod drops every connection. Step 6's numbers tell you where that floor sits.
 
@@ -386,46 +526,76 @@ The default request of 128 MiB is about four times what the proxy really uses he
 
 Deploy the same two apps in an ambient namespace:
 
-```bash
-kubectl apply -f platform-engineering/manifests/30-ambient-apps.yaml
-kubectl -n course-ambient rollout status deploy/client
-kubectl -n course-ambient rollout status deploy/httpbin
+```console
+$ kubectl apply -f platform-engineering/manifests/30-ambient-apps.yaml
+namespace/course-ambient created
+serviceaccount/httpbin created
+serviceaccount/client created
+deployment.apps/httpbin created
+service/httpbin created
+deployment.apps/client created
+
+$ kubectl -n course-ambient rollout status deploy/client
+deployment "client" successfully rolled out
+
+$ kubectl -n course-ambient rollout status deploy/httpbin
+deployment "httpbin" successfully rolled out
 ```
 
 Then measure latency. The function below sends 300 requests from each client over one kept-alive connection, and prints the median (p50) and the 95th percentile (p95):
 
-```bash
-latency() {
+```console
+$ latency() {
   kubectl -n "$1" exec deploy/client -c curl -- sh -c 'curl -s -w "%{time_total}\n" $(for i in $(seq 1 300); do printf -- "-o /dev/null http://httpbin:8000/get "; done) | sort -n | awk "{a[NR]=\$1} END {printf \"p50 %.2f ms, p95 %.2f ms\n\", a[int(NR*0.5)]*1000, a[int(NR*0.95)]*1000}"'
 }
-latency course-proxy
-latency course-ambient
-kubectl label namespace course-ambient istio.io/dataplane-mode-
-latency course-ambient
-kubectl label namespace course-ambient istio.io/dataplane-mode=ambient
+$ latency course-proxy
+p50 0.27 ms, p95 0.42 ms
+
+$ latency course-ambient
+p50 0.12 ms, p95 0.28 ms
+
+$ kubectl label namespace course-ambient istio.io/dataplane-mode-
+namespace/course-ambient unlabeled
+
+$ latency course-ambient
+p50 0.09 ms, p95 0.30 ms
+
+$ kubectl label namespace course-ambient istio.io/dataplane-mode=ambient
+namespace/course-ambient labeled
 ```
 
 The middle lines take `course-ambient` out of the mesh for one measurement, so you get a baseline without any proxy. In ambient mode, that takes a label and no restart.
 
-**What you should see.** Three runs in the test run:
+**What you should see.** The test runs for this module gave these ranges. The transcript above is one of those runs.
 
 | Path | p50 | p95 |
 |---|---|---|
 | sidecar to sidecar, two Envoys | 0.22 to 0.28 ms | 0.35 to 0.45 ms |
 | ambient, ztunnel only | 0.07 to 0.12 ms | 0.13 to 0.30 ms |
-| no mesh | 0.05 to 0.08 ms | 0.19 to 0.28 ms |
+| no mesh | 0.05 to 0.09 ms | 0.19 to 0.30 ms |
 
 On a kept-alive connection, ambient adds almost nothing, because ztunnel only moves bytes through a tunnel it already opened. Two Envoys add about 0.2 ms, because each one parses and rebuilds every HTTP request. The absolute numbers stay tiny on one node. The difference grows with request size, with CPU limits, and with L7 features like retries. Ambient with a waypoint adds one Envoy back, so it lands between the two.
 
 Now the memory:
 
-```bash
-kubectl top pod -n course-proxy --containers
-kubectl top pod -n course-ambient --containers
-kubectl top pod -n istio-system | grep ztunnel
+```console
+$ kubectl top pod -n course-proxy --containers
+POD                       NAME          CPU(cores)   MEMORY(bytes)
+client-7c4c4dd89b-lkmfz   curl          0m           0Mi
+client-7c4c4dd89b-lkmfz   istio-proxy   3m           30Mi
+httpbin-8669c4f84-cr4xn   httpbin       1m           2Mi
+httpbin-8669c4f84-cr4xn   istio-proxy   5m           28Mi
+
+$ kubectl top pod -n course-ambient --containers
+POD                       NAME      CPU(cores)   MEMORY(bytes)
+client-57854fb759-jm222   curl      3m           0Mi
+httpbin-fb884c77d-48ftg   httpbin   2m           3Mi
+
+$ kubectl top pod -n istio-system | grep ztunnel
+ztunnel-htqw5            5m           22Mi
 ```
 
-**What you should see.** In the test run, each `istio-proxy` used 27 to 38 MiB, depending on the Sidecar resource and the time since start. The ambient pods had no proxy at all: `curl` used 2 MiB and `httpbin` 7 MiB. ztunnel used 17 to 20 MiB for every ambient pod on the node together. So the sidecar cost grows with every pod, while ztunnel's cost grows with every node.
+**What you should see.** In the test run, each `istio-proxy` used 27 to 38 MiB, depending on the Sidecar resource and the time since start. The ambient pods had no proxy at all: `curl` used 0 to 2 MiB and `httpbin` 3 to 7 MiB. ztunnel used 17 to 22 MiB for every ambient pod on the node together. So the sidecar cost grows with every pod, while ztunnel's cost grows with every node.
 
 ## Investigate
 
@@ -446,8 +616,13 @@ kubectl top pod -n istio-system | grep ztunnel
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh
+```console
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 This deletes the `course-proxy` and `course-ambient` namespaces, with the Sidecar resource and the patched Deployments inside them.
