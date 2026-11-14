@@ -699,3 +699,19 @@ These terms come from the [CKS track](../certs/cks/README.md) in `certs/cks/`. E
 **Container escape.** A container escape is an attack that breaks out of a container's fences onto the node, usually through a kernel bug, a privileged pod or a `hostPath` mount. CKS 04.
 
 **gVisor Sentry and Kata Containers.** The Sentry is gVisor's user-space kernel: it answers a sandboxed container's syscalls itself and calls the host kernel with only a small set. Kata Containers takes the other route and runs each pod in a lightweight virtual machine with its own kernel. CKS 04.
+
+**Software supply chain.** The software supply chain is everything that touches code on its way from a developer's editor to a running pod: base images, packages, libraries, build systems and registries. CKS 05.
+
+**Image layer.** An image layer is one tar archive of files that a Dockerfile instruction added or changed. The runtime stacks the layers into one file system. A file deleted in a later layer still ships in the earlier one. CKS 05.
+
+**Distroless image and multi-stage build.** A distroless image holds only an app's runtime and libraries, with no shell, package manager or tools. A multi-stage build compiles in one stage and copies only the finished program into a minimal last stage, so build tools never ship. CKS 05.
+
+**Fixable and unfixable vulnerability.** A fixable finding has a newer package version that closes the bug, so a rebuild removes it. An unfixable one has no fix yet. `trivy --ignore-unfixed` hides the second kind. CKS 05.
+
+**Static analysis.** Static analysis checks a file without running it, such as kubesec or KubeLinter on a manifest, or hadolint on a Dockerfile. It runs earliest in the supply chain, where a fix is cheapest. CKS 05.
+
+**Fail closed and fail open.** These describe what a check does when it breaks. Fail closed refuses everything until the check works again. Fail open lets everything through. ImagePolicyWebhook's `defaultAllow: false` fails closed. CKS 05.
+
+**Keyless signing and transparency log.** Keyless signing with cosign uses a short-lived certificate tied to an identity, such as a CI login, instead of a long-lived key. The signature goes to a public transparency log, an append-only record anybody checks later. CKS 05.
+
+**Provenance and SLSA.** Provenance is a verifiable record of where an artifact came from and how it was built. SLSA (Supply-chain Levels for Software Artifacts) is a framework that grades how trustworthy that record is. CKS 05.

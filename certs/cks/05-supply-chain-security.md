@@ -6,7 +6,24 @@
 
 Most of the code in a container image came from someone else: a base image, system packages, language libraries. A vulnerable or poisoned piece anywhere in that chain ends up running in your cluster with your permissions. This domain checks the chain at each step, from the Dockerfile to the API server's front door. It has ten tasks and takes about 1 hour 40 minutes.
 
-## Theory: a check at every step
+## The domain in one table
+
+Each task checks the chain at one point:
+
+| Question | Tool | Task |
+|---|---|---|
+| Does the image carry more than the app needs? | a smaller base image, a non-root `USER` | 1 |
+| Which images hold known vulnerabilities? | trivy | 2, 9 |
+| What exactly is inside an image? | an SBOM from bom or trivy | 3, 10 |
+| Does the manifest ask for dangerous settings? | kubesec | 4 |
+| Does the cluster run only images from trusted registries? | ImagePolicyWebhook | 5, 6, 7 |
+| Does the cluster run exactly the build you checked? | an image digest | 8 |
+
+## Concept: the supply chain, from source to running pod
+
+Most of the code in a container image came from someone else: a base image, system packages, language libraries, build tools. Your own code is often the smallest part. A **software supply chain** is everything that touches the code on its way from a developer's editor to a running pod. A vulnerable or poisoned piece anywhere in that chain ends up running in your cluster with your permissions.
+
+Attackers know this. Breaking into one popular library or one build system reaches thousands of victims at once, which is cheaper than attacking each of them. Defenders answer with a check at each step.
 
 ![Supply chain checks: kubesec on the Dockerfile and manifests, trivy and bom at build, cosign at the registry, ImagePolicyWebhook at admission, Falco on the node](../../docs/diagrams/chapters/cks-supply-chain.svg)
 
@@ -18,22 +35,48 @@ An image travels through five places before it runs, and each place has its own 
 4. The API server. An admission check refuses images from registries you don't trust.
 5. The node. Falco watches what the container does, which is [domain 06](06-monitoring-logging-runtime-security.md#task-2-catch-a-shell-with-falco).
 
-No single check is enough. trivy only knows vulnerabilities somebody already found. A signature proves where an image came from, not that it's safe. The admission check is the only one the cluster enforces by itself.
+No single check is enough. trivy only knows vulnerabilities somebody already found. A signature proves where an image came from, not that it's safe. The admission check is the only one the cluster enforces by itself. Think of food safety: the farm, the factory, the truck and the shop each check something different, and a scandal usually means one of them skipped its check.
 
-### Base images
+## Concept: image layers and small images
 
-Every package in an image is code an attacker might use. `curl` and `wget` download tools. A shell runs commands. A package manager installs more. The test run built the same three-line Python app twice:
+A container image is a stack of **layers**. Each instruction in a Dockerfile that changes files, such as `RUN apt-get install` or `COPY`, adds one layer: a tar archive of the files it added or changed. At run time, the container runtime stacks the layers into one file system, with a thin writable layer on top. Two images that share a base share its layers, which saves disk and download time.
+
+Layers explain two facts that matter for security:
+
+1. Everything in every layer ships with the image. A file that a later layer deletes still sits in the earlier layer, and anybody who pulls the image extracts it. A password copied in and deleted two lines later is still in the image.
+2. Every package in any layer counts. Scanners read the package lists of the whole stack, and so do attackers.
+
+Every package is code an attacker might use. `curl` and `wget` download tools. A shell runs commands. A package manager installs more. Each one also brings its own CVEs, so a smaller image means fewer findings and fewer emergency rebuilds. The test run built the same three-line Python app twice:
 
 | Base | Extra packages | Runs as | Size |
 |---|---|---|---|
 | `ubuntu:latest` | python3, curl, wget, netcat, vim | root | 425 MB |
 | `python:3.13-alpine` | none | `nobody` (65534) | 74.4 MB |
 
-Three habits get you most of the way. Pin the base image to a tag or digest, because `latest` changes under you. Pick a minimal variant: `-alpine`, `-slim`, or a distroless image with no shell at all. End with a `USER` that isn't root. Alpine still ships `wget` and `apk` through BusyBox, which the test run confirmed. A distroless image removes even those.
+Three habits get you most of the way:
 
-### Vulnerability scanning
+1. Pin the base image to a tag or digest, because `latest` changes under you.
+2. Pick a minimal variant: `-alpine`, `-slim`, or a **distroless** image. A distroless image holds the app's runtime and its libraries, and no shell, no package manager and no tools.
+3. End with a `USER` that isn't root.
 
-A **CVE** (Common Vulnerabilities and Exposures entry) is a public record of one known security bug, with an ID such as `CVE-2024-6387` and a severity. trivy reads the package lists inside an image and compares them with a database of CVEs. It downloads that database the first time it runs, which took about 30 seconds in the test run.
+A **multi-stage build** helps with the second habit. The first stage has compilers and build tools. The last stage copies only the finished program into a minimal base, so the build tools never ship.
+
+**What this stops.** A small image stops an attacker who gets in from finding download tools, a shell or a package manager, and it stops most of the CVE findings that come with packages the app never uses.
+
+**Exam traps.** Alpine still ships `wget` and `apk` through BusyBox, which the test run confirmed. Only a distroless image removes those. And the exam often wants several fixes in one Dockerfile: the pinned base, the removed packages, and the `USER` line.
+
+## Concept: vulnerability scanning
+
+A **CVE** (Common Vulnerabilities and Exposures entry) is a public record of one known security bug, with an ID such as `CVE-2024-6387` and a severity. The severity usually comes from a CVSS score, a number from 0 to 10, grouped into `LOW`, `MEDIUM`, `HIGH` and `CRITICAL`.
+
+**trivy** is a scanner from Aqua Security. It works in four steps:
+
+1. It downloads its vulnerability database the first time it runs, which took about 30 seconds in the test run. The database merges advisories from Linux distributions, from language ecosystems and from the national CVE database.
+2. It unpacks the image and reads the package lists inside: the operating system packages and the language libraries.
+3. It compares each package version with the database.
+4. It prints each finding with its severity, the installed version, and the fixed version when one exists.
+
+The last column matters. A **fixable** finding has a newer package version that closes the bug, so a rebuild removes it. An **unfixable** finding has no fix yet, so the only choices are to accept it, change the base image or drop the package. `--ignore-unfixed` hides the second kind, which suits a CI gate that must not fail on something nobody repairs.
 
 | Image | CRITICAL findings in the test run |
 |---|---|
@@ -43,38 +86,76 @@ A **CVE** (Common Vulnerabilities and Exposures entry) is a public record of one
 | `busybox:1.36` | 0 |
 | `registry.k8s.io/pause:3.10` | 0 |
 
-The numbers grow over time without any change to the image, because researchers keep finding bugs in old code. An exam task usually says "delete the pods whose image has CRITICAL vulnerabilities". Scan each distinct image once, not each pod.
+**What this stops.** Scanning stops images with known, published bugs from reaching production unnoticed. Attackers read the same CVE lists.
 
-### Tags move, digests don't
+**Exam traps.** The numbers grow over time without any change to the image, because researchers keep finding bugs in old code. An exam task usually says "delete the pods whose image has CRITICAL vulnerabilities". Scan each distinct image once, not each pod, and use `--severity CRITICAL` to keep the output short. `trivy image` prints nothing for a target without findings, so an empty `Total` line means clean.
+
+## Concept: tags move, digests don't
 
 A tag such as `nginx:1.27-alpine` is a name that the image's owner moves to a new build whenever they like. Two nodes that pull the same tag a week apart may run different code. A **digest** is the SHA-256 checksum of the image's manifest, written `nginx@sha256:6564...`. Change one byte of the image, and the digest changes. So an image named by digest always means exactly one build, and a registry that got broken into has no way to swap it silently.
 
 The digest of the image a pod runs sits in the pod's status, in `containerStatuses[].imageID`. `crictl inspecti <image>` on the node shows it too, as `repoDigests`. Task 8 pins a Deployment to one.
 
-Pin the image you scanned. A digest proves that what runs is what trivy saw, which a tag never proves.
+**What this stops.** A digest stops a moved tag, or a tampered registry, from changing what runs in the cluster. It also makes the scan meaningful: a digest proves that what runs is what trivy saw, which a tag never proves.
 
-### SBOMs
+**Exam traps.** With both a tag and a digest in the image name, the runtime ignores the tag. In task 8, both `nginx@sha256:...` and `nginx:1.27-alpine@sha256:...` worked.
 
-An **SBOM** (software bill of materials) is a machine-readable list of every package in an image, with versions and licenses. When the next big CVE arrives, a team with SBOMs searches files instead of rescanning every image. Two formats dominate: **SPDX**, from the Linux Foundation, and **CycloneDX**, from OWASP. The exam allows the docs of **bom**, a Kubernetes SIG tool that writes SPDX. trivy writes both.
+## Concept: SBOMs, the list of ingredients
 
-### Static analysis of manifests
+A scan answers "what's wrong today". It doesn't answer "where do we use library X", which is the first question on the day a big new CVE lands. Rescanning every image in every registry takes hours.
 
-kubesec reads a manifest without running it. It gives points for good settings, such as `readOnlyRootFilesystem` or resource limits, and marks dangerous ones as critical, such as `privileged` or `hostPID`. A pod with any critical finding fails, whatever its points. KubeLinter, also named in the curriculum, works the same way with a different rule set.
+An **SBOM** (software bill of materials) is a machine-readable list of every package in an image, with versions and licenses. It works like the list of ingredients on food packaging. When a new CVE arrives, a team with SBOMs searches files instead of rescanning images. Two formats dominate:
+
+1. **SPDX**, from the Linux Foundation, also an ISO standard.
+2. **CycloneDX**, from OWASP, built for security use.
+
+The exam allows the docs of **bom**, a Kubernetes SIG tool that writes SPDX. trivy writes both formats, and also scans an SBOM file directly with `trivy sbom`.
+
+**What this stops.** An SBOM stops the slow, blind search on the day of a new CVE. It also documents what you shipped, which customers and regulators increasingly ask for.
+
+**Exam traps.** Tools count differently. In task 3, bom listed 266 packages and trivy 172 components for the same image, because bom also lists every Go module inside the Kubernetes binaries. In task 10, scanning three SBOM files took under a second each and needed no registry: `app-2.cdx.json` showed `Total: 44 (CRITICAL: 44)`.
+
+## Concept: static analysis of manifests
+
+**Static analysis** reads a file without running it. kubesec reads a Kubernetes manifest. It gives points for good settings, such as `readOnlyRootFilesystem` or resource limits, and marks dangerous ones as critical, such as `privileged` or `hostPID`. KubeLinter, also named in the curriculum, works the same way with a different rule set. Tools such as hadolint do the same for Dockerfiles.
+
+Static analysis runs earliest in the chain, in the editor or the pull request, where a fix costs a minute. The same mistake found by admission costs a failed deployment, and found by Falco costs an incident.
+
+**What this stops.** It stops dangerous settings from leaving the developer's machine, before any cluster sees them.
+
+**Exam traps.** A pod with any critical finding fails, whatever its points. In task 4, the setup's manifest scored `-39` with `Privileged` and `HostPID`, and the fixed one scored 10.
+
+## Concept: admission, the cluster's front door
+
+Every check so far runs outside the cluster: in CI, on a laptop, in a registry. The cluster trusts none of them by default. A developer who skips CI, or an attacker with `create pods` rights, deploys whatever image they like. Admission control, the step of [domain 02's request chain](02-cluster-hardening.md#concept-one-request-six-steps) that reads the object, is the only check the cluster enforces on itself.
 
 ### Allowing only approved registries
 
-The cluster's last line of defence is admission. Two ways to restrict registries come up in the exam:
+Two ways to restrict images come up in the exam:
 
 1. **ImagePolicyWebhook**, a built-in admission plugin. For every new pod, the API server POSTs an `ImageReview` with the image names to an outside service, and that service answers allowed or denied.
-2. A policy engine such as Kyverno, or a ValidatingAdmissionPolicy, which [module 26](../../course/26-kyverno-policy-as-code.md) covers.
+2. A policy engine such as Kyverno, or a ValidatingAdmissionPolicy, which the course's [module 26](../../platform-engineering/26-kyverno-policy-as-code.md) covers. These read the whole pod and express rules such as "images only from `registry.example.com`" as cluster objects.
+
+![The API server sends an ImageReview to the policy back end and gets a verdict. When the back end doesn't answer, defaultAllow decides between failing closed and failing open](../../docs/diagrams/chapters/cks-image-policy.svg)
+
+The ImagePolicyWebhook flow has four steps:
+
+1. A client creates a pod.
+2. At admission, the API server sends an `ImageReview` with the pod's images to the back end.
+3. The back end answers with a verdict: allowed, or denied with a reason. The API server caches the answer for `allowTTL` or `denyTTL` seconds.
+4. If the back end doesn't answer, `defaultAllow` decides.
 
 ImagePolicyWebhook needs three files, and the exam usually hands you the last two half-filled:
 
 1. The API server flags `--enable-admission-plugins=...,ImagePolicyWebhook` and `--admission-control-config-file=<file>`.
-2. The admission configuration, an `AdmissionConfiguration` that points to a kubeconfig and sets `defaultAllow`.
+2. The admission configuration, an `AdmissionConfiguration` that points to a kubeconfig and sets the TTLs, the retry backoff and `defaultAllow`.
 3. That kubeconfig, whose `cluster.server` is the webhook's URL and whose `certificate-authority` checks the webhook's certificate.
 
-`defaultAllow` decides what happens when the webhook doesn't answer. The test run stopped the back end with `defaultAllow: false`, and every new pod failed: `Post "https://localhost:8443/review?timeout=30s": dial tcp [::1]:8443: connect: connection refused`. That's the safe choice for a registry rule, and the reason the webhook needs high availability in production.
+### Fail closed or fail open
+
+Every admission webhook faces the same question: what happens when the referee doesn't show up? **Fail closed** means refuse everything until the check works again. **Fail open** means let everything through. `defaultAllow: false` fails closed, and `defaultAllow: true` fails open.
+
+Failing closed is the safe choice for a security rule, and it's why the webhook needs high availability in production. The test run stopped the back end with `defaultAllow: false`, and every new pod failed: `Post "https://localhost:8443/review?timeout=30s": dial tcp [::1]:8443: connect: connection refused`. Failing open keeps deployments flowing during an outage, and quietly switches the rule off.
 
 When the webhook goes wrong, the symptoms depend on which file is wrong:
 
@@ -84,13 +165,45 @@ When the webhook goes wrong, the symptoms depend on which file is wrong:
 | the webhook kubeconfig's `certificate-authority` doesn't sign the back end's certificate | the API server runs, and every new pod fails with an `x509` error, because the call fails and `defaultAllow: false` refuses |
 | the back end is down, with `defaultAllow: true` | everything works, including images the policy forbids. Nobody notices |
 
-The last row is the dangerous one, and task 7 sets it up. A webhook that fails open looks healthy until somebody checks it with an image it should refuse.
-
 The practice cluster runs a small back end on `cks-cp` at `https://localhost:8443/review`, from `certs/cks/cluster/image-policy/`. It allows images from the prefixes in `/etc/image-policy/allowed-registries`, refuses `latest` and untagged images, and logs each verdict to `journalctl -u image-policy`.
 
-### Signatures
+**What this stops.** An admission rule stops images from unknown registries, and `latest` tags, from running in the cluster, whoever deploys them and whatever CI they skipped.
 
-A signature ties an image digest to the key or identity that built it. **cosign**, from the Sigstore project, signs images and stores the signature next to the image in the registry. Kyverno's `verifyImages` rule or the Sigstore policy controller then refuses unsigned images at admission. The practice cluster doesn't run a signing flow, because it needs a registry you push to. Know the two commands: `cosign sign --key cosign.key <image>@<digest>` and `cosign verify --key cosign.pub <image>`.
+**Exam traps.** The last row of the fault table is the dangerous one, and task 7 sets it up. A webhook that fails open looks healthy until somebody checks it with an image it should refuse. In the test run, `quay.io/evil/miner:1` got `pod/probe created` while the back end was down. A missing volume mount is the most common reason the API server doesn't come back: the test run's log said `couldn't init admission plugin "ImagePolicyWebhook": stat /etc/kubernetes/policy-webhook/kubeconfig.yaml: no such file or directory`.
+
+## Concept: signatures
+
+A registry rule says where an image comes from. It doesn't prove who built it. An attacker who steals a CI token pushes a poisoned image to your own trusted registry, and the rule lets it in.
+
+A **signature** ties an image digest to the key or identity that built it. Signing works in three steps:
+
+1. The build system signs the image's digest with a private key, after the scans pass.
+2. The signature goes to the registry, stored next to the image.
+3. At admission, a policy checks the signature with the matching public key, and refuses images without a valid one.
+
+**cosign**, from the Sigstore project, does steps 1 and 2. It signs with a key pair (`cosign sign --key cosign.key <image>@<digest>`, then `cosign verify --key cosign.pub <image>`) or keyless. Keyless signing uses a short-lived certificate tied to an identity, such as the CI system's login, and writes the signature to a public transparency log, an append-only record that anybody checks later. Kubernetes signs its own release binaries this way. Kyverno's `verifyImages` rule or the Sigstore policy controller does step 3.
+
+Sign the digest, not the tag. A tag moves, so a signature on a tag says nothing about the build that runs tomorrow.
+
+The practice cluster doesn't run a signing flow, because it needs a registry you push to. Know the commands and the order.
+
+**What this stops.** A signature check stops images that your build system never produced, even when they sit in your own registry under a familiar name.
+
+## The bigger picture: trust nothing you didn't check
+
+The supply chain controls answer three different questions. kubesec, small images and scanning ask "is this image any good?". Signatures and digests ask "is this the image we checked?". Admission asks "is the cluster willing to run it?". Each question needs its own tool, because each one fails in its own way.
+
+The industry calls the goal **provenance**: a verifiable record of where every artifact came from and what happened to it on the way. Frameworks such as SLSA describe levels of that, from "a script runs the build" up to "the build runs on a hardened service that signs a record of every input". Real platform teams usually wire it like this: CI builds from a minimal base, scans, writes an SBOM, signs the digest and pushes. A policy engine in every cluster then admits only signed images from the company registry, pinned by digest. Scans keep running on the registry after release, because new CVEs appear for old images every week.
+
+## Why this way
+
+**Why scan at build time and at run time?** A build-time scan sees the image once. The CVE database changes every day, so the same image gets new findings after it shipped. Task 9 scans what the cluster runs today for exactly that reason.
+
+**Why does admission call a webhook instead of reading a list?** Image rules change often and differ per company: registries, tags, signatures, scan results. A webhook keeps that logic outside the API server, where a team updates it without restarting the control plane.
+
+**Why fail closed?** A security rule that switches itself off during an outage protects nothing during the outage, which is exactly when attackers like to act. Failing closed turns a broken check into a visible problem that somebody fixes.
+
+**Why digests when signatures exist?** A signature check runs at admission. The digest makes sure the node then pulls the exact build that passed, and not whatever the tag points to by the time the pull happens.
 
 ## Task 1: Shrink a Dockerfile
 
