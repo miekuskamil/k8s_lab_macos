@@ -592,3 +592,15 @@ These terms come from the [CKS track](../certs/cks/README.md) in `certs/cks/`. E
 
 **Pod-to-pod encryption.** Pod-to-pod encryption means traffic between pods crosses the network encrypted. Istio does it with mTLS between proxies and proves the workload; Cilium does it with WireGuard or IPsec between nodes and proves the node. CKS 04, modules 2 and 10.
 
+**CVE.** A CVE (Common Vulnerabilities and Exposures entry) is a public record of one known security bug, with an ID such as `CVE-2024-6387` and a severity from LOW to CRITICAL. CKS 05.
+
+**trivy.** trivy is Aqua Security's scanner that compares the packages inside an image, a file system or an SBOM with a database of CVEs. It also writes SBOMs. CKS 05.
+
+**SBOM, SPDX and CycloneDX.** An SBOM (software bill of materials) is a machine-readable list of every package in an image, with versions and licenses. SPDX, from the Linux Foundation, and CycloneDX, from OWASP, are its two main formats. The Kubernetes tool bom writes SPDX. CKS 05.
+
+**kubesec.** kubesec is a static analysis tool that scores a Kubernetes manifest's security settings without running it. Critical findings such as `privileged` or `hostPID` fail the manifest whatever its points. KubeLinter is a similar tool. CKS 05.
+
+**ImagePolicyWebhook.** ImagePolicyWebhook is a built-in admission plugin that sends every new pod's image names to an outside service as an `ImageReview` and follows its verdict. Its admission configuration names a kubeconfig for the service and `defaultAllow`, the answer when the service is down. CKS 05.
+
+**cosign.** cosign is the Sigstore tool that signs container images and verifies those signatures. Admission policies, such as Kyverno's `verifyImages`, then refuse unsigned images. CKS 05.
+

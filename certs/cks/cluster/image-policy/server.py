@@ -20,9 +20,19 @@ def allowed_prefixes():
         return [l.strip() for l in f if l.strip() and not l.startswith("#")]
 
 
+def normalize(img):
+    """Expand short names the way container runtimes do: busybox:1.36 -> docker.io/library/busybox:1.36."""
+    first = img.split("/", 1)[0]
+    if "/" not in img:
+        return "docker.io/library/" + img
+    if "." not in first and ":" not in first and first != "localhost":
+        return "docker.io/" + img
+    return img
+
+
 def verdict(images):
     prefixes = allowed_prefixes()
-    for img in images:
+    for img in map(normalize, images):
         if not any(img.startswith(p) for p in prefixes):
             return False, f"image {img} is not from an allowed registry"
         if "@sha256:" not in img:
