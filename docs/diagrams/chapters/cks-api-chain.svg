@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="720" viewBox="0 0 1800 720" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1800" height="720" fill="#1e1f24"/>
+<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
+<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">One API request,</text>
+<rect x="394.4" y="26.0" width="209.3" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<text x="408.4" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">six steps</text>
+<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">Each gate either passes the request on or ends it with an error.</text>
+<rect x="60.0" y="186.0" width="240.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="60.0" y="180.0" width="240.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="60.0" y="288.0" width="240.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="100.0" cy="225.0" rx="10" ry="10" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<rect x="84.0" y="238.0" width="32.0" height="19.0" rx="10" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
+<text x="138.0" y="227.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Client</text>
+<text x="138.0" y="255.0" font-size="16" fill="#ffffffcc" text-anchor="start">kubectl</text>
+<rect x="420.0" y="186.0" width="300.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="420.0" y="180.0" width="300.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="420.0" y="288.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="460.0,215.0 478.0,222.0 475.0,243.0 460.0,256.0 445.0,243.0 442.0,222.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="452.0,235.0 458.0,242.0 469.0,229.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="498.0" y="227.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Authenticate</text>
+<text x="498.0" y="255.0" font-size="16" fill="#ffffffcc" text-anchor="start">who are you?</text>
+<rect x="840.0" y="186.0" width="300.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="840.0" y="180.0" width="300.0" height="110.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<rect x="840.0" y="288.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="880.0,215.0 898.0,222.0 895.0,243.0 880.0,256.0 865.0,243.0 862.0,222.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="872.0,235.0 878.0,242.0 889.0,229.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="918.0" y="227.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Authorize</text>
+<text x="918.0" y="255.0" font-size="16" fill="#ffffffcc" text-anchor="start">may you?</text>
+<rect x="1260.0" y="186.0" width="340.0" height="110.0" rx="16" fill="#db2777" stroke="#db2777" stroke-width="1"/>
+<rect x="1260.0" y="180.0" width="340.0" height="110.0" rx="16" fill="#db2777" stroke="#db2777" stroke-width="1"/>
+<rect x="1260.0" y="288.0" width="340.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="1300.0" cy="235.0" rx="16" ry="16" fill="none" stroke="#f5f5f7" stroke-width="3"/>
+<ellipse cx="1300.0" cy="235.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<polyline points="1300.0,214.0 1300.0,221.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1300.0,249.0 1300.0,256.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1279.0,235.0 1286.0,235.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1314.0,235.0 1321.0,235.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1338.0" y="227.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Mutating</text>
+<text x="1338.0" y="255.0" font-size="16" fill="#ffffffcc" text-anchor="start">may change it</text>
+<polyline points="300.0,235.0 420.0,235.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="360.0" cy="235.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="360.0" y="242.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
+<polyline points="720.0,235.0 840.0,235.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="780.0" cy="235.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="780.0" y="242.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
+<polyline points="1140.0,235.0 1260.0,235.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="1200.0" cy="235.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1200.0" y="242.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
+<text x="570.0" y="340.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">401 if unknown</text>
+<text x="990.0" y="340.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">403 if denied</text>
+<rect x="1260.0" y="476.0" width="340.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="1260.0" y="470.0" width="340.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="1260.0" y="578.0" width="340.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="1286.0,505.0 1306.0,505.0 1316.0,515.0 1316.0,545.0 1286.0,545.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="1293.0,523.0 1309.0,523.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1293.0,531.0 1309.0,531.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1293.0,539.0 1304.0,539.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1338.0" y="517.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Schema check</text>
+<text x="1338.0" y="545.0" font-size="16" fill="#ffffffcc" text-anchor="start">valid object?</text>
+<rect x="840.0" y="476.0" width="300.0" height="110.0" rx="16" fill="#db2777" stroke="#db2777" stroke-width="1"/>
+<rect x="840.0" y="470.0" width="300.0" height="110.0" rx="16" fill="#db2777" stroke="#db2777" stroke-width="1"/>
+<rect x="840.0" y="578.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="880.0,505.0 898.0,512.0 895.0,533.0 880.0,546.0 865.0,533.0 862.0,512.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="872.0,525.0 878.0,532.0 889.0,519.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="918.0" y="517.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Validating</text>
+<text x="918.0" y="545.0" font-size="16" fill="#ffffffcc" text-anchor="start">accept it?</text>
+<rect x="420.0" y="476.0" width="300.0" height="110.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
+<rect x="420.0" y="470.0" width="300.0" height="110.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
+<rect x="420.0" y="578.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="444.0" y="511.0" width="32.0" height="30.0" rx="2" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="460.0" cy="511.0" rx="16" ry="6" fill="#1e1f24" stroke="#f5f5f7" stroke-width="2.2"/>
+<polyline points="444.0,526.0 476.0,526.0" fill="none" stroke="#f5f5f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="498.0" y="517.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">etcd</text>
+<text x="498.0" y="545.0" font-size="16" fill="#ffffffcc" text-anchor="start">stored</text>
+<polyline points="1430.0,290.0 1430.0,470.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="1430.0" cy="380.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1430.0" y="387.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">4</text>
+<polyline points="1260.0,525.0 1140.0,525.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="1200.0" cy="525.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="1200.0" y="532.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">5</text>
+<polyline points="840.0,525.0 720.0,525.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<ellipse cx="780.0" cy="525.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
+<text x="780.0" y="532.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">6</text>
+<text x="780.0" y="568.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">write</text>
+</svg>
