@@ -4,7 +4,7 @@
 
 **Before this track:** a CKA, or the skills it tests. The Linux Foundation lets you book the CKS only after you pass the CKA. You need the [practice cluster](../README.md#the-practice-cluster) running, and for the AppArmor and Cilium tasks the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium). No Istio, no k3d lab.
 
-A cluster that works is not yet a safe cluster. Out of the box, kubeadm leaves pods free to talk to each other, writes Secrets to etcd in plain text, logs no API calls, and lets any image from any registry run as root. The CKS exam checks that you close those gaps on a live cluster, quickly. This track walks through the six exam domains, each with short theory and 7 to 13 timed tasks, 65 in all, and ends with three scored mock exams that get harder one after another.
+A cluster that works is not yet a safe cluster. Out of the box, kubeadm leaves pods free to talk to each other, writes Secrets to etcd in plain text, logs no API calls, and lets any image from any registry run as root. The CKS exam checks that you close those gaps on a live cluster, quickly. This track walks through the six exam domains, each with course-style theory (how every control works inside, what it stops, and the traps the test runs measured) and 7 to 13 timed tasks, 65 in all, and ends with three scored mock exams that get harder one after another.
 
 ## The exam
 

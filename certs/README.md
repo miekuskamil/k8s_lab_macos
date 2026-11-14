@@ -18,7 +18,7 @@ The course and the tracks use different clusters and a different rhythm. The tab
 |---|---|---|
 | Cluster | k3d on your Mac, one k3s node, Istio and the shop | kubeadm on two OrbStack Linux machines, no mesh |
 | You work | from your Mac, with `kubectl` and the UIs | inside a node, with `kubectl`, `vim`, `systemctl` and `journalctl`, like in the exam |
-| A unit is | a module of 30 to 60 minutes that explains one idea in depth | a domain file with short theory and tasks of 3 to 10 minutes each |
+| A unit is | a module of 30 to 60 minutes that explains one idea in depth | a domain file that opens with course-style theory, concepts, diagrams and exam traps, then tasks of 3 to 10 minutes each |
 | You finish when | you understand why the platform behaves as it does | you solve each task inside its time budget without opening the solution |
 
 The exam cluster comes from kubeadm, so the tracks use kubeadm too. kubeadm is the official tool that turns plain Linux machines into a Kubernetes cluster. It runs the control plane as **static pods**: pods that the kubelet starts from YAML files in `/etc/kubernetes/manifests`, with no API server involved. Many exam tasks edit those files. The k3s cluster of the course keeps its control plane inside one binary, so those tasks have nothing to edit there.
