@@ -105,72 +105,154 @@ The habit that pays off most is "deny by default". Start with nothing allowed. T
 
 **1. Deploy a client with its own identity.**
 
-```bash
-cat platform-engineering/manifests/03-course-client.yaml
-kubectl apply -f platform-engineering/manifests/03-course-client.yaml
-kubectl -n shop rollout status deploy/course-client
+```console
+$ cat platform-engineering/manifests/03-course-client.yaml
+# A curl pod inside the mesh, in the "shop" namespace, with its own identity.
+# It is not the frontend, so the lab's policies refuse it until you write a rule for it.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: course-client
+  namespace: shop
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: course-client
+  namespace: shop
+  labels:
+    app: course-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: course-client
+  template:
+    metadata:
+      labels:
+        app: course-client
+    spec:
+      serviceAccountName: course-client
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: curl
+          image: curlimages/curl:8.11.1
+          command: ["sleep", "infinity"]
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+
+$ kubectl apply -f platform-engineering/manifests/03-course-client.yaml
+serviceaccount/course-client created
+deployment.apps/course-client created
+
+$ kubectl -n shop rollout status deploy/course-client
+Waiting for deployment "course-client" rollout to finish: 0 of 1 updated replicas are available...
+deployment "course-client" successfully rolled out
 ```
 
 **What you should see.** You see the manifest, then `serviceaccount/course-client created`, `deployment.apps/course-client created` and `successfully rolled out`. The pod runs in `shop` as service account `course-client`. The namespace is in ambient mode, so ztunnel gives the pod the identity `spiffe://cluster.local/ns/shop/sa/course-client` with no extra step.
 
 **2. The waypoint refuses it at L7.**
 
-```bash
-kubectl -n shop exec deploy/course-client -- curl -s -w " [%{http_code}]\n" http://backend:8000/api/version
-kubectl -n shop exec deploy/course-client -- curl -s -o /dev/null -w "frontend [%{http_code}]\n" http://frontend:3000/healthz
-```
-
-**What you should see.**
-
-```text
+```console
+$ kubectl -n shop exec deploy/course-client -- curl -s -w " [%{http_code}]\n" http://backend:8000/api/version
 RBAC: access denied [403]
+
+$ kubectl -n shop exec deploy/course-client -- curl -s -o /dev/null -w "frontend [%{http_code}]\n" http://frontend:3000/healthz
 frontend [200]
 ```
 
-The waypoint refused the call with HTTP 403 and wrote the body `RBAC: access denied` itself. The backend never saw the request. The frontend has no policy, so it answers.
+**What you should see.** The waypoint refused the call with HTTP 403 and wrote the body `RBAC: access denied` itself. The backend never saw the request. The frontend has no policy, so it answers.
 
 **3. Allow exactly one call.**
 
-```bash
-cat platform-engineering/manifests/03-allow-course-client.yaml
-kubectl apply -f platform-engineering/manifests/03-allow-course-client.yaml
-sleep 5
-kubectl -n shop exec deploy/course-client -- curl -s -w " [%{http_code}]\n" http://backend:8000/api/version
-kubectl -n shop exec deploy/course-client -- curl -s -w " [%{http_code}]\n" http://backend:8000/api/orders
-```
+```console
+$ cat platform-engineering/manifests/03-allow-course-client.yaml
+# L7 rule enforced by the waypoint: the course-client identity may call
+# GET /api/version on the backend, and nothing else.
+# ALLOW policies add up, so this works next to the lab's backend-allow-frontend policy.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: backend-allow-course-client
+  namespace: shop
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: backend
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/shop/sa/course-client
+      to:
+        - operation:
+            methods: ["GET"]
+            paths: ["/api/version"]
 
-**What you should see.**
+$ kubectl apply -f platform-engineering/manifests/03-allow-course-client.yaml
+authorizationpolicy.security.istio.io/backend-allow-course-client created
 
-```text
-{"version":"v1","pod":"backend-v1-54c86bf9b-wm5tn"} [200]
+$ sleep 5
+$ kubectl -n shop exec deploy/course-client -- curl -s -w " [%{http_code}]\n" http://backend:8000/api/version
+{"version":"v1","pod":"backend-v1-54c86bf9b-vssp2"} [200]
+
+$ kubectl -n shop exec deploy/course-client -- curl -s -w " [%{http_code}]\n" http://backend:8000/api/orders
 RBAC: access denied [403]
 ```
 
-`/api/version` now returns `200`. `/api/orders` still returns `403`, because the new rule names only `GET /api/version`. The shop on http://localhost:8080 keeps working too. ALLOW policies add up, so the frontend's rule still matches the frontend's calls.
+**What you should see.** `/api/version` now returns `200`. `/api/orders` still returns `403`, because the new rule names only `GET /api/version`. The shop on http://localhost:8080 keeps working too. ALLOW policies add up, so the frontend's rule still matches the frontend's calls.
 
 **4. Find the bypass.**
 
-```bash
-BACKEND_IP=$(kubectl -n shop get pod -l app=backend,version=v1 -o jsonpath='{.items[0].status.podIP}')
-kubectl -n shop exec deploy/course-client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://$BACKEND_IP:8000/api/orders
+```console
+$ BACKEND_IP=$(kubectl -n shop get pod -l app=backend,version=v1 -o jsonpath='{.items[0].status.podIP}')
+$ kubectl -n shop exec deploy/course-client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://$BACKEND_IP:8000/api/orders
+000
+command terminated with exit code 56
 ```
 
 **What you should see.** You see `000`, then `command terminated with exit code 56`, which means the connection was reset. The client dialled a pod IP, so no waypoint took part. The backend's ztunnel checked the L4 policy. That policy only admits the waypoint, so ztunnel closed the connection. Now remove that policy:
 
-```bash
-kubectl -n shop delete authorizationpolicy backend-only-from-waypoint
-sleep 10
-kubectl -n shop exec deploy/course-client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://$BACKEND_IP:8000/api/orders
+```console
+$ kubectl -n shop delete authorizationpolicy backend-only-from-waypoint
+authorizationpolicy.security.istio.io "backend-only-from-waypoint" deleted
+
+$ sleep 10
+$ kubectl -n shop exec deploy/course-client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://$BACKEND_IP:8000/api/orders
+200
 ```
 
 **What you should see.** You see `authorizationpolicy.security.istio.io "backend-only-from-waypoint" deleted`, then `200`. `course-client` read the orders, even though its L7 rule forbids that. Without the L4 rule, the L7 rule protects only the front door. A client that walks around to the side door, the pod IP, gets in.
 
 **5. Close it again.**
 
-```bash
-kubectl apply -f manifests/istio/security.yaml
-sleep 10
-kubectl -n shop exec deploy/course-client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://$BACKEND_IP:8000/api/orders
+```console
+$ kubectl apply -f manifests/istio/security.yaml
+peerauthentication.security.istio.io/default configured
+authorizationpolicy.security.istio.io/redis-allow-backend configured
+authorizationpolicy.security.istio.io/backend-allow-frontend configured
+authorizationpolicy.security.istio.io/backend-only-from-waypoint created
+
+$ sleep 10
+$ kubectl -n shop exec deploy/course-client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://$BACKEND_IP:8000/api/orders
+000
+command terminated with exit code 56
 ```
 
 **What you should see.** Among the lines, you see `authorizationpolicy.security.istio.io/backend-only-from-waypoint created`. Then you see `000` and exit code 56 again. The other resources in the file report `configured`. The bypass is gone again.
@@ -179,8 +261,11 @@ kubectl -n shop exec deploy/course-client -- curl -s -m 5 -o /dev/null -w "%{htt
 
 1. Read ztunnel's log. After step 4, with the policy in place, run:
 
-   ```bash
-   kubectl -n istio-system logs ds/ztunnel --tail=100 | grep course-client | tail -3
+   ```console
+   $ kubectl -n istio-system logs ds/ztunnel --tail=100 | grep course-client | tail -3
+   2026-11-14T22:44:28.300631Z	info	access	connection complete	src.addr=10.42.0.135:59290 src.workload="course-client-b7478cb8b-jh9w4" src.namespace="shop" src.identity="spiffe://cluster.local/ns/shop/sa/course-client" dst.addr=10.42.0.75:15008 dst.hbone_addr=10.42.0.75:8000 dst.workload="backend-v1-54c86bf9b-jqnzh" dst.namespace="shop" dst.identity="spiffe://cluster.local/ns/shop/sa/backend" direction="outbound" bytes_sent=89 bytes_recv=455 duration="2ms"
+   2026-11-14T22:44:38.649263Z	error	access	connection complete	src.addr=10.42.0.135:47916 src.workload="course-client-b7478cb8b-jh9w4" src.namespace="shop" src.identity="spiffe://cluster.local/ns/shop/sa/course-client" dst.addr=10.42.0.75:15008 dst.hbone_addr=10.42.0.75:8000 dst.service="backend-v1.shop.svc.cluster.local" dst.workload="backend-v1-54c86bf9b-jqnzh" dst.namespace="shop" dst.identity="spiffe://cluster.local/ns/shop/sa/backend" direction="inbound" bytes_sent=0 bytes_recv=0 duration="0ms" error="connection closed due to policy rejection: allow policies exist, but none allowed"
+   2026-11-14T22:44:38.649338Z	error	access	connection complete	src.addr=10.42.0.135:50792 src.workload="course-client-b7478cb8b-jh9w4" src.namespace="shop" src.identity="spiffe://cluster.local/ns/shop/sa/course-client" dst.addr=10.42.0.75:15008 dst.hbone_addr=10.42.0.75:8000 dst.workload="backend-v1-54c86bf9b-jqnzh" dst.namespace="shop" dst.identity="spiffe://cluster.local/ns/shop/sa/backend" direction="outbound" bytes_sent=0 bytes_recv=0 duration="0ms" error="http status: 401 Unauthorized"
    ```
 
    Find the two `error` lines for the backend pod. Which side wrote `allow policies exist, but none allowed`, and which side wrote `http status: 401 Unauthorized`? Compare `src.identity` with the principals in `backend-only-from-waypoint`.
@@ -201,9 +286,11 @@ kubectl -n shop exec deploy/course-client -- curl -s -m 5 -o /dev/null -w "%{htt
    Which `source_workload` carries the 403s? The query uses `increase` over 5 minutes, which counts requests even when you sent them in one short burst. A `rate` over 1 minute shows nothing once the burst is older than a minute.
 5. Is Redis reachable from `course-client`? Try a port check, then real data:
 
-   ```bash
-   kubectl -n shop exec deploy/course-client -- nc -zv -w 3 redis 6379
-   kubectl -n shop exec deploy/course-client -- sh -c "printf 'PING\r\n' | nc -w 3 redis 6379"
+   ```console
+   $ kubectl -n shop exec deploy/course-client -- nc -zv -w 3 redis 6379
+   redis (10.43.100.21:6379) open
+
+   $ kubectl -n shop exec deploy/course-client -- sh -c "printf 'PING\r\n' | nc -w 3 redis 6379"
    ```
 
    The port check says `open`, but `PING` gets no `+PONG` back. Why? Hint: ask yourself which process accepted the TCP handshake. Look at the ztunnel log lines for `dst.service="redis..."`. What does this mean for port scans as a security test inside an ambient mesh?
@@ -232,8 +319,13 @@ kubectl -n shop exec deploy/course-client -- curl -s -m 5 -o /dev/null -w "%{htt
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh
+```console
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 `course-client` stays deployed for later modules. `./platform-engineering/reset.sh --all` removes it.

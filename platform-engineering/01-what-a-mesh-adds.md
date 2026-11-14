@@ -97,31 +97,29 @@ Ambient mode arrived much later. For years, users complained about the cost of s
 
 **1. Count the containers in a shop pod.**
 
-```bash
-kubectl -n shop get pods -l app=backend -o jsonpath='{.items[0].spec.containers[*].name}{"\n"}'
+```console
+$ kubectl -n shop get pods -l app=backend -o jsonpath='{.items[0].spec.containers[*].name}{"\n"}'
+backend
 ```
 
 **What you should see.** One word: `backend`. The pod runs your app and nothing else. Ambient mode adds no sidecar container, so the pod spec looks exactly like the Deployment you wrote.
 
 **2. See which pods ztunnel has taken over.**
 
-```bash
-istioctl ztunnel-config workloads | grep -E "NAMESPACE|shop"
+```console
+$ istioctl ztunnel-config workloads | grep -E "NAMESPACE|shop"
+NAMESPACE     POD NAME                                                  ADDRESS       NODE                 WAYPOINT PROTOCOL
+kube-system   svclb-shop-gateway-istio-e733c05f-4zvvs                   10.42.0.103   k3d-k8s-lab-server-0 None     TCP
+shop-ingress  shop-gateway-istio-858774d7cd-n4n4b                       10.42.0.124   k3d-k8s-lab-server-0 None     TCP
+shop          backend-v1-54c86bf9b-jqnzh                                10.42.0.75    k3d-k8s-lab-server-0 None     HBONE
+shop          backend-v1-54c86bf9b-vssp2                                10.42.0.73    k3d-k8s-lab-server-0 None     HBONE
+shop          backend-v2-5fd94d9cf4-r8j9f                               10.42.0.93    k3d-k8s-lab-server-0 None     HBONE
+shop          frontend-d8cfc88bd-c5lpv                                  10.42.0.42    k3d-k8s-lab-server-0 None     HBONE
+shop          redis-7bbf49c9f8-fj62f                                    10.42.0.46    k3d-k8s-lab-server-0 None     HBONE
+shop          waypoint-b9b76876f-rjx7m                                  10.42.0.125   k3d-k8s-lab-server-0 None     TCP
 ```
 
-**What you should see.** A table like this (your pod names and IPs differ):
-
-```text
-NAMESPACE     POD NAME                                  ADDRESS     NODE                 WAYPOINT PROTOCOL
-kube-system   svclb-shop-gateway-istio-f7b228cb-pgfnv   10.42.0.18  k3d-k8s-lab-server-0 None     TCP
-shop-ingress  shop-gateway-istio-858774d7cd-wpvlw       10.42.0.20  k3d-k8s-lab-server-0 None     TCP
-shop          backend-v1-54c86bf9b-dnfq2                10.42.0.17  k3d-k8s-lab-server-0 None     HBONE
-shop          backend-v1-54c86bf9b-wm5tn                10.42.0.16  k3d-k8s-lab-server-0 None     HBONE
-shop          backend-v2-5fd94d9cf4-pf8wn               10.42.0.14  k3d-k8s-lab-server-0 None     HBONE
-shop          frontend-d8cfc88bd-rbjps                  10.42.0.13  k3d-k8s-lab-server-0 None     HBONE
-shop          redis-7bbf49c9f8-zm8gf                    10.42.0.15  k3d-k8s-lab-server-0 None     HBONE
-shop          waypoint-b9b76876f-5jhcm                  10.42.0.19  k3d-k8s-lab-server-0 None     TCP
-```
+**What you should see.** One row per pod. Your pod names and IPs differ.
 
 `HBONE` means ztunnel handles this pod's traffic. All five app pods in `shop` show it. A pod outside the mesh shows `TCP`. The waypoint and the ingress gateway show `TCP` too, even though they belong to the mesh. Both are Envoy proxies that speak HBONE themselves, so ztunnel leaves their traffic alone.
 
@@ -129,54 +127,54 @@ The `svclb` pod comes from the load balancer built into k3s. It passes the node'
 
 **3. See which Services use the waypoint.**
 
-```bash
-istioctl ztunnel-config services | grep -E "NAMESPACE|shop"
+```console
+$ istioctl ztunnel-config services | grep -E "NAMESPACE|shop"
+NAMESPACE     SERVICE NAME                             SERVICE VIP   WAYPOINT ENDPOINTS
+shop          backend                                  10.43.239.201 waypoint 3/3
+shop          backend-v1                               10.43.22.204  waypoint 2/2
+shop          backend-v2                               10.43.198.219 waypoint 1/1
+shop          frontend                                 10.43.196.195 None     1/1
+shop          redis                                    10.43.100.21  None     1/1
+shop          waypoint                                 10.43.106.27  None     1/1
+shop-ingress  shop-gateway-istio                       10.43.62.182  None     1/1
 ```
 
 **What you should see.** `backend`, `backend-v1` and `backend-v2` show `waypoint` in the WAYPOINT column. `frontend`, `redis` and the `waypoint` Service itself show `None`. Only the backend needs HTTP features, so only its Services send traffic through the waypoint. The ENDPOINTS column counts ready pods. `backend` shows `3/3` because it selects the pods of both versions.
 
 The label that does it:
 
-```bash
-kubectl -n shop get svc backend --show-labels
+```console
+$ kubectl -n shop get svc backend --show-labels
+NAME      TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE   LABELS
+backend   ClusterIP   10.43.239.201   <none>        8000/TCP   34h   app=backend,argocd.argoproj.io/instance=shop-apps,istio.io/use-waypoint=waypoint,metrics=scrape
 ```
 
 **What you should see.** Among the labels, you find `istio.io/use-waypoint=waypoint`. That label sends this Service's traffic through the Gateway named `waypoint`. The waypoint is defined as a Gateway resource, which is why the label names one. If you remove the label, ztunnel delivers straight to the pods again.
 
 **4. See the proxy in the response.**
 
-```bash
-curl -sD - -o /dev/null http://localhost:8080/api/version | grep -iE "server|x-envoy"
-```
-
-**What you should see.**
-
-```text
-x-envoy-upstream-service-time: 104
+```console
+$ curl -sD - -o /dev/null http://localhost:8080/api/version | grep -iE "server|x-envoy"
+x-envoy-upstream-service-time: 5
 server: istio-envoy
 ```
 
-The number changes with every request. Both headers come from the ingress gateway's Envoy, not from the app.
+**What you should see.** The number changes with every request. Both headers come from the ingress gateway's Envoy, not from the app.
 
 - `server: istio-envoy` names the proxy.
 - `x-envoy-upstream-service-time` says how many milliseconds Envoy waited for the frontend.
 
 **5. Count the proxies istiod manages.**
 
-```bash
-istioctl proxy-status
+```console
+$ istioctl proxy-status
+NAME                                                 CLUSTER        ISTIOD                    VERSION     SUBSCRIBED TYPES
+shop-gateway-istio-858774d7cd-n4n4b.shop-ingress     Kubernetes     istiod-5c5bf76f-gtmzl     1.24.2      4 (CDS,LDS,EDS,RDS)
+waypoint-b9b76876f-rjx7m.shop                        Kubernetes     istiod-5c5bf76f-gtmzl     1.24.2      4 (CDS,LDS,EDS,WDS)
+ztunnel-htqw5.istio-system                           Kubernetes     istiod-5c5bf76f-gtmzl     1.24.2      2 (WADS,WDS)
 ```
 
-**What you should see.** Three rows:
-
-```text
-NAME                                               CLUSTER     ISTIOD                  VERSION  SUBSCRIBED TYPES
-shop-gateway-istio-858774d7cd-wpvlw.shop-ingress   Kubernetes  istiod-5c5bf76f-vskzs   1.24.2   4 (CDS,LDS,EDS,RDS)
-waypoint-b9b76876f-5jhcm.shop                      Kubernetes  istiod-5c5bf76f-vskzs   1.24.2   4 (CDS,LDS,EDS,WDS)
-ztunnel-ttgf9.istio-system                         Kubernetes  istiod-5c5bf76f-vskzs   1.24.2   2 (WADS,WDS)
-```
-
-The three rows are the gateway, the waypoint and ztunnel. The shop's five pods don't appear, because in ambient mode they have no proxy of their own. The last column lists the xDS feeds that each proxy takes from istiod. Each feed carries one kind of configuration. The two Envoys get listeners, clusters and endpoints. ztunnel only gets workloads and addresses, which is a much smaller feed.
+**What you should see.** Three rows: the gateway, the waypoint and ztunnel. The shop's five pods don't appear, because in ambient mode they have no proxy of their own. The last column lists the xDS feeds that each proxy takes from istiod. Each feed carries one kind of configuration. The two Envoys get listeners, clusters and endpoints. ztunnel only gets workloads and addresses, which is a much smaller feed.
 
 ## Investigate
 

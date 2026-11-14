@@ -92,29 +92,27 @@ One more detail. Every certificate traces back to a root certificate, the one al
 
 **1. See the certificates ztunnel holds.**
 
-```bash
-istioctl ztunnel-config certificates | grep -E "CERTIFICATE|ns/shop"
+```console
+$ istioctl ztunnel-config certificates | grep -E "CERTIFICATE|ns/shop"
+CERTIFICATE NAME                                                                        TYPE     STATUS        VALID CERT     SERIAL NUMBER                        NOT AFTER                NOT BEFORE
+spiffe://cluster.local/ns/shop/sa/backend                                               Leaf     Available     true           cdd0650411d48f45b45f756066cd3e7f     2026-11-15T16:02:52Z     2026-11-14T16:00:52Z
+spiffe://cluster.local/ns/shop/sa/backend                                               Root     Available     true           b1d9074685f90f0b29a27c6e0edc1a1a     2036-11-10T12:26:51Z     2026-11-13T12:26:51Z
+spiffe://cluster.local/ns/shop/sa/frontend                                              Leaf     Available     true           2a7a3d079d91bf699aadb658ee9a5316     2026-11-15T16:02:51Z     2026-11-14T16:00:51Z
+spiffe://cluster.local/ns/shop/sa/frontend                                              Root     Available     true           b1d9074685f90f0b29a27c6e0edc1a1a     2036-11-10T12:26:51Z     2026-11-13T12:26:51Z
+spiffe://cluster.local/ns/shop/sa/redis                                                 Leaf     Available     true           b45d9858960c08cd8bb231794d863cad     2026-11-15T16:02:52Z     2026-11-14T16:00:52Z
+spiffe://cluster.local/ns/shop/sa/redis                                                 Root     Available     true           b1d9074685f90f0b29a27c6e0edc1a1a     2036-11-10T12:26:51Z     2026-11-13T12:26:51Z
 ```
 
-**What you should see.** You see three identities, one per service account in `shop`. Each identity has a leaf certificate, its own, and a root certificate, the CA's. Some columns are trimmed here:
-
-```text
-CERTIFICATE NAME                             TYPE  STATUS     VALID CERT  NOT AFTER             NOT BEFORE
-spiffe://cluster.local/ns/shop/sa/backend    Leaf  Available  true        2026-11-13T18:45:27Z  2026-11-12T18:43:27Z
-spiffe://cluster.local/ns/shop/sa/backend    Root  Available  true        2036-11-09T18:44:33Z  2026-11-12T18:44:33Z
-spiffe://cluster.local/ns/shop/sa/frontend   Leaf  Available  true        2026-11-13T18:45:26Z  2026-11-12T18:43:26Z
-...
-spiffe://cluster.local/ns/shop/sa/redis      Leaf  Available  true        2026-11-13T18:45:29Z  2026-11-12T18:43:29Z
-...
-```
+**What you should see.** You see three identities, one per service account in `shop`. Each identity has a leaf certificate, its own, and a root certificate, the CA's.
 
 The leaf certificate lives 24 hours plus two minutes. The extra two minutes are on purpose. istiod sets NOT BEFORE a little in the past, so a node with a slightly slow clock still accepts the certificate. The root, istiod's own CA, lives 10 years, and every root row shows the same serial number. Three backend pods, two v1 and one v2, share one certificate because they all run as `sa/backend`. The identity belongs to the service account, not to the pod.
 
 **2. See the identities on a real connection.** Send a request, then read ztunnel's access log:
 
-```bash
-curl -s -o /dev/null http://localhost:8080/api/orders
-kubectl -n istio-system logs ds/ztunnel --tail=50 | grep 'src.workload="shop-gateway' | tail -1
+```console
+$ curl -s -o /dev/null http://localhost:8080/api/orders
+$ kubectl -n istio-system logs ds/ztunnel --tail=50 | grep 'src.workload="shop-gateway' | tail -1
+2026-11-14T22:43:06.059532Z	info	access	connection complete	src.addr=10.42.0.124:46262 src.workload="shop-gateway-istio-858774d7cd-n4n4b" src.namespace="shop-ingress" src.identity="spiffe://cluster.local/ns/shop-ingress/sa/shop-gateway-istio" dst.addr=10.42.0.42:15008 dst.hbone_addr=10.42.0.42:3000 dst.service="frontend.shop.svc.cluster.local" dst.workload="frontend-d8cfc88bd-c5lpv" dst.namespace="shop" dst.identity="spiffe://cluster.local/ns/shop/sa/frontend" direction="inbound" bytes_sent=560 bytes_recv=1022 duration="6008ms"
 ```
 
 **What you should see.** One long `connection complete` line. Look for these fields:
@@ -131,29 +129,44 @@ Both identities sit in one line. The gateway proved `sa/shop-gateway-istio`, and
 
 **3. Try to get in from outside the mesh.**
 
-```bash
-kubectl apply -f platform-engineering/manifests/02-outside-client.yaml
-kubectl -n course-outside rollout status deploy/client
-kubectl -n course-outside exec deploy/client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://frontend.shop:3000/healthz
+```console
+$ kubectl apply -f platform-engineering/manifests/02-outside-client.yaml
+namespace/course-outside created
+deployment.apps/client created
+
+$ kubectl -n course-outside rollout status deploy/client
+Waiting for deployment "client" rollout to finish: 0 of 1 updated replicas are available...
+deployment "client" successfully rolled out
+
+$ kubectl -n course-outside exec deploy/client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://frontend.shop:3000/healthz
+000
+command terminated with exit code 56
 ```
 
 **What you should see.** You see `000`, then `command terminated with exit code 56`. Exit code 56 is curl's "connection reset by peer". Now and then the exit code reads `52` instead, which means "empty reply from server". Either way, the connection died before any HTTP answer came back. Here is why. The client sends plaintext, but the frontend requires mTLS. So the destination ztunnel closes the connection.
 
 ztunnel's log names the rule that did it:
 
-```bash
-kubectl -n istio-system logs ds/ztunnel --since=1m | grep course-outside | tail -1
+```console
+$ kubectl -n istio-system logs ds/ztunnel --since=1m | grep course-outside | tail -1
+2026-11-14T22:43:08.896080Z	error	access	connection complete	src.addr=10.42.0.132:59156 src.workload="client-5fc599697f-w5gbz" src.namespace="course-outside" dst.addr=10.42.0.42:3000 dst.service="frontend.shop.svc.cluster.local" dst.workload="frontend-d8cfc88bd-c5lpv" dst.namespace="shop" direction="inbound" bytes_sent=0 bytes_recv=0 duration="0ms" error="connection closed due to policy rejection: explicitly denied by: istio-system/istio_converted_static_strict"
 ```
 
 **What you should see.** You see a line with `error="connection closed due to policy rejection: explicitly denied by: istio-system/istio_converted_static_strict"`. istiod turned the STRICT `PeerAuthentication` in `shop` into an internal rule that denies plaintext. ztunnel applied that rule. The line has no `src.identity`, because a plaintext client has no identity.
 
 **4. Enroll the namespace, without restarting the pod.**
 
-```bash
-kubectl label namespace course-outside istio.io/dataplane-mode=ambient
-sleep 5
-kubectl -n course-outside exec deploy/client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://frontend.shop:3000/healthz
-kubectl -n course-outside get pods     # same pod, RESTARTS 0
+```console
+$ kubectl label namespace course-outside istio.io/dataplane-mode=ambient
+namespace/course-outside labeled
+
+$ sleep 5
+$ kubectl -n course-outside exec deploy/client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://frontend.shop:3000/healthz
+200
+
+$ kubectl -n course-outside get pods     # same pod, RESTARTS 0
+NAME                      READY   STATUS    RESTARTS   AGE
+client-5fc599697f-w5gbz   1/1     Running   0          8s
 ```
 
 **What you should see.** You see `200`, and the same pod as before, with `RESTARTS 0` and its old AGE. The pod joined the mesh while it kept running. Here is what happened:
@@ -166,13 +179,17 @@ To check the certificate, run `istioctl ztunnel-config certificates | grep cours
 
 **5. Leave the mesh again.**
 
-```bash
-kubectl label namespace course-outside istio.io/dataplane-mode-
-sleep 5
-kubectl -n course-outside exec deploy/client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://frontend.shop:3000/healthz
+```console
+$ kubectl label namespace course-outside istio.io/dataplane-mode-
+namespace/course-outside unlabeled
+
+$ sleep 5
+$ kubectl -n course-outside exec deploy/client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://frontend.shop:3000/healthz
+000
+command terminated with exit code 52
 ```
 
-**What you should see.** You're back to `000` with exit code 56, still with the same pod. istio-cni removed the redirect rules, so the client's traffic leaves as plaintext again. The frontend's ztunnel refuses it, as in step 3.
+**What you should see.** You're back to `000` with exit code 56 or 52, still with the same pod. istio-cni removed the redirect rules, so the client's traffic leaves as plaintext again. The frontend's ztunnel refuses it, as in step 3.
 
 ## Investigate
 
@@ -197,8 +214,10 @@ kubectl -n course-outside exec deploy/client -- curl -s -m 5 -o /dev/null -w "%{
 
 ## Clean up
 
-```bash
-kubectl label namespace course-outside istio.io/dataplane-mode- 2>/dev/null
+```console
+$ kubectl label namespace course-outside istio.io/dataplane-mode- 2>/dev/null
+label "istio.io/dataplane-mode" not found.
+namespace/course-outside not labeled
 ```
 
 Keep the `course-outside` namespace, because module 7 uses it again. `./platform-engineering/reset.sh --all` removes it.
