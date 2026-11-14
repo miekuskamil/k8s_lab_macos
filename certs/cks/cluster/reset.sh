@@ -19,16 +19,16 @@ for m in cks-w1 cks-cp; do
     iptables-save | grep -v -E "KUBE|cali" | iptables-restore 2>/dev/null || true
     ip link delete tunl0 2>/dev/null || true
     # Undo changes the tasks make on the nodes.
-    rm -f /etc/falco/falco_rules.local.yaml /etc/falco/rules.d/cks-*.yaml
-    rm -rf /etc/apparmor.d/cks-* /var/lib/kubelet/seccomp/profiles
+    rm -f /etc/falco/falco_rules.local.yaml /etc/falco/rules.d/cks-*.yaml /etc/falco/rules.d/m2.yaml /etc/falco/rules.d/m3.yaml
+    rm -rf /etc/apparmor.d/cks-* /var/lib/kubelet/seccomp/profiles /var/lib/kubelet/seccomp/m3.json
     systemctl is-enabled falco-modern-bpf >/dev/null 2>&1 && systemctl restart falco-modern-bpf || true
     for s in snapd cups apache2 nginx; do systemctl is-enabled "$s" >/dev/null 2>&1 && systemctl disable --now "$s" >/dev/null 2>&1 || true; done
     for u in cks-dev old-admin cks-ops intern; do userdel -r "$u" >/dev/null 2>&1 || true; done
     rm -f /etc/sudoers.d/cks-dev /etc/sudoers.d/intern
-    systemctl disable --now sysmon >/dev/null 2>&1 || true
-    rm -rf /etc/systemd/system/sysmon.service /usr/local/lib/.sysmon /var/backups/k8s; systemctl daemon-reload
+    for u in sysmon node-exporter-lite; do systemctl disable --now $u >/dev/null 2>&1 || true; done
+    rm -rf /etc/systemd/system/sysmon.service /etc/systemd/system/node-exporter-lite.service /usr/local/lib/.sysmon /opt/.cache/nel /var/backups/k8s; systemctl daemon-reload
     DEBIAN_FRONTEND=noninteractive apt-get purge -y -qq vsftpd lighttpd openssh-server >/dev/null 2>&1 || true
-    rm -rf /etc/ssh/sshd_config.d/10-legacy.conf
+    rm -rf /etc/ssh/sshd_config.d/10-legacy.conf /etc/ssh/sshd_config.d/05-vendor.conf
     rm -rf /opt/cks /opt/cks-check /root/cks /root/mock
   '
 done
