@@ -669,3 +669,15 @@ These terms come from the [CKS track](../certs/cks/README.md) in `certs/cks/`. E
 **TLS handshake.** The TLS handshake is the short negotiation at the start of a TLS connection: the client offers versions and cipher suites, the server picks one of each, sends its certificate, and both agree on keys. CKS 01.
 
 **Downgrade attack.** A downgrade attack makes two sides of a connection settle on an old protocol version or a weak cipher suite, which the attacker then breaks. A minimum TLS version on the server stops it. CKS 01.
+
+**Mutating and validating admission.** These are the two phases of admission control. Mutating admission controllers run first and may change the object, for example to add defaults. Validating admission controllers run after schema validation and only accept or refuse, so they judge the final object that etcd stores. Reads skip admission. CKS 02.
+
+**Authorizer and SubjectAccessReview.** An authorizer is one entry in the API server's `--authorization-mode` list: `Node`, `RBAC`, `Webhook`, `ABAC`, `AlwaysAllow` or `AlwaysDeny`. Each answers allow, deny or no opinion, and the first opinion wins. A SubjectAccessReview is the question "may this user do this?" sent as an object, which the kubelet and webhook authorizers use. CKS 02.
+
+**escalate, bind and impersonate.** These are the three RBAC verbs that unlock other rights. `escalate` lets a subject write a role with rights it lacks, `bind` lets it bind such a role, and `impersonate` lets it act as another user. Treat each as cluster admin. CKS 02.
+
+**TokenRequest API and token audience.** The TokenRequest API is the API server endpoint that mints a bound service account token on demand, with an expiry and a binding to one pod. The audience (`aud` claim) names the service that should accept the token, so a token minted for Vault fails against the Kubernetes API. CKS 02.
+
+**Mirror pod.** A mirror pod is the read-only copy of a static pod that the kubelet creates in the API server, so `kubectl get pods` shows it. Deleting or editing the mirror changes nothing: the manifest file on the node is the truth. CKS 02.
+
+**OIDC authentication.** OIDC (OpenID Connect) is a login standard that lets the API server trust tokens from a company identity provider. People then log in with their company account, and lose access when the company removes it. CKS 02.
