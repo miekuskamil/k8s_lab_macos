@@ -1,0 +1,15 @@
+# Module 30: the same Sidecar as 30-sidecar-scope.yaml, plus an outbound policy.
+# REGISTRY_ONLY sends any destination the proxy doesn't know to BlackHoleCluster,
+# so a pod in course-proxy reaches only the hosts listed under egress.
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: default
+  namespace: course-proxy
+spec:
+  egress:
+    - hosts:
+        - "./*"
+        - "istio-system/*"
+  outboundTrafficPolicy:
+    mode: REGISTRY_ONLY

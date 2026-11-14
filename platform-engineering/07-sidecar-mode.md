@@ -307,6 +307,8 @@ Module 3 explains why that policy exists.
 
 </details>
 
+[Module 30](30-sidecar-in-depth.md) goes deeper into sidecars: which of istiod's four webhooks injects a pod, the iptables rules inside it, and how a Sidecar resource cuts each proxy's config.
+
 ## Clean up
 
 ```bash

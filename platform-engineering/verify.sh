@@ -927,6 +927,243 @@ module_29() {
   expect "after the reset course-life is gone" "$("${K[@]}" get ns course-life 2>&1 | grep -c NotFound)" '^1$'
 }
 
+module_30() {
+  section "30: sidecar mode in depth"
+  baseline
+  local P=(-n course-proxy) node="k3d-${CLUSTER_NAME:-k8s-lab}-server-0"
+  expect "istiod registers four injection webhooks" "$("${K[@]}" get mutatingwebhookconfiguration istio-sidecar-injector -o jsonpath='{.webhooks[*].name}' | wc -w | tr -d ' ')" '^4$'
+  "${K[@]}" apply -f "$M/30-apps.yaml" >/dev/null
+  "${K[@]}" "${P[@]}" rollout status deploy/client --timeout=180s >/dev/null 2>&1
+  "${K[@]}" "${P[@]}" rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1
+  "${K[@]}" label namespace course-proxy istio-injection=enabled >/dev/null
+  expect "labelling the namespace leaves the running pod alone" "$("${K[@]}" "${P[@]}" get pod -l app=httpbin -o jsonpath='{.items[0].spec.containers[*].name}')" '^httpbin$'
+  expect "check-inject predicts injection from the namespace label" "$("${I[@]}" x check-inject -n course-proxy deploy/httpbin 2>/dev/null)" 'istio-injection=enabled matches'
+  "${K[@]}" "${P[@]}" rollout restart deploy >/dev/null
+  "${K[@]}" "${P[@]}" rollout status deploy/client --timeout=180s >/dev/null 2>&1
+  "${K[@]}" "${P[@]}" rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1
+  local n
+  for _ in $(seq 1 24); do n="$("${K[@]}" "${P[@]}" get pods --no-headers 2>/dev/null | wc -l | tr -d ' ')"; [[ $n == 2 ]] && break; settle 5; done
+  expect "after a restart the pods carry istio-proxy" "$("${K[@]}" "${P[@]}" get pod -l app=httpbin -o jsonpath='{.items[0].spec.containers[*].name}')" 'httpbin istio-proxy'
+  local img=curlimages/curl:8.11.1
+  "${K[@]}" "${P[@]}" run opt-out-label --image=$img --labels=sidecar.istio.io/inject=false --command -- sleep infinity >/dev/null
+  "${K[@]}" "${P[@]}" run opt-out-annotation --image=$img --annotations=sidecar.istio.io/inject=false --command -- sleep infinity >/dev/null
+  "${K[@]}" label namespace course-proxy istio-injection- >/dev/null
+  "${K[@]}" label namespace course-proxy istio.io/rev=default >/dev/null
+  "${K[@]}" "${P[@]}" run by-revision --image=$img --command -- sleep infinity >/dev/null
+  "${K[@]}" label namespace course-proxy istio-injection=disabled >/dev/null
+  "${K[@]}" "${P[@]}" run disabled-wins --image=$img --command -- sleep infinity >/dev/null
+  "${K[@]}" label namespace course-proxy istio.io/rev- istio-injection- >/dev/null
+  "${K[@]}" "${P[@]}" run no-label --image=$img --command -- sleep infinity >/dev/null
+  "${K[@]}" "${P[@]}" run opt-in --image=$img --labels=sidecar.istio.io/inject=true --command -- sleep infinity >/dev/null
+  "${K[@]}" label namespace course-proxy istio-injection=enabled >/dev/null
+  local cols='custom-columns=N:.metadata.name,C:.spec.containers[*].name'
+  expect "injection follows the webhook table" "$("${K[@]}" "${P[@]}" get pod opt-out-label opt-out-annotation by-revision disabled-wins no-label opt-in --no-headers -o "$cols" | awk '{print $1 "=" ($2 ~ /istio-proxy/ ? "yes" : "no")}' | tr '\n' ' ')" '^opt-out-label=no opt-out-annotation=no by-revision=yes disabled-wins=no no-label=no opt-in=yes $'
+  expect "check-inject misses the annotation opt-out" "$("${I[@]}" x check-inject -n course-proxy opt-out-annotation 2>/dev/null)" 'istio-injection=enabled matches'
+  "${K[@]}" "${P[@]}" delete pod opt-out-label opt-out-annotation by-revision disabled-wins no-label opt-in --wait=false >/dev/null
+  expect "istio-init redirects to 15001 and 15006, skipping uid 1337" "$("${K[@]}" "${P[@]}" get pod -l app=client -o jsonpath='{.items[0].spec.initContainers[0].args}')" '"-p","15001","-z","15006","-u","1337"'
+  local pod cid pid rules
+  pod="$("${K[@]}" "${P[@]}" get pod -l app=client -o jsonpath='{.items[0].metadata.name}')"
+  cid="$(docker exec "$node" crictl ps --name curl --label "io.kubernetes.pod.name=$pod" -q 2>/dev/null | head -1)"
+  pid="$(docker exec "$node" crictl inspect --output go-template --template '{{.info.pid}}' "$cid" 2>/dev/null)"
+  rules="$(docker exec "$node" nsenter -t "$pid" -n iptables-legacy-save -t nat 2>/dev/null)"
+  expect "the pod's legacy NAT table redirects outbound to 15001" "$(echo "$rules" | grep -c 'ISTIO_REDIRECT -p tcp -j REDIRECT --to-ports 15001')" '^1$'
+  expect "and inbound to 15006" "$(echo "$rules" | grep -c 'ISTIO_IN_REDIRECT -p tcp -j REDIRECT --to-ports 15006')" '^1$'
+  local cp=(-n course-proxy exec deploy/client -c curl --)
+  expect "through the client's Envoy httpbin sees the client certificate" "$("${K[@]}" "${cp[@]}" curl -s -m 5 http://httpbin:8000/headers 2>/dev/null | grep -c X-Forwarded-Client-Cert)" '^1$'
+  "${K[@]}" "${P[@]}" patch deploy client --patch-file "$M/30-exclude-port.yaml" >/dev/null
+  "${K[@]}" "${P[@]}" rollout status deploy/client --timeout=180s >/dev/null 2>&1
+  for _ in $(seq 1 24); do n="$("${K[@]}" "${P[@]}" get pods -l app=client --no-headers 2>/dev/null | wc -l | tr -d ' ')"; [[ $n == 1 ]] && break; settle 5; done
+  expect "the annotation adds -o 8000 to istio-init" "$("${K[@]}" "${P[@]}" get pod -l app=client -o jsonpath='{.items[0].spec.initContainers[0].args}')" '"-o","8000"'
+  expect "an excluded port skips the client's Envoy (no XFCC)" "$("${K[@]}" "${cp[@]}" curl -s -m 5 http://httpbin:8000/headers 2>/dev/null | grep -c X-Forwarded-Client-Cert)" '^0$'
+  "${K[@]}" "${P[@]}" rollout undo deploy/client >/dev/null
+  "${K[@]}" "${P[@]}" rollout status deploy/client --timeout=180s >/dev/null 2>&1
+  for _ in $(seq 1 24); do n="$("${K[@]}" "${P[@]}" get pods -l app=client --no-headers 2>/dev/null | wc -l | tr -d ' ')"; [[ $n == 1 ]] && break; settle 5; done
+  local before after
+  before="$("${I[@]}" proxy-config cluster deploy/client -n course-proxy 2>/dev/null | tail -n +2 | wc -l | tr -d ' ')"
+  between "without a Sidecar resource the client knows every Service (clusters)" "$before" 40 200
+  "${K[@]}" apply -f "$M/30-sidecar-scope.yaml" >/dev/null
+  for _ in $(seq 1 12); do settle 3; after="$("${I[@]}" proxy-config cluster deploy/client -n course-proxy 2>/dev/null | tail -n +2 | wc -l | tr -d ' ')"; (( after < 30 )) && break; done
+  between "the Sidecar resource cuts the clusters" "$after" 8 29
+  expect "an unknown destination passes through (ALLOW_ANY)" "$("${K[@]}" "${cp[@]}" curl -s -m 5 -o /dev/null -w '%{http_code}' http://headlamp.headlamp/ 2>/dev/null)" '^200$'
+  expect "the ambient frontend refuses the passthrough plain text" "$("${K[@]}" "${cp[@]}" curl -s -m 5 -o /dev/null -w '%{http_code}' http://frontend.shop:3000/healthz 2>/dev/null)" '^000$'
+  "${K[@]}" apply -f "$M/30-sidecar-registry-only.yaml" >/dev/null; settle 5
+  expect "REGISTRY_ONLY blocks the unknown destination" "$("${K[@]}" "${cp[@]}" curl -s -m 5 -o /dev/null -w '%{http_code}' http://headlamp.headlamp/ 2>/dev/null)" '^000$'
+  expect "REGISTRY_ONLY still allows httpbin" "$("${K[@]}" "${cp[@]}" curl -s -m 5 -o /dev/null -w '%{http_code}' http://httpbin:8000/status/200 2>/dev/null)" '^200$'
+  "${K[@]}" "${P[@]}" patch deploy httpbin --patch-file "$M/30-proxy-resources.yaml" >/dev/null
+  "${K[@]}" "${P[@]}" rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1
+  for _ in $(seq 1 24); do n="$("${K[@]}" "${P[@]}" get pods -l app=httpbin --no-headers 2>/dev/null | wc -l | tr -d ' ')"; [[ $n == 1 ]] && break; settle 5; done
+  expect "the annotations set the sidecar's resources" "$("${K[@]}" "${P[@]}" get pod -l app=httpbin -o jsonpath='{.items[0].spec.containers[?(@.name=="istio-proxy")].resources}')" '"limits":\{"cpu":"200m","memory":"128Mi"\},"requests":\{"cpu":"50m","memory":"64Mi"\}'
+  "${K[@]}" apply -f "$M/30-ambient-apps.yaml" >/dev/null
+  "${K[@]}" -n course-ambient rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1
+  "${K[@]}" -n course-ambient rollout status deploy/client --timeout=180s >/dev/null 2>&1
+  expect "ambient pods keep one container" "$("${K[@]}" -n course-ambient get pod -l app=httpbin -o jsonpath='{.items[0].spec.containers[*].name}')" '^httpbin$'
+  expect "ambient client reaches httpbin through ztunnel" "$("${K[@]}" -n course-ambient exec deploy/client -c curl -- curl -s -m 5 -o /dev/null -w '%{http_code}' http://httpbin:8000/get 2>/dev/null)" '^200$'
+  expect "ztunnel lists the ambient pods as HBONE" "$("${I[@]}" ztunnel-config workloads 2>/dev/null | awk '$1=="course-ambient" {print $NF}' | sort -u | tr -d '\n')" '^HBONE$'
+  baseline
+  expect "after the reset course-proxy and course-ambient are gone" "$("${K[@]}" get ns course-proxy course-ambient 2>&1 | grep -c NotFound)" '^2$'
+}
+
+# xDS sync state per proxy in course-debug, one line each: "<pod> Cluster=SYNCED ..."
+debug_sync() {
+  "${I[@]}" proxy-status -o json 2>/dev/null | python3 -c 'import json,sys
+for r in json.load(sys.stdin)["resources"]:
+  if r["node"]["id"].endswith(".course-debug"):
+    print(r["node"]["id"], *[c["typeUrl"].split(".")[-1] + "=" + c.get("configStatus", "?") for c in r["genericXdsConfigs"]])'
+}
+
+module_31() {
+  section "31: debugging Envoy with istioctl"
+  baseline
+  local D=(-n course-debug) node="k3d-${CLUSTER_NAME:-k8s-lab}-server-0" cl="outbound|8000||httpbin.course-debug.svc.cluster.local"
+  local c=(-n course-debug exec deploy/client -c curl --)
+  "${K[@]}" apply -f "$M/31-apps.yaml" -f "$M/31-access-logs.yaml" >/dev/null
+  "${K[@]}" "${D[@]}" rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1
+  "${K[@]}" "${D[@]}" rollout status deploy/client --timeout=180s >/dev/null 2>&1; settle 5
+  expect "both sidecars are SYNCED" "$(debug_sync | grep -c 'Cluster=SYNCED ClusterLoadAssignment=SYNCED Listener=SYNCED RouteConfiguration=SYNCED')" '^2$'
+  expect "listener 8000 hands HTTP to route 8000" "$("${I[@]}" proxy-config listener deploy/client -n course-debug --port 8000 2>/dev/null)" 'Route: 8000'
+  expect "route 8000 holds the httpbin host" "$("${I[@]}" proxy-config route deploy/client -n course-debug --name 8000 2>/dev/null | grep -c 'httpbin.course-debug.svc.cluster.local:8000')" '^1$'
+  expect "the cluster gets endpoints by EDS" "$("${I[@]}" proxy-config cluster deploy/client -n course-debug --fqdn httpbin.course-debug.svc.cluster.local 2>/dev/null | grep -c 'outbound .*EDS')" '^1$'
+  expect "one healthy endpoint on port 8080" "$("${I[@]}" proxy-config endpoint deploy/client -n course-debug --cluster "$cl" 2>/dev/null | grep -c ':8080 .*HEALTHY')" '^1$'
+  expect "the server sidecar has an inbound cluster for 8080" "$("${I[@]}" proxy-config cluster deploy/httpbin -n course-debug --direction inbound 2>/dev/null | grep -c '8080 .*inbound')" '^1$'
+  expect "the client holds an active certificate and root" "$("${I[@]}" proxy-config secret deploy/client -n course-debug 2>/dev/null | grep -cE '^(default|ROOTCA) .*ACTIVE +true')" '^2$'
+  expect "the waypoint's clusters are inbound-vip" "$("${I[@]}" proxy-config cluster deploy/waypoint -n shop 2>/dev/null | grep -c 'backend.shop.svc.cluster.local .*inbound-vip')" '^1$'
+  "${K[@]}" apply -f "$M/31-broken.yaml" >/dev/null; settle 5
+  local out; out="$("${I[@]}" analyze -n course-debug 2>&1)"
+  expect "analyze finds the missing subset, the conflict and the empty subset" "$(echo "$out" | grep -oE 'IST0101|IST0109|IST0173' | sort -u | tr '\n' ' ')" '^IST0101 IST0109 IST0173 $'
+  expect "the route to a missing subset gives 503" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/status/200 2>/dev/null)" '^503$'
+  settle 2
+  expect "the client's log says NC cluster_not_found" "$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --tail=1 2>/dev/null)" '503 NC cluster_not_found'
+  local hb; hb="$("${K[@]}" "${D[@]}" get pod -l app=httpbin -o jsonpath='{.items[0].metadata.name}')"
+  expect "describe warns about the unknown subset" "$("${I[@]}" x describe pod "$hb" -n course-debug 2>/dev/null)" 'UNKNOWN subset v2'
+  "${K[@]}" "${D[@]}" delete virtualservice,destinationrule --all >/dev/null; settle 3
+  local pod cid pid envoy
+  pod="$("${K[@]}" "${D[@]}" get pod -l app=client -o jsonpath='{.items[0].metadata.name}')"
+  cid="$(docker exec "$node" crictl ps --name istio-proxy --label "io.kubernetes.pod.name=$pod" -q 2>/dev/null | head -1)"
+  pid="$(docker exec "$node" crictl inspect --output go-template --template '{{.info.pid}}' "$cid" 2>/dev/null)"
+  envoy="$(docker exec "$node" sh -c "cat /proc/$pid/task/*/children" 2>/dev/null | awk '{print $1}')"
+  expect "pilot-agent's child is envoy" "$(docker exec "$node" cat "/proc/$envoy/comm" 2>/dev/null)" '^envoy$'
+  docker exec "$node" kill -STOP "$envoy"
+  "${K[@]}" apply -f "$M/31-status-only.yaml" >/dev/null
+  local s=""
+  for _ in $(seq 1 10); do settle 2; s="$(debug_sync | grep "^$pod")"; [[ $s == *STALE* ]] && break; done
+  expect "a frozen Envoy goes STALE" "$s" 'RouteConfiguration=STALE'
+  docker exec "$node" kill -CONT "$envoy"
+  for _ in $(seq 1 10); do settle 2; s="$(debug_sync | grep "^$pod")"; [[ $s == *STALE* ]] || break; done
+  expect "awake again, it syncs" "$s" 'Listener=SYNCED RouteConfiguration=SYNCED'
+  expect "retries run out on /status/503" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/status/503 2>/dev/null)" '^503$'
+  expect "no route for /headers" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/headers 2>/dev/null)" '^404$'
+  settle 2
+  out="$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --tail=2 2>/dev/null)"
+  expect "the log shows URX then NR" "$(echo "$out" | grep -oE ' (URX via_upstream|NR route_not_found)' | tr -d '\n')" '^ URX via_upstream NR route_not_found$'
+  "${K[@]}" "${D[@]}" delete virtualservice httpbin >/dev/null
+  "${K[@]}" "${D[@]}" scale deploy httpbin --replicas=0 >/dev/null
+  "${K[@]}" "${D[@]}" wait --for=delete pod -l app=httpbin --timeout=90s >/dev/null 2>&1; settle 3
+  expect "no pods: no healthy upstream" "$("${K[@]}" "${c[@]}" curl -s http://httpbin:8000/status/200 2>/dev/null)" '^no healthy upstream$'
+  settle 2
+  expect "the client's log says UH" "$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --tail=1 2>/dev/null)" '503 UH no_healthy_upstream'
+  "${K[@]}" "${D[@]}" scale deploy httpbin --replicas=1 >/dev/null
+  "${K[@]}" "${D[@]}" rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1; settle 3
+  "${K[@]}" "${D[@]}" patch svc httpbin --type json -p '[{"op":"replace","path":"/spec/ports/0/targetPort","value":9999}]' >/dev/null; settle 5
+  expect "a refused port gives 503" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/status/200 2>/dev/null)" '^503$'
+  settle 2
+  expect "the server's sidecar logs UF" "$("${K[@]}" "${D[@]}" logs deploy/httpbin -c istio-proxy --tail=1 2>/dev/null)" ' 503 [A-Z,]*UF'
+  "${K[@]}" "${D[@]}" patch svc httpbin --type json -p '[{"op":"replace","path":"/spec/ports/0/targetPort","value":"http"}]' >/dev/null; settle 5
+  "${K[@]}" apply -f "$M/31-tight-pool.yaml" >/dev/null; settle 5
+  local overflow; overflow="$("${K[@]}" "${c[@]}" sh -c 'for i in $(seq 1 10); do curl -s -o /dev/null -w "%{http_code}\n" http://httpbin:8000/delay/1 & done; wait' 2>/dev/null | grep -c 503)"
+  between "a pool of one rejects most of ten parallel requests" "$overflow" 5 9
+  settle 2
+  expect "the client's log says UO" "$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --tail=10 2>/dev/null | grep -c ' 503 UO ')" '^[1-9]'
+  "${K[@]}" "${D[@]}" delete destinationrule httpbin >/dev/null
+  expect "the router logger goes to debug at runtime" "$("${I[@]}" proxy-config log deploy/client -n course-debug --level router:debug 2>/dev/null | grep router)" 'router: debug'
+  "${K[@]}" "${c[@]}" curl -s -o /dev/null http://httpbin:8000/status/200 >/dev/null 2>&1; settle 2
+  expect "the proxy logs router debug lines" "$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --since=15s 2>/dev/null | grep -c 'debug.*router')" '^[1-9]'
+  expect "--reset sets it back to warning" "$("${I[@]}" proxy-config log deploy/client -n course-debug --reset 2>/dev/null | grep router)" 'router: warning'
+  local clean=(-n course-debug delete virtualservice,destinationrule,sidecar,authorizationpolicy --all)
+  "${K[@]}" apply -f "$M/31-break-1.yaml" >/dev/null; settle 5
+  "${K[@]}" "${c[@]}" curl -s -o /dev/null http://httpbin:8000/status/200 >/dev/null 2>&1; settle 2
+  expect "break 1: UH on the v1 subset cluster" "$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --tail=1 2>/dev/null)" '503 UH .*outbound\|8000\|v1\|'
+  expect "break 1: analyze names the empty subset" "$("${I[@]}" analyze -n course-debug 2>&1 | grep -c IST0173)" '^1$'
+  "${K[@]}" "${clean[@]}" >/dev/null; "${K[@]}" apply -f "$M/31-break-2.yaml" >/dev/null; settle 5
+  expect "break 2: the call still works" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/status/200 2>/dev/null)" '^200$'
+  expect "break 2: but httpbin sees no client certificate" "$("${K[@]}" "${c[@]}" curl -s http://httpbin:8000/headers 2>/dev/null | grep -c X-Forwarded-Client-Cert)" '^0$'
+  settle 2
+  expect "break 2: the client's log shows PassthroughCluster" "$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --tail=1 2>/dev/null)" 'PassthroughCluster'
+  "${K[@]}" "${clean[@]}" >/dev/null; "${K[@]}" apply -f "$M/31-break-3.yaml" >/dev/null; settle 5
+  expect "break 3: /delay/1 times out with 504" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/delay/1 2>/dev/null)" '^504$'
+  expect "break 3: the route holds a 0.5 s timeout" "$("${I[@]}" proxy-config route deploy/client -n course-debug --name 8000 -o json 2>/dev/null | grep -c '"timeout": "0.500s"')" '^[1-9]'
+  "${K[@]}" "${clean[@]}" >/dev/null; "${K[@]}" apply -f "$M/31-break-4.yaml" >/dev/null 2>&1; settle 5
+  expect "break 4: /anything/order gets 403" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/anything/order 2>/dev/null)" '^403$'
+  settle 2
+  expect "break 4: httpbin's sidecar names the policy" "$("${K[@]}" "${D[@]}" logs deploy/httpbin -c istio-proxy --tail=1 2>/dev/null)" 'policy\[block-anything\]'
+  baseline
+  expect "after the reset course-debug is gone" "$("${K[@]}" get ns course-debug 2>&1 | grep -c NotFound)" '^1$'
+}
+
+# Module 32 creates its own k3d cluster and downloads istioctl 1.24.2, so it is not in the
+# default run: ./platform-engineering/verify.sh 32. It never touches k8s-lab's Istio.
+module_32() {
+  section "32: installing Istio with istioctl (throwaway cluster istio-install-lab)"
+  local X=(kubectl --context k3d-istio-install-lab) dir="$HOME/.istioctl/1.24.2" fetched=0 out
+  local IC="$dir/istioctl" op="$M/32-istio-operator.yaml" vals="${TMPDIR:-/tmp}/istio-helm-values-verify"
+  k3d cluster delete istio-install-lab >/dev/null 2>&1
+  k3d cluster create istio-install-lab --image rancher/k3s:v1.31.5-k3s1 --no-lb \
+    --k3s-arg "--disable=traefik@server:0" --kubeconfig-switch-context=false --wait >/dev/null 2>&1
+  expect "the throwaway node is Ready" "$("${X[@]}" get nodes --no-headers 2>/dev/null | awk '{print $2}')" '^Ready$'
+  expect "kubectl still points at k8s-lab" "$(kubectl config current-context)" '^k3d-k8s-lab$'
+  if [[ ! -x "$IC" ]]; then
+    local os arch
+    os="$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/osx/')"; arch="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
+    mkdir -p "$dir"
+    curl -fsSL "https://github.com/istio/istio/releases/download/1.24.2/istioctl-1.24.2-$os-$arch.tar.gz" | tar xz -C "$dir"
+    fetched=1
+  fi
+  expect "istioctl 1.24.2 is ready" "$("$IC" version --remote=false 2>&1)" '1\.24\.2'
+  expect "1.24 removed profile and verify-install" "$("$IC" profile list 2>&1; "$IC" verify-install 2>&1)" 'unknown command "profile".*unknown command "verify-install"'
+  expect "precheck finds no issues" "$("$IC" x precheck --context k3d-istio-install-lab 2>&1)" 'No issues found'
+  local wl=""
+  for p in minimal default demo ambient; do
+    wl="$wl$p:$("$IC" manifest generate --set profile=$p 2>/dev/null | "${X[@]}" create --dry-run=client -o name -f - 2>/dev/null | grep -cE '^(deployment|daemonset)') "
+  done
+  expect "profiles add workloads: minimal 1, default 2, demo 3, ambient 3" "$wl" '^minimal:1 default:2 demo:3 ambient:3 $'
+  expect "manifest generate shows the three mesh settings" "$("$IC" manifest generate -f "$op" 2>/dev/null | grep -cE 'accessLogFile: /dev/stdout|mode: REGISTRY_ONLY|holdApplicationUntilProxyStarts: true$')" '^3$'
+  "$IC" install --context k3d-istio-install-lab -f "$op" -y >/dev/null 2>&1
+  expect "istioctl installed istiod from the Helm chart" "$("${X[@]}" -n istio-system get deploy istiod -o jsonpath='{.metadata.labels.helm\.sh/chart} {.status.readyReplicas}' 2>/dev/null)" '^istiod-1\.24\.2 1$'
+  "${X[@]}" create namespace demo >/dev/null
+  "${X[@]}" label namespace demo istio-injection=enabled >/dev/null
+  "${X[@]}" -n demo run curl --image=curlimages/curl:8.11.1 --command -- sleep infinity >/dev/null
+  "${X[@]}" -n demo wait --for=condition=Ready pod/curl --timeout=180s >/dev/null 2>&1
+  expect "holdApplicationUntilProxyStarts puts istio-proxy first" "$("${X[@]}" -n demo get pod curl -o jsonpath='{.spec.containers[*].name}')" '^istio-proxy curl$'
+  expect "values.global.proxy sets the sidecar requests" "$("${X[@]}" -n demo get pod curl -o jsonpath='{.spec.containers[0].resources.requests}')" '"cpu":"10m","memory":"40Mi"'
+  expect "REGISTRY_ONLY blocks example.com" "$("${X[@]}" -n demo exec curl -c curl -- curl -s -m 5 -o /dev/null -w '%{http_code}' http://example.com 2>/dev/null)" '^000$'
+  settle 2
+  expect "mesh-wide access logs show BlackHoleCluster" "$("${X[@]}" -n demo logs curl -c istio-proxy --tail=1 2>/dev/null)" 'BlackHoleCluster'
+  "$IC" install --context k3d-istio-install-lab -f "$op" --set meshConfig.outboundTrafficPolicy.mode=ALLOW_ANY -y >/dev/null 2>&1
+  out=000
+  for _ in $(seq 1 10); do settle 2; out="$("${X[@]}" -n demo exec curl -c curl -- curl -s -m 5 -o /dev/null -w '%{http_code}' http://example.com 2>/dev/null)"; [[ $out == 200 ]] && break; done
+  expect "--set ALLOW_ANY wins over the file, without a restart" "$out" '^200$'
+  rm -rf "$vals"; mkdir -p "$vals"
+  "$IC" manifest translate -f "$op" -o "$vals" >/dev/null 2>&1
+  expect "manifest translate writes Helm values with the settings" "$(grep -c 'mode: REGISTRY_ONLY' "$vals/base-values.yaml" 2>/dev/null)" '^1$'
+  rm -rf "$vals"
+  local bin; bin="$(docker exec k3d-istio-install-lab-server-0 sed -n 's/^ *bin_dir = "\(.*\)"/\1/p' /var/lib/rancher/k3s/agent/etc/containerd/config.toml)"
+  "$IC" install --context k3d-istio-install-lab --set profile=ambient --set values.global.platform=k3s --set values.cni.cniBinDir="$bin" -y >/dev/null 2>&1
+  expect "ambient runs istio-cni, istiod and ztunnel" "$("${X[@]}" -n istio-system get pods --no-headers 2>/dev/null | awk '$3=="Running" {print $1}' | sed -E 's/-[a-z0-9]{5}$//; s/-[a-z0-9]{8,10}$//' | sort | tr '\n' ' ')" '^istio-cni-node istiod ztunnel $'
+  expect "the reinstall without the file dropped the mesh settings" "$("${X[@]}" -n istio-system get cm istio -o jsonpath='{.data.mesh}' | grep -cE 'accessLogFile|REGISTRY_ONLY')" '^0$'
+  "${X[@]}" -n demo run curl2 --image=curlimages/curl:8.11.1 --command -- sleep infinity >/dev/null
+  "${X[@]}" -n demo wait --for=condition=Ready pod/curl2 --timeout=180s >/dev/null 2>&1
+  expect "with the CNI, new sidecars get istio-validation" "$("${X[@]}" -n demo get pod curl2 -o jsonpath='{.spec.initContainers[*].name}')" '^istio-validation$'
+  "${X[@]}" delete namespace demo >/dev/null 2>&1
+  "$IC" uninstall --context k3d-istio-install-lab --purge -y >/dev/null 2>&1
+  local crds=1
+  for _ in $(seq 1 12); do crds="$("${X[@]}" get crd 2>/dev/null | grep -c 'istio\.io')"; [[ $crds == 0 ]] && break; settle 5; done
+  expect "uninstall --purge removes the CRDs" "$crds" '^0$'
+  expect "istio-system stays, empty" "$("${X[@]}" get ns istio-system --no-headers 2>/dev/null | awk '{print $2}')" '^Active$'
+  k3d cluster delete istio-install-lab >/dev/null 2>&1
+  (( fetched )) && rm -rf "$dir" && rmdir "$HOME/.istioctl" 2>/dev/null
+  expect "the throwaway cluster is gone" "$(k3d cluster list 2>/dev/null | grep -c istio-install-lab)" '^0$'
+  expect "k8s-lab still has its 3 proxies" "$("${I[@]}" version 2>/dev/null | grep -o '([0-9]* proxies)')" '^\(3 proxies\)$'
+}
+
 # Module 21 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 21
 module_21() {
   section "21: k3s certificates, backups and upgrades (the upgrade is one-way)"
@@ -1035,7 +1272,7 @@ module_14() {
 }
 
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16 20 22 23 24 25 26 28 29); fi
+if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16 20 22 23 24 25 26 28 29 30 31); fi
 # Start from the Git baseline, in case an exercise is still applied.
 printf 'Restoring the baseline before the checks\n'
 "$ROOT/platform-engineering/reset.sh" >/dev/null 2>&1

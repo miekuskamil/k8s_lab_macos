@@ -9,6 +9,9 @@ Every resource and term the Kubernetes Platform Engineering course and the certi
 - [Observability and operations](#observability-and-operations)
 - [Protocols and identity](#protocols-and-identity)
 - [Envoy response flags](#envoy-response-flags)
+- [Sidecars in depth](#sidecars-in-depth)
+- [Debugging Envoy](#debugging-envoy)
+- [Installing Istio](#installing-istio)
 - [Around the mesh](#around-the-mesh)
 - [AI on Kubernetes](#ai-on-kubernetes)
 - [Kubernetes operations](#kubernetes-operations)
@@ -49,7 +52,7 @@ Every resource and term the Kubernetes Platform Engineering course and the certi
 
 **Waypoint.** A waypoint is an Envoy proxy that handles L7 for a namespace or a service in ambient mode. Its jobs include HTTP routing, L7 authorization, retries, faults and HTTP metrics. You create it as a Gateway with `gatewayClassName: istio-waypoint`, and you point traffic at it with the label `istio.io/use-waypoint`. The lab's backend uses one. Modules 1, 3, 4.
 
-**Sidecar.** A sidecar is the Envoy container (`istio-proxy`) that sits inside each pod in sidecar mode and carries all its traffic. An init container, `istio-init`, sets up the iptables rules that send the pod's traffic through it. Module 7. Don't mix it up with the Sidecar resource below.
+**Sidecar.** A sidecar is the Envoy container (`istio-proxy`) that sits inside each pod in sidecar mode and carries all its traffic. An init container, `istio-init`, sets up the iptables rules that send the pod's traffic through it. Modules 7 and 30. Don't mix it up with the Sidecar resource below.
 
 **istio-cni.** istio-cni is a node agent (DaemonSet) that sends each ambient pod's traffic through ztunnel. It does this by setting up redirect rules inside each mesh pod's network namespace. It also answers pods' DNS when DNS capture is on. Modules 2, 12, and troubleshooting problems 15 and 18.
 
@@ -125,7 +128,7 @@ spec:
 
 **ServiceEntry.** A ServiceEntry is a resource that adds a host the mesh doesn't know, usually outside the cluster, to the mesh's service registry. After that, traffic to the host gets names in metrics, routing rules and authorization. `location: MESH_EXTERNAL` marks it as outside, and `resolution: DNS` tells Envoy to look up its IPs. In ambient mode, it needs a virtual IP and DNS capture to reach a waypoint. Module 12.
 
-**Sidecar (resource).** The Sidecar resource (`networking.istio.io/v1 Sidecar`) is a resource that limits which hosts one sidecar proxy knows about and may reach. It also sets the outbound policy, for example `REGISTRY_ONLY` to block unknown hosts. It works in sidecar mode only, and ambient has no equivalent. The course doesn't use it, but large sidecar installs often use it to cut memory.
+**Sidecar (resource).** The Sidecar resource (`networking.istio.io/v1 Sidecar`) is a resource that limits which hosts one sidecar proxy knows about and may reach. It also sets the outbound policy, for example `REGISTRY_ONLY` to block unknown hosts. It works in sidecar mode only, and ambient has no equivalent. Large sidecar installs use it to cut memory: in module 30 it shrank one proxy from 62 clusters to 16 and its Envoy heap by 40%. Module 30.
 
 **EnvoyFilter.** An EnvoyFilter is a resource that patches raw Envoy configuration when no Istio resource covers what you need. It is powerful but breaks easily across upgrades, and Istio 1.24 doesn't support it on waypoints. Module 5 mentions it.
 
@@ -241,7 +244,69 @@ Envoy writes a short flag into access logs and the `response_flags` metric label
 | `DC` | Downstream connection termination | The caller hung up early |
 | `-` | No flag | Envoy passed the response on unchanged |
 
-Modules 4, 5, 6, 8.
+Modules 4, 5, 6, 8, 31. A flag appears in the log of the proxy that hit the problem, so check both sides: in module 31, `UF` showed only in the server's sidecar log.
+
+## Sidecars in depth
+
+**Injection webhook.** The injection webhook is the mutating admission webhook in istiod that adds `istio-init` and `istio-proxy` to a new pod. istiod registers four of them, each with its own namespace and pod selectors, for `istio-injection=enabled`, `istio.io/rev`, and pods that opt in themselves. A webhook runs only when a pod is created, so running pods need a restart. Module 30.
+
+**sidecar.istio.io/inject.** `sidecar.istio.io/inject` is a pod label that overrides the namespace for one pod: `false` keeps the sidecar out, and `true` asks for one in an unlabelled namespace. As a label, it stops the webhook call itself. The same key as an annotation only works inside istiod, so `istioctl x check-inject` misses it. Module 30.
+
+**istioctl x check-inject.** `check-inject` is an istioctl command that reads the injection webhooks' selectors and says whether a pod or Deployment gets a sidecar, and which label decides it. Module 30.
+
+**istio-init.** istio-init is the init container that writes the pod's iptables NAT rules and exits before the app starts. It needs the `NET_ADMIN` and `NET_RAW` capabilities. In Istio 1.24, it writes the legacy iptables back end, so `iptables-legacy-save` shows the rules. Modules 7 and 30.
+
+**Traffic capture.** Traffic capture is how a sidecar pod's connections reach Envoy without the app knowing. NAT rules redirect outgoing TCP to port 15001 and incoming TCP to port 15006. Traffic from user ID 1337, Envoy's own, and a few ports (15008, 15090, 15021, 15020) skip the redirect. Module 30.
+
+**istio-validation.** istio-validation is the init container a sidecar pod gets when the Istio CNI plugin writes the redirect rules instead of `istio-init`. It only checks that the rules work, so the pod needs no extra capabilities. istiod uses it when `pilot.cni.enabled` is on. Modules 30 and 32.
+
+**Exclude annotations.** `traffic.sidecar.istio.io/excludeOutboundPorts`, `excludeInboundPorts` and `excludeOutboundIPRanges` are pod annotations that tell istio-init to leave some traffic alone, so it bypasses Envoy and loses mTLS, routing and metrics. Module 30.
+
+**Proxy resource annotations.** `sidecar.istio.io/proxyCPU`, `proxyMemory`, `proxyCPULimit` and `proxyMemoryLimit` are pod annotations that set the injected `istio-proxy` container's requests and limits. The lab's default is 100m CPU and 128Mi memory requested. Module 30.
+
+**Outbound traffic policy.** The outbound traffic policy decides what a sidecar does with a destination it doesn't know. `ALLOW_ANY`, the default, passes it on. `REGISTRY_ONLY` blocks it. It lives in mesh config (module 32) or in a Sidecar resource (module 30).
+
+**PassthroughCluster and BlackHoleCluster.** These are two built-in Envoy clusters for unknown destinations. PassthroughCluster sends the connection on unchanged, with no mTLS, routing or metrics. BlackHoleCluster drops it. Access logs name them in the upstream cluster field. Modules 30 and 31.
+
+**pilot-agent.** pilot-agent is the process that starts Envoy inside `istio-proxy`, fetches its certificate and relays its config. `pilot-agent request GET <path>` calls Envoy's admin API from inside the pod, for example `config_dump` or `memory`. Module 30.
+
+## Debugging Envoy
+
+**Listener (Envoy).** A listener is a socket plus a chain of filters inside Envoy, the first of four lookups for each request. It answers "which port, and how do I read it?" A sidecar has one outbound listener per HTTP port, one per TCP Service IP and port, and the catch-all `virtualOutbound` (15001) and `virtualInbound` (15006). Module 31.
+
+**Route (Envoy).** A route is Envoy's table of HTTP rules for one listener port, grouped by virtual host. It picks a cluster by host, path and headers. istiod builds it from Services, VirtualServices and HTTPRoutes. Module 31.
+
+**Cluster (Envoy).** A cluster is Envoy's name for a pool of upstream servers with its own load balancing, connection limits and TLS settings. Its name has four fields, such as `outbound|8000|v1|httpbin.course-debug.svc.cluster.local`: direction, port, subset and host. DestinationRules shape it. Module 31.
+
+**Endpoint (Envoy).** An endpoint is one member of a cluster, a pod IP and port with a health status. istiod builds endpoints from EndpointSlices and sends them over EDS. Module 31.
+
+**xDS sync state.** The xDS sync state is istiod's record of whether a proxy acknowledged the latest config of each kind. `SYNCED` means it did, `STALE` means istiod sent newer config that the proxy hasn't acknowledged yet, and `NOT SENT` means there was nothing to send. `istioctl proxy-status -o json` prints it per kind. Module 31.
+
+**Response code detail.** The response code detail is the longer reason after the response flag in an access log line, such as `no_healthy_upstream`, `route_not_found` or `rbac_access_denied_matched_policy[...]`. `via_upstream` means the app sent the response and Envoy only passed it on. Module 31.
+
+**istioctl analyze.** `istioctl analyze` is a command that checks Istio resources in the cluster, or in files before you apply them, against known mistakes. Each finding has a code such as `IST0101` (missing host or subset), `IST0109` (two VirtualServices for one host) or `IST0173` (a subset that selects no pod). It exits with code 79 on errors. Modules 16 and 31.
+
+**istioctl x describe pod.** `istioctl x describe pod` starts from one sidecar pod and lists the Service, DestinationRule, VirtualService and PeerAuthentication that affect it, with warnings such as a route to an unknown subset. It only understands sidecar pods. Modules 7 and 31.
+
+**Envoy log level.** Envoy has one logger per area, such as `router`, `connection`, `rbac` and `upstream`, each with its own level. `istioctl proxy-config log <pod> --level router:debug` changes a level on the running proxy, and `--reset` sets all of them back to `warning`. Module 31.
+
+## Installing Istio
+
+**Install profile.** An install profile is a named set of defaults for `istioctl install` that says which Istio components to turn on and how to size them. `minimal` installs istiod only, `default` adds an ingress gateway, `demo` adds an egress gateway with small requests and access logs, and `ambient` adds istio-cni and ztunnel. Module 32.
+
+**IstioOperator.** IstioOperator (`install.istio.io/v1alpha1`) is the file format `istioctl install` reads, with three main sections: `meshConfig`, `components` and `values`. Since Istio 1.24, no operator runs in the cluster and nothing stores the file there, so keep it in Git. Module 32.
+
+**meshConfig.** meshConfig is the set of mesh-wide settings that istiod reads from the `istio` ConfigMap and pushes to every proxy, such as `accessLogFile`, `outboundTrafficPolicy` and `defaultConfig`. A change reaches running proxies without a restart. Module 32.
+
+**ProxyConfig and holdApplicationUntilProxyStarts.** ProxyConfig is the startup configuration of each proxy, set mesh-wide under `meshConfig.defaultConfig` or per pod with the `proxy.istio.io/config` annotation. Its field `holdApplicationUntilProxyStarts: true` makes the injector put `istio-proxy` first and hold the app until Envoy is ready. Modules 7 and 32.
+
+**istioctl install.** `istioctl install` merges a profile, IstioOperator files and `--set` flags, renders Istio's Helm charts, applies the result and prunes what the new config drops. Each run describes the whole desired state, so a run without your file resets your settings. Module 32.
+
+**istioctl manifest generate and translate.** `manifest generate` prints the YAML `istioctl install` would apply, without touching a cluster. `manifest translate` turns an IstioOperator file into Helm values files, for a move from istioctl to Helm. Module 32.
+
+**istioctl uninstall --purge.** `istioctl uninstall --purge` removes every Istio component and the CRDs from a cluster. It leaves the `istio-system` namespace in place. Module 32.
+
+**Platform setting and cniBinDir.** `values.global.platform` (for example `k3s`) adjusts paths and defaults for one Kubernetes distribution. On k3d, istio-cni also needs `values.cni.cniBinDir` set to the folder containerd searches, read from the node's containerd config, or new pods fail with `failed to find plugin "istio-cni"`. Modules 14 and 32.
 
 ## Around the mesh
 

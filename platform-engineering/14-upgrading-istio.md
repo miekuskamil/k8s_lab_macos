@@ -259,6 +259,8 @@ kubectl apply --dry-run=server -f platform-engineering/manifests/12-serviceentry
 
 </details>
 
+The lab installs Istio with Helm. [Module 32](32-installing-istio.md) installs it the other way, with `istioctl install`, profiles and an IstioOperator file, on a throwaway cluster.
+
 ## Clean up
 
 Nothing to clean up: the upgrade stays. To return to Istio 1.24.2 for the rest of the course, rebuild the lab:

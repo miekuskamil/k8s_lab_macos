@@ -1,0 +1,11 @@
+# Module 30: a patch for the httpbin Deployment. The annotations sit on the pod
+# template, because the injector reads them from each new pod. Apply it with
+#   kubectl -n course-proxy patch deploy httpbin --patch-file platform-engineering/manifests/30-proxy-resources.yaml
+spec:
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/proxyCPU: "50m"
+        sidecar.istio.io/proxyMemory: "64Mi"
+        sidecar.istio.io/proxyCPULimit: "200m"
+        sidecar.istio.io/proxyMemoryLimit: "128Mi"

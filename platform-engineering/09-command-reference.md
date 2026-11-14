@@ -82,6 +82,7 @@ At the baseline, Prometheus has no alert rules: the lab turns the chart's defaul
 | Is istiod healthy? | `kubectl -n istio-system get pods` and `kubectl -n istio-system logs deploy/istiod --tail=30` |
 | Which proxies are connected, are they up to date? | `istioctl proxy-status` |
 | Does my config have known problems? | `istioctl analyze -n shop` (or `-A` for every namespace) |
+| What would `istioctl install` apply? (module 32, never on this lab) | `istioctl manifest generate -f <IstioOperator file>` |
 | Is one pod in the mesh, and through which waypoint? | `istioctl ztunnel-config workloads \| grep <pod>` (ambient). Do not use `istioctl x describe pod` for ambient pods: it only understands sidecars, reports "not part of mesh" and then fails. |
 
 ## Layer 4: ambient data plane (ztunnel and the CNI)
@@ -118,6 +119,12 @@ At the baseline, Prometheus has no alert rules: the lab turns the chart's defaul
 | Routes the client sidecar uses | `istioctl proxy-config routes deploy/client -n course-sidecar` |
 | Service, ports and effective mTLS mode of a sidecar pod | `istioctl x describe pod <pod> -n course-sidecar` (sidecar pods only) |
 | Sidecar logs | `kubectl logs <pod> -n <ns> -c istio-proxy --tail=30` |
+| Why did (or didn't) a pod get a sidecar? (module 30) | `istioctl x check-inject -n <ns> <pod>` |
+| SYNCED or STALE per proxy and config kind (module 31) | `istioctl proxy-status -o json`, field `configStatus` |
+| Follow one request: listener, route, cluster, endpoint (module 31) | `istioctl proxy-config listener <pod> -n <ns> --port 8000`, then `route --name 8000`, `cluster --fqdn <host>`, `endpoint --cluster "outbound\|8000\|\|<host>"` |
+| Which certificate does the proxy hold? | `istioctl proxy-config secret <pod> -n <ns>` |
+| Envoy debug logging for a while (module 31) | `istioctl proxy-config log <pod> -n <ns> --level router:debug`, then `--reset` |
+| Which Services does this sidecar know? (module 30) | `istioctl proxy-config cluster <pod> -n <ns> --direction outbound` |
 
 ## Layer 7: the application path, from outside in
 
