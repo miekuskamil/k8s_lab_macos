@@ -570,3 +570,15 @@ These terms come from the [CKS track](../certs/cks/README.md) in `certs/cks/`. E
 
 **Checksum (SHA-512).** A checksum is a fingerprint of a file, computed so that changing one byte changes the whole value. Kubernetes publishes a SHA-512 checksum next to every binary on `dl.k8s.io`, and `sha512sum -c` compares a file against it. CKS 01.
 
+**RBAC: Role, ClusterRole and bindings.** RBAC (role-based access control) is Kubernetes' permission system. A Role lists allowed verbs on resources in one namespace, a ClusterRole does the same cluster-wide, and a RoleBinding or ClusterRoleBinding hands a role to users, groups or service accounts. Rules only add rights. CKS 02, module 29.
+
+**resourceNames.** resourceNames is an RBAC rule field that limits the rule to named objects, such as one Secret. It covers `get`, `update` and `delete` on those objects, never `create`, and not a plain `list`. CKS 02.
+
+**automountServiceAccountToken.** automountServiceAccountToken is a field on a ServiceAccount or a pod spec that, when `false`, stops the kubelet from mounting an API token into the pod. The pod's setting wins over the account's. CKS 02.
+
+**Anonymous request and AuthenticationConfiguration.** An anonymous request is one without credentials, which the API server treats as user `system:anonymous`. An AuthenticationConfiguration file, passed with `--authentication-config`, keeps anonymous access only for named paths such as `/livez`. Turning anonymous access off completely makes kubeadm's own probes fail. CKS 02.
+
+**Version skew.** Version skew is the allowed difference between component versions in one cluster. The kubelet must never be newer than the API server, so upgrades go control plane first, then the workers. CKS 02.
+
+**NodeRestriction.** NodeRestriction is an admission plugin that limits what a kubelet may change: only its own Node object and the pods bound to it, and no labels with the `node-restriction.kubernetes.io/` prefix. kubeadm turns it on. CKS 03.
+
