@@ -92,11 +92,25 @@ A refusal at any gate goes straight back to the client. The API server stores no
 
 ### 1. See what kubectl sends, and who you are
 
-```bash
-kubectl apply -f platform-engineering/manifests/29-plain-app.yaml -v=6 2>&1 | grep -oE 'verb="[A-Z]+" url="[^"]*" status="[^"]*"' | grep -v openapi | head -6
-kubectl auth whoami
-kubectl auth can-i create deployments -n course-life
-kubectl auth can-i create deployments -n course-life --as=system:serviceaccount:shop:frontend
+```console
+$ kubectl apply -f platform-engineering/manifests/29-plain-app.yaml -v=6 2>&1 | grep -oE 'verb="[A-Z]+" url="[^"]*" status="[^"]*"' | grep -v openapi | head -6
+verb="GET" url="https://0.0.0.0:63077/api/v1/namespaces/course-life" status="404 Not Found"
+verb="POST" url="https://0.0.0.0:63077/api/v1/namespaces?fieldManager=kubectl-client-side-apply&fieldValidation=Strict" status="201 Created"
+verb="GET" url="https://0.0.0.0:63077/apis/apps/v1/namespaces/course-life/deployments/hello" status="404 Not Found"
+verb="GET" url="https://0.0.0.0:63077/api/v1/namespaces/course-life" status="200 OK"
+verb="POST" url="https://0.0.0.0:63077/apis/apps/v1/namespaces/course-life/deployments?fieldManager=kubectl-client-side-apply&fieldValidation=Strict" status="201 Created"
+verb="GET" url="https://0.0.0.0:63077/api/v1/namespaces/course-life/services/hello" status="404 Not Found"
+
+$ kubectl auth whoami
+ATTRIBUTE   VALUE
+Username    system:admin
+Groups      [system:masters system:authenticated]
+
+$ kubectl auth can-i create deployments -n course-life
+yes
+
+$ kubectl auth can-i create deployments -n course-life --as=system:serviceaccount:shop:frontend
+no
 ```
 
 **What you should see.** The output answers three questions.
@@ -109,12 +123,30 @@ kubectl auth can-i create deployments -n course-life --as=system:serviceaccount:
 
 ### 2. Watch the controllers hand the work along
 
-```bash
-kubectl -n course-life get events --sort-by=.firstTimestamp \
+```console
+$ kubectl -n course-life get events --sort-by=.firstTimestamp \
   -o custom-columns=WHO:.source.component,KIND:.involvedObject.kind,REASON:.reason,MESSAGE:.message | grep -v client
-P=$(kubectl -n course-life get pod -l app=hello -o jsonpath='{.items[0].metadata.name}')
-kubectl -n course-life get pod $P -o jsonpath='{.metadata.ownerReferences[0].kind}/{.metadata.ownerReferences[0].name}{"\n"}'
-kubectl -n course-life get pod $P -o jsonpath='{range .status.conditions[*]}{.type}={.lastTransitionTime}{"\n"}{end}'
+WHO                     KIND         REASON              MESSAGE
+<none>                  Pod          Scheduled           Successfully assigned course-life/hello-76fb6c6b6f-dqlh9 to k3d-k8s-lab-server-0
+replicaset-controller   ReplicaSet   SuccessfulCreate    Created pod: hello-76fb6c6b6f-dqlh9
+deployment-controller   Deployment   ScalingReplicaSet   Scaled up replica set hello-76fb6c6b6f to 1
+kubelet                 Pod          Pulled              Container image "curlimages/curl:8.11.1" already present on machine
+kubelet                 Pod          Created             Created container curl
+kubelet                 Pod          Started             Started container curl
+kubelet                 Pod          Pulled              Container image "nginx:1.27-alpine" already present on machine
+kubelet                 Pod          Created             Created container web
+kubelet                 Pod          Started             Started container web
+
+$ P=$(kubectl -n course-life get pod -l app=hello -o jsonpath='{.items[0].metadata.name}')
+$ kubectl -n course-life get pod $P -o jsonpath='{.metadata.ownerReferences[0].kind}/{.metadata.ownerReferences[0].name}{"\n"}'
+ReplicaSet/hello-76fb6c6b6f
+
+$ kubectl -n course-life get pod $P -o jsonpath='{range .status.conditions[*]}{.type}={.lastTransitionTime}{"\n"}{end}'
+PodReadyToStartContainers=2026-11-14T22:54:00Z
+Initialized=2026-11-14T22:53:59Z
+Ready=2026-11-14T22:54:00Z
+ContainersReady=2026-11-14T22:54:00Z
+PodScheduled=2026-11-14T22:53:59Z
 ```
 
 **What you should see.** Each controller does one small job and hands over to the next, by writing an object. In the test run, all of it took under two seconds:
@@ -122,9 +154,11 @@ kubectl -n course-life get pod $P -o jsonpath='{range .status.conditions[*]}{.ty
 | Who | Event |
 |---|---|
 | deployment-controller | `ScalingReplicaSet`: Scaled up replica set hello-76fb6c6b6f to 1 |
-| replicaset-controller | `SuccessfulCreate`: Created pod hello-76fb6c6b6f-plkh6 |
+| replicaset-controller | `SuccessfulCreate`: Created pod hello-76fb6c6b6f-dqlh9 |
 | default-scheduler | `Scheduled`: assigned to k3d-k8s-lab-server-0 |
 | kubelet | `Pulled` (already present on machine), `Created`, `Started` |
+
+The scheduler's row shows `<none>` in the WHO column. The scheduler writes its name into the event's `reportingComponent` field, not into `source.component`.
 
 Each object records who created it. The pod's owner is `ReplicaSet/hello-76fb6c6b6f`, and that ReplicaSet's owner is `Deployment/hello`. These links are called owner references. A background cleaner, the garbage collector, follows them. So `kubectl delete deployment` removes everything below the Deployment too.
 
@@ -134,11 +168,13 @@ The pod's conditions run from `PodScheduled` to `Ready` in about a second, becau
 
 Controllers don't ask the API server "anything new?" every second. They open a watch and wait for changes. You open the same kind of watch here.
 
-```bash
-kubectl get --raw "/api/v1/namespaces/course-life/pods?watch=1&timeoutSeconds=3&labelSelector=app%3Dhello"
+```console
+$ kubectl get --raw "/api/v1/namespaces/course-life/pods?watch=1&timeoutSeconds=3&labelSelector=app%3Dhello"
+{"type":"ADDED","object":{"kind":"Pod","apiVersion":"v1","metadata":{"name":"hello-76fb6c6b6f-dqlh9","generateName":"hello-76fb6c6b6f-","namespace":"course-life","uid":"105ada5b-5707-4b5f-86ba-6a4ae90615e5","resourceVersion":"148280","creationTimestamp":"2026-11-14T22:53:59Z",
+...
 ```
 
-**What you should see.** One JSON line, starting with `{"type":"ADDED","object":{"kind":"Pod"...`. It carries a `resourceVersion`, 21586 in the test run. The `resourceVersion` is a counter that grows with every write in the cluster.
+**What you should see.** One JSON line, starting with `{"type":"ADDED","object":{"kind":"Pod"...`. It carries a `resourceVersion`, 148280 in this run. The `resourceVersion` is a counter that grows with every write in the cluster.
 
 Controllers hold a watch like this open all the time. When something changes, `MODIFIED` or `DELETED` lines arrive. If the connection drops, the watcher reconnects with its last `resourceVersion`. The API server then sends only what it missed, like a bookmark in a news feed.
 
@@ -146,13 +182,30 @@ Controllers hold a watch like this open all the time. When something changes, `M
 
 The scheduler's job is to find a node with room for each new pod. To see how it decides, you give it two pods that fit nowhere. One asks for far too much memory, and one asks for a node label that doesn't exist.
 
-```bash
-kubectl -n course-life run greedy --image=nginx:1.27-alpine \
+```console
+$ kubectl -n course-life run greedy --image=nginx:1.27-alpine \
   --overrides='{"spec":{"containers":[{"name":"greedy","image":"nginx:1.27-alpine","resources":{"requests":{"memory":"64Gi"}}}]}}'
-kubectl -n course-life run picky --image=nginx:1.27-alpine --overrides='{"spec":{"nodeSelector":{"disktype":"ssd"}}}'
-sleep 5; kubectl -n course-life get events --field-selector reason=FailedScheduling -o jsonpath='{range .items[*]}{.message}{"\n"}{end}'
-kubectl describe node k3d-k8s-lab-server-0 | grep -A6 "Allocated resources"
-kubectl -n course-life delete pod greedy picky
+pod/greedy created
+
+$ kubectl -n course-life run picky --image=nginx:1.27-alpine --overrides='{"spec":{"nodeSelector":{"disktype":"ssd"}}}'
+pod/picky created
+
+$ sleep 5; kubectl -n course-life get events --field-selector reason=FailedScheduling -o jsonpath='{range .items[*]}{.message}{"\n"}{end}'
+0/1 nodes are available: 1 Insufficient memory. preemption: 0/1 nodes are available: 1 No preemption victims found for incoming pod.
+0/1 nodes are available: 1 node(s) didn't match Pod's node affinity/selector. preemption: 0/1 nodes are available: 1 Preemption is not helpful for scheduling.
+
+$ kubectl describe node k3d-k8s-lab-server-0 | grep -A6 "Allocated resources"
+Allocated resources:
+  (Total limits may be over 100 percent, i.e., overcommitted.)
+  Resource           Requests      Limits
+  --------           --------      ------
+  cpu                1560m (10%)   15350m (102%)
+  memory             3284Mi (27%)  10506Mi (87%)
+  ephemeral-storage  0 (0%)        0 (0%)
+
+$ kubectl -n course-life delete pod greedy picky
+pod "greedy" deleted
+pod "picky" deleted
 ```
 
 **What you should see.** Two refusals:
@@ -174,9 +227,14 @@ Now look at the node's allocations. A pod states two amounts. Its *request* is w
 
 Admission is the API server's last check before storage. Here you send two broken objects and watch two different checkers refuse them.
 
-```bash
-kubectl -n course-life create deployment bad --image=nginx:1.27-alpine --replicas=-1 --dry-run=client -o yaml | kubectl apply -f -
-printf 'apiVersion: security.istio.io/v1\nkind: AuthorizationPolicy\nmetadata:\n  name: broken\n  namespace: course-life\nspec:\n  rules:\n  - when:\n    - key: request.colour\n      values: ["blue"]\n' | kubectl apply -f -
+```console
+$ kubectl -n course-life create deployment bad --image=nginx:1.27-alpine --replicas=-1 --dry-run=client -o yaml | kubectl apply -f -
+The Deployment "bad" is invalid: spec.replicas: Invalid value: -1: must be greater than or equal to 0
+
+$ printf 'apiVersion: security.istio.io/v1\nkind: AuthorizationPolicy\nmetadata:\n  name: broken\n  namespace: course-life\nspec:\n  rules:\n  - when:\n    - key: request.colour\n      values: ["blue"]\n' | kubectl apply -f -
+Error from server: error when creating "STDIN": admission webhook "validation.istio.io" denied the request: configuration is invalid: 2 errors occurred:
+	* invalid policy broken.course-life: invalid `value` for `key` request.colour: unknown attribute: request.colour
+	* invalid policy broken.course-life: invalid `notValue` for `key` request.colour: unknown attribute: request.colour
 ```
 
 **What you should see.** Two refusals, from two checkers:
@@ -210,17 +268,26 @@ CoreDNS is the cluster's DNS server. It answers DNS lookups for the Service name
 
 istiod is Istio's control plane. It tells ztunnel and the waypoints, Istio's proxies, about the new address.
 
-```bash
-docker exec k3d-k8s-lab-server-0 crictl pods --namespace course-life
-docker exec k3d-k8s-lab-server-0 ip route
-kubectl -n course-life get endpointslice -l kubernetes.io/service-name=hello -o jsonpath='{range .items[*].endpoints[*]}{.addresses[0]} ready={.conditions.ready}{"\n"}{end}'
+```console
+$ docker exec k3d-k8s-lab-server-0 crictl pods --namespace course-life
+POD ID              CREATED             STATE               NAME                      NAMESPACE           ATTEMPT             RUNTIME
+02bfa6f80973d       56 seconds ago      Ready               client-7695f5987b-q9gk6   course-life         0                   (default)
+68644c8d13d7b       56 seconds ago      Ready               hello-76fb6c6b6f-dqlh9    course-life         0                   (default)
+
+$ docker exec k3d-k8s-lab-server-0 ip route
+default via 192.168.107.1 dev eth0
+10.42.0.0/24 dev cni0 proto kernel scope link src 10.42.0.1
+192.168.107.0/24 dev eth0 proto kernel scope link src 192.168.107.2
+
+$ kubectl -n course-life get endpointslice -l kubernetes.io/service-name=hello -o jsonpath='{range .items[*].endpoints[*]}{.addresses[0]} ready={.conditions.ready}{"\n"}{end}'
+10.42.0.176 ready=true
 ```
 
 **What you should see.** Each command shows one part of the list above:
 
 1. `crictl pods` lists the pod's sandbox.
 2. `ip route` shows the node's routes. `10.42.0.0/24 dev cni0` covers the pods on this node, through the bridge. A default route sends everything else out of `eth0`. With more nodes, flannel adds a route per node through its VXLAN interface, a tunnel that carries pod traffic between nodes.
-3. The EndpointSlice lists `10.42.0.33 ready=true`. Your IP differs.
+3. The EndpointSlice lists `10.42.0.176 ready=true`. Your IP differs.
 
 ## Part 2: scenario A, a request without a mesh
 
@@ -254,12 +321,27 @@ In other words: kube-proxy writes the forwarding rules once, and the kernel appl
 
 ### 7. Follow one request
 
-```bash
-kubectl -n course-life exec deploy/client -- cat /etc/resolv.conf
-kubectl -n course-life exec deploy/client -- curl -sv -o /dev/null http://hello 2>&1 | grep -E "Trying|Connected|< HTTP"
-SVCIP=$(kubectl -n course-life get svc hello -o jsonpath='{.spec.clusterIP}')
-docker exec k3d-k8s-lab-server-0 sh -c "iptables-save -t nat | grep course-life/hello"
-docker exec k3d-k8s-lab-server-0 conntrack -L -d $SVCIP 2>/dev/null
+```console
+$ kubectl -n course-life exec deploy/client -- cat /etc/resolv.conf
+search course-life.svc.cluster.local svc.cluster.local cluster.local
+nameserver 10.43.0.10
+options ndots:5
+
+$ kubectl -n course-life exec deploy/client -- curl -sv -o /dev/null http://hello 2>&1 | grep -E "Trying|Connected|< HTTP"
+*   Trying 10.43.36.121:80...
+* Connected to hello (10.43.36.121) port 80
+< HTTP/1.1 200 OK
+
+$ SVCIP=$(kubectl -n course-life get svc hello -o jsonpath='{.spec.clusterIP}')
+$ docker exec k3d-k8s-lab-server-0 sh -c "iptables-save -t nat | grep course-life/hello"
+-A KUBE-SEP-YAZKFCYBLKU7OJFH -s 10.42.0.176/32 -m comment --comment "course-life/hello:http" -j KUBE-MARK-MASQ
+-A KUBE-SEP-YAZKFCYBLKU7OJFH -p tcp -m comment --comment "course-life/hello:http" -m tcp -j DNAT --to-destination 10.42.0.176:80
+-A KUBE-SERVICES -d 10.43.36.121/32 -p tcp -m comment --comment "course-life/hello:http cluster IP" -m tcp --dport 80 -j KUBE-SVC-KJCWZC573JCB7P23
+-A KUBE-SVC-KJCWZC573JCB7P23 ! -s 10.42.0.0/16 -d 10.43.36.121/32 -p tcp -m comment --comment "course-life/hello:http cluster IP" -m tcp --dport 80 -j KUBE-MARK-MASQ
+-A KUBE-SVC-KJCWZC573JCB7P23 -m comment --comment "course-life/hello:http -> 10.42.0.176:80" -j KUBE-SEP-YAZKFCYBLKU7OJFH
+
+$ docker exec k3d-k8s-lab-server-0 conntrack -L -d $SVCIP 2>/dev/null
+tcp      6 119 TIME_WAIT src=10.42.0.177 dst=10.43.36.121 sport=56598 dport=80 src=10.42.0.176 dst=10.42.0.177 sport=80 dport=56598 [ASSURED] mark=0 use=1
 ```
 
 **What you should see.** The output follows the four steps from the top of this part. The values below come from the test run. Yours will differ.
@@ -276,15 +358,15 @@ The client only knows the name `hello`. It needs an address. `resolv.conf` tells
 
 **Step 2: the client connects.**
 
-curl prints `Trying 10.43.57.32:80... Connected to hello`. As far as curl knows, it talks to `10.43.57.32`. The packet leaves the client pod through its network cable, the veth pair, and enters the node.
+curl prints `Trying 10.43.36.121:80... Connected to hello`. As far as curl knows, it talks to `10.43.36.121`. The packet leaves the client pod through its network cable, the veth pair, and enters the node.
 
 **Step 3: the kernel rewrites the destination.**
 
-The kernel checks the packet against kube-proxy's rules in the `nat` table. The `grep` shows three rules. Read them as a chain, each one handing the packet to the next:
+The kernel checks the packet against kube-proxy's rules in the `nat` table. The `grep` shows five rules. Read the three that move the packet as a chain, each one handing the packet to the next:
 
-1. `KUBE-SERVICES` matches the destination `10.43.57.32` port 80 and jumps to the Service's own chain, `KUBE-SVC-KJCW...`.
+1. `KUBE-SERVICES` matches the destination `10.43.36.121` port 80 and jumps to the Service's own chain, `KUBE-SVC-KJCW...`.
 2. `KUBE-SVC-KJCW...` picks one pod. With one pod, the choice is easy. With three, kube-proxy adds random odds, so each pod gets about a third of the connections.
-3. `KUBE-SEP-2DZN...` rewrites the destination: `DNAT --to-destination 10.42.0.33:80`.
+3. `KUBE-SEP-YAZK...` rewrites the destination: `DNAT --to-destination 10.42.0.176:80`.
 
 The packet now carries the nginx pod's real address. The kernel sends it through the node's bridge, `cni0`, to the nginx pod. nginx sees an ordinary TCP connection from the client pod's IP.
 
@@ -292,10 +374,10 @@ The packet now carries the nginx pod's real address. The kernel sends it through
 
 conntrack shows one line with two halves:
 
-- going out: `src=10.42.0.35 dst=10.43.57.32 dport=80` (what the client sent)
-- coming back: `src=10.42.0.33 dst=10.42.0.35 sport=80` (what nginx sends)
+- going out: `src=10.42.0.177 dst=10.43.36.121 dport=80` (what the client sent)
+- coming back: `src=10.42.0.176 dst=10.42.0.177 sport=80` (what nginx sends)
 
-When nginx replies from `10.42.0.33`, the kernel finds this entry and changes the source back to `10.43.57.32`. To the client, the Service answered. It never learns the pod's real IP.
+When nginx replies from `10.42.0.176`, the kernel finds this entry and changes the source back to `10.43.36.121`. To the client, the Service answered. It never learns the pod's real IP.
 
 Only the first packet of a connection walks through the iptables chain. Every later packet follows the conntrack entry, which is faster.
 
@@ -338,15 +420,40 @@ Each end's certificate names its service account in a standard form, a SPIFFE ID
 
 Your Mac isn't part of the cluster, so the request first has to reach the gateway pod inside it. Two forwarders and two kernel rewrites do that, before any Istio component takes part.
 
-```bash
-docker port k3d-k8s-lab-serverlb
-docker exec k3d-k8s-lab-serverlb grep -A3 "upstream 8080_tcp" /etc/nginx/nginx.conf
-kubectl -n shop-ingress get svc shop-gateway-istio
-docker exec k3d-k8s-lab-server-0 iptables -t nat -S PREROUTING
-curl -s -o /dev/null localhost:8080/
-docker exec k3d-k8s-lab-server-0 sh -c 'iptables -t nat -L -v -n | grep -E "shop-gateway-istio:http loadbalancer IP|DNAT .*dpt:8080 to:"'
-docker exec k3d-k8s-lab-server-0 conntrack -L -p tcp -d 192.168.107.2 --dport 8080 2>/dev/null | head -1
-kubectl -n shop-ingress get pod -l gateway.networking.k8s.io/gateway-name=shop-gateway -o wide
+```console
+$ docker port k3d-k8s-lab-serverlb
+6443/tcp -> 0.0.0.0:63077
+8080/tcp -> 0.0.0.0:8080
+8080/tcp -> [::]:8080
+8443/tcp -> 0.0.0.0:8443
+8443/tcp -> [::]:8443
+
+$ docker exec k3d-k8s-lab-serverlb grep -A3 "upstream 8080_tcp" /etc/nginx/nginx.conf
+  upstream 8080_tcp {
+    server k3d-k8s-lab-server-0:8080 max_fails=1 fail_timeout=10s;
+  }
+
+$ kubectl -n shop-ingress get svc shop-gateway-istio
+NAME                 TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)                          AGE
+shop-gateway-istio   LoadBalancer   10.43.62.182   192.168.107.2   15021:32050/TCP,8080:30297/TCP   34h
+
+$ docker exec k3d-k8s-lab-server-0 iptables -t nat -S PREROUTING
+-P PREROUTING ACCEPT
+-A PREROUTING -m comment --comment "kubernetes service portals" -j KUBE-SERVICES
+-A PREROUTING -d 192.168.107.1/32 -j DOCKER_OUTPUT
+-A PREROUTING -m addrtype --dst-type LOCAL -j CNI-HOSTPORT-DNAT
+
+$ curl -s -o /dev/null localhost:8080/
+$ docker exec k3d-k8s-lab-server-0 sh -c 'iptables -t nat -L -v -n | grep -E "shop-gateway-istio:http loadbalancer IP|DNAT .*dpt:8080 to:"'
+    0     0 DNAT       6    --  *      *       0.0.0.0/0            0.0.0.0/0            tcp dpt:8080 to:10.42.0.103:8080
+    1    60 KUBE-EXT-EIP2LX4U67RPLA5V  6    --  *      *       0.0.0.0/0            192.168.107.2        /* shop-ingress/shop-gateway-istio:http loadbalancer IP */ tcp dpt:8080
+
+$ docker exec k3d-k8s-lab-server-0 conntrack -L -p tcp -d 192.168.107.2 --dport 8080 2>/dev/null | head -1
+tcp      6 119 TIME_WAIT src=192.168.107.3 dst=192.168.107.2 sport=40124 dport=8080 src=10.42.0.172 dst=10.42.0.1 sport=8080 dport=36112 [ASSURED] mark=0 use=1
+
+$ kubectl -n shop-ingress get pod -l gateway.networking.k8s.io/gateway-name=shop-gateway -o wide
+NAME                                  READY   STATUS    RESTARTS   AGE    IP            NODE                   NOMINATED NODE   READINESS GATES
+shop-gateway-istio-858774d7cd-5k8bl   1/1     Running   0          113s   10.42.0.172   k3d-k8s-lab-server-0   <none>           <none>
 ```
 
 **What you should see.** The output follows four hops.
@@ -366,16 +473,16 @@ The kernel checks rules in order, and the first match wins. `PREROUTING` jumps t
 
 1. The rule `-d 192.168.107.2/32 ... --dport 8080` jumps to `KUBE-EXT-EIP2...`.
 2. `KUBE-EXT-EIP2...` marks the packet for masquerade, a note that says "change the source on the way out".
-3. `KUBE-SVC-EIP2...` then `KUBE-SEP-...` rewrite the destination to the gateway pod, `10.42.0.88:8080`. This is the DNAT.
+3. `KUBE-SVC-EIP2...` then `KUBE-SEP-...` rewrite the destination to the gateway pod, `10.42.0.172:8080`. This is the DNAT.
 
-The packet counters prove it. In the test run, the load balancer IP rule had matched 33 connections, and the host port DNAT none.
+The packet counters prove it. In this run, the load balancer IP rule had matched 1 connection since the gateway pod last restarted, and the host port DNAT none. An earlier run counted 33.
 
 **Hop 4: the kernel rewrites the source.** On the way out to the pod, `KUBE-POSTROUTING` sees the mark. It applies `MASQUERADE --random-fully`, which changes the source to `10.42.0.1`, the node's address on the pod network, with a new port. This rewrite of the source is called SNAT.
 
 conntrack, the kernel's notebook of rewrites, shows both changes in one line:
 
 - going in: `src=192.168.107.3 dst=192.168.107.2 dport=8080`
-- coming back: `src=10.42.0.88 dst=10.42.0.1`
+- coming back: `src=10.42.0.172 dst=10.42.0.1`
 
 So the gateway pod sees a plain TCP connection from the node. The SNAT makes the reply return through this node, so conntrack undoes both rewrites. The cost is that the gateway never learns your Mac's address. A Service with `externalTrafficPolicy: Cluster`, the default, always hides the client this way.
 
@@ -383,29 +490,44 @@ So the gateway pod sees a plain TCP connection from the node. The SNAT makes the
 
 The gateway is the shop's front door. It runs Envoy, a proxy that reads HTTP. It decides which app gets the request and opens an encrypted tunnel to that app.
 
-```bash
-GW=$(kubectl -n shop-ingress get pod -l gateway.networking.k8s.io/gateway-name=shop-gateway -o name)
-istioctl proxy-config routes $GW -n shop-ingress | head -3
-istioctl proxy-config endpoints $GW -n shop-ingress | grep frontend
-kubectl get ns shop-ingress shop -L istio.io/dataplane-mode
+```console
+$ GW=$(kubectl -n shop-ingress get pod -l gateway.networking.k8s.io/gateway-name=shop-gateway -o name)
+$ istioctl proxy-config routes $GW -n shop-ingress | head -3
+NAME          VHOST NAME     DOMAINS     MATCH                  VIRTUAL SERVICE
+http.8080     *:8080         *           /*                     frontend-0-istio-autogenerated-k8s-gateway.shop
+              backend        *           /healthz/ready*
+
+$ istioctl proxy-config endpoints $GW -n shop-ingress | grep frontend
+envoy://connect_originate/10.42.0.42:3000               HEALTHY     OK                outbound|3000||frontend.shop.svc.cluster.local
+
+$ kubectl get ns shop-ingress shop -L istio.io/dataplane-mode
+NAME           STATUS   AGE   DATAPLANE-MODE
+shop-ingress   Active   34h
+shop           Active   34h   ambient
 ```
 
 **What you should see.** Three answers:
 
 1. **Where does the request go?** Route `http.8080` matches `/*` and sends it to `frontend.shop`. istiod built this route from the shop's HTTPRoute.
-2. **How does it get there?** The endpoint is `envoy://connect_originate/10.42.0.13:3000`. This means the gateway's Envoy **itself** opens the HBONE tunnel to the frontend pod, with its own certificate.
+2. **How does it get there?** The endpoint is `envoy://connect_originate/10.42.0.42:3000`. This means the gateway's Envoy **itself** opens the HBONE tunnel to the frontend pod, with its own certificate.
 3. **Does the gateway need ambient mode?** No. The gateway's namespace `shop-ingress` isn't in ambient mode, and it doesn't need to be. The gateway is already an Envoy that speaks HBONE.
 
 ### 10. Inside the frontend pod: ztunnel's sockets
 
 Somebody must decrypt the tunnel before the app sees the bytes. In ambient mode, that job belongs to ztunnel. ztunnel is a small proxy, one per node, that handles encryption and identity for every pod on its node. Surprisingly, the tunnel ends inside the frontend pod, not inside ztunnel's own pod. This step shows how.
 
-```bash
-CID=$(docker exec k3d-k8s-lab-server-0 crictl ps --name frontend -q | head -1)
-PID=$(docker exec k3d-k8s-lab-server-0 crictl inspect --output go-template --template '{{.info.pid}}' $CID)
-docker exec k3d-k8s-lab-server-0 nsenter -t $PID -n iptables-save | grep -E "REDIRECT|15008"
-docker exec k3d-k8s-lab-server-0 sh -c "cat /proc/$PID/net/tcp /proc/$PID/net/tcp6" \
+```console
+$ CID=$(docker exec k3d-k8s-lab-server-0 crictl ps --name frontend -q | head -1)
+$ PID=$(docker exec k3d-k8s-lab-server-0 crictl inspect --output go-template --template '{{.info.pid}}' $CID)
+$ docker exec k3d-k8s-lab-server-0 nsenter -t $PID -n iptables-save | grep -E "REDIRECT|15008"
+-A ISTIO_OUTPUT ! -o lo -p udp -m mark ! --mark 0x539/0xfff -m udp --dport 53 -j REDIRECT --to-ports 15053
+-A ISTIO_OUTPUT ! -d 127.0.0.1/32 -p tcp -m tcp --dport 53 -m mark ! --mark 0x539/0xfff -j REDIRECT --to-ports 15053
+-A ISTIO_OUTPUT ! -d 127.0.0.1/32 -p tcp -m mark ! --mark 0x539/0xfff -j REDIRECT --to-ports 15001
+-A ISTIO_PRERT ! -d 127.0.0.1/32 -p tcp -m tcp ! --dport 15008 -m mark ! --mark 0x539/0xfff -j REDIRECT --to-ports 15006
+
+$ docker exec k3d-k8s-lab-server-0 sh -c "cat /proc/$PID/net/tcp /proc/$PID/net/tcp6" \
   | python3 -c 'import sys; print(sorted({int(l.split()[1].split(":")[1],16) for l in sys.stdin if len(l.split())>3 and l.split()[3]=="0A"}))'
+[3000, 15001, 15006, 15008, 15053]
 ```
 
 **What you should see.** The third command enters the frontend pod's network namespace through its process ID. When the pod started, istio-cni wrote REDIRECT rules there. A REDIRECT rule works like a receptionist who sends every visitor to one desk, whatever room they asked for:
@@ -419,7 +541,7 @@ docker exec k3d-k8s-lab-server-0 sh -c "cat /proc/$PID/net/tcp /proc/$PID/net/tc
 
 The last command lists the listening ports: `[3000, 15001, 15006, 15008, 15053]`. Port 3000 is the app. The other four are **ztunnel's sockets, inside the pod's own network namespace**. ztunnel runs as a pod of its own, but it created these sockets here.
 
-Now the arrival makes sense. The gateway's tunnel ends at `10.42.0.13:15008`, inside the frontend pod. Then ztunnel works through four steps:
+Now the arrival makes sense. The gateway's tunnel ends at `10.42.0.42:15008`, inside the frontend pod. Then ztunnel works through four steps:
 
 1. It checks the gateway's identity.
 2. It checks any L4 policy, a rule about who may connect.
@@ -438,11 +560,24 @@ The frontend app knows nothing about the mesh. It opens `http://backend.shop.svc
 
 Each hop has its own tunnel, and each tunnel shows two identities, the caller's and the receiver's. ztunnel's log records them.
 
-```bash
-kubectl -n istio-system logs ds/ztunnel --since=60m | grep 'connection complete' \
+```console
+$ kubectl -n istio-system logs ds/ztunnel --since=60m | grep 'connection complete' \
   | grep -E 'src.workload="(shop-gateway|frontend|waypoint|backend)' \
   | grep -oE '(src\.identity|dst\.identity|dst\.hbone_addr)=[^ ]+' | paste - - - | sort -u | head -8
-istioctl ztunnel-config certificates | grep -E "ns/shop/sa/(frontend|backend)" | head -4
+src.identity="spiffe://cluster.local/ns/shop-ingress/sa/shop-gateway-istio"	dst.hbone_addr=10.42.0.37:4317	dst.identity="spiffe://cluster.local/ns/observability/sa/jaeger"
+src.identity="spiffe://cluster.local/ns/shop-ingress/sa/shop-gateway-istio"	dst.hbone_addr=10.42.0.42:3000	dst.identity="spiffe://cluster.local/ns/shop/sa/frontend"
+src.identity="spiffe://cluster.local/ns/shop/sa/backend"	dst.hbone_addr=10.42.0.37:4318	dst.identity="spiffe://cluster.local/ns/observability/sa/jaeger"
+src.identity="spiffe://cluster.local/ns/shop/sa/backend"	dst.hbone_addr=10.42.0.46:6379	dst.identity="spiffe://cluster.local/ns/shop/sa/redis"
+src.identity="spiffe://cluster.local/ns/shop/sa/frontend"	dst.hbone_addr=10.43.239.201:8000	dst.identity="spiffe://cluster.local/ns/shop/sa/waypoint"
+src.identity="spiffe://cluster.local/ns/shop/sa/waypoint"	dst.hbone_addr=10.42.0.150:8000	dst.identity="spiffe://cluster.local/ns/shop/sa/backend"
+src.identity="spiffe://cluster.local/ns/shop/sa/waypoint"	dst.hbone_addr=10.42.0.152:8000	dst.identity="spiffe://cluster.local/ns/shop/sa/backend"
+src.identity="spiffe://cluster.local/ns/shop/sa/waypoint"	dst.hbone_addr=10.42.0.155:8000	dst.identity="spiffe://cluster.local/ns/shop/sa/backend"
+
+$ istioctl ztunnel-config certificates | grep -E "ns/shop/sa/(frontend|backend)" | head -4
+spiffe://cluster.local/ns/shop/sa/backend                                               Leaf     Available     true           cdd0650411d48f45b45f756066cd3e7f     2026-11-15T16:02:52Z     2026-11-14T16:00:52Z
+spiffe://cluster.local/ns/shop/sa/backend                                               Root     Available     true           b1d9074685f90f0b29a27c6e0edc1a1a     2036-11-10T12:26:51Z     2026-11-13T12:26:51Z
+spiffe://cluster.local/ns/shop/sa/frontend                                              Leaf     Available     true           2a7a3d079d91bf699aadb658ee9a5316     2026-11-15T16:02:51Z     2026-11-14T16:00:51Z
+spiffe://cluster.local/ns/shop/sa/frontend                                              Root     Available     true           b1d9074685f90f0b29a27c6e0edc1a1a     2036-11-10T12:26:51Z     2026-11-13T12:26:51Z
 ```
 
 ztunnel logs a connection only when it **closes**. The shop reuses its connections, so they stay open for a long time. For this reason, give the command a wide time window, or wait a few minutes after sending requests. Tunnels to services from earlier modules, such as `sa/assistant` from module 17, may show up too.
@@ -452,7 +587,7 @@ ztunnel logs a connection only when it **closes**. The shop reuses its connectio
 | Hop | From | To | Notes |
 |---|---|---|---|
 | 1 | `ns/shop-ingress/sa/shop-gateway-istio` | `ns/shop/sa/frontend` | step 9's tunnel |
-| 2 | `ns/shop/sa/frontend` | `ns/shop/sa/waypoint` | addressed to `10.43.76.1:8000`, the backend **Service's** IP: the waypoint takes the Service's traffic |
+| 2 | `ns/shop/sa/frontend` | `ns/shop/sa/waypoint` | addressed to `10.43.239.201:8000`, the backend **Service's** IP: the waypoint takes the Service's traffic |
 | 3 | `ns/shop/sa/waypoint` | `ns/shop/sa/backend` | the waypoint picked a backend-v1 pod |
 | 4 | `ns/shop/sa/backend` | `ns/shop/sa/redis` | ztunnel to ztunnel: Redis has no waypoint, so only L4 |
 
@@ -462,16 +597,31 @@ Every certificate carries a SPIFFE identity, a standard name made of namespace a
 
 ztunnel sees connections and identities, but not HTTP. A rule like "only `GET` on `/api/`" needs a proxy that reads each request. In ambient mode, that proxy is the waypoint, an Envoy that serves the backend Services.
 
-```bash
-kubectl apply -f platform-engineering/manifests/06-waypoint-access-logs.yaml
-curl -s -o /dev/null localhost:8080/api/orders
-kubectl -n shop logs deploy/waypoint --tail=1
-kubectl -n shop get authorizationpolicy backend-allow-frontend -o yaml | grep -A12 "^spec"
+```console
+$ kubectl apply -f platform-engineering/manifests/06-waypoint-access-logs.yaml
+telemetry.telemetry.istio.io/waypoint-access-logs created
+
+$ curl -s -o /dev/null localhost:8080/api/orders
+$ kubectl -n shop logs deploy/waypoint --tail=1
+[2026-11-14T22:55:06.925Z] "GET /api/orders HTTP/1.1" 200 - via_upstream - "-" 0 395 15 14 "-" "node" "4a405e31-bc25-901e-a9aa-6ca228e6c85d" "backend.shop.svc.cluster.local:8000" "envoy://connect_originate/10.42.0.157:8000" inbound-vip|8000|http|backend-v1.shop.svc.cluster.local envoy://internal_client_address/ 10.43.239.201:8000 10.42.0.42:43502 - shop.backend-route.0
+
+$ kubectl -n shop get authorizationpolicy backend-allow-frontend -o yaml | grep -A12 "^spec"
+spec:
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/shop/sa/frontend
+    to:
+    - operation:
+        methods:
+        - GET
+        - POST
+        paths:
 ```
 
-**What you should see.** One access log line:
-
-`"GET /api/orders HTTP/1.1" 200 ... "envoy://connect_originate/10.42.0.56:8000" inbound-vip|8000|http|backend-v1.shop.svc.cluster.local`
+**What you should see.** One access log line. It names the pod the waypoint chose, `envoy://connect_originate/10.42.0.157:8000`, and the Service `backend-v1`.
 
 Behind that one line, the waypoint did everything an L7 proxy does, in this order:
 
@@ -488,8 +638,8 @@ A refused request ends at step 2 with `403 RBAC: access denied`. The waypoint wr
 
 Each proxy records how long its part of the request took, as a timed block called a span. Jaeger, the lab's tracing tool, joins the spans of one request into a trace. The trace shows where the time goes.
 
-```bash
-curl -s -o /dev/null -X POST localhost:8080/api/orders -H 'content-type: application/json' -d '{"item":"life","quantity":1}'
+```console
+$ curl -s -o /dev/null -X POST localhost:8080/api/orders -H 'content-type: application/json' -d '{"item":"life","quantity":1}'
 ```
 
 Find the trace in Jaeger (http://localhost:16686). Choose service `backend` and operation `POST /api/orders`.
@@ -537,7 +687,7 @@ The request met several checks, and each one looks at something different. The t
 
 1. You delete the `hello` pod. List, in order, the components that act before a new pod serves traffic again, and what each does.
 2. In scenario A, nginx logs the client pod's IP as the source. In scenario B, what does the backend app see as the source of a request, and how does the backend learn which service really called?
-3. The frontend's connection to the backend goes to the Service IP `10.43.76.1`, yet kube-proxy has iptables rules for that IP too. Why doesn't kube-proxy's DNAT send it straight to a backend pod?
+3. The frontend's connection to the backend goes to the Service IP `10.43.239.201`, yet kube-proxy has iptables rules for that IP too. Why doesn't kube-proxy's DNAT send it straight to a backend pod?
 4. Your API server is down for five minutes. Which of today's paths keep working, and which stop?
 
 <details>
@@ -561,8 +711,13 @@ The request met several checks, and each one looks at something different. The t
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh
+```console
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 This deletes the `course-life` namespace, and with it the nginx app and the client.
