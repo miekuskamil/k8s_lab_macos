@@ -2,7 +2,7 @@
 
 > New to a term here, like kubeadm or static pod? The [glossary](../course/glossary.md#cks-exam-track) explains every term the tracks use.
 
-The [course](../course/README.md) teaches you how a platform works and why. A certification exam tests something narrower: whether you fix a given problem on a live cluster, from a terminal, against the clock. These tracks train that second skill. Each one covers an exam's official curriculum, links to the course wherever the course already explains a topic, and adds timed tasks and a scored mock exam for the rest.
+The [course](../course/README.md) teaches you how a platform works and why. A certification exam tests something narrower: whether you fix a given problem on a live cluster, from a terminal, against the clock. These tracks train that second skill. Each one covers an exam's official curriculum, links to the course wherever the course already explains a topic, and adds timed tasks and scored mock exams for the rest.
 
 | Track | Exam | Status |
 |---|---|---|
@@ -25,7 +25,7 @@ The exam cluster comes from kubeadm, so the tracks use kubeadm too. kubeadm is t
 
 ## The practice cluster
 
-![The practice cluster: two OrbStack machines, cks-cp and cks-w1, with the tools each one runs](../docs/diagrams/chapters/cks-practice-cluster.svg)
+![The practice clusters: two OrbStack machines, cks-cp and cks-w1, with the tools each one runs, and the Lima VM cks-lima with Cilium, AppArmor and WireGuard](../docs/diagrams/chapters/cks-practice-cluster.svg)
 
 The cluster has two nodes, each an OrbStack Linux machine with Ubuntu 24.04 on arm64:
 

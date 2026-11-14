@@ -2,7 +2,7 @@
 
 A small shop running on your laptop, wrapped in the tooling a platform team uses: Istio ambient mesh, ArgoCD, cert-manager, Prometheus, Grafana, Jaeger, Loki, Kiali and Headlamp. It is a place to learn a service mesh and GitOps without a cloud account.
 
-The shop is a Node.js frontend, a Python FastAPI backend in two versions, and Redis. You break it on purpose (shift 10% of traffic to a new version, inject faults, trip a circuit breaker) and watch what happens in the UIs. An [Istio course](course/README.md) takes you from zero to debugging incidents. The [certification tracks](certs/README.md) prepare you for the CKS exam with timed tasks and a scored mock exam on a kubeadm cluster.
+The shop is a Node.js frontend, a Python FastAPI backend in two versions, and Redis. You break it on purpose (shift 10% of traffic to a new version, inject faults, trip a circuit breaker) and watch what happens in the UIs. An [Istio course](course/README.md) takes you from zero to debugging incidents. The [certification tracks](certs/README.md) prepare you for the CKS exam with 65 timed tasks and three scored mock exams on kubeadm clusters.
 
 ## What you need
 
