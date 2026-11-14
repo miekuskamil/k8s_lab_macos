@@ -53,8 +53,28 @@ The machines keep their IP addresses across `orb stop` and `orb start`, which ma
 
 OrbStack machines are not full virtual machines. They share one Linux kernel with each other and with OrbStack's Docker engine. Three consequences matter for the CKS track:
 
-- The kernel has no AppArmor. The kubelet accepts AppArmor fields in a pod but refuses to start the pod: `Cannot enforce AppArmor: AppArmor is not enabled on the host`. The AppArmor tasks therefore check your profile with `apparmor_parser` and your pod spec with the API server, and stop there.
+- The kernel has no AppArmor. The kubelet accepts AppArmor fields in a pod but refuses to start the pod: `Cannot enforce AppArmor: AppArmor is not enabled on the host`. So the AppArmor tasks run on the [Lima VM](#the-lima-vm-for-apparmor-and-cilium), which has a kernel of its own.
 - The kernel has no WireGuard module, so Calico and Cilium node-to-node encryption don't run here. Pod-to-pod encryption points to Istio, which the course already runs.
+- Cilium would load its eBPF programs into the kernel that every OrbStack machine and the Docker engine share. The Cilium tasks run on the Lima VM for that reason, and the OrbStack cluster keeps Calico.
 - Falco sees every system call on the shared kernel, including the ones from other OrbStack machines and Docker containers. Filter its output by `k8s.ns.name` or container name to see only your cluster.
 
 Two settings in `certs/cks/cluster/kubeadm-config.yaml` exist only because of OrbStack. kube-proxy doesn't set the kernel's connection tracking table size (`conntrack.maxPerCore: 0`), because a machine may not change a value the whole kernel shares. And the kubelet tolerates swap (`failSwapOn: false`), because OrbStack gives every machine the host's swap.
+
+## The Lima VM for AppArmor and Cilium
+
+Two exam topics need a kernel that belongs to one machine: AppArmor, which OrbStack's kernel lacks, and Cilium, which reprograms the kernel's network path. So the track has a third practice machine. **Lima** is a tool for macOS that runs Linux virtual machines on Apple's virtualization framework, each with its own kernel. The VM `cks-lima` runs Ubuntu 24.04 with AppArmor on, and a one-node kubeadm cluster at Kubernetes 1.37.1 with Cilium 1.20.4 as its CNI.
+
+```bash
+brew install lima                       # once
+./certs/cks/cluster/lima.sh create      # builds the VM and the cluster; safe to run again
+./certs/cks/cluster/lima.sh shell       # a root shell on the node, like "ssh cks-lima" in the exam
+./certs/cks/cluster/lima.sh stop        # frees the memory; "start" brings it back
+./certs/cks/cluster/lima.sh reset       # back to a fresh cluster, VM kept
+./certs/cks/cluster/lima.sh destroy     # deletes the VM
+```
+
+In the test run, `create` took 2 minutes 5 seconds from nothing, and `reset` took 2 minutes 15 seconds. The VM gets 2 CPUs and 3 GiB. With the cluster idle, the guest used 1.25 GB and the VM process on the Mac 1.5 GB. Lima's memory comes from the Mac directly, not from OrbStack's share, so it doesn't compete with the OrbStack machines or the k3d lab.
+
+Lima shows your Mac home folder inside the VM at the same path, read-only. The node has `kubectl` with the `k` alias, `crictl`, `apparmor_parser`, `aa-status` and the `cilium` command line tool.
+
+The domain files mark each task that runs here with **Host:** `cks-lima`.
