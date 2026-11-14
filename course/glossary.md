@@ -604,3 +604,15 @@ These terms come from the [CKS track](../certs/cks/README.md) in `certs/cks/`. E
 
 **cosign.** cosign is the Sigstore tool that signs container images and verifies those signatures. Admission policies, such as Kyverno's `verifyImages`, then refuse unsigned images. CKS 05.
 
+**Audit log and audit policy.** The audit log is the API server's record of requests: who did what to which object, and when. The audit policy decides what to record, with the first matching rule winning, at one of four levels: `None`, `Metadata`, `Request` or `RequestResponse`. kubeadm leaves auditing off. CKS 06.
+
+**System call (syscall).** A system call is a request from a program to the kernel, such as opening a file or starting a process. Everything a container does turns into syscalls, so seccomp filters them and Falco watches them. CKS 06.
+
+**Falco.** Falco is a CNCF runtime security tool that watches system calls through an eBPF probe and raises an alert when one matches a rule. A rule has a condition, an output with `%` fields, and a priority. Falco reports and never blocks. CKS 06.
+
+**Immutable container.** An immutable container never changes after it starts, because its root file system is read-only (`readOnlyRootFilesystem: true`). The folders a program must write to get `emptyDir` volumes. CKS 06.
+
+**seccomp.** seccomp is a Linux kernel feature that filters the system calls a process may make. A profile is a JSON file with a default action and per-syscall actions. Kubernetes loads `Localhost` profiles from `/var/lib/kubelet/seccomp/`, and `RuntimeDefault` uses the container runtime's built-in profile. CKS 06.
+
+**AppArmor.** AppArmor is a Linux security module that limits which files, capabilities and network access a program gets, through a text profile loaded with `apparmor_parser`. A pod asks for a loaded profile with `securityContext.appArmorProfile`. OrbStack's kernel lacks it. CKS 06.
+
