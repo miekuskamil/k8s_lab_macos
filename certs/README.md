@@ -7,8 +7,6 @@ The [course](../platform-engineering/README.md) teaches you how a platform works
 | Track | Exam | Status |
 |---|---|---|
 | [CKS](cks/README.md) | Certified Kubernetes Security Specialist, Kubernetes v1.37 | ready |
-| CKA | Certified Kubernetes Administrator | planned |
-| CKAD | Certified Kubernetes Application Developer | planned |
 
 ## How a track differs from the course
 
