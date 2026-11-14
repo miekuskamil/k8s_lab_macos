@@ -1,8 +1,8 @@
 # CKS 05: Supply chain security (20%)
 
-> New to a term here, like SBOM or ImagePolicyWebhook? The [glossary](../../course/glossary.md#cks-exam-track) explains every term this track uses.
+> New to a term here, like SBOM or ImagePolicyWebhook? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
 
-**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running. The course's [module 26](../../course/26-kyverno-policy-as-code.md) explains admission webhooks, which task 5 configures by hand.
+**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running. The course's [module 26](../../platform-engineering/26-kyverno-policy-as-code.md) explains admission webhooks, which task 5 configures by hand.
 
 Most of the code in a container image came from someone else: a base image, system packages, language libraries. A vulnerable or poisoned piece anywhere in that chain ends up running in your cluster with your permissions. This domain checks the chain at each step, from the Dockerfile to the API server's front door. It has ten tasks and takes about 1 hour 40 minutes.
 
@@ -66,7 +66,7 @@ kubesec reads a manifest without running it. It gives points for good settings, 
 The cluster's last line of defence is admission. Two ways to restrict registries come up in the exam:
 
 1. **ImagePolicyWebhook**, a built-in admission plugin. For every new pod, the API server POSTs an `ImageReview` with the image names to an outside service, and that service answers allowed or denied.
-2. A policy engine such as Kyverno, or a ValidatingAdmissionPolicy, which [module 26](../../course/26-kyverno-policy-as-code.md) covers.
+2. A policy engine such as Kyverno, or a ValidatingAdmissionPolicy, which [module 26](../../platform-engineering/26-kyverno-policy-as-code.md) covers.
 
 ImagePolicyWebhook needs three files, and the exam usually hands you the last two half-filled:
 

@@ -1,6 +1,6 @@
 # CKS mock exam 2
 
-> New to a term here? The [glossary](../../course/glossary.md#cks-exam-track) explains every term this track uses.
+> New to a term here? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
 
 **Before this mock exam:** [mock exam 1](mock-exam.md) under time, and all 13 tasks of each domain file. The [practice cluster](../README.md#the-practice-cluster) and the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium), both freshly reset.
 

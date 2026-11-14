@@ -23,7 +23,7 @@ def ingest_and_ask():
     c.subtitle("Ingest runs when the documents change. Ask runs for every question.")
 
     c.group(30, 180, 1780, 200, "Ingest, once per change")
-    ingest = [(SLATE, "Course files", "doc", "course/*.md, ConfigMap"),
+    ingest = [(SLATE, "Course files", "doc", "*.md, ConfigMap"),
               (PURPLE, "Split", "gear", "at headings, chunks"),
               (TEAL, "Embedding", "gear", "text to 768 numbers"),
               (ORANGE, "Qdrant", "db", "vector + text")]

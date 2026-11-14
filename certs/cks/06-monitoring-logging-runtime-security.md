@@ -1,8 +1,8 @@
 # CKS 06: Monitoring, logging and runtime security (20%)
 
-> New to a term here, like audit policy or syscall? The [glossary](../../course/glossary.md#cks-exam-track) explains every term this track uses.
+> New to a term here, like audit policy or syscall? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
 
-**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running, ideally fresh from `./certs/cks/cluster/reset.sh`, and the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium) for tasks 5 and 12. The course's [module 10](../../course/10-ebpf-and-cilium.md#concept-what-ebpf-is) explains eBPF, the technique Falco uses to watch the kernel.
+**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running, ideally fresh from `./certs/cks/cluster/reset.sh`, and the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium) for tasks 5 and 12. The course's [module 10](../../platform-engineering/10-ebpf-and-cilium.md#concept-what-ebpf-is) explains eBPF, the technique Falco uses to watch the kernel.
 
 The other domains try to keep attackers out. This one assumes somebody got in anyway. Then three questions matter: what did they do through the API, what are they doing inside the container right now, and how much damage does the container let them do. Audit logs answer the first, Falco the second, and immutable root file systems, seccomp and AppArmor limit the third. This domain has 13 tasks and takes about 2 hours.
 

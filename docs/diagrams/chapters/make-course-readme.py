@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the course map for course/README.md in ByteByteGo style (see ../bbg.py).
+"""Draw the course map for platform-engineering/README.md in ByteByteGo style (see ../bbg.py).
 
   readme-course-routes   module 0, then the Istio, operations and platform tracks
 

@@ -1,8 +1,8 @@
 # CKS 04: Minimize microservice vulnerabilities (20%)
 
-> New to a term here, like Pod Security Admission or RuntimeClass? The [glossary](../../course/glossary.md#cks-exam-track) explains every term this track uses.
+> New to a term here, like Pod Security Admission or RuntimeClass? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
 
-**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running. The course's [module 2](../../course/02-identity-and-mtls.md) explains mTLS between pods, and [module 10](../../course/10-ebpf-and-cilium.md#concept-kernel-space-and-user-space) explains the kernel boundary that gVisor moves. Read them for the pod-to-pod encryption topic. Task 10 runs on the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium).
+**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running. The course's [module 2](../../platform-engineering/02-identity-and-mtls.md) explains mTLS between pods, and [module 10](../../platform-engineering/10-ebpf-and-cilium.md#concept-kernel-space-and-user-space) explains the kernel boundary that gVisor moves. Read them for the pod-to-pod encryption topic. Task 10 runs on the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium).
 
 A container is a process with a few fences around it. It shares the node's kernel, and by default it runs as root, keeps a dozen Linux capabilities, and sees its API token and its Secrets as plain text. This domain tightens each fence: what a pod may ask for, where Secrets rest, how a pod receives them, and which kernel a risky pod talks to. It has ten tasks and takes about 1 hour 45 minutes.
 
@@ -24,7 +24,7 @@ The **Pod Security Standards** are three fixed levels that say how much power a 
 2. `pod-security.kubernetes.io/warn` lets them in and prints a warning to the client.
 3. `pod-security.kubernetes.io/audit` lets them in and writes a note into the audit log.
 
-Enforce never touches pods that already run, the same lesson the course's [module 26](../../course/26-kyverno-policy-as-code.md#concept-two-paths-to-a-verdict) teaches for Kyverno. A Deployment's existing pods keep running after you label the namespace. The refusal hits the next pod the ReplicaSet creates, and it shows up only as an event on the ReplicaSet. A server-side dry run of the label lists the pods that would break the rule before you apply it:
+Enforce never touches pods that already run, the same lesson the course's [module 26](../../platform-engineering/26-kyverno-policy-as-code.md#concept-two-paths-to-a-verdict) teaches for Kyverno. A Deployment's existing pods keep running after you label the namespace. The refusal hits the next pod the ReplicaSet creates, and it shows up only as an event on the ReplicaSet. A server-side dry run of the label lists the pods that would break the rule before you apply it:
 
 ```bash
 k label --dry-run=server --overwrite ns secure-apps pod-security.kubernetes.io/enforce=restricted
@@ -126,7 +126,7 @@ NetworkPolicy decides who may talk. It doesn't hide what they say: traffic betwe
 | How | mTLS between proxies, with a certificate per service account | WireGuard or IPsec tunnels between nodes |
 | Proves | which workload sent the request | which node sent the packet |
 | Turn on | label the namespace for the mesh, then a `PeerAuthentication` with `mode: STRICT` | Helm values `encryption.enabled=true` and `encryption.type=wireguard` |
-| In this repo | the whole Istio route of the course, [module 2](../../course/02-identity-and-mtls.md) first | compared in [module 10](../../course/10-ebpf-and-cilium.md#why-this-way-the-two-designs-share-one-idea) |
+| In this repo | the whole Istio route of the course, [module 2](../../platform-engineering/02-identity-and-mtls.md) first | compared in [module 10](../../platform-engineering/10-ebpf-and-cilium.md#why-this-way-the-two-designs-share-one-idea) |
 
 The OrbStack cluster runs neither. Its kernel has no WireGuard module, and Calico's own encryption needs WireGuard too. The Lima VM's kernel has the module, so task 10 turns on Cilium's WireGuard there and checks it with `cilium encrypt status`. The VM has one node, and WireGuard encrypts traffic between nodes, so no packet actually crosses the tunnel. The task proves the setting and the interface, not encrypted traffic. For Istio, the check is the PeerAuthentication and `istioctl x describe pod`, which the course's module 2 shows.
 

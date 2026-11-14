@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagram for course/08-incidents.md in ByteByteGo style (see ../bbg.py).
+"""Draw the diagram for platform-engineering/08-incidents.md in ByteByteGo style (see ../bbg.py).
 
   08-investigate       from the symptom to the fix, outside in
 

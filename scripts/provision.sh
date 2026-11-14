@@ -363,7 +363,7 @@ Cluster ports
 Next steps
   ./scripts/traffic-test.sh 200                 send 200 requests and print the version split
   kubectl apply -f manifests/scenarios/a-canary-httproute.yaml
-  see docs/lab-guide.md for scenarios B and C, and course/README.md for the Kubernetes Platform Engineering course
+  see docs/lab-guide.md for scenarios B and C, and platform-engineering/README.md for the Kubernetes Platform Engineering course
 
 SUMMARY
 }

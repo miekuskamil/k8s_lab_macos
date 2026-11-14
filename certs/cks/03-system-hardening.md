@@ -1,6 +1,6 @@
 # CKS 03: System hardening (10%)
 
-> New to a term here, like attack surface or NodeRestriction? The [glossary](../../course/glossary.md#cks-exam-track) explains every term this track uses.
+> New to a term here, like attack surface or NodeRestriction? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
 
 **Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running, and the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium) for task 7. No course module covers node hardening, so this domain starts from the basics.
 

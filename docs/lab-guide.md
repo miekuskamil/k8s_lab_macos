@@ -2,7 +2,7 @@
 
 This guide assumes `./scripts/provision.sh` finished and you can open http://localhost:8080. Run all commands from the repository root. Start `./scripts/port-forward.sh` in a spare terminal so Grafana, Jaeger and ArgoCD are open while you work.
 
-This guide is the short tour. For a full introduction to Istio with diagrams, design reasons and investigation exercises in Kiali, Grafana, Jaeger and Loki, take the [Kubernetes Platform Engineering course](../course/README.md).
+This guide is the short tour. For a full introduction to Istio with diagrams, design reasons and investigation exercises in Kiali, Grafana, Jaeger and Loki, take the [Kubernetes Platform Engineering course](../platform-engineering/README.md).
 
 Contents:
 
@@ -288,8 +288,8 @@ Containers run as a non-root user with a read-only root filesystem, no Linux cap
 
 ### Observability
 
-- Alert on symptoms such as error ratio and latency before causes such as CPU. The lab runs Alertmanager (http://localhost:9093) with no rules by default; [course module 23](../course/23-prometheus-and-alerting.md) adds an SLO with a burn-rate alert and routes it to a receiver.
-- Keep dashboards in Git. The lab's dashboard is a ConfigMap that Grafana's sidecar loads, and Grafana refuses edits to it in the UI. [Course module 24](../course/24-grafana-as-code.md) builds an SLO dashboard the same way.
+- Alert on symptoms such as error ratio and latency before causes such as CPU. The lab runs Alertmanager (http://localhost:9093) with no rules by default; [course module 23](../platform-engineering/23-prometheus-and-alerting.md) adds an SLO with a burn-rate alert and routes it to a receiver.
+- Keep dashboards in Git. The lab's dashboard is a ConfigMap that Grafana's sidecar loads, and Grafana refuses edits to it in the UI. [Course module 24](../platform-engineering/24-grafana-as-code.md) builds an SLO dashboard the same way.
 - The lab samples 100% of traces. Use 1 to 5% in production, plus tail sampling to keep error traces.
 - The backend writes the trace id into every log line. Search your logs by `trace_id` and open the matching trace in Jaeger.
 - Log in JSON, and logs turn into data. The Grafana dashboard **Shop logs** counts the backend's requests by status and computes p95 latency per path from its JSON log lines with LogQL (course module 6, step 5).
@@ -303,4 +303,4 @@ Containers run as a non-root user with a read-only root filesystem, no Linux cap
 4. Add a second waypoint for the frontend and measure its memory with `kubectl top pods -n shop`.
 5. Push a manifest with a deliberate typo to `main` and read how ArgoCD reports the failed sync.
 
-For more depth on the platform tools, the course has a module each: [GitOps with ArgoCD](../course/22-gitops-with-argocd.md) runs its own Git server, so you practise drift, rollbacks, hooks, project guardrails and ApplicationSets without pushing to this repository. Then [Prometheus and alerting](../course/23-prometheus-and-alerting.md) and [Grafana as code](../course/24-grafana-as-code.md).
+For more depth on the platform tools, the course has a module each: [GitOps with ArgoCD](../platform-engineering/22-gitops-with-argocd.md) runs its own Git server, so you practise drift, rollbacks, hooks, project guardrails and ApplicationSets without pushing to this repository. Then [Prometheus and alerting](../platform-engineering/23-prometheus-and-alerting.md) and [Grafana as code](../platform-engineering/24-grafana-as-code.md).

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagram for course/12-egress.md in ByteByteGo style (see ../bbg.py).
+"""Draw the diagram for platform-engineering/12-egress.md in ByteByteGo style (see ../bbg.py).
 
   12-egress-flow       a call to httpbin.org through ztunnel and the waypoint
 

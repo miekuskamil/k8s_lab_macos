@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagram in course/29-life-of-a-request.md in ByteByteGo style (see ../bbg.py).
+"""Draw the diagram in platform-engineering/29-life-of-a-request.md in ByteByteGo style (see ../bbg.py).
 
   29-many-workers   one Deployment, many workers that each watch the API server and write back
 

@@ -1,6 +1,6 @@
 # CKS mock exam 1
 
-> New to a term here? The [glossary](../../course/glossary.md#cks-exam-track) explains every term this track uses.
+> New to a term here? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
 
 **Before the mock exam:** all six domain files, or the confidence to skip them. The [practice cluster](../README.md#the-practice-cluster), freshly reset. This is the first of three mock exams; [mock exam 2](mock-exam-2.md) and [mock exam 3](mock-exam-3.md) get harder.
 

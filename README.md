@@ -1,8 +1,8 @@
 # k8s_lab_macos
 
-A small shop running on your laptop, wrapped in the tooling a platform team uses: Istio ambient mesh, ArgoCD, cert-manager, Prometheus, Grafana, Jaeger, Loki, Kiali and Headlamp. It is a place to learn a service mesh and GitOps without a cloud account.
+A small shop running on your laptop, wrapped in the tooling a platform team uses: Istio ambient mesh, ArgoCD, cert-manager, Prometheus, Grafana, Jaeger, Loki, Kiali and Headlamp. It is a place to learn platform engineering without a cloud account: a service mesh, GitOps, observability, policy as code, AI workloads, and practice for the CKS exam.
 
-The shop is a Node.js frontend, a Python FastAPI backend in two versions, and Redis. You break it on purpose (shift 10% of traffic to a new version, inject faults, trip a circuit breaker) and watch what happens in the UIs. The [Kubernetes Platform Engineering course](course/README.md) takes you from your first service mesh to debugging incidents, then through GitOps, observability, policy as code and AI workloads. The [certification tracks](certs/README.md) prepare you for the CKS exam with 65 timed tasks and three scored mock exams on kubeadm clusters.
+The shop is a Node.js frontend, a Python FastAPI backend in two versions, and Redis. You break it on purpose (shift 10% of traffic to a new version, inject faults, trip a circuit breaker) and watch what happens in the UIs. The [Kubernetes Platform Engineering course](platform-engineering/README.md) takes you from your first service mesh to debugging incidents, then through GitOps, observability, policy as code and AI workloads. The [certification tracks](certs/README.md) prepare you for the CKS exam with 65 timed tasks and three scored mock exams on kubeadm clusters.
 
 ## What you need
 
@@ -14,7 +14,7 @@ The shop is a Node.js frontend, a Python FastAPI backend in two versions, and Re
 
 The first run takes about 10 minutes, mostly image downloads. A rebuild with cached images takes about 2.
 
-Both platforms are tested. On macOS (OrbStack) and on Ubuntu 24.04 (Docker Engine 29.1 from Ubuntu's packages, curl 8.5), a single `./scripts/provision.sh` from nothing passed every health check. On Ubuntu 24.04 on 13 November 2026, `./course/verify.sh` passed 230 of its 232 checks, and the 2 failures, both in module 7, are fixed. The latest full macOS run is below. Other Linux distributions should work if they meet the table above. For Ubuntu install commands, WSL2 on Windows, and Ollama for the AI modules, see [Running the lab on Linux and WSL2](docs/linux-and-wsl.md). To run the AI modules on another model or on Claude, see [Choosing the model for the AI modules](docs/ai-models.md).
+Both platforms are tested. On macOS (OrbStack) and on Ubuntu 24.04 (Docker Engine 29.1 from Ubuntu's packages, curl 8.5), a single `./scripts/provision.sh` from nothing passed every health check. On Ubuntu 24.04 on 13 November 2026, `./platform-engineering/verify.sh` passed 230 of its 232 checks, and the 2 failures, both in module 7, are fixed. The latest full macOS run is below. Other Linux distributions should work if they meet the table above. For Ubuntu install commands, WSL2 on Windows, and Ollama for the AI modules, see [Running the lab on Linux and WSL2](docs/linux-and-wsl.md). To run the AI modules on another model or on Claude, see [Choosing the model for the AI modules](docs/ai-models.md).
 
 OrbStack's own Kubernetes can stay switched off. The lab runs its own k3d cluster on the Docker engine. [docs/build-from-scratch.md](docs/build-from-scratch.md#step-1-the-cluster) explains why.
 
@@ -42,7 +42,7 @@ Run `./scripts/port-forward.sh` in a spare terminal and leave it running. The sh
 
 | UI | URL | User | Password |
 |---|---|---|---|
-| The shop | http://localhost:8080 (https://localhost:8443 during [course module 11](course/11-edge-tls.md)) | | |
+| The shop | http://localhost:8080 (https://localhost:8443 during [course module 11](platform-engineering/11-edge-tls.md)) | | |
 | Kiali, the Istio console | http://localhost:20001 | | |
 | Headlamp, a web UI for the whole cluster: pods, logs, shells, events, YAML | http://localhost:4466 | | |
 | Grafana, with Prometheus, Loki and Jaeger data sources | http://localhost:3000 | `admin` | `k8s-lab-admin` |
@@ -63,7 +63,7 @@ Every secret the lab uses is a fixed default stored in Git, so every copy of the
 | ArgoCD `admin` password | `k8s-lab-admin` | `helm/argocd-values.yaml`, as a bcrypt hash | Generate a hash with the command in that file's comment, and update `argocdServerAdminPasswordMtime` |
 | Redis password | `k8s-lab-redis` | `manifests/base/03-lab-credentials.yaml` (Secret `shop/redis-auth`) | Edit it there, then restart Redis and the backends |
 | Kiali token signing key | `k8s-lab-kiali-signing-key-32chrs` | `helm/kiali-values.yaml` (`login_token.signing_key`) | Any 16, 24 or 32 characters. It must be fixed, or Kiali restarts on every ArgoCD poll ([problem 16](docs/troubleshooting.md#16-kiali-restarts-every-few-minutes)) |
-| Gitea `lab` password (course module 22 only) | `lab-gitops-pass` | the `gitea admin user create` command in `course/22-gitops-with-argocd.md` | Use another password in that command and in your `git push` URL |
+| Gitea `lab` password (course module 22 only) | `lab-gitops-pass` | the `gitea admin user create` command in `platform-engineering/22-gitops-with-argocd.md` | Use another password in that command and in your `git push` URL |
 
 ArgoCD applies all of these from Git, so push a change before you expect it in the cluster. `provision.sh` also applies the two Secrets before ArgoCD starts, so pods that need them start on the first try.
 
@@ -73,10 +73,10 @@ ArgoCD applies all of these from Git, so push a change before you expect it in t
 ./scripts/traffic-test.sh 200                                  # every request goes to v1
 kubectl apply -f manifests/scenarios/a-canary-httproute.yaml   # send 10% to v2
 ./scripts/traffic-test.sh 200                                  # about 180 v1, 20 v2
-./course/reset.sh                                              # back to the baseline
+./platform-engineering/reset.sh                                              # back to the baseline
 ```
 
-Then start the [Kubernetes Platform Engineering course](course/README.md) with its 15-minute pre-reading, [Istio in one picture](course/start-here.md), or the shorter [lab guide](docs/lab-guide.md).
+Then start the [Kubernetes Platform Engineering course](platform-engineering/README.md) with its 15-minute pre-reading, [Istio in one picture](platform-engineering/start-here.md), or the shorter [lab guide](docs/lab-guide.md).
 
 ## Where things are
 
@@ -94,7 +94,7 @@ k8s_lab_macos/
 │   └── scenarios/    canary, fault and circuit-breaker experiments, applied by hand
 ├── helm/             value files for every Helm chart the lab installs
 ├── scripts/          provision, start, port-forward, traffic-test, teardown
-├── course/           the course: modules 0 to 29, their manifests and scripts
+├── platform-engineering/           the course: modules 0 to 29, their manifests and scripts
 └── docs/             build guide, architecture, lab guide, troubleshooting, diagrams
 ```
 
@@ -103,10 +103,10 @@ k8s_lab_macos/
 | [docs/build-from-scratch.md](docs/build-from-scratch.md) | How the lab was built, step by step: every decision, the alternatives, and what went wrong |
 | [docs/architecture.md](docs/architecture.md) | How a request travels, where mTLS applies, what was measured |
 | [docs/life-of-a-request.md](docs/life-of-a-request.md) | One request through every layer: API server gates, controllers, scheduler, kubelet, veth and bridge, iptables and conntrack, ztunnel, the waypoint, with packet captures and real output |
-| [course/README.md](course/README.md) | The Kubernetes Platform Engineering course |
+| [platform-engineering/README.md](platform-engineering/README.md) | The Kubernetes Platform Engineering course |
 | [docs/lab-guide.md](docs/lab-guide.md) | The lab's experiments and GitOps workflow, without the course depth |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Every problem hit so far, with symptom, diagnosis and fix |
-| [course/09-command-reference.md](course/09-command-reference.md) | Troubleshooting commands for the cluster and Istio, by layer |
+| [platform-engineering/09-command-reference.md](platform-engineering/09-command-reference.md) | Troubleshooting commands for the cluster and Istio, by layer |
 
 ## When something goes wrong
 
@@ -123,7 +123,7 @@ kubectl -n argocd get applications
 | Everything broken after a reboot or sleep; CoreDNS `Unknown`; ztunnel not Ready | Docker restarted the cluster without k3d | `./scripts/start.sh` |
 | `namespaces "argocd" not found` | OrbStack switched kubectl to its own cluster | `kubectl config use-context k3d-k8s-lab` |
 | `localhost:8080` does not answer | Port 8080 taken, or the gateway pod is missing | `lsof -i :8080`, then `kubectl -n shop-ingress get pods` |
-| An app shows OutOfSync after an experiment | Expected: `istio-config` reports drift but does not undo it | `./course/reset.sh` |
+| An app shows OutOfSync after an experiment | Expected: `istio-config` reports drift but does not undo it | `./platform-engineering/reset.sh` |
 | A pod never appears | Quota or LimitRange refused it | `kubectl get events -A --field-selector reason=FailedCreate` |
 
 [docs/troubleshooting.md](docs/troubleshooting.md) has the full record.
@@ -136,4 +136,4 @@ kubectl -n argocd get applications
 
 It asks before deleting. Add `--yes` to skip the question, for example in a script. This deletes the k3d cluster. The built images stay in your local Docker store.
 
-To rebuild from nothing: `./scripts/teardown.sh --yes && ./scripts/provision.sh`. On 13 November 2026 that took 2 minutes 16 seconds with cached images. On that fresh cluster, `./course/verify.sh` passed all 232 of its checks across 22 modules in 41 minutes, and `./course/verify.sh 27` (RAG, which needs Ollama on the host) passed all 11 of its own. `./course/verify.sh 21`, the one-way k3s upgrade, passed all 9 of its checks on 12 November.
+To rebuild from nothing: `./scripts/teardown.sh --yes && ./scripts/provision.sh`. On 13 November 2026 that took 2 minutes 16 seconds with cached images. On that fresh cluster, `./platform-engineering/verify.sh` passed all 232 of its checks across 22 modules in 41 minutes, and `./platform-engineering/verify.sh 27` (RAG, which needs Ollama on the host) passed all 11 of its own. `./platform-engineering/verify.sh 21`, the one-way k3s upgrade, passed all 9 of its checks on 12 November.

@@ -9,7 +9,7 @@ The lab and the course were written on macOS. This page covers what changes on U
 | OS | Ubuntu 24.04, arm64, in an OrbStack Linux machine |
 | Container engine | Docker Engine 29.1.3 from Ubuntu's packages |
 | Tools | k3d 5.9.0, kubectl 1.31.5, helm 4.3.1, istioctl 1.24.2 |
-| Result | `./scripts/provision.sh` from nothing in 163 seconds, then `./course/verify.sh`: 230 of 232 checks passed in 40 minutes. The 2 failures were an `istioctl` command form in module 7, now fixed. A re-run of modules 7 and 22 passed 31 of 31. |
+| Result | `./scripts/provision.sh` from nothing in 163 seconds, then `./platform-engineering/verify.sh`: 230 of 232 checks passed in 40 minutes. The 2 failures were an `istioctl` command form in module 7, now fixed. A re-run of modules 7 and 22 passed 31 of 31. |
 
 WSL2 itself wasn't tested. WSL2 runs a real Linux kernel with a normal Ubuntu on top, so the Ubuntu results carry over. The WSL-specific parts below (memory, systemd, file location) come from Microsoft's and Docker's documentation, not from a test run.
 
@@ -101,7 +101,7 @@ Every other command in the course runs unchanged. Two commands used to break on 
 
 These modules call [Ollama](https://ollama.com), a program that runs language models on your own machine. Pods reach it under the name `host.docker.internal`, which means "the machine that runs Docker". On macOS, OrbStack and Docker Desktop answer that name for you. Plain Docker Engine on Linux doesn't, so the setup needs two extra steps.
 
-**With Docker Desktop on WSL2,** `host.docker.internal` already points at Windows. Install Ollama for Windows, pull the models, and the modules work as written. This path wasn't tested. The course's test script looks for Ollama at `http://localhost:11434` by default. When Ollama runs somewhere else, tell the script where: `LAB_OLLAMA_URL=http://<windows-host>:11434 ./course/verify.sh 17`.
+**With Docker Desktop on WSL2,** `host.docker.internal` already points at Windows. Install Ollama for Windows, pull the models, and the modules work as written. This path wasn't tested. The course's test script looks for Ollama at `http://localhost:11434` by default. When Ollama runs somewhere else, tell the script where: `LAB_OLLAMA_URL=http://<windows-host>:11434 ./platform-engineering/verify.sh 17`.
 
 **With Docker Engine inside Ubuntu:**
 

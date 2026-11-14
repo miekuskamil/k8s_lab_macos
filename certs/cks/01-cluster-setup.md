@@ -1,8 +1,8 @@
 # CKS 01: Cluster setup (15%)
 
-> New to a term here, like CIS benchmark or ipBlock? The [glossary](../../course/glossary.md#cks-exam-track) explains every term this track uses.
+> New to a term here, like CIS benchmark or ipBlock? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
 
-**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running, and for tasks 9 to 11 the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium) too. The course's [module 3](../../course/03-authorization.md#concept-authorizationpolicy-compared-with-networkpolicy) compares NetworkPolicy with Istio's rules, and [module 11](../../course/11-edge-tls.md) explains certificates and trust. Read those first if NetworkPolicy or TLS feel shaky.
+**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running, and for tasks 9 to 11 the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium) too. The course's [module 3](../../platform-engineering/03-authorization.md#concept-authorizationpolicy-compared-with-networkpolicy) compares NetworkPolicy with Istio's rules, and [module 11](../../platform-engineering/11-edge-tls.md) explains certificates and trust. Read those first if NetworkPolicy or TLS feel shaky.
 
 A fresh kubeadm cluster lets every pod reach every other pod, exposes profiling data about its own internals, and trusts whatever binaries you copy onto the nodes. This domain closes those doors before any workload arrives. It has 13 tasks and takes about 2 hours, including the theory.
 
@@ -60,7 +60,7 @@ A `podSelector` alone, without a `namespaceSelector`, only matches pods in the p
 
 ### CiliumNetworkPolicy
 
-**Cilium** is a CNI plugin built on eBPF, the kernel technique the course's [module 10](../../course/10-ebpf-and-cilium.md#concept-what-ebpf-is) explains. It enforces ordinary NetworkPolicies, and it adds its own resource, the **CiliumNetworkPolicy** (short name `cnp`). The exam allows the Cilium docs, and its tasks expect three things the Kubernetes NetworkPolicy lacks:
+**Cilium** is a CNI plugin built on eBPF, the kernel technique the course's [module 10](../../platform-engineering/10-ebpf-and-cilium.md#concept-what-ebpf-is) explains. It enforces ordinary NetworkPolicies, and it adds its own resource, the **CiliumNetworkPolicy** (short name `cnp`). The exam allows the Cilium docs, and its tasks expect three things the Kubernetes NetworkPolicy lacks:
 
 | Cilium feature | What it adds | Task |
 |---|---|---|

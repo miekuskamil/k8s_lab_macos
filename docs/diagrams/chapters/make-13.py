@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagram for course/13-jwt.md in ByteByteGo style (see ../bbg.py).
+"""Draw the diagram for platform-engineering/13-jwt.md in ByteByteGo style (see ../bbg.py).
 
   13-two-checks        RequestAuthentication, then AuthorizationPolicy
 

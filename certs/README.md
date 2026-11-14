@@ -1,8 +1,8 @@
 # Certification tracks
 
-> New to a term here, like kubeadm or static pod? The [glossary](../course/glossary.md#cks-exam-track) explains every term the tracks use.
+> New to a term here, like kubeadm or static pod? The [glossary](../platform-engineering/glossary.md#cks-exam-track) explains every term the tracks use.
 
-The [course](../course/README.md) teaches you how a platform works and why. A certification exam tests something narrower: whether you fix a given problem on a live cluster, from a terminal, against the clock. These tracks train that second skill. Each one covers an exam's official curriculum, links to the course wherever the course already explains a topic, and adds timed tasks and scored mock exams for the rest.
+The [course](../platform-engineering/README.md) teaches you how a platform works and why. A certification exam tests something narrower: whether you fix a given problem on a live cluster, from a terminal, against the clock. These tracks train that second skill. Each one covers an exam's official curriculum, links to the course wherever the course already explains a topic, and adds timed tasks and scored mock exams for the rest.
 
 | Track | Exam | Status |
 |---|---|---|
@@ -14,7 +14,7 @@ The [course](../course/README.md) teaches you how a platform works and why. A ce
 
 The course and the tracks use different clusters and a different rhythm. The table shows the differences:
 
-| | Course (`course/`) | Tracks (`certs/`) |
+| | Course (`platform-engineering/`) | Tracks (`certs/`) |
 |---|---|---|
 | Cluster | k3d on your Mac, one k3s node, Istio and the shop | kubeadm on two OrbStack Linux machines, no mesh |
 | You work | from your Mac, with `kubectl` and the UIs | inside a node, with `kubectl`, `vim`, `systemctl` and `journalctl`, like in the exam |

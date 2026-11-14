@@ -2,7 +2,7 @@
 """Draw "Istio in one picture" in ByteByteGo style (see bbg.py): the lab's request
 path, with every Istio resource placed under the proxy that enforces it.
 
-The circled numbers match "Follow one request" in course/start-here.md.
+The circled numbers match "Follow one request" in platform-engineering/start-here.md.
 
 Writes istio-resources.svg (shown on GitHub and in the course) and
 istio-resources.excalidraw (open and edit at https://excalidraw.com).

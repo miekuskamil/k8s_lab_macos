@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagrams for course/10-ebpf-and-cilium.md in ByteByteGo style (see ../bbg.py).
+"""Draw the diagrams for platform-engineering/10-ebpf-and-cilium.md in ByteByteGo style (see ../bbg.py).
 
   10-cilium-node        the three Cilium parts on one node
   10-two-designs        Cilium and Istio ambient: an L4 layer per node, Envoy for L7

@@ -29,7 +29,7 @@ Some things work differently from Ollama:
 - **Cost.** Every call costs money. The default model, `claude-opus-5-5`, costs $4 per million input tokens and $20 per million output tokens, and thinking counts as output. A question to the assistant carries the 10 most recent orders, so expect around one cent per answer. The `input_tokens` and `output_tokens` fields in each reply show the real numbers. Set `ANTHROPIC_MODEL=claude-haiku-5-5` for the cheapest model.
 - **Thinking.** Current Claude models think before they answer, and the thinking counts against `max_tokens`. The apps therefore give Claude a budget of 4,000 tokens instead of Ollama's 120 and 250, and ask for `effort: low`, because short questions about orders don't need deep reasoning. The system prompt still keeps the visible answer to three sentences.
 - **Search stays in Ollama.** Anthropic offers no embedding model. In module 27, `nomic-embed-text` in Ollama still turns the text into vectors. Only the final answer comes from Claude.
-- **Encrypted traffic.** Ollama speaks plain HTTP, so the waypoint reads every request. The Anthropic API only accepts HTTPS. The setup below uses TLS origination from [module 12](../course/12-egress.md#concept-tls-origination): the assistant sends plain HTTP inside the mesh, and the waypoint opens the HTTPS connection. The waypoint then still sees the method and path of every call, so metrics and policies keep working.
+- **Encrypted traffic.** Ollama speaks plain HTTP, so the waypoint reads every request. The Anthropic API only accepts HTTPS. The setup below uses TLS origination from [module 12](../platform-engineering/12-egress.md#concept-tls-origination): the assistant sends plain HTTP inside the mesh, and the waypoint opens the HTTPS connection. The waypoint then still sees the method and path of every call, so metrics and policies keep working.
 - **Declined answers.** A safety system sometimes declines a request. The apps ask the API to retry on another model in that case (`fallbacks: "default"`), and they show "The model declined to answer this question." when no model answers.
 
 ### 1. Store the API key
@@ -46,7 +46,7 @@ kubectl -n shop create secret generic anthropic --from-literal=ANTHROPIC_API_KEY
 Do module 17 up to its ServiceEntry step first, so the assistant and the shop waypoint exist. Then add Anthropic's API to the mesh, allow only the assistant to call it, and switch the assistant over:
 
 ```bash
-kubectl apply -f course/manifests/17-claude-serviceentry.yaml -f course/manifests/17-claude-policy.yaml
+kubectl apply -f platform-engineering/manifests/17-claude-serviceentry.yaml -f platform-engineering/manifests/17-claude-policy.yaml
 kubectl -n shop set env deploy/assistant --from=secret/anthropic
 kubectl -n shop set env deploy/assistant PROVIDER=anthropic ANTHROPIC_BASE_URL=http://api.anthropic.com
 kubectl -n shop rollout status deploy/assistant
@@ -89,7 +89,7 @@ The answers in module 27's text came from `qwen2.5:3b`. Claude answers the same 
 
 ## What was tested
 
-The Ollama path is the course default. With the new app images, `./course/verify.sh 17 27` passed every check. The Claude path was tested without an API key:
+The Ollama path is the course default. With the new app images, `./platform-engineering/verify.sh 17 27` passed every check. The Claude path was tested without an API key:
 
 - Both apps ran against a stand-in server that recorded each request. The SDK sent `POST /v1/messages` with the model, the system prompt, `effort: low` and the fallback setting, and the apps read the answer and the token counts from the reply.
 - In the cluster, the request went from the assistant through the waypoint to `api.anthropic.com` over HTTPS. With a fake key, Anthropic answered `401 authentication_error`, which shows the route and the TLS origination work. A pod with another service account got `403` from the waypoint, before its request left the cluster. The policy matches `/v1/messages` even though the SDK adds `?beta=true`, because Istio leaves the query string out of path matching.

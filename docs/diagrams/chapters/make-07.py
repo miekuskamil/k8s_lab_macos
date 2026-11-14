@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagrams for course/07-sidecar-mode.md in ByteByteGo style (see ../bbg.py).
+"""Draw the diagrams for platform-engineering/07-sidecar-mode.md in ByteByteGo style (see ../bbg.py).
 
   07-two-modes         ambient and sidecar namespaces side by side, one istiod
   07-injection         how a one-container Deployment ends up with three containers
