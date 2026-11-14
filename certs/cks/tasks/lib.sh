@@ -16,12 +16,16 @@ k() { orb -m "$CKS_CP" -u root kubectl "$@"; }
 PASSES=0
 FAILS=0
 # check "what" <command...>: the command's exit code decides PASS or FAIL.
+# FIRST_OK records whether the first check since the counters were reset passed.
+FIRST_OK=""
 check() {
   local what="$1"; shift
   if "$@" >/dev/null 2>&1; then
     printf '  PASS  %s\n' "$what"; PASSES=$((PASSES + 1))
+    [ -n "$FIRST_OK" ] || FIRST_OK=yes
   else
     printf '  FAIL  %s\n' "$what"; FAILS=$((FAILS + 1))
+    [ -n "$FIRST_OK" ] || FIRST_OK=no
   fi
 }
 # Like check, but the command runs on cks-cp (or cks-w1) as root.

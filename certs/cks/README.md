@@ -34,7 +34,7 @@ The curriculum has six domains. The weight is the share of the score:
 | [04-minimize-microservice-vulnerabilities.md](04-minimize-microservice-vulnerabilities.md) | Minimize microservice vulnerabilities | 20% |
 | [05-supply-chain-security.md](05-supply-chain-security.md) | Supply chain security | 20% |
 | [06-monitoring-logging-runtime-security.md](06-monitoring-logging-runtime-security.md) | Monitoring, logging and runtime security | 20% |
-| [mock-exam.md](mock-exam.md) | All six, 16 tasks in 2 hours, scored by a script | |
+| [mock-exam.md](mock-exam.md) | All six, 17 tasks in 2 hours, scored by a script | |
 
 ## Gap map
 
