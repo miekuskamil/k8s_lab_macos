@@ -12,6 +12,7 @@ Every Istio resource and term this course uses, in plain words. Each entry start
 - [Around the mesh](#around-the-mesh)
 - [AI on Kubernetes](#ai-on-kubernetes)
 - [Kubernetes operations](#kubernetes-operations)
+- [CKS exam track](#cks-exam-track)
 
 ## Find the right resource
 
@@ -544,3 +545,74 @@ Members of `system:masters` skip RBAC. Module 29.
 **kube-router.** kube-router is the network policy controller that k3s embeds. It turns NetworkPolicy objects into iptables rules on every node. Module 29.
 
 **Probe source 169.254.7.127.** 169.254.7.127 is the link-local source address that ambient mode gives to the kubelet's health checks. istio-cni rewrites the kubelet's probe traffic to come from it. ztunnel lets that traffic through without mTLS, so health checks work under STRICT mode. Module 29.
+
+## CKS exam track
+
+These terms come from the [CKS track](../certs/cks/README.md) in `certs/cks/`. Each entry names the domain file that uses it.
+
+**kubeadm.** kubeadm is the official tool that turns plain Linux machines into a Kubernetes cluster. `kubeadm init` creates the control plane, `kubeadm join` adds a node, and `kubeadm upgrade` moves the cluster to a newer version. The CKS exam clusters come from kubeadm. [certs/README](../certs/README.md), CKS 02.
+
+**Static pod.** A static pod is a pod that the kubelet starts from a YAML file in `/etc/kubernetes/manifests`, with no API server involved. kubeadm runs the API server, etcd, the scheduler and the controller manager this way. Edit the file, and the kubelet restarts the pod within seconds. [certs/README](../certs/README.md), CKS 01, 02, 04, 06.
+
+**OrbStack machine.** An OrbStack machine is a lightweight Linux system that OrbStack runs on a Mac. It feels like a virtual machine, but every machine shares one Linux kernel. The CKS track's two nodes, `cks-cp` and `cks-w1`, are OrbStack machines. [certs/README](../certs/README.md).
+
+**Default-deny policy.** A default-deny policy is a NetworkPolicy that selects every pod in a namespace (`podSelector: {}`) and allows nothing, so you open every path on purpose. Smaller policies then add single paths, because NetworkPolicies only ever add to each other. CKS 01.
+
+**ipBlock.** An ipBlock is the part of a NetworkPolicy rule that matches IP ranges instead of pods, with an optional `except` list of ranges to leave out. CKS 01.
+
+**Metadata service.** The metadata service is an HTTP endpoint at `169.254.169.254` on cloud virtual machines that hands out the machine's identity and often temporary cloud credentials. Pods reach it by default, so a NetworkPolicy blocks it. CKS 01.
+
+**CIS Kubernetes Benchmark.** The CIS Kubernetes Benchmark is a checklist from the Center for Internet Security with about 130 settings for the control plane, etcd and the kubelet, each with a reason and a fix. CKS 01.
+
+**kube-bench.** kube-bench is a tool from Aqua Security that checks a node's running Kubernetes components against the CIS benchmark and prints PASS, FAIL or WARN with a remediation per item. CKS 01.
+
+**Ingress and Ingress controller.** An Ingress is a Kubernetes object with HTTP routing rules for traffic entering the cluster: hosts and paths to Services, plus TLS certificates. An Ingress controller, such as ingress-nginx, is the proxy that carries the rules out. Without a matching TLS Secret, ingress-nginx serves a fake certificate instead of failing. CKS 01.
+
+**Checksum (SHA-512).** A checksum is a fingerprint of a file, computed so that changing one byte changes the whole value. Kubernetes publishes a SHA-512 checksum next to every binary on `dl.k8s.io`, and `sha512sum -c` compares a file against it. CKS 01.
+
+**RBAC: Role, ClusterRole and bindings.** RBAC (role-based access control) is Kubernetes' permission system. A Role lists allowed verbs on resources in one namespace, a ClusterRole does the same cluster-wide, and a RoleBinding or ClusterRoleBinding hands a role to users, groups or service accounts. Rules only add rights. CKS 02, module 29.
+
+**resourceNames.** resourceNames is an RBAC rule field that limits the rule to named objects, such as one Secret. It covers `get`, `update` and `delete` on those objects, never `create`, and not a plain `list`. CKS 02.
+
+**automountServiceAccountToken.** automountServiceAccountToken is a field on a ServiceAccount or a pod spec that, when `false`, stops the kubelet from mounting an API token into the pod. The pod's setting wins over the account's. CKS 02.
+
+**Anonymous request and AuthenticationConfiguration.** An anonymous request is one without credentials, which the API server treats as user `system:anonymous`. An AuthenticationConfiguration file, passed with `--authentication-config`, keeps anonymous access only for named paths such as `/livez`. Turning anonymous access off completely makes kubeadm's own probes fail. CKS 02.
+
+**Version skew.** Version skew is the allowed difference between component versions in one cluster. The kubelet must never be newer than the API server, so upgrades go control plane first, then the workers. CKS 02.
+
+**NodeRestriction.** NodeRestriction is an admission plugin that limits what a kubelet may change: only its own Node object and the pods bound to it, and no labels with the `node-restriction.kubernetes.io/` prefix. kubeadm turns it on. CKS 03.
+
+**Attack surface.** The attack surface is everything an attacker might use to get in or move on: listening ports, installed packages, running services and user accounts. Hardening a node means removing what its job doesn't need. CKS 03.
+
+**Pod Security Standards and Pod Security Admission.** The Pod Security Standards are three fixed levels for how much power a pod may ask for: `privileged`, `baseline` and `restricted`. Pod Security Admission is the built-in admission plugin that applies a level per namespace through the labels `pod-security.kubernetes.io/enforce`, `warn` and `audit`. Enforce refuses new pods only, never running ones. CKS 04.
+
+**EncryptionConfiguration.** An EncryptionConfiguration is a file that tells the API server to encrypt chosen resources, usually Secrets, before writing them to etcd. It lists providers such as `aescbc` or `secretbox`; the first one encrypts new writes, and `identity` at the end keeps old plain values readable. The flag is `--encryption-provider-config`. CKS 04.
+
+**RuntimeClass and gVisor.** A RuntimeClass is a cluster object that names a container runtime handler, so a pod picks it with `runtimeClassName`. gVisor is a sandboxed runtime (`runsc`) that answers a container's system calls with its own user-space kernel, so the host kernel sees far fewer of them. CKS 04.
+
+**Pod-to-pod encryption.** Pod-to-pod encryption means traffic between pods crosses the network encrypted. Istio does it with mTLS between proxies and proves the workload; Cilium does it with WireGuard or IPsec between nodes and proves the node. CKS 04, modules 2 and 10.
+
+**CVE.** A CVE (Common Vulnerabilities and Exposures entry) is a public record of one known security bug, with an ID such as `CVE-2024-6387` and a severity from LOW to CRITICAL. CKS 05.
+
+**trivy.** trivy is Aqua Security's scanner that compares the packages inside an image, a file system or an SBOM with a database of CVEs. It also writes SBOMs. CKS 05.
+
+**SBOM, SPDX and CycloneDX.** An SBOM (software bill of materials) is a machine-readable list of every package in an image, with versions and licenses. SPDX, from the Linux Foundation, and CycloneDX, from OWASP, are its two main formats. The Kubernetes tool bom writes SPDX. CKS 05.
+
+**kubesec.** kubesec is a static analysis tool that scores a Kubernetes manifest's security settings without running it. Critical findings such as `privileged` or `hostPID` fail the manifest whatever its points. KubeLinter is a similar tool. CKS 05.
+
+**ImagePolicyWebhook.** ImagePolicyWebhook is a built-in admission plugin that sends every new pod's image names to an outside service as an `ImageReview` and follows its verdict. Its admission configuration names a kubeconfig for the service and `defaultAllow`, the answer when the service is down. CKS 05.
+
+**cosign.** cosign is the Sigstore tool that signs container images and verifies those signatures. Admission policies, such as Kyverno's `verifyImages`, then refuse unsigned images. CKS 05.
+
+**Audit log and audit policy.** The audit log is the API server's record of requests: who did what to which object, and when. The audit policy decides what to record, with the first matching rule winning, at one of four levels: `None`, `Metadata`, `Request` or `RequestResponse`. kubeadm leaves auditing off. CKS 06.
+
+**System call (syscall).** A system call is a request from a program to the kernel, such as opening a file or starting a process. Everything a container does turns into syscalls, so seccomp filters them and Falco watches them. CKS 06.
+
+**Falco.** Falco is a CNCF runtime security tool that watches system calls through an eBPF probe and raises an alert when one matches a rule. A rule has a condition, an output with `%` fields, and a priority. Falco reports and never blocks. CKS 06.
+
+**Immutable container.** An immutable container never changes after it starts, because its root file system is read-only (`readOnlyRootFilesystem: true`). The folders a program must write to get `emptyDir` volumes. CKS 06.
+
+**seccomp.** seccomp is a Linux kernel feature that filters the system calls a process may make. A profile is a JSON file with a default action and per-syscall actions. Kubernetes loads `Localhost` profiles from `/var/lib/kubelet/seccomp/`, and `RuntimeDefault` uses the container runtime's built-in profile. CKS 06.
+
+**AppArmor.** AppArmor is a Linux security module that limits which files, capabilities and network access a program gets, through a text profile loaded with `apparmor_parser`. A pod asks for a loaded profile with `securityContext.appArmorProfile`. OrbStack's kernel lacks it. CKS 06.
+

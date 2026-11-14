@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="620" viewBox="0 0 1800 620" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1800" height="620" fill="#1e1f24"/>
+<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
+<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
+<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">Supply chain</text>
+<rect x="313.8" y="26.0" width="148.8" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<text x="327.8" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">checks</text>
+<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">Each check catches a different mistake, at a different place.</text>
+<rect x="60.0" y="226.0" width="300.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="60.0" y="220.0" width="300.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="60.0" y="328.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="86.0,255.0 106.0,255.0 116.0,265.0 116.0,295.0 86.0,295.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="93.0,273.0 109.0,273.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="93.0,281.0 109.0,281.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="93.0,289.0 104.0,289.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="138.0" y="267.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Dockerfile</text>
+<text x="138.0" y="295.0" font-size="16" fill="#ffffffcc" text-anchor="start">small base</text>
+<rect x="400.0" y="226.0" width="300.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="400.0" y="220.0" width="300.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="400.0" y="328.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<ellipse cx="440.0" cy="275.0" rx="16" ry="16" fill="none" stroke="#f5f5f7" stroke-width="3"/>
+<ellipse cx="440.0" cy="275.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<polyline points="440.0,254.0 440.0,261.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="440.0,289.0 440.0,296.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="419.0,275.0 426.0,275.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="454.0,275.0 461.0,275.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="478.0" y="267.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Build</text>
+<text x="478.0" y="295.0" font-size="16" fill="#ffffffcc" text-anchor="start">CI pipeline</text>
+<rect x="740.0" y="226.0" width="300.0" height="110.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
+<rect x="740.0" y="220.0" width="300.0" height="110.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
+<rect x="740.0" y="328.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="764.0" y="261.0" width="32.0" height="30.0" rx="2" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="780.0" cy="261.0" rx="16" ry="6" fill="#1e1f24" stroke="#f5f5f7" stroke-width="2.2"/>
+<polyline points="764.0,276.0 796.0,276.0" fill="none" stroke="#f5f5f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="818.0" y="267.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Registry</text>
+<text x="818.0" y="295.0" font-size="16" fill="#ffffffcc" text-anchor="start">signed image</text>
+<rect x="1080.0" y="226.0" width="300.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="1080.0" y="220.0" width="300.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
+<rect x="1080.0" y="328.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<rect x="1101.0" y="255.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="1108.0" cy="260.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<rect x="1101.0" y="269.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="1108.0" cy="274.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<rect x="1101.0" y="283.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
+<ellipse cx="1108.0" cy="288.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
+<text x="1158.0" y="267.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">API server</text>
+<text x="1158.0" y="295.0" font-size="16" fill="#ffffffcc" text-anchor="start">admission</text>
+<rect x="1420.0" y="226.0" width="300.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="1420.0" y="220.0" width="300.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
+<rect x="1420.0" y="328.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
+<polygon points="1460.0,255.0 1478.0,265.0 1460.0,275.0 1442.0,265.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="1442.0,265.0 1460.0,275.0 1460.0,296.0 1442.0,286.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="1478.0,265.0 1460.0,275.0 1460.0,296.0 1478.0,286.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="1498.0" y="267.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Node</text>
+<text x="1498.0" y="295.0" font-size="16" fill="#ffffffcc" text-anchor="start">runs pod</text>
+<polyline points="360.0,275.0 400.0,275.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<polyline points="700.0,275.0 740.0,275.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<polyline points="1040.0,275.0 1080.0,275.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<polyline points="1380.0,275.0 1420.0,275.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
+<rect x="60.0" y="430.0" width="300.0" height="90.0" rx="12" fill="#2a2b33" stroke="#e5484d" stroke-width="2.5"/>
+<polygon points="94.0,455.0 112.0,462.0 109.0,483.0 94.0,496.0 79.0,483.0 76.0,462.0" fill="none" stroke="#e5484d" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="86.0,475.0 92.0,482.0 103.0,469.0" fill="none" stroke="#e5484d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="126.0" y="479.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">kubesec</text>
+<text x="210.0" y="560.0" font-size="17" fill="#c9cbd3" text-anchor="middle">static analysis</text>
+<polyline points="210.0,430.0 210.0,330.0" fill="none" stroke="#e5484d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7"/>
+<rect x="400.0" y="430.0" width="300.0" height="90.0" rx="12" fill="#2a2b33" stroke="#e5484d" stroke-width="2.5"/>
+<polygon points="434.0,455.0 452.0,462.0 449.0,483.0 434.0,496.0 419.0,483.0 416.0,462.0" fill="none" stroke="#e5484d" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="426.0,475.0 432.0,482.0 443.0,469.0" fill="none" stroke="#e5484d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="466.0" y="479.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">trivy, bom</text>
+<text x="550.0" y="560.0" font-size="17" fill="#c9cbd3" text-anchor="middle">CVEs and SBOM</text>
+<polyline points="550.0,430.0 550.0,330.0" fill="none" stroke="#e5484d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7"/>
+<rect x="740.0" y="430.0" width="300.0" height="90.0" rx="12" fill="#2a2b33" stroke="#e5484d" stroke-width="2.5"/>
+<polygon points="774.0,455.0 792.0,462.0 789.0,483.0 774.0,496.0 759.0,483.0 756.0,462.0" fill="none" stroke="#e5484d" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="766.0,475.0 772.0,482.0 783.0,469.0" fill="none" stroke="#e5484d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="806.0" y="479.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">cosign</text>
+<text x="890.0" y="560.0" font-size="17" fill="#c9cbd3" text-anchor="middle">signature</text>
+<polyline points="890.0,430.0 890.0,330.0" fill="none" stroke="#e5484d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7"/>
+<rect x="1080.0" y="430.0" width="300.0" height="90.0" rx="12" fill="#2a2b33" stroke="#e5484d" stroke-width="2.5"/>
+<polygon points="1114.0,455.0 1132.0,462.0 1129.0,483.0 1114.0,496.0 1099.0,483.0 1096.0,462.0" fill="none" stroke="#e5484d" stroke-width="2.5" stroke-linejoin="round"/>
+<polyline points="1106.0,475.0 1112.0,482.0 1123.0,469.0" fill="none" stroke="#e5484d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1146.0" y="479.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">ImagePolicy</text>
+<text x="1230.0" y="560.0" font-size="17" fill="#c9cbd3" text-anchor="middle">allowed registries</text>
+<polyline points="1230.0,430.0 1230.0,330.0" fill="none" stroke="#e5484d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7"/>
+<rect x="1420.0" y="430.0" width="300.0" height="90.0" rx="12" fill="#2a2b33" stroke="#e5484d" stroke-width="2.5"/>
+<ellipse cx="1454.0" cy="475.0" rx="20" ry="11" fill="none" stroke="#e5484d" stroke-width="2.5"/>
+<ellipse cx="1454.0" cy="475.0" rx="6" ry="6" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
+<text x="1486.0" y="479.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">Falco</text>
+<text x="1570.0" y="560.0" font-size="17" fill="#c9cbd3" text-anchor="middle">behaviour at runtime</text>
+<polyline points="1570.0,430.0 1570.0,330.0" fill="none" stroke="#e5484d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7"/>
+</svg>
