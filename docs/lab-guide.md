@@ -2,7 +2,7 @@
 
 This guide assumes `./scripts/provision.sh` finished and you can open http://localhost:8080. Run all commands from the repository root. Start `./scripts/port-forward.sh` in a spare terminal so Grafana, Jaeger and ArgoCD are open while you work.
 
-This guide is the short tour. For a full introduction to Istio with diagrams, design reasons and investigation exercises in Kiali, Grafana, Jaeger and Loki, take the [Istio course](../course/README.md).
+This guide is the short tour. For a full introduction to Istio with diagrams, design reasons and investigation exercises in Kiali, Grafana, Jaeger and Loki, take the [Kubernetes Platform Engineering course](../course/README.md).
 
 Contents:
 

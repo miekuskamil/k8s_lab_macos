@@ -275,7 +275,7 @@ kubectl -n istio-system get pods -l app=kiali
 kubectl -n argocd get applications                          # 9 Applications, Synced and Healthy
 kubectl get pods -A | grep -vE "Running|Completed"          # no output
 ./scripts/traffic-test.sh 100                               # 100 x 200, all v1
-./course/verify.sh                                          # replays the whole Istio course
+./course/verify.sh                                          # replays the whole course
 ```
 
 ## Day 2: after a reboot

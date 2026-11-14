@@ -1,8 +1,8 @@
-# Istio and platform course
+# Kubernetes Platform Engineering
 
-A hands-on Istio course built on this lab. It assumes you know Kubernetes well (CKA or CKAD level) and have never used a service mesh. Every module explains what Istio does, why it is built that way and not another, and how to see it happening in Kiali, Grafana, Jaeger and Loki.
+A hands-on course in running a Kubernetes platform, built on this lab. It assumes you know Kubernetes well (CKA or CKAD level). It starts with Istio, the service mesh, because a mesh touches every request. Then it covers the rest of a platform team's work: cluster operations, GitOps, alerting, dashboards, OpenTelemetry, policy as code, profiling, and AI workloads on Kubernetes. Every module explains what a tool does, why it is built that way and not another, and how to see it happening in Kiali, Grafana, Jaeger and Loki.
 
-Each module takes 30 to 60 minutes. Do them in order, because each one builds on the last.
+Each module takes 30 to 60 minutes. Each one lists the modules and tools it needs at the top, and the routes below show which modules build on which. For exam practice with timed tasks, see the [certification tracks](../certs/README.md).
 
 | Module | You learn | Tools you use |
 |---|---|---|
@@ -39,7 +39,7 @@ Each module takes 30 to 60 minutes. Do them in order, because each one builds on
 
 **New to Istio? Read [Start here: Istio in one picture](start-here.md) first.** It takes 15 minutes, needs no cluster, and shows every resource the course uses on one diagram. Every term also has a plain explanation in the [glossary](glossary.md). Keep it open in a tab.
 
-## Three routes through the course
+## Routes through the course
 
 ![Routes through the course: module 0, then the Istio, operations and platform tracks](../docs/diagrams/chapters/readme-course-routes.svg)
 

@@ -2,7 +2,7 @@
 
 A small shop running on your laptop, wrapped in the tooling a platform team uses: Istio ambient mesh, ArgoCD, cert-manager, Prometheus, Grafana, Jaeger, Loki, Kiali and Headlamp. It is a place to learn a service mesh and GitOps without a cloud account.
 
-The shop is a Node.js frontend, a Python FastAPI backend in two versions, and Redis. You break it on purpose (shift 10% of traffic to a new version, inject faults, trip a circuit breaker) and watch what happens in the UIs. An [Istio course](course/README.md) takes you from zero to debugging incidents. The [certification tracks](certs/README.md) prepare you for the CKS exam with timed tasks and a scored mock exam on a kubeadm cluster.
+The shop is a Node.js frontend, a Python FastAPI backend in two versions, and Redis. You break it on purpose (shift 10% of traffic to a new version, inject faults, trip a circuit breaker) and watch what happens in the UIs. The [Kubernetes Platform Engineering course](course/README.md) takes you from your first service mesh to debugging incidents, then through GitOps, observability, policy as code and AI workloads. The [certification tracks](certs/README.md) prepare you for the CKS exam with timed tasks and a scored mock exam on a kubeadm cluster.
 
 ## What you need
 
@@ -76,7 +76,7 @@ kubectl apply -f manifests/scenarios/a-canary-httproute.yaml   # send 10% to v2
 ./course/reset.sh                                              # back to the baseline
 ```
 
-Then start the [Istio course](course/README.md) with its 15-minute pre-reading, [Istio in one picture](course/start-here.md), or the shorter [lab guide](docs/lab-guide.md).
+Then start the [Kubernetes Platform Engineering course](course/README.md) with its 15-minute pre-reading, [Istio in one picture](course/start-here.md), or the shorter [lab guide](docs/lab-guide.md).
 
 ## Where things are
 
@@ -103,7 +103,7 @@ k8s_lab_macos/
 | [docs/build-from-scratch.md](docs/build-from-scratch.md) | How the lab was built, step by step: every decision, the alternatives, and what went wrong |
 | [docs/architecture.md](docs/architecture.md) | How a request travels, where mTLS applies, what was measured |
 | [docs/life-of-a-request.md](docs/life-of-a-request.md) | One request through every layer: API server gates, controllers, scheduler, kubelet, veth and bridge, iptables and conntrack, ztunnel, the waypoint, with packet captures and real output |
-| [course/README.md](course/README.md) | The Istio course |
+| [course/README.md](course/README.md) | The Kubernetes Platform Engineering course |
 | [docs/lab-guide.md](docs/lab-guide.md) | The lab's experiments and GitOps workflow, without the course depth |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Every problem hit so far, with symptom, diagnosis and fix |
 | [course/09-command-reference.md](course/09-command-reference.md) | Troubleshooting commands for the cluster and Istio, by layer |
