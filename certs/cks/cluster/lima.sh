@@ -115,7 +115,7 @@ EOF
       for l in cilium_host cilium_net cilium_vxlan; do ip link delete $l 2>/dev/null || true; done
       # Undo what the tasks change on the node.
       for p in /etc/apparmor.d/cks-*; do [ -e "$p" ] && apparmor_parser -R "$p" 2>/dev/null; done; true
-      rm -rf /etc/apparmor.d/cks-* /root/cks'
+      rm -rf /etc/apparmor.d/cks-* /etc/modprobe.d/cks-*.conf /root/cks'
     build_cluster ;;
   destroy)
     if exists; then limactl delete -f "$VM"; echo "deleted $VM"; else echo "$VM does not exist"; fi ;;
