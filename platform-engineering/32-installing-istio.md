@@ -323,7 +323,7 @@ Delete the cluster and the downloaded binary:
 
 ```bash
 k3d cluster delete istio-install-lab
-rm -rf ~/.istioctl/1.24.2
+rm -rf ~/.istioctl/1.24.2 && rmdir ~/.istioctl 2>/dev/null
 k3d cluster list
 ```
 

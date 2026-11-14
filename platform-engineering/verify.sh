@@ -1159,7 +1159,7 @@ module_32() {
   expect "uninstall --purge removes the CRDs" "$crds" '^0$'
   expect "istio-system stays, empty" "$("${X[@]}" get ns istio-system --no-headers 2>/dev/null | awk '{print $2}')" '^Active$'
   k3d cluster delete istio-install-lab >/dev/null 2>&1
-  (( fetched )) && rm -rf "$dir"
+  (( fetched )) && rm -rf "$dir" && rmdir "$HOME/.istioctl" 2>/dev/null
   expect "the throwaway cluster is gone" "$(k3d cluster list 2>/dev/null | grep -c istio-install-lab)" '^0$'
   expect "k8s-lab still has its 3 proxies" "$("${I[@]}" version 2>/dev/null | grep -o '([0-9]* proxies)')" '^\(3 proxies\)$'
 }
