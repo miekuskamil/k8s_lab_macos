@@ -13,6 +13,19 @@ cp_sh() { orb -m "$CKS_CP" -u root bash -c "$*"; }
 w1_sh() { orb -m "$CKS_W1" -u root bash -c "$*"; }
 k() { orb -m "$CKS_CP" -u root kubectl "$@"; }
 
+# The Lima VM (cluster/lima.sh) runs the AppArmor and Cilium tasks on a kernel of its own.
+CKS_LIMA="${CKS_LIMA:-cks-lima}"
+onlima() { limactl shell --workdir / "$CKS_LIMA" sudo bash -s "$@"; }
+lima_sh() { limactl shell --workdir / "$CKS_LIMA" sudo bash -c "$*"; }
+kl() { limactl shell --workdir / "$CKS_LIMA" sudo kubectl "$@"; }
+# Stop early with a clear message when a Lima task runs while the VM is down.
+need_lima() {
+  if [ "$(limactl list --format '{{.Status}}' "$CKS_LIMA" 2>/dev/null)" != Running ]; then
+    echo "  this task runs on the Lima VM $CKS_LIMA: ./certs/cks/cluster/lima.sh start (or create)"
+    return 1
+  fi
+}
+
 PASSES=0
 FAILS=0
 # check "what" <command...>: the command's exit code decides PASS or FAIL.
@@ -31,10 +44,16 @@ check() {
 # Like check, but the command runs on cks-cp (or cks-w1) as root.
 check_cp() { local what="$1"; shift; check "$what" cp_sh "$*"; }
 check_w1() { local what="$1"; shift; check "$what" w1_sh "$*"; }
+check_lima() { local what="$1"; shift; check "$what" lima_sh "$*"; }
 
 # Wait until the API server answers again after a static pod edit.
 wait_api() {
   cp_sh 'for i in $(seq 1 90); do kubectl get --raw=/readyz >/dev/null 2>&1 && exit 0; sleep 2; done; exit 1'
+}
+
+# Wait until a static pod's mirror pod is Ready again: wait_static kube-scheduler
+wait_static() {
+  cp_sh "for i in \$(seq 1 60); do kubectl -n kube-system get pod $1-cks-cp -o jsonpath='{.status.conditions[?(@.type==\"Ready\")].status}' 2>/dev/null | grep -qx True && exit 0; sleep 3; done; exit 1"
 }
 
 # Mount a host folder into the API server pod: apiserver_mount auth-config /etc/kubernetes/auth

@@ -1,15 +1,15 @@
-# CKS mock exam
+# CKS mock exam 1
 
 > New to a term here? The [glossary](../../course/glossary.md#cks-exam-track) explains every term this track uses.
 
-**Before the mock exam:** all six domain files, or the confidence to skip them. The [practice cluster](../README.md#the-practice-cluster), freshly reset.
+**Before the mock exam:** all six domain files, or the confidence to skip them. The [practice cluster](../README.md#the-practice-cluster), freshly reset. This is the first of three mock exams; [mock exam 2](mock-exam-2.md) and [mock exam 3](mock-exam-3.md) get harder.
 
 The real exam gives you 2 hours for 15 to 20 tasks on several clusters. This mock gives you 2 hours for 17 tasks on one cluster, worth 100 points in total. The weights follow the curriculum's domains roughly. A script checks the cluster's state and gives partial credit, the way the exam does.
 
 ## Rules
 
 1. Start fresh: `./certs/cks/cluster/reset.sh`, then `./certs/cks/mock-exam/setup.sh`. In the test run, the setup took 8 seconds, because the node already had the images. On new machines, the first run also downloads them.
-2. Start a 2-hour timer.
+2. The clock starts when `setup.sh` ends: it writes the start time, and `score.sh` prints the minutes since then and flags a run over 120 minutes.
 3. Work only on the nodes: `orb -m cks-cp` and `orb -m cks-w1`. Use only the documentation the exam allows: kubernetes.io, and the docs of Falco, bom, etcd, ingress-nginx, Cilium and Istio.
 4. Don't open the solutions while the timer runs.
 5. When time is up, score from your Mac: `./certs/cks/mock-exam/score.sh`. Single tasks score with `./certs/cks/mock-exam/score.sh 4 9`.
@@ -433,4 +433,4 @@ k -n m-runtime scale deploy reporter --replicas=0
 
 `score.sh` runs between two and six checks per task and splits the task's points evenly over them, rounded down. It prints each check, the points per task, and the total.
 
-In the test run, on a cluster fresh from `reset.sh` and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` After `./certs/cks/mock-exam/solve.sh`, which applies every solution above in order in 6 minutes 37 seconds, it was `TOTAL: 100 of 100 points (100%).` A task scores only when its first check, the main change, passes. Without that rule, an untouched cluster scored 18, because checks such as "the scheduler still runs" pass by themselves.
+In the test run, on a cluster fresh from `reset.sh` and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` After `./certs/cks/mock-exam/solve.sh`, which applies every solution above in order in 5 minutes 57 seconds in the final run, it was `TOTAL: 100 of 100 points (100%).` A task scores only when its first check, the main change, passes. Without that rule, an untouched cluster scored 18, because checks such as "the scheduler still runs" pass by themselves.

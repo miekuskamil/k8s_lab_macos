@@ -1,0 +1,18 @@
+# The Lima virtual machine for the CKS tasks that OrbStack's shared kernel can't run:
+# AppArmor (OrbStack's kernel has none) and Cilium (it needs a kernel of its own).
+# lima.sh creates it from this file. Lima puts your Mac home folder at the same path
+# inside the VM, read-only, so the track files are where the text says.
+minimumLimaVersion: 2.0.0
+base:
+- template:_images/ubuntu-24.04
+vmType: vz
+cpus: 2
+memory: 3GiB
+disk: 20GiB
+mounts:
+- location: "~"
+  writable: false
+# lima.sh installs containerd itself, the same version as the OrbStack nodes.
+containerd:
+  system: false
+  user: false

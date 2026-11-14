@@ -2,9 +2,9 @@
 
 > New to a term here, like Pod Security Admission or RuntimeClass? The [glossary](../../course/glossary.md#cks-exam-track) explains every term this track uses.
 
-**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running. The course's [module 2](../../course/02-identity-and-mtls.md) explains mTLS between pods, and [module 10](../../course/10-ebpf-and-cilium.md#concept-kernel-space-and-user-space) explains the kernel boundary that gVisor moves. Read them for the pod-to-pod encryption topic, which this domain covers in theory only.
+**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running. The course's [module 2](../../course/02-identity-and-mtls.md) explains mTLS between pods, and [module 10](../../course/10-ebpf-and-cilium.md#concept-kernel-space-and-user-space) explains the kernel boundary that gVisor moves. Read them for the pod-to-pod encryption topic. Task 10 runs on the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium).
 
-A container is a process with a few fences around it. It shares the node's kernel, and by default it runs as root, keeps a dozen Linux capabilities, and sees its API token and its Secrets as plain text. This domain tightens each fence: what a pod may ask for, where Secrets rest, how a pod receives them, and which kernel a risky pod talks to. It has four tasks and takes about 45 minutes.
+A container is a process with a few fences around it. It shares the node's kernel, and by default it runs as root, keeps a dozen Linux capabilities, and sees its API token and its Secrets as plain text. This domain tightens each fence: what a pod may ask for, where Secrets rest, how a pod receives them, and which kernel a risky pod talks to. It has ten tasks and takes about 1 hour 45 minutes.
 
 ## Theory: four fences around a workload
 
@@ -32,6 +32,51 @@ k label --dry-run=server --overwrite ns secure-apps pod-security.kubernetes.io/e
 
 In the test run, that printed `Warning: existing pods in namespace "secure-apps" violate the new PodSecurity enforce level "restricted:latest"`, then the four reasons for the one pod.
 
+Each mode also takes a version label, such as `pod-security.kubernetes.io/enforce-version: v1.37`. The rules of a level grow a little with each Kubernetes release. A pinned version keeps the rules of that release, so an upgrade never starts refusing pods that ran yesterday. `latest`, the default, always means the newest rules. A common pattern pins `enforce` and leaves `warn` and `audit` on `latest`, so the warnings show what the next upgrade would break. Task 6 sets all three.
+
+### Pod Security for the whole cluster
+
+Namespace labels cover one namespace each. The PodSecurity admission plugin also reads a cluster-wide configuration, and it applies to every namespace without labels:
+
+```yaml
+apiVersion: apiserver.config.k8s.io/v1
+kind: AdmissionConfiguration
+plugins:
+- name: PodSecurity
+  configuration:
+    apiVersion: pod-security.admission.config.k8s.io/v1
+    kind: PodSecurityConfiguration
+    defaults:
+      enforce: baseline
+      enforce-version: latest
+      warn: restricted
+      warn-version: latest
+      audit: restricted
+      audit-version: latest
+    exemptions:
+      usernames: []
+      runtimeClasses: []
+      namespaces: [kube-system, monitoring-agents]
+```
+
+Three kinds of **exemption** switch Pod Security off completely: for pods in named namespaces, for pods created by named users, and for pods that ask for named RuntimeClasses. Exempt `kube-system`, because the CNI and other node agents there need host access. A label on a namespace still beats the defaults, so a namespace labelled `enforce=privileged` stays open.
+
+The API server reads the file from `--admission-control-config-file`, the same flag that [domain 05](05-supply-chain-security.md#allowing-only-approved-registries) uses for ImagePolicyWebhook. One file holds the configuration of every plugin that has one, as items in its `plugins` list. Task 7 writes it.
+
+### Pods that reach into the node
+
+Pod Security names the fields that matter most. A pod with any of these shares something with its node, and a compromised container takes the node with it:
+
+| Field | What the pod shares |
+|---|---|
+| `hostPID: true` | the node's process list: it sees and signals every process |
+| `hostNetwork: true` | the node's network: every port, and traffic of other pods on the node |
+| `hostIPC: true` | the node's shared memory |
+| a `hostPath` volume | any folder of the node, `/` included |
+| `privileged: true` | nearly every kernel capability and every device |
+
+The `baseline` level refuses all five. On an old cluster without Pod Security, you find such pods by hand, which task 8 does.
+
 ### Secrets at rest
 
 A Secret is base64, and base64 is an encoding, not a cipher. The API server stores Secrets in etcd exactly as it stores ConfigMaps. Anybody with a copy of etcd's data or a backup file reads every password in the cluster.
@@ -45,6 +90,15 @@ An **EncryptionConfiguration** file tells the API server to encrypt chosen resou
 Turning encryption on changes nothing that's already stored. Each Secret gets encrypted the next time someone writes it. So the last step rewrites every Secret once: `k get secrets -A -o json | k replace -f -`.
 
 The test run showed the difference with `etcdctl`. A plain object starts with `k8s` and a zero byte, followed by readable protobuf. After encryption, the value starts with `k8s:enc:aescbc:v1:key1:`, and everything after it is noise.
+
+That prefix names the key, which makes **key rotation** safe. Rotation replaces the key that encrypts the data, for example after somebody saw the config file. It takes four steps on a cluster with one API server:
+
+1. Add the new key at the top of the provider's `keys` list, above the old one.
+2. Restart the API server. New writes use the new key, and the old key still decrypts old data.
+3. Rewrite every Secret with `k get secrets -A -o json | k replace -f -`.
+4. Remove the old key and restart once more.
+
+Remove the old key before step 3, and the API server fails to read every Secret it hasn't rewritten yet. With several API servers, add the new key in second place on all of them first, so that every server reads it before any server writes with it. Task 5 rotates a key.
 
 ### Secrets inside the pod
 
@@ -61,6 +115,8 @@ Every container on a node shares the node's kernel. One kernel bug reachable thr
 
 Kubernetes picks the runtime per pod with a **RuntimeClass**. Its `handler` names a runtime that containerd knows. The practice cluster's `cks-w1` has a `runsc` handler in `/etc/containerd/config.toml`. A pod asks for it with `runtimeClassName`.
 
+Usually only some nodes have the sandbox installed. A pod for `runsc` on a node without it fails to start. A RuntimeClass fixes that with a `scheduling.nodeSelector`: the RuntimeClass admission plugin copies the selector into every pod that asks for the class, so the scheduler only picks nodes with the right label. In the test run, a pod of task 9 showed `nodeSelector: {"sandbox":"gvisor"}` without its Deployment ever naming it.
+
 ### Pod-to-pod encryption
 
 NetworkPolicy decides who may talk. It doesn't hide what they say: traffic between nodes crosses the network in clear text. The curriculum names two ways to encrypt it.
@@ -72,7 +128,7 @@ NetworkPolicy decides who may talk. It doesn't hide what they say: traffic betwe
 | Turn on | label the namespace for the mesh, then a `PeerAuthentication` with `mode: STRICT` | Helm values `encryption.enabled=true` and `encryption.type=wireguard` |
 | In this repo | the whole Istio route of the course, [module 2](../../course/02-identity-and-mtls.md) first | compared in [module 10](../../course/10-ebpf-and-cilium.md#why-this-way-the-two-designs-share-one-idea) |
 
-The practice cluster doesn't run either. OrbStack's kernel has no WireGuard module, and Calico's own encryption needs WireGuard too. For an exam task, read the Istio or Cilium documentation, which the exam allows, and remember the two checks: `istioctl x describe pod` or the PeerAuthentication for Istio, and `cilium encrypt status` for Cilium.
+The OrbStack cluster runs neither. Its kernel has no WireGuard module, and Calico's own encryption needs WireGuard too. The Lima VM's kernel has the module, so task 10 turns on Cilium's WireGuard there and checks it with `cilium encrypt status`. The VM has one node, and WireGuard encrypts traffic between nodes, so no packet actually crosses the tunnel. The task proves the setting and the interface, not encrypted traffic. For Istio, the check is the PeerAuthentication and `istioctl x describe pod`, which the course's module 2 shows.
 
 ## Task 1: Enforce the restricted standard
 
@@ -298,6 +354,310 @@ k -n sandbox exec deploy/untrusted -- dmesg | head -2
   PASS  the running pod's kernel is gVisor
 ```
 
+## Task 5: Rotate the encryption key
+
+**Time budget:** 10 minutes. **Host:** `cks-cp`.
+
+```bash
+./certs/cks/task.sh setup 4.5
+```
+
+The setup starts from task 2's result and applies its solution when encryption is off. It prints how the Secret sits in etcd. In the test run: `stored as: k8s:enc:aescbc:v1:key1:`.
+
+> The API server encrypts Secrets with the `aescbc` key `key1` from `/etc/kubernetes/enc/enc.yaml`. Rotate to a new key `key2`: every Secret in etcd ends up encrypted with `key2`, and the file no longer holds `key1`. Keep the file's path.
+
+<details>
+<summary>Solution</summary>
+
+Step 1, the new key on top:
+
+```bash
+cp /etc/kubernetes/enc/enc.yaml /root/
+head -c 32 /dev/urandom | base64
+vim /etc/kubernetes/enc/enc.yaml
+```
+
+```yaml
+  - aescbc:
+      keys:
+      - name: key2
+        secret: <the new base64 key>
+      - name: key1
+        secret: <the old key, unchanged>
+```
+
+Step 2, a restart. The API server reads the file only at start, and the manifest didn't change, so the kubelet sees no reason to restart it. Move the manifest out of the folder and back:
+
+```bash
+mv /etc/kubernetes/manifests/kube-apiserver.yaml /root/
+watch crictl ps --name kube-apiserver        # wait until the container is gone
+mv /root/kube-apiserver.yaml /etc/kubernetes/manifests/
+```
+
+Step 3, rewrite, once `k get nodes` answers again:
+
+```bash
+k get secrets -A -o json | k replace -f -
+```
+
+Step 4: delete the two `key1` lines, and restart the API server the same way. Then prove it with etcdctl, using the variables from task 2:
+
+```bash
+etcdctl ... get /registry/secrets/rotate-me/app-secret --print-value-only | head -c 23; echo
+```
+
+In the test run, that printed `k8s:enc:aescbc:v1:key2:`. The rewrite touched 5 Secrets, and the two restarts made the whole rotation take 71 seconds.
+
+</details>
+
+```bash
+./certs/cks/task.sh check 4.5
+```
+
+```
+  PASS  app-secret is stored with key2
+  PASS  every Secret in etcd is stored with key2
+  PASS  the configuration no longer holds key1, and key2 comes first
+  PASS  kubectl still reads app-secret
+```
+
+## Task 6: Pod Security levels, modes and versions
+
+**Time budget:** 4 minutes. **Host:** `cks-cp`.
+
+```bash
+./certs/cks/task.sh setup 4.6
+```
+
+> Namespace `psa-levels` runs Deployment `legacy` with nginx as root. Configure Pod Security for the namespace:
+>
+> 1. Enforce `baseline`, pinned to the rules of Kubernetes v1.37.
+> 2. Warn and audit at `restricted`, with the newest rules.
+>
+> `legacy` keeps running.
+
+<details>
+<summary>Solution</summary>
+
+```bash
+k label ns psa-levels \
+  pod-security.kubernetes.io/enforce=baseline pod-security.kubernetes.io/enforce-version=v1.37 \
+  pod-security.kubernetes.io/warn=restricted pod-security.kubernetes.io/warn-version=latest \
+  pod-security.kubernetes.io/audit=restricted pod-security.kubernetes.io/audit-version=latest
+```
+
+Write `latest` explicitly even though it's the default: the task asks for it, and a check reads the label. Test both levels with server-side dry runs:
+
+```bash
+k -n psa-levels run t1 --image=busybox:1.36 --privileged --dry-run=server -- sleep 1   # Forbidden
+k -n psa-levels run t2 --image=nginx:1.27-alpine --dry-run=server                      # Warning, then created
+```
+
+In the test run, the second command printed `Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false ...` and then `pod/t2 created (server dry run)`. nginx as root passes `baseline`, so `legacy` keeps running.
+
+</details>
+
+```bash
+./certs/cks/task.sh check 4.6
+```
+
+```
+  PASS  enforce is baseline, pinned to v1.37
+  PASS  warn and audit are restricted, at version latest
+  PASS  a privileged pod is refused
+  PASS  a root nginx pod is admitted, with a restricted warning
+  PASS  Deployment legacy keeps its ready pod
+```
+
+## Task 7: Cluster-wide Pod Security defaults with exemptions
+
+**Time budget:** 10 minutes. **Host:** `cks-cp`.
+
+```bash
+./certs/cks/task.sh setup 4.7
+```
+
+The setup shows the cluster's default today. In the test run, a privileged pod in an unlabelled namespace got `pod/t created (server dry run)`.
+
+> Configure Pod Security for every namespace without labels, through the file `/etc/kubernetes/admission/psa.yaml`:
+>
+> 1. Enforce `baseline`. Warn and audit at `restricted`. Use the newest rules for all three.
+> 2. Exempt the namespaces `kube-system` and `monitoring-agents`.
+
+<details>
+<summary>Solution</summary>
+
+Write the file from the theory section, then point the API server at it. Back up the manifest first:
+
+```yaml
+    - --admission-control-config-file=/etc/kubernetes/admission/psa.yaml
+...
+    - mountPath: /etc/kubernetes/admission
+      name: admission
+      readOnly: true
+...
+  - hostPath:
+      path: /etc/kubernetes/admission
+      type: DirectoryOrCreate
+    name: admission
+```
+
+The "Enforce Pod Security Standards by configuring the built-in admission controller" page in the Kubernetes docs holds the YAML. Once the API server answers, test three namespaces:
+
+```bash
+k -n psa-default run t1 --image=busybox:1.36 --privileged --dry-run=server -- sleep 1        # Forbidden
+k -n psa-default run t2 --image=nginx:1.27-alpine --dry-run=server                           # Warning, then created
+k -n monitoring-agents run t3 --image=busybox:1.36 --privileged --dry-run=server -- sleep 1  # created, exempt
+```
+
+In the test run, the restart took 61 seconds. The defaults hit every namespace without labels from then on, including ones created later.
+
+</details>
+
+```bash
+./certs/cks/task.sh check 4.7
+```
+
+```
+  PASS  the API server reads /etc/kubernetes/admission/psa.yaml
+  PASS  a privileged pod in the unlabelled namespace psa-default is refused
+  PASS  a root nginx pod in psa-default gets a restricted warning but runs
+  PASS  a privileged pod in monitoring-agents is admitted
+  PASS  the API server pod is Ready
+```
+
+## Task 8: Pods that reach into the node
+
+**Time budget:** 6 minutes. **Host:** `cks-cp`.
+
+```bash
+./certs/cks/task.sh setup 4.8
+```
+
+> Namespaces `team-blue` and `team-green` run seven pods. Delete every pod that shares a host namespace (PID, network or IPC), mounts a `hostPath` volume, or runs a privileged container. Leave the others running.
+
+<details>
+<summary>Solution</summary>
+
+`jsonpath` prints the fields side by side, one pod per line:
+
+```bash
+for n in team-blue team-green; do
+  k -n $n get pods -o jsonpath='{range .items[*]}{.metadata.name}{" pid="}{.spec.hostPID}{" net="}{.spec.hostNetwork}{" ipc="}{.spec.hostIPC}{" priv="}{.spec.containers[*].securityContext.privileged}{" vols="}{.spec.volumes[*].hostPath.path}{"\n"}{end}'
+done
+```
+
+Empty fields mean "not set". In the test run, four pods had something: `node-debug` (hostPID), `log-reader` (a hostPath of `/`), `net-tool` (hostNetwork) and `metrics` (privileged). `cache` mounts an `emptyDir`, which lives inside the pod's own storage and is harmless here.
+
+```bash
+k -n team-blue delete pod node-debug log-reader
+k -n team-green delete pod net-tool metrics
+```
+
+Both namespaces carry `pod-security.kubernetes.io/enforce=privileged`, which explains how those pods got in. Changing the label to `baseline` afterwards keeps new ones out.
+
+</details>
+
+```bash
+./certs/cks/task.sh check 4.8
+```
+
+```
+  PASS  node-debug (hostPID) is gone
+  PASS  log-reader (hostPath /) is gone
+  PASS  net-tool (hostNetwork) is gone
+  PASS  metrics (privileged) is gone
+  PASS  web, api and cache still run
+```
+
+## Task 9: A sandbox only on the nodes that have it
+
+**Time budget:** 6 minutes. **Host:** `cks-cp`.
+
+```bash
+./certs/cks/task.sh setup 4.9
+```
+
+> Only `cks-w1` has gVisor. Label it `sandbox=gvisor`. Create a RuntimeClass `gvisor-pinned` for the handler `runsc` that sends its pods only to nodes with that label. Then create Deployment `scanner` in namespace `sandbox-sched`, image `busybox:1.36`, command `sleep 1d`, 3 replicas, with that RuntimeClass.
+
+<details>
+<summary>Solution</summary>
+
+```bash
+k label node cks-w1 sandbox=gvisor
+```
+
+```yaml
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: gvisor-pinned
+handler: runsc
+scheduling:
+  nodeSelector:
+    sandbox: gvisor
+```
+
+```bash
+k -n sandbox-sched create deploy scanner --image=busybox:1.36 --replicas=3 $do -- sleep 1d > scanner.yaml
+vim scanner.yaml      # add runtimeClassName: gvisor-pinned under the pod template's spec
+k apply -f scanner.yaml
+k -n sandbox-sched get pods -o wide
+```
+
+In the test run, all three pods landed on `cks-w1`, and each one carried `nodeSelector: {"sandbox":"gvisor"}`, copied in from the RuntimeClass.
+
+</details>
+
+```bash
+./certs/cks/task.sh check 4.9
+```
+
+```
+  PASS  cks-w1 carries the label sandbox=gvisor, cks-cp does not
+  PASS  RuntimeClass gvisor-pinned uses runsc and schedules onto sandbox=gvisor
+  PASS  Deployment scanner has 3 ready pods, all on cks-w1, all under gVisor
+```
+
+## Task 10: Pod-to-pod encryption with Cilium
+
+**Time budget:** 5 minutes. **Host:** `cks-lima`.
+
+```bash
+./certs/cks/cluster/lima.sh start      # once, when the VM is off
+./certs/cks/task.sh setup 4.10
+```
+
+> Turn on WireGuard encryption for pod traffic in Cilium on `cks-lima`. Pods must keep reaching each other.
+
+<details>
+<summary>Solution</summary>
+
+The Cilium docs' "WireGuard Transparent Encryption" page gives the Helm values. The `cilium` command line tool applies them to the installed release:
+
+```bash
+cilium upgrade --version 1.20.4 --reuse-values --set encryption.enabled=true --set encryption.type=wireguard
+k -n kube-system rollout restart ds/cilium
+k -n kube-system rollout status ds/cilium
+cilium encrypt status
+ip link show cilium_wg0
+```
+
+The upgrade only changes the `cilium-config` ConfigMap, and the agents read it at start, so the restart is part of the job. The test run missed it once: the upgrade printed `You maybe need to restart Cilium pods for configmap changes to take effect`, and `cilium encrypt status` kept saying `Disabled`. After the restart, it said `Encryption: Wireguard (1/1 nodes)`, 12 seconds later.
+
+</details>
+
+```bash
+./certs/cks/task.sh check 4.10
+```
+
+```
+  PASS  cilium-config has enable-wireguard: true
+  PASS  cilium encrypt status reports Wireguard on every node
+  PASS  the node has the WireGuard interface cilium_wg0
+  PASS  pods still reach each other
+```
+
 ## Clean up
 
-Task 2 changed the API server. `./certs/cks/cluster/reset.sh` returns to a fresh cluster.
+Tasks 2, 5 and 7 changed the API server, and task 9 labelled a node. `./certs/cks/cluster/reset.sh` returns to a fresh cluster. `./certs/cks/cluster/lima.sh reset` turns WireGuard off again.
