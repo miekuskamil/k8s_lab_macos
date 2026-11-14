@@ -94,55 +94,65 @@ Ambient swaps these problems for different ones. ztunnel runs once per node. A z
 
 ### 1. Create a sidecar namespace
 
-```bash
-cat platform-engineering/manifests/07-sidecar-namespace.yaml
-kubectl apply -f platform-engineering/manifests/07-sidecar-namespace.yaml -f platform-engineering/manifests/07-sidecar-apps.yaml \
+```console
+$ cat platform-engineering/manifests/07-sidecar-namespace.yaml
+# A namespace that uses classic sidecar injection, next to the ambient "shop" namespace.
+# It has no Pod Security "baseline" label: the injected istio-init container needs the
+# NET_ADMIN and NET_RAW capabilities to set up traffic redirection, and baseline forbids them.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-sidecar
+  labels:
+    istio-injection: enabled
+    app.kubernetes.io/part-of: istio-course
+
+$ kubectl apply -f platform-engineering/manifests/07-sidecar-namespace.yaml -f platform-engineering/manifests/07-sidecar-apps.yaml \
   -f platform-engineering/manifests/07-sidecar-podmonitor.yaml
-kubectl -n course-sidecar rollout status deploy/httpbin
-kubectl -n course-sidecar get pods
+namespace/course-sidecar created
+serviceaccount/httpbin created
+serviceaccount/client created
+deployment.apps/httpbin created
+service/httpbin created
+deployment.apps/client created
+podmonitor.monitoring.coreos.com/sidecars created
+
+$ kubectl -n course-sidecar rollout status deploy/httpbin
+deployment "httpbin" successfully rolled out
+
+$ kubectl -n course-sidecar get pods
+NAME                      READY   STATUS    RESTARTS   AGE
+client-588f9f56c-tpkqr    2/2     Running   0          8s
+httpbin-fb884c77d-68bvw   2/2     Running   0          8s
 ```
 
 **What you should see.** First you see the namespace with the label `istio-injection: enabled`. Then `kubectl apply` prints `created` for the namespace, two service accounts, two Deployments, the Service and the PodMonitor. Both pods show `READY 2/2`, one container for the app and one for `istio-proxy`.
 
-```text
-NAME                      READY   STATUS    RESTARTS   AGE
-client-588f9f56c-9p5k5    2/2     Running   0          5s
-httpbin-fb884c77d-m5tkz   2/2     Running   0          5s
-```
-
 The PodMonitor asks Prometheus to scrape the sidecars. By default the lab only scrapes the gateway, the waypoint and ztunnel. Without the PodMonitor, no sidecar metric reaches Grafana or Kiali. Prometheus needs a few minutes to load it. That's why you apply it now, long before the questions at the end.
 
-```bash
-kubectl -n course-sidecar get pod -l app=httpbin \
+```console
+$ kubectl -n course-sidecar get pod -l app=httpbin \
   -o jsonpath='{range .items[0].spec.initContainers[*]}init: {.name}{"\n"}{end}{range .items[0].spec.containers[*]}container: {.name}{"\n"}{end}'
-```
-
-**What you should see.**
-
-```text
 init: istio-init
 container: httpbin
 container: istio-proxy
 ```
 
-The Deployment you applied has one container. The injector added the other two when the API server created the pod. The `.items[0]` in the command matters, because `get pod -l` returns a list, even for one pod.
+**What you should see.** The Deployment you applied has one container. The injector added the other two when the API server created the pod. The `.items[0]` in the command matters, because `get pod -l` returns a list, even for one pod.
 
 ### 2. Look at the proxies
 
-```bash
-istioctl proxy-status
+```console
+$ istioctl proxy-status
+NAME                                                 CLUSTER        ISTIOD                    VERSION     SUBSCRIBED TYPES
+client-588f9f56c-tpkqr.course-sidecar                Kubernetes     istiod-5c5bf76f-gtmzl     1.24.2      4 (CDS,LDS,EDS,RDS)
+httpbin-fb884c77d-68bvw.course-sidecar               Kubernetes     istiod-5c5bf76f-gtmzl     1.24.2      4 (CDS,LDS,EDS,RDS)
+shop-gateway-istio-858774d7cd-fgdt5.shop-ingress     Kubernetes     istiod-5c5bf76f-gtmzl     1.24.2      4 (CDS,LDS,EDS,RDS)
+waypoint-b9b76876f-hph5z.shop                        Kubernetes     istiod-5c5bf76f-gtmzl     1.24.2      4 (CDS,LDS,EDS,WDS)
+ztunnel-htqw5.istio-system                           Kubernetes     istiod-5c5bf76f-gtmzl     1.24.2      2 (WADS,WDS)
 ```
 
-**What you should see.** Five rows now:
-
-```text
-NAME                                               ...  VERSION  SUBSCRIBED TYPES
-client-588f9f56c-9p5k5.course-sidecar              ...  1.24.2   4 (CDS,LDS,EDS,RDS)
-httpbin-fb884c77d-m5tkz.course-sidecar             ...  1.24.2   4 (CDS,LDS,EDS,RDS)
-shop-gateway-istio-858774d7cd-fcnqh.shop-ingress   ...  1.24.2   4 (CDS,LDS,EDS,RDS)
-waypoint-b9b76876f-pwzjr.shop                      ...  1.24.2   4 (CDS,LDS,EDS,WDS)
-ztunnel-ttgf9.istio-system                         ...  1.24.2   2 (WADS,WDS)
-```
+**What you should see.** Five rows now.
 
 The two sidecars appear next to the gateway, the waypoint and ztunnel. Look at the column "SUBSCRIBED TYPES". It lists the kinds of config each proxy receives from istiod. A proxy that does more work needs more kinds of config:
 
@@ -150,55 +160,81 @@ The two sidecars appear next to the gateway, the waypoint and ztunnel. Look at t
 - The waypoint takes `WDS` instead of `RDS`. It carries its routes inside its listeners, and it reads workload data like ztunnel does.
 - ztunnel receives `WADS, WDS`, which stand for workloads and addresses. This is a much smaller protocol made for ztunnel.
 
-```bash
-istioctl x describe pod $(kubectl -n course-sidecar get pod -l app=httpbin -o jsonpath='{.items[0].metadata.name}').course-sidecar
-```
-
-**What you should see.**
-
-```text
-Pod: httpbin-fb884c77d-m5tkz
+```console
+$ istioctl x describe pod $(kubectl -n course-sidecar get pod -l app=httpbin -o jsonpath='{.items[0].metadata.name}').course-sidecar
+Pod: httpbin-fb884c77d-68bvw.course-sidecar
    Pod Revision: default
    Pod Ports: 8080 (httpbin), 15090 (istio-proxy)
 --------------------
-Service: httpbin
+Service: httpbin.course-sidecar
    Port: http 8000/HTTP targets pod port 8080
 --------------------
 Effective PeerAuthentication:
    Workload mTLS mode: PERMISSIVE
+Skipping Gateway information (no ingress gateway pods)
 ```
 
-It shows the Service, the port and the effective mTLS mode. The mode is `PERMISSIVE`, because nothing in `course-sidecar` says otherwise yet. Envoy serves its metrics on port 15090 of `istio-proxy`, and the PodMonitor scrapes that port.
+**What you should see.** It shows the Service, the port and the effective mTLS mode. The mode is `PERMISSIVE`, because nothing in `course-sidecar` says otherwise yet. Envoy serves its metrics on port 15090 of `istio-proxy`, and the PodMonitor scrapes that port.
 
 ### 3. mTLS identity, seen by the app
 
-```bash
-kubectl -n course-sidecar exec deploy/client -c curl -- curl -s http://httpbin:8000/headers
+```console
+$ kubectl -n course-sidecar exec deploy/client -c curl -- curl -s http://httpbin:8000/headers
+{
+  "headers": {
+    "Accept": [
+      "*/*"
+    ],
+    "Host": [
+      "httpbin:8000"
+    ],
+    "Traceparent": [
+      "00-75e33a51754890802c65eb532b4e61f8-088487df8ec0f77c-01"
+    ],
+    "Tracestate": [
+      ""
+    ],
+    "User-Agent": [
+      "curl/8.11.1"
+    ],
+    "X-Envoy-Attempt-Count": [
+      "1"
+    ],
+...
+    "X-Request-Id": [
+      "4fc70156-1a77-9ffc-a5d1-415016f939ca"
+    ]
+  }
+}
 ```
 
-**What you should see.** httpbin echoes the request headers it received, as JSON. Among them:
-
-```text
-"X-Forwarded-Client-Cert": [
-  "By=spiffe://cluster.local/ns/course-sidecar/sa/httpbin;Hash=130e...;Subject=\"\";URI=spiffe://cluster.local/ns/course-sidecar/sa/client"
-],
-```
+**What you should see.** httpbin echoes the request headers it received, as JSON. Among them is `X-Forwarded-Client-Cert`.
 
 `URI=` names the caller, and `By=` names the receiver. The server-side sidecar adds this header. So the app sees who called, even though it never touched TLS. You also find `Traceparent` and `X-Envoy-Attempt-Count: 1`. The sidecars added those headers, not curl.
 
 ### 4. PERMISSIVE, then STRICT
 
-```bash
-kubectl apply -f platform-engineering/manifests/02-outside-client.yaml
-kubectl -n course-outside exec deploy/client -- curl -s -o /dev/null -w "%{http_code}\n" http://httpbin.course-sidecar:8000/status/200
+```console
+$ kubectl apply -f platform-engineering/manifests/02-outside-client.yaml
+namespace/course-outside unchanged
+deployment.apps/client unchanged
+
+$ kubectl -n course-outside exec deploy/client -- curl -s -o /dev/null -w "%{http_code}\n" http://httpbin.course-sidecar:8000/status/200
+200
 ```
 
 **What you should see.** `200`. A plaintext client from outside the mesh gets in. That is PERMISSIVE mode, the default for sidecars. If you kept `course-outside` from module 2, `kubectl apply` reports `unchanged`.
 
-```bash
-kubectl apply -f platform-engineering/manifests/07-sidecar-strict-mtls.yaml
-kubectl -n course-outside exec deploy/client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://httpbin.course-sidecar:8000/status/200
-kubectl -n course-sidecar exec deploy/client -c curl -- curl -s -o /dev/null -w "%{http_code}\n" http://httpbin:8000/status/200
+```console
+$ kubectl apply -f platform-engineering/manifests/07-sidecar-strict-mtls.yaml
+peerauthentication.security.istio.io/default created
+
+$ kubectl -n course-outside exec deploy/client -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" http://httpbin.course-sidecar:8000/status/200
+000
+command terminated with exit code 56
+
+$ kubectl -n course-sidecar exec deploy/client -c curl -- curl -s -o /dev/null -w "%{http_code}\n" http://httpbin:8000/status/200
+200
 ```
 
 **What you should see.** `peerauthentication.security.istio.io/default created`. The outside client now gets `000` with `command terminated with exit code 56`. httpbin's sidecar reset the plaintext connection. The sidecar client still gets `200`, because its own sidecar speaks mTLS for it. Run step 2's `istioctl x describe` again, and it reports `Workload mTLS mode: STRICT`.
@@ -207,20 +243,31 @@ kubectl -n course-sidecar exec deploy/client -c curl -- curl -s -o /dev/null -w 
 
 `/unstable?failure_rate=0.5` fails half of the time.
 
-```bash
-kubectl -n course-sidecar exec deploy/client -c curl -- sh -c 'ok=0; for i in $(seq 1 40); do c=$(curl -s -o /dev/null -w "%{http_code}" "http://httpbin:8000/unstable?failure_rate=0.5"); [ "$c" = 200 ] && ok=$((ok+1)); done; echo "$ok of 40"'
-kubectl apply -f platform-engineering/manifests/07-sidecar-retries.yaml
+```console
+$ kubectl -n course-sidecar exec deploy/client -c curl -- sh -c 'ok=0; for i in $(seq 1 40); do c=$(curl -s -o /dev/null -w "%{http_code}" "http://httpbin:8000/unstable?failure_rate=0.5"); [ "$c" = 200 ] && ok=$((ok+1)); done; echo "$ok of 40"'
+17 of 40
+
+$ kubectl apply -f platform-engineering/manifests/07-sidecar-retries.yaml
+virtualservice.networking.istio.io/httpbin created
+
 # run the same loop again
+$ kubectl -n course-sidecar exec deploy/client -c curl -- sh -c 'ok=0; for i in $(seq 1 40); do c=$(curl -s -o /dev/null -w "%{http_code}" "http://httpbin:8000/unstable?failure_rate=0.5"); [ "$c" = 200 ] && ok=$((ok+1)); done; echo "$ok of 40"'
+38 of 40
 ```
 
-**What you should see.** Without retries, about half the requests succeed. The lab got `27 of 40` and `19 of 40` in two runs. With 3 retries, almost all succeed. The lab got `38 of 40` and `39 of 40`. Each request now gets up to four tries, and four failures in a row happen about one time in 16. The curl command did nothing different. The client's sidecar retried for it.
+**What you should see.** Without retries, about half the requests succeed. The lab got `27 of 40`, `19 of 40` and `17 of 40` in three runs. With 3 retries, almost all succeed. The lab got `38 of 40` and `39 of 40`. Each request now gets up to four tries, and four failures in a row happen about one time in 16. The curl command did nothing different. The client's sidecar retried for it.
 
 ### 6. Fault injection on the client side
 
-```bash
-kubectl apply -f platform-engineering/manifests/07-sidecar-fault.yaml
-kubectl -n course-sidecar exec deploy/client -c curl -- curl -s -o /dev/null -w "%{http_code} in %{time_total}s\n" http://httpbin:8000/status/200
-kubectl -n course-sidecar delete virtualservice httpbin
+```console
+$ kubectl apply -f platform-engineering/manifests/07-sidecar-fault.yaml
+virtualservice.networking.istio.io/httpbin configured
+
+$ kubectl -n course-sidecar exec deploy/client -c curl -- curl -s -o /dev/null -w "%{http_code} in %{time_total}s\n" http://httpbin:8000/status/200
+200 in 2.004833s
+
+$ kubectl -n course-sidecar delete virtualservice httpbin
+virtualservice.networking.istio.io "httpbin" deleted
 ```
 
 **What you should see.**
@@ -233,41 +280,34 @@ httpbin answered at once. The client's own sidecar held the request for two seco
 
 ### 7. Compare the memory
 
-```bash
-kubectl top pod -n course-sidecar --containers
-kubectl top pod -n istio-system | grep ztunnel
-kubectl top pod -n shop | grep waypoint
-```
-
-**What you should see.**
-
-```text
+```console
+$ kubectl top pod -n course-sidecar --containers
 POD                       NAME          CPU(cores)   MEMORY(bytes)
-client-588f9f56c-9p5k5    curl          0m           6Mi
-client-588f9f56c-9p5k5    istio-proxy   3m           35Mi
-httpbin-fb884c77d-m5tkz   httpbin       1m           8Mi
-httpbin-fb884c77d-m5tkz   istio-proxy   3m           39Mi
-ztunnel-ttgf9            5m           16Mi
-waypoint-b9b76876f-pwzjr        2m           29Mi
+client-588f9f56c-tpkqr    curl          11m          0Mi
+client-588f9f56c-tpkqr    istio-proxy   6m           35Mi
+httpbin-fb884c77d-68bvw   httpbin       1m           5Mi
+httpbin-fb884c77d-68bvw   istio-proxy   5m           38Mi
+
+$ kubectl top pod -n istio-system | grep ztunnel
+ztunnel-htqw5            5m           16Mi
+
+$ kubectl top pod -n shop | grep waypoint
+waypoint-b9b76876f-hph5z        2m           37Mi
 ```
 
-The lab measured 35 to 39 MiB per sidecar, 12 to 16 MiB for ztunnel, and 29 to 36 MiB for the waypoint. Each sidecar weighs about five times the app it serves. Two sidecars already cost more than ztunnel and the waypoint together, and the sidecar cost grows with every pod.
+**What you should see.** The lab measured 35 to 39 MiB per sidecar, 12 to 16 MiB for ztunnel, and 29 to 37 MiB for the waypoint. Each sidecar weighs about five times the app it serves. Two sidecars already cost more than ztunnel and the waypoint together, and the sidecar cost grows with every pod.
 
 ### 8. Cross-mode traffic
 
-```bash
-kubectl -n course-sidecar exec deploy/client -c curl -- curl -s -o /dev/null -w "frontend %{http_code}\n" http://frontend.shop:3000/healthz
-kubectl -n course-sidecar exec deploy/client -c curl -- curl -s -w " backend %{http_code}\n" http://backend.shop:8000/api/version
-```
-
-**What you should see.**
-
-```text
+```console
+$ kubectl -n course-sidecar exec deploy/client -c curl -- curl -s -o /dev/null -w "frontend %{http_code}\n" http://frontend.shop:3000/healthz
 frontend 200
+
+$ kubectl -n course-sidecar exec deploy/client -c curl -- curl -s -w " backend %{http_code}\n" http://backend.shop:8000/api/version
 upstream connect error or disconnect/reset before headers. reset reason: connection termination backend 503
 ```
 
-A sidecar pod talks to ambient pods without trouble, unless an ambient rule expects traffic to pass through a waypoint. The frontend answers `200`, because sidecars and ztunnel speak the same mTLS. The backend refuses. Here is why, in order:
+**What you should see.** A sidecar pod talks to ambient pods without trouble, unless an ambient rule expects traffic to pass through a waypoint. The frontend answers `200`, because sidecars and ztunnel speak the same mTLS. The backend refuses. Here is why, in order:
 
 1. The client's sidecar sends traffic straight to a backend pod and skips the waypoint.
 2. The L4 policy `backend-only-from-waypoint` admits only the waypoint.
@@ -311,7 +351,19 @@ Module 3 explains why that policy exists.
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh          # removes the VirtualService and PeerAuthentication
-./platform-engineering/reset.sh --all    # also deletes course-sidecar (with its PodMonitor) and course-outside
+```console
+$ ./platform-engineering/reset.sh          # removes the VirtualService and PeerAuthentication
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
+
+$ ./platform-engineering/reset.sh --all    # also deletes course-sidecar (with its PodMonitor) and course-outside
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Removing the course namespaces and the course client
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```

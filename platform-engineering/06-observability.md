@@ -112,15 +112,12 @@ Watch out for one trap: labels with too many values. Prometheus stores one time 
 
 ### 1. Follow one request from trace to log and back
 
-```bash
-curl -s -X POST -H 'content-type: application/json' -d '{"item":"find-me","quantity":1}' http://localhost:8080/api/orders
+```console
+$ curl -s -X POST -H 'content-type: application/json' -d '{"item":"find-me","quantity":1}' http://localhost:8080/api/orders
+{"version":"v1","order":{"id":"3","item":"find-me","quantity":"1","created_at":"2026-11-14T22:50:14.052832+00:00","created_by":"v1"}}
 ```
 
-**What you should see.** You see the new order as JSON, created by v1:
-
-```text
-{"version":"v1","order":{"id":"2","item":"find-me","quantity":"1","created_at":"2026-11-12T19:15:42.309483+00:00","created_by":"v1"}}
-```
+**What you should see.** You see the new order as JSON, created by v1.
 
 The `id` counts up from earlier orders, because Redis keeps them across resets.
 
@@ -188,33 +185,43 @@ A common mistake follows from the first-hop decision. You lower the sampling rat
 
 ### 3. Change the sampling rate
 
-```bash
-kubectl -n istio-system patch telemetry mesh-default --type merge \
+```console
+$ kubectl -n istio-system patch telemetry mesh-default --type merge \
   -p '{"spec":{"tracing":[{"providers":[{"name":"jaeger-otlp"}],"randomSamplingPercentage":10}]}}'
-./scripts/traffic-test.sh 200 10 /api/version
+telemetry.telemetry.istio.io/mesh-default patched
+
+$ ./scripts/traffic-test.sh 200 10 /api/version
+Sending 200 requests to http://localhost:8080/api/version with concurrency 10
+
+Status codes
+  200  200  (100%)
+
+Backend versions
+  v1  200  (100%)
+
+Average latency 44 ms, slowest 165 ms
 ```
 
 **What you should see.** You see `telemetry.telemetry.istio.io/mesh-default patched`, then 200 `200` answers. Jaeger now holds about 20 new traces for the 200 requests. The lab counted 19 in one run and 25 in another. The gateway rolls the dice for each new request, so the count wobbles around 10%. Put it back with `./platform-engineering/reset.sh`, which restores `randomSamplingPercentage: 100`.
 
 ### 4. Turn on access logs for one proxy
 
-```bash
-kubectl apply -f platform-engineering/manifests/06-waypoint-access-logs.yaml
-curl -s -o /dev/null http://localhost:8080/api/orders
-kubectl -n shop logs deploy/waypoint --tail=1
+```console
+$ kubectl apply -f platform-engineering/manifests/06-waypoint-access-logs.yaml
+telemetry.telemetry.istio.io/waypoint-access-logs created
+
+$ curl -s -o /dev/null http://localhost:8080/api/orders
+$ kubectl -n shop logs deploy/waypoint --tail=1
+[2026-11-14T22:50:31.359Z] "GET /api/orders HTTP/1.1" 200 - via_upstream - "-" 0 395 4 3 "-" "node" "fe2298dd-ead3-9d48-9687-d5f3b2fdeac1" "backend.shop.svc.cluster.local:8000" "envoy://connect_originate/10.42.0.157:8000" inbound-vip|8000|http|backend-v1.shop.svc.cluster.local envoy://internal_client_address/ 10.43.239.201:8000 10.42.0.42:48478 - shop.backend-route.0
 ```
 
-**What you should see.** You see one access log line for your request:
-
-```text
-[2026-11-12T19:19:00.868Z] "GET /api/orders HTTP/1.1" 200 - via_upstream - "-" 0 290 4 4 "-" "node" "21e5901f-..." "backend.shop.svc.cluster.local:8000" "envoy://connect_originate/10.42.0.91:8000" inbound-vip|8000|http|backend-v1.shop.svc.cluster.local ...
-```
+**What you should see.** You see one access log line for your request.
 
 The line holds a few fields worth reading:
 
 - The user agent reads `node`. The frontend, a Node.js app, made the call, not your curl.
-- `290` is the response size in bytes.
-- The two `4`s are the total time and the backend's time, in milliseconds.
+- `395` is the response size in bytes. It grows as orders pile up in Redis.
+- The `4` and the `3` are the total time and the backend's time, in milliseconds.
 
 A `Telemetry` resource with `targetRefs` changes one proxy. The mesh-wide one in `istio-system` changes all of them.
 
@@ -230,9 +237,9 @@ The backend writes one JSON line per request. So LogQL parses each line and turn
 
 Send some traffic with errors in it, then open Grafana, Dashboards, **Shop logs**:
 
-```bash
-for i in $(seq 1 30); do curl -s -o /dev/null localhost:8080/api/orders; curl -s -o /dev/null localhost:8080/api/nope; done
-curl -s -o /dev/null "localhost:8080/api/slow?ms=400"
+```console
+$ for i in $(seq 1 30); do curl -s -o /dev/null localhost:8080/api/orders; curl -s -o /dev/null localhost:8080/api/nope; done
+$ curl -s -o /dev/null "localhost:8080/api/slow?ms=400"
 ```
 
 **What you should see.** You see seven panels, all built from log lines:
@@ -276,6 +283,11 @@ Sometimes logs and metrics answer the same question. The dashboard's status pane
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh
+```console
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
