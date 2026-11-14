@@ -195,7 +195,7 @@ Test with `echo | openssl s_client -connect 127.0.0.1:6443 -tls1_2 2>/dev/null |
 <summary>Solution</summary>
 
 ```bash
-for sa in ci docs ops; do echo "$sa $(k auth can-i create pods/exec -A --as=system:serviceaccount:m2-team:$sa)"; done
+for sa in ci docs ops; do echo "$sa $(k auth can-i create pods --subresource=exec -A --as=system:serviceaccount:m2-team:$sa)"; done
 echo docs > /root/mock/exec-sa.txt
 k get clusterrolebinding -o wide | grep m2-team/docs
 k delete clusterrolebinding debug-helper

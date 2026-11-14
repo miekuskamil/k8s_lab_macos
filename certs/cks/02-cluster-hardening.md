@@ -138,9 +138,18 @@ Two consequences matter:
 
 `kubectl auth can-i` answers the question for any caller, without becoming that caller. It asks the API server's own authorizers, so the answer is exact. Two forms help in an investigation:
 
-```bash
-k auth can-i get secrets -n kube-system --as=system:serviceaccount:apps:cleaner   # one verb, one caller
-k auth can-i --list -n apps --as=system:serviceaccount:apps:viewer                 # everything one caller may do
+```console
+root@cks-cp:~# k auth can-i get secrets -n kube-system --as=system:serviceaccount:apps:cleaner   # one verb, one caller
+yes
+root@cks-cp:~# k auth can-i --list -n apps --as=system:serviceaccount:apps:viewer                 # everything one caller may do
+Resources                                       Non-Resource URLs                      Resource Names   Verbs
+selfsubjectreviews.authentication.k8s.io        []                                     []               [create]
+selfsubjectaccessreviews.authorization.k8s.io   []                                     []               [create]
+selfsubjectrulesreviews.authorization.k8s.io    []                                     []               [create]
+pods                                            []                                     []               [get list watch]
+services                                        []                                     []               [get list watch]
+clustertrustbundles.certificates.k8s.io         []                                     []               [get list watch]
+...
 ```
 
 `--list` prints a table of resources, resource names, non-resource URLs and verbs. It lists the rules that apply in the namespace you name, from Roles and ClusterRoles together. To find which binding grants a right, search the bindings for the subject: `k get rolebinding,clusterrolebinding -A -o wide | grep apps/cleaner`. In task 6, the culprit was a ClusterRoleBinding named `log-cleanup`, a harmless name for a role that may get, list and delete every Secret in the cluster.
@@ -278,8 +287,14 @@ Real platform teams rarely hand out client certificates to people. They connect 
 
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 2.1
+```console
+$ ./certs/cks/task.sh setup 2.1
+== setup task 2.1
+serviceaccount/reporter created
+secret/report-key created
+secret/db-password created
+role.rbac.authorization.k8s.io/reporter-role created
+rolebinding.rbac.authorization.k8s.io/reporter-binding created
 ```
 
 > In namespace `finance`, ServiceAccount `reporter` is bound to Role `reporter-role`, which allows every verb on every resource.
@@ -292,31 +307,35 @@ Real platform teams rarely hand out client certificates to people. They connect 
 
 `kubectl create role ... --dry-run=client -o yaml | kubectl replace -f -` rewrites the existing Role in one line:
 
-```bash
-k -n finance create role reporter-role --verb=get,list,watch --resource=pods $do | k replace -f -
-k -n finance create role secret-reader --verb=get --resource=secrets --resource-name=report-key
-k -n finance create rolebinding secret-reader --role=secret-reader --serviceaccount=finance:reporter
+```console
+root@cks-cp:~# k -n finance create role reporter-role --verb=get,list,watch --resource=pods $do | k replace -f -
+role.rbac.authorization.k8s.io/reporter-role replaced
+root@cks-cp:~# k -n finance create role secret-reader --verb=get --resource=secrets --resource-name=report-key
+role.rbac.authorization.k8s.io/secret-reader created
+root@cks-cp:~# k -n finance create rolebinding secret-reader --role=secret-reader --serviceaccount=finance:reporter
+rolebinding.rbac.authorization.k8s.io/secret-reader created
 ```
 
 Then ask the API server as the account:
 
-```bash
-for q in "list pods" "delete pods" "get secret/report-key" "get secret/db-password" "list secrets"; do
+```console
+root@cks-cp:~# for q in "list pods" "delete pods" "get secret/report-key" "get secret/db-password" "list secrets"; do
   echo "$q: $(k auth can-i $q --as=system:serviceaccount:finance:reporter -n finance)"
 done
+list pods: yes
+delete pods: no
+get secret/report-key: yes
+get secret/db-password: no
+list secrets: no
 ```
 
 `list secrets` must say `no`. With `--resource-name`, the Role allows `get` on one Secret only, and `list` never matches a named rule.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 2.1
-```
-
-In the test run, the setup's Role failed three of the seven checks: it allowed deleting pods, reading `db-password` and listing Secrets. After the solution:
-
-```
+```console
+$ ./certs/cks/task.sh check 2.1
+== check task 2.1
   PASS  reporter lists pods
   PASS  reporter watches pods
   PASS  reporter does not delete pods
@@ -324,14 +343,21 @@ In the test run, the setup's Role failed three of the seven checks: it allowed d
   PASS  reporter gets the Secret report-key
   PASS  reporter does not get the Secret db-password
   PASS  reporter does not list Secrets
+== task 2.1: 7 passed, 0 failed
 ```
+
+In the test run, the setup's Role failed three of the seven checks: it allowed deleting pods, reading `db-password` and listing Secrets.
 
 ## Task 2: Service account tokens
 
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 2.2
+```console
+$ ./certs/cks/task.sh setup 2.2
+== setup task 2.2
+deployment.apps/checkout created
+Waiting for deployment "checkout" rollout to finish: 0 of 1 updated replicas are available...
+deployment "checkout" successfully rolled out
 ```
 
 > In namespace `payments`, Deployment `checkout` runs with the `default` ServiceAccount and never calls the Kubernetes API.
@@ -342,36 +368,47 @@ In the test run, the setup's Role failed three of the seven checks: it allowed d
 <details>
 <summary>Solution</summary>
 
-```bash
-k -n payments patch sa default -p '{"automountServiceAccountToken": false}'
-k -n payments create sa checkout
-k -n payments patch sa checkout -p '{"automountServiceAccountToken": false}'
-k -n payments set serviceaccount deploy checkout checkout
-k -n payments rollout status deploy checkout
-k -n payments exec deploy/checkout -- ls /var/run/secrets/kubernetes.io/serviceaccount/
+```console
+root@cks-cp:~# k -n payments patch sa default -p '{"automountServiceAccountToken": false}'
+serviceaccount/default patched
+root@cks-cp:~# k -n payments create sa checkout
+serviceaccount/checkout created
+root@cks-cp:~# k -n payments patch sa checkout -p '{"automountServiceAccountToken": false}'
+serviceaccount/checkout patched
+root@cks-cp:~# k -n payments set serviceaccount deploy checkout checkout
+deployment.apps/checkout serviceaccount updated
+root@cks-cp:~# k -n payments rollout status deploy checkout
+Waiting for deployment "checkout" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "checkout" rollout to finish: 1 old replicas are pending termination...
+deployment "checkout" successfully rolled out
+root@cks-cp:~# k -n payments exec deploy/checkout -- ls /var/run/secrets/kubernetes.io/serviceaccount/
+ls: /var/run/secrets/kubernetes.io/serviceaccount/: No such file or directory
+command terminated with exit code 1
 ```
 
 `set serviceaccount` changes the pod template, so the Deployment rolls out new pods. The old pods keep their token until they stop: a ServiceAccount change never reaches running pods. The last command fails with `No such file or directory`, which is the goal.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 2.2
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 2.2
+== check task 2.2
   PASS  ServiceAccount default in payments has automountServiceAccountToken: false
   PASS  ServiceAccount checkout exists, also without automount
   PASS  Deployment checkout runs as ServiceAccount checkout
   PASS  the running pod has no API token mounted
+== task 2.2: 4 passed, 0 failed
 ```
 
 ## Task 3: Restrict anonymous access to the API
 
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 2.3
+```console
+$ ./certs/cks/task.sh setup 2.3
+== setup task 2.3
+clusterrolebinding.rbac.authorization.k8s.io/anonymous-view created
+anonymous list of pods: 200
 ```
 
 The setup creates a binding and prints what an anonymous caller gets. In the test run: `anonymous list of pods: 200`.
@@ -387,17 +424,21 @@ The setup creates a binding and prints what an anonymous caller gets. In the tes
 
 Find and delete the binding:
 
-```bash
-k get clusterrolebinding -o wide | grep system:anonymous
-k delete clusterrolebinding anonymous-view
+```console
+root@cks-cp:~# k get clusterrolebinding -o wide | grep system:anonymous
+anonymous-view                                                          ClusterRole/view                                                                    1s      system:anonymous                                                                   
+root@cks-cp:~# k delete clusterrolebinding anonymous-view
+clusterrolebinding.rbac.authorization.k8s.io "anonymous-view" deleted
 ```
 
 Write the configuration:
 
-```bash
-mkdir -p /etc/kubernetes/auth
-vim /etc/kubernetes/auth/auth-config.yaml
+```console
+root@cks-cp:~# mkdir -p /etc/kubernetes/auth
+root@cks-cp:~# vim /etc/kubernetes/auth/auth-config.yaml
 ```
+
+The transcript leaves out the editor session.
 
 ```yaml
 apiVersion: apiserver.config.k8s.io/v1
@@ -433,27 +474,32 @@ Don't also set `--anonymous-auth`. With both, the API server exits at once: `--a
 
 Wait for the API server to come back, then test with curl, which sends no credentials:
 
-```bash
-watch crictl ps --name kube-apiserver
-IP=$(hostname -I | cut -d' ' -f1)
-curl -sk -o /dev/null -w '%{http_code}\n' https://$IP:6443/api/v1/namespaces/default/pods   # 401
-curl -sk -o /dev/null -w '%{http_code}\n' https://$IP:6443/livez                            # 200
+```console
+root@cks-cp:~# watch crictl ps --name kube-apiserver
+CONTAINER           IMAGE               CREATED             STATE               NAME                ATTEMPT             POD ID              POD                     NAMESPACE
+45dc14a403141       98d6e75e244ec       3 seconds ago       Running             kube-apiserver      0                   4bce357ebe11e       kube-apiserver-cks-cp   kube-system
+root@cks-cp:~# IP=$(hostname -I | cut -d' ' -f1)
+root@cks-cp:~# curl -sk -o /dev/null -w '%{http_code}\n' https://$IP:6443/api/v1/namespaces/default/pods   # 401
+401
+root@cks-cp:~# curl -sk -o /dev/null -w '%{http_code}\n' https://$IP:6443/livez                            # 200
+200
 ```
+
+`watch` redraws its screen every 2 seconds until you press Ctrl-C. The transcript shows one screen.
 
 In the test run, the API server answered again within a minute of the manifest change.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 2.3
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 2.3
+== check task 2.3
   PASS  ClusterRoleBinding anonymous-view is gone
   PASS  an anonymous request for pods gets 401
   PASS  an anonymous request for /livez still gets 200
   PASS  the API server uses --authentication-config
   PASS  the API server pod is Ready
+== task 2.3: 5 passed, 0 failed
 ```
 
 `401` means "I don't know who you are". Before the fix, an anonymous caller without the binding got `403`, "I know you're anonymous, and anonymous may not". Both refuse, but `401` refuses earlier, at gate 1.
@@ -462,8 +508,13 @@ In the test run, the API server answered again within a minute of the manifest c
 
 **Time budget:** 12 minutes. **Hosts:** `cks-cp`, then `cks-w1`.
 
-```bash
-./certs/cks/task.sh setup 2.4     # prints the node versions; both must say v1.37.1
+```console
+$ ./certs/cks/task.sh setup 2.4     # prints the node versions; both must say v1.37.1
+== setup task 2.4
+NAME     STATUS   ROLES           AGE     VERSION
+cks-cp   Ready    control-plane   2m12s   v1.37.1
+cks-w1   Ready    <none>          77s     v1.37.1
+  the cluster must run v1.37.1 for this task; ./certs/cks/cluster/reset.sh puts it back there
 ```
 
 > Upgrade the control plane and the worker from v1.37.1 to v1.37.2. Drain each node before you upgrade its kubelet, and make it schedulable again afterwards. Keep the packages on hold.
@@ -473,30 +524,172 @@ In the test run, the API server answered again within a minute of the manifest c
 
 On `cks-cp`:
 
-```bash
-apt-mark unhold kubeadm
-apt-get update && apt-get install -y kubeadm=1.37.2-1.1
-apt-mark hold kubeadm
-kubeadm upgrade plan v1.37.2
-kubeadm upgrade apply v1.37.2 -y
-k drain cks-cp --ignore-daemonsets --delete-emptydir-data
-apt-mark unhold kubelet kubectl
-apt-get install -y kubelet=1.37.2-1.1 kubectl=1.37.2-1.1
-apt-mark hold kubelet kubectl
-systemctl daemon-reload && systemctl restart kubelet
-k uncordon cks-cp
-k drain cks-w1 --ignore-daemonsets --delete-emptydir-data --force
+```console
+root@cks-cp:~# apt-mark unhold kubeadm
+Canceled hold on kubeadm.
+root@cks-cp:~# apt-get update && apt-get install -y kubeadm=1.37.2-1.1
+Hit:1 http://ports.ubuntu.com/ubuntu-ports noble InRelease
+Hit:2 http://ports.ubuntu.com/ubuntu-ports noble-updates InRelease
+Hit:4 http://ports.ubuntu.com/ubuntu-ports noble-security InRelease
+Hit:3 https://prod-cdn.packages.k8s.io/repositories/isv:/kubernetes:/core:/stable:/v1.37/deb  InRelease
+...
+The following packages will be upgraded:
+  kubeadm
+...
+1 upgraded, 0 newly installed, 0 to remove and 6 not upgraded.
+...
+Unpacking kubeadm (1.37.2-1.1) over (1.37.1-1.1)…
+Setting up kubeadm (1.37.2-1.1)…
+root@cks-cp:~# apt-mark hold kubeadm
+kubeadm set on hold.
+root@cks-cp:~# kubeadm upgrade plan v1.37.2
+...
+[upgrade] Running cluster health checks
+[upgrade] Fetching available versions to upgrade to
+[upgrade/versions] Cluster version: 1.37.1
+[upgrade/versions] kubeadm version: v1.37.2
+[upgrade/versions] Target version: v1.37.2
+[upgrade/versions] Latest version in the v1.37 series: v1.37.2
+...
+Components that must be upgraded manually after you have upgraded the control plane with 'kubeadm upgrade apply':
+COMPONENT   NODE      CURRENT   TARGET
+kubelet     cks-cp    v1.37.1   v1.37.2
+kubelet     cks-w1    v1.37.1   v1.37.2
+
+Upgrade to the latest version in the v1.37 series:
+
+COMPONENT                 NODE      CURRENT   TARGET
+kube-apiserver            cks-cp    v1.37.1   v1.37.2
+kube-controller-manager   cks-cp    v1.37.1   v1.37.2
+kube-scheduler            cks-cp    v1.37.1   v1.37.2
+kube-proxy                          1.37.1    v1.37.2
+CoreDNS                             v1.14.6   v1.14.6
+etcd                      cks-cp    3.7.0-0   3.7.0-0
+
+You can now apply the upgrade by executing the following command:
+
+	kubeadm upgrade apply v1.37.2
+...
+root@cks-cp:~# kubeadm upgrade apply v1.37.2 -y
+[upgrade] Reading configuration from the "kubeadm-config" ConfigMap in namespace "kube-system"...
+[upgrade] Use 'kubeadm init phase upload-config kubeadm --config your-config-file' to re-upload it.
+...
+[upgrade] Running cluster health checks
+...
+[upgrade/versions] Cluster version: v1.37.1
+[upgrade/versions] kubeadm version: v1.37.2
+...
+[upgrade/control-plane] Upgrading your static Pod-hosted control plane to version "v1.37.2" (timeout: 5m0s)...
+...
+[upgrade/staticpods] Component "etcd" upgraded successfully!
+...
+[upgrade/staticpods] Component "kube-apiserver" upgraded successfully!
+...
+[upgrade/staticpods] Component "kube-controller-manager" upgraded successfully!
+...
+[upgrade/staticpods] Component "kube-scheduler" upgraded successfully!
+[upgrade/control-plane] The control plane instance for this node was successfully upgraded!
+...
+[upgrade] Backing up kubelet config file to /etc/kubernetes/tmp/kubeadm-kubelet-config-2026-11-14-23-38-14/config.yaml
+...
+[upgrade] SUCCESS! A control plane node of your cluster was upgraded to "v1.37.2".
+...
+[upgrade] Now please proceed with upgrading the rest of the nodes by following the right order.
+root@cks-cp:~# k drain cks-cp --ignore-daemonsets --delete-emptydir-data
+node/cks-cp cordoned
+Warning: ignoring DaemonSet-managed Pods: kube-system/calico-node-j6xqr, kube-system/kube-proxy-qltk8
+evicting pod kube-system/coredns-559f6c778d-t5mx4
+evicting pod kube-system/calico-kube-controllers-7dd56c9f7-xl84h
+evicting pod kube-system/coredns-559f6c778d-p78fz
+pod/calico-kube-controllers-7dd56c9f7-xl84h evicted
+pod/coredns-559f6c778d-t5mx4 evicted
+pod/coredns-559f6c778d-p78fz evicted
+node/cks-cp drained
+root@cks-cp:~# apt-mark unhold kubelet kubectl
+Canceled hold on kubelet.
+Canceled hold on kubectl.
+root@cks-cp:~# apt-get install -y kubelet=1.37.2-1.1 kubectl=1.37.2-1.1
+...
+The following packages will be upgraded:
+  kubectl kubelet
+...
+2 upgraded, 0 newly installed, 0 to remove and 4 not upgraded.
+...
+Unpacking kubectl (1.37.2-1.1) over (1.37.1-1.1)…
+...
+Unpacking kubelet (1.37.2-1.1) over (1.37.1-1.1)…
+Setting up kubectl (1.37.2-1.1)…
+Setting up kubelet (1.37.2-1.1)…
+root@cks-cp:~# apt-mark hold kubelet kubectl
+kubelet set on hold.
+kubectl set on hold.
+root@cks-cp:~# systemctl daemon-reload && systemctl restart kubelet
+root@cks-cp:~# k uncordon cks-cp
+node/cks-cp uncordoned
+root@cks-cp:~# k drain cks-w1 --ignore-daemonsets --delete-emptydir-data --force
+node/cks-w1 cordoned
+Warning: ignoring DaemonSet-managed Pods: kube-system/calico-node-hfg7l, kube-system/kube-proxy-l5p8f
+evicting pod kube-system/coredns-559f6c778d-sg722
+evicting pod kube-system/calico-kube-controllers-7dd56c9f7-69xkx
+evicting pod ingress-nginx/ingress-nginx-controller-8464654b6c-fdnh8
+evicting pod kube-system/coredns-559f6c778d-dlj47
+pod/calico-kube-controllers-7dd56c9f7-69xkx evicted
+pod/coredns-559f6c778d-sg722 evicted
+pod/coredns-559f6c778d-dlj47 evicted
+pod/ingress-nginx-controller-8464654b6c-fdnh8 evicted
+node/cks-w1 drained
 ```
 
 `--force` lets the drain delete bare pods that no controller owns, such as the ones earlier tasks created. Then on `cks-w1`:
 
-```bash
-apt-mark unhold kubeadm kubelet kubectl
-apt-get update && apt-get install -y kubeadm=1.37.2-1.1
-kubeadm upgrade node
-apt-get install -y kubelet=1.37.2-1.1 kubectl=1.37.2-1.1
-apt-mark hold kubeadm kubelet kubectl
-systemctl daemon-reload && systemctl restart kubelet
+```console
+root@cks-w1:~# apt-mark unhold kubeadm kubelet kubectl
+Canceled hold on kubeadm.
+Canceled hold on kubelet.
+Canceled hold on kubectl.
+root@cks-w1:~# apt-get update && apt-get install -y kubeadm=1.37.2-1.1
+Hit:2 http://ports.ubuntu.com/ubuntu-ports noble InRelease
+Hit:4 http://ports.ubuntu.com/ubuntu-ports noble-updates InRelease
+Hit:1 https://d20hasrqv82i0q.cloudfront.net/packages/deb stable InRelease
+Hit:5 http://ports.ubuntu.com/ubuntu-ports noble-security InRelease
+Hit:3 https://prod-cdn.packages.k8s.io/repositories/isv:/kubernetes:/core:/stable:/v1.37/deb  InRelease
+...
+The following packages were automatically installed and are no longer required:
+...
+The following packages will be upgraded:
+  kubeadm
+...
+1 upgraded, 0 newly installed, 0 to remove and 7 not upgraded.
+...
+Unpacking kubeadm (1.37.2-1.1) over (1.37.1-1.1)…
+Setting up kubeadm (1.37.2-1.1)…
+root@cks-w1:~# kubeadm upgrade node
+[upgrade] Reading configuration from the "kubeadm-config" ConfigMap in namespace "kube-system"...
+[upgrade] Use 'kubeadm init phase upload-config kubeadm --config your-config-file' to re-upload it.
+[upgrade/preflight] Running pre-flight checks
+...
+[upgrade/kubelet-config] The kubelet configuration for this node was successfully upgraded!
+[upgrade/addon] Skipping the addon/coredns phase. Not a control plane node.
+[upgrade/addon] Skipping the addon/kube-proxy phase. Not a control plane node.
+root@cks-w1:~# apt-get install -y kubelet=1.37.2-1.1 kubectl=1.37.2-1.1
+...
+The following packages were automatically installed and are no longer required:
+...
+The following packages will be upgraded:
+  kubectl kubelet
+...
+2 upgraded, 0 newly installed, 0 to remove and 5 not upgraded.
+...
+Unpacking kubectl (1.37.2-1.1) over (1.37.1-1.1)…
+...
+Unpacking kubelet (1.37.2-1.1) over (1.37.1-1.1)…
+Setting up kubectl (1.37.2-1.1)…
+Setting up kubelet (1.37.2-1.1)…
+root@cks-w1:~# apt-mark hold kubeadm kubelet kubectl
+kubeadm set on hold.
+kubelet set on hold.
+kubectl set on hold.
+root@cks-w1:~# systemctl daemon-reload && systemctl restart kubelet
 ```
 
 And back on `cks-cp`: `k uncordon cks-w1`, then `k get nodes`.
@@ -505,24 +698,30 @@ And back on `cks-cp`: `k uncordon cks-w1`, then `k get nodes`.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 2.4
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 2.4
+== check task 2.4
   PASS  cks-cp kubelet reports v1.37.2
   PASS  cks-w1 kubelet reports v1.37.2
   PASS  the API server runs image v1.37.2
   PASS  both nodes are schedulable
   PASS  kubeadm, kubelet and kubectl stay on hold on cks-w1
+== task 2.4: 5 passed, 0 failed
 ```
 
 ## Task 5: Aggregated ClusterRoles
 
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 2.5
+```console
+$ ./certs/cks/task.sh setup 2.5
+== setup task 2.5
+serviceaccount/prom created
+clusterrole.rbac.authorization.k8s.io/monitoring-reader created
+clusterrole.rbac.authorization.k8s.io/monitoring-pods created
+clusterrolebinding.rbac.authorization.k8s.io/prom created
+  ["pods"] ["get","list","watch"]
+  ["pods/exec"] ["create"]
 ```
 
 > ServiceAccount `prom` in namespace `monitoring` is bound to the aggregated ClusterRole `monitoring-reader`.
@@ -535,18 +734,34 @@ And back on `cks-cp`: `k uncordon cks-w1`, then `k get nodes`.
 
 Read how the role collects its rules:
 
-```bash
-k get clusterrole monitoring-reader -o yaml | grep -A4 aggregationRule
-k get clusterrole -l rbac.cks.io/aggregate-to-monitoring=true
+```console
+root@cks-cp:~# k get clusterrole monitoring-reader -o yaml | grep -A4 aggregationRule
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels:
+      rbac.cks.io/aggregate-to-monitoring: "true"
+apiVersion: rbac.authorization.k8s.io/v1
+--
+      {"aggregationRule":{"clusterRoleSelectors":[{"matchLabels":{"rbac.cks.io/aggregate-to-monitoring":"true"}}]},"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRole","metadata":{"annotations":{},"name":"monitoring-reader"},"rules":[]}
+  creationTimestamp: "2026-11-14T23:38:49Z"
+  name: monitoring-reader
+  resourceVersion: "1633"
+  uid: 40dad1a7-ffa0-464c-9b5f-462b77b5ec68
+root@cks-cp:~# k get clusterrole -l rbac.cks.io/aggregate-to-monitoring=true
+NAME              CREATED AT
+monitoring-pods   2026-11-14T23:38:49Z
 ```
 
 Create the new role with the same label:
 
-```bash
-k create clusterrole monitoring-endpoints --verb=get,list,watch --resource=endpoints,services $do > me.yaml
-vim me.yaml        # add the label under metadata
-k apply -f me.yaml
+```console
+root@cks-cp:~# k create clusterrole monitoring-endpoints --verb=get,list,watch --resource=endpoints,services $do > me.yaml
+root@cks-cp:~# vim me.yaml        # add the label under metadata
+root@cks-cp:~# k apply -f me.yaml
+clusterrole.rbac.authorization.k8s.io/monitoring-endpoints created
 ```
+
+The transcript leaves out the editor session, which adds the label under `metadata`.
 
 ```yaml
 metadata:
@@ -557,34 +772,48 @@ metadata:
 
 The `pods/exec` rule comes from the labelled role `monitoring-pods`. Remove it there with `k edit clusterrole monitoring-pods`. Editing `monitoring-reader` instead would last only until the controller copies the rules again.
 
-```bash
-k auth can-i list endpoints -A --as=system:serviceaccount:monitoring:prom      # yes
-k auth can-i create pods/exec -A --as=system:serviceaccount:monitoring:prom    # no
+```console
+root@cks-cp:~# k auth can-i list endpoints -A --as=system:serviceaccount:monitoring:prom      # yes
+yes
+root@cks-cp:~# k auth can-i create pods --subresource=exec -A --as=system:serviceaccount:monitoring:prom    # no
+no
 ```
 
 </details>
 
-```bash
-./certs/cks/task.sh check 2.5
-```
-
-In the test run, the check failed four of six items before the solution:
-
-```
+```console
+$ ./certs/cks/task.sh check 2.5
+== check task 2.5
   PASS  ClusterRole monitoring-endpoints carries the aggregation label
   PASS  prom lists endpoints in every namespace
   PASS  prom watches services in every namespace
   PASS  prom still lists pods
   PASS  prom may no longer exec into pods
   PASS  monitoring-reader still aggregates, with no rules of its own written by hand
+== task 2.5: 6 passed, 0 failed
 ```
+
+In the test run, the check failed four of six items before the solution.
 
 ## Task 6: Who may read the Secrets?
 
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 2.6
+```console
+$ ./certs/cks/task.sh setup 2.6
+== setup task 2.6
+serviceaccount/builder created
+serviceaccount/deployer created
+serviceaccount/viewer created
+serviceaccount/cleaner created
+role.rbac.authorization.k8s.io/builder created
+rolebinding.rbac.authorization.k8s.io/builder created
+role.rbac.authorization.k8s.io/deployer created
+rolebinding.rbac.authorization.k8s.io/deployer created
+role.rbac.authorization.k8s.io/viewer created
+rolebinding.rbac.authorization.k8s.io/viewer created
+clusterrole.rbac.authorization.k8s.io/log-cleanup created
+clusterrolebinding.rbac.authorization.k8s.io/log-cleanup created
 ```
 
 > Namespace `apps` has four ServiceAccounts: `builder`, `deployer`, `viewer` and `cleaner`.
@@ -597,14 +826,20 @@ In the test run, the check failed four of six items before the solution:
 
 Ask the API server once per account:
 
-```bash
-for sa in builder deployer viewer cleaner; do
+```console
+root@cks-cp:~# for sa in builder deployer viewer cleaner; do
   echo "$sa: $(k auth can-i get secrets -n kube-system --as=system:serviceaccount:apps:$sa)"
 done
-echo cleaner > /root/cks/secret-reader.txt
-k get rolebinding,clusterrolebinding -A -o wide | grep apps/cleaner
-k delete clusterrolebinding log-cleanup
-k auth can-i --list -n apps --as=system:serviceaccount:apps:viewer > /root/cks/viewer-perms.txt
+builder: no
+deployer: no
+viewer: no
+cleaner: yes
+root@cks-cp:~# echo cleaner > /root/cks/secret-reader.txt
+root@cks-cp:~# k get rolebinding,clusterrolebinding -A -o wide | grep apps/cleaner
+            clusterrolebinding.rbac.authorization.k8s.io/log-cleanup                                                             ClusterRole/log-cleanup                                                             1s                                                                                         apps/cleaner
+root@cks-cp:~# k delete clusterrolebinding log-cleanup
+clusterrolebinding.rbac.authorization.k8s.io "log-cleanup" deleted
+root@cks-cp:~# k auth can-i --list -n apps --as=system:serviceaccount:apps:viewer > /root/cks/viewer-perms.txt
 ```
 
 The right came from a ClusterRoleBinding named `log-cleanup`, a harmless name for a role that may get, list and delete every Secret in the cluster. In the test run, `viewer-perms.txt` held these lines among the default ones every account has:
@@ -617,24 +852,25 @@ services                                        []                  []          
 
 </details>
 
-```bash
-./certs/cks/task.sh check 2.6
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 2.6
+== check task 2.6
   PASS  /root/cks/secret-reader.txt names cleaner
   PASS  cleaner may no longer read Secrets in kube-system
   PASS  ServiceAccount cleaner still exists
   PASS  deployer keeps its rights
   PASS  /root/cks/viewer-perms.txt holds viewer's can-i list
+== task 2.6: 5 passed, 0 failed
 ```
 
 ## Task 7: A bound token for another audience
 
 **Time budget:** 7 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 2.7
+```console
+$ ./certs/cks/task.sh setup 2.7
+== setup task 2.7
+serviceaccount/vault-auth created
 ```
 
 > In namespace `vault-client`, ServiceAccount `vault-auth` logs in to a Vault server.
@@ -645,8 +881,8 @@ services                                        []                  []          
 <details>
 <summary>Solution</summary>
 
-```bash
-k -n vault-client create token vault-auth --audience=vault --duration=2h > /root/cks/vault-token.txt
+```console
+root@cks-cp:~# k -n vault-client create token vault-auth --audience=vault --duration=2h > /root/cks/vault-token.txt
 ```
 
 The pod uses a projected volume, as in the theory:
@@ -678,30 +914,38 @@ spec:
 
 `automountServiceAccountToken: false` stops only the default token. A projected `serviceAccountToken` that you spell out still arrives. To read a token's claims, decode its middle part:
 
-```bash
-cut -d. -f2 /root/cks/vault-token.txt | tr '_-' '/+' | base64 -d 2>/dev/null; echo
+```console
+root@cks-cp:~# cut -d. -f2 /root/cks/vault-token.txt | tr '_-' '/+' | base64 -d 2>/dev/null; echo
+{"aud":["vault"],"exp":1794705542,"iat":1794698342,"iss":"https://kubernetes.default.svc.cluster.local","jti":"5f257a59-860e-4cae-be2f-d51fc14230a4","kubernetes.io":{"namespace":"vault-client","serviceaccount":{"name":"vault-auth","uid":"cc64eef3-41e6-43c0-a53f-b0daf18e0e8a"}},"nbf":1794698342,"sub":"system:serviceaccount:vault-client:vault-auth"}
 ```
 
 In the test run, the claims held `"aud":["vault"]`, and `exp` minus `iat` was exactly 7200 seconds.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 2.7
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 2.7
+== check task 2.7
   PASS  /root/cks/vault-token.txt is a token for vault-auth with audience vault, valid 2 hours
   PASS  pod client runs as vault-auth without the default token
   PASS  a projected token with audience vault and 3600 seconds sits at /var/run/secrets/vault/token
+== task 2.7: 3 passed, 0 failed
 ```
 
 ## Task 8: Clean up legacy token Secrets
 
 **Time budget:** 4 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 2.8
+```console
+$ ./certs/cks/task.sh setup 2.8
+== setup task 2.8
+serviceaccount/old-ci created
+secret/old-ci-token created
+serviceaccount/old-batch created
+secret/old-batch-token created
+secret/app-config created
+  old-ci's legacy token against the API: 200
+  label legacy-token-last-used: 2026-11-14
 ```
 
 The setup creates two legacy token Secrets and uses one of them. In the test run it printed `old-ci's legacy token against the API: 200` and `label legacy-token-last-used: 2026-11-14`.
@@ -713,31 +957,37 @@ The setup creates two legacy token Secrets and uses one of them. In the test run
 
 A field selector finds Secrets by type, and the same selector deletes them:
 
-```bash
-k get secrets -A --field-selector type=kubernetes.io/service-account-token
-k -n legacy delete secret --field-selector type=kubernetes.io/service-account-token
+```console
+root@cks-cp:~# k get secrets -A --field-selector type=kubernetes.io/service-account-token
+NAMESPACE   NAME              TYPE                                  DATA   AGE
+legacy      old-batch-token   kubernetes.io/service-account-token   3      63s
+legacy      old-ci-token      kubernetes.io/service-account-token   3      63s
+root@cks-cp:~# k -n legacy delete secret --field-selector type=kubernetes.io/service-account-token
+secret "old-batch-token" deleted from legacy namespace
+secret "old-ci-token" deleted from legacy namespace
 ```
 
 Secret `app-config` has type `Opaque`, so the selector leaves it alone. In the test run, the deleted token got `401` 8 seconds after the delete, once the API server's token cache had expired.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 2.8
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 2.8
+== check task 2.8
   PASS  no Secret of type kubernetes.io/service-account-token is left in legacy
   PASS  old-ci's old token no longer authenticates (401)
   PASS  both ServiceAccounts and Secret app-config still exist
+== task 2.8: 3 passed, 0 failed
 ```
 
 ## Task 9: Repair the API server
 
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 2.9
+```console
+$ ./certs/cks/task.sh setup 2.9
+== setup task 2.9
+  a colleague edited the API server manifest at 23:38:55
 ```
 
 > A colleague enabled the `AlwaysPullImages` admission plugin, and the API server never came back. Get it running with `NodeRestriction` and `AlwaysPullImages` enabled. Change nothing else that worked before.
@@ -747,12 +997,18 @@ Secret `app-config` has type `Opaque`, so the selector leaves it alone. In the t
 
 `kubectl` fails, so look on the node, as the theory describes:
 
-```bash
-crictl ps -a --name kube-apiserver
-crictl logs <id of the newest exited container>
+```console
+root@cks-cp:~# crictl ps -a --name kube-apiserver
+CONTAINER           IMAGE               CREATED             STATE               NAME                ATTEMPT             POD ID              POD                     NAMESPACE
+02b4d931b9b58       a6d02e64d4827       11 seconds ago      Exited              kube-apiserver      2                   317638bcd0558       kube-apiserver-cks-cp   kube-system
+root@cks-cp:~# crictl logs <id of the newest exited container>
+...
+E1114 23:39:49.860527       1 run.go:72] "command failed" err="enable-admission-plugins plugin \"AlwaysPullImage\" is unknown"
 ```
 
-The setup broke two lines, and the API server reports only the first problem it meets. In the test run, the first log ended with:
+The transcript ran `crictl logs` with the ID of the newest exited container.
+
+The setup broke two lines, and the API server reports only the first problem it meets. The transcript above met the plugin name first. Another test run met the CA path first, and its first log ended with:
 
 ```
 "command failed" err="error creating storage factory: open /etc/kubernetes/pki/etcd/ca.cert: no such file or directory"
@@ -775,29 +1031,32 @@ Fix both lines in `/etc/kubernetes/manifests/kube-apiserver.yaml`:
 
 Then `watch crictl ps --name kube-apiserver` until a container stays up, and `k get nodes`. AlwaysPullImages sets `imagePullPolicy: Always` on every new pod, so a pod on a shared node never starts from an image somebody else pulled with their credentials:
 
-```bash
-k run pull-test --image=busybox:1.36 --image-pull-policy=IfNotPresent --dry-run=server -o yaml -- sleep 1 | grep imagePullPolicy
+```console
+root@cks-cp:~# k run pull-test --image=busybox:1.36 --image-pull-policy=IfNotPresent --dry-run=server -o yaml -- sleep 1 | grep imagePullPolicy
+    imagePullPolicy: Always
 ```
 
 </details>
 
-```bash
-./certs/cks/task.sh check 2.9
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 2.9
+== check task 2.9
   PASS  the API server answers and its pod is Ready
   PASS  the admission plugins are NodeRestriction and AlwaysPullImages
   PASS  --etcd-cafile points to the etcd CA
   PASS  AlwaysPullImages sets imagePullPolicy Always on a new pod
+== task 2.9: 4 passed, 0 failed
 ```
 
 ## Task 10: Repair etcd
 
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 2.10
+```console
+$ ./certs/cks/task.sh setup 2.10
+== setup task 2.10
+configmap/cks-canary created
+  someone edited etcd's manifest at 23:40:55
 ```
 
 > Somebody edited etcd's manifest, and now the whole control plane is down. Repair it without losing any data.
@@ -807,16 +1066,18 @@ k run pull-test --image=busybox:1.36 --image-pull-policy=IfNotPresent --dry-run=
 
 Start at the bottom layer:
 
-```bash
-crictl ps -a --name etcd
-crictl logs <id of the newest etcd container>
+```console
+root@cks-cp:~# crictl ps -a --name etcd
+CONTAINER           IMAGE               CREATED             STATE               NAME                ATTEMPT             POD ID              POD                 NAMESPACE
+692ac1801f589       c2e426bbd1cd6       20 seconds ago      Exited              etcd                2                   a097efbb04db6       etcd-cks-cp         kube-system
+root@cks-cp:~# crictl logs <id of the newest etcd container>
+...
+{"level":"fatal","ts":"2026-11-14T23:42:58.103816Z","caller":"etcdmain/etcd.go:172","msg":"listener failed","error":"open /etc/kubernetes/pki/etcd/server.cert: no such file or directory","stacktrace":"go.etcd.io/etcd/server/v3/etcdmain.startEtcdOrProxyV2\n\tgo.etcd.io/etcd/server/v3/etcdmain/etcd.go:172\ngo.etcd.io/etcd/server/v3/etcdmain.Main\n\tgo.etcd.io/etcd/server/v3/etcdmain/main.go:40\nmain.main\n\tgo.etcd.io/etcd/server/v3/main.go:31\nruntime.main\n\truntime/proc.go:290"}
 ```
 
-In the test run, etcd exited with:
+The transcript ran `crictl logs` with the ID of the newest exited container.
 
-```
-"msg":"listener failed","error":"open /etc/kubernetes/pki/etcd/server.cert: no such file or directory"
-```
+In the test run, etcd exited with the `server.cert` error above.
 
 Fix the path in `/etc/kubernetes/manifests/etcd.yaml` to `server.crt`. etcd then starts, but the API server still fails. Its log says why:
 
@@ -826,10 +1087,18 @@ Error while dialing: dial tcp 127.0.0.1:2379: connect: connection refused
 
 The API server talks to etcd at `https://127.0.0.1:2379`, its `--etcd-servers` flag. So compare that address with etcd's own flags:
 
-```bash
-grep etcd-servers /etc/kubernetes/manifests/kube-apiserver.yaml
-grep -E 'listen-client-urls|advertise-client-urls' /etc/kubernetes/manifests/etcd.yaml
-ss -tlnp | grep etcd
+```console
+root@cks-cp:~# grep etcd-servers /etc/kubernetes/manifests/kube-apiserver.yaml
+    - --etcd-servers=https://127.0.0.1:2379
+root@cks-cp:~# grep -E 'listen-client-urls|advertise-client-urls' /etc/kubernetes/manifests/etcd.yaml
+    kubeadm.kubernetes.io/etcd.advertise-client-urls: https://192.168.139.194:2379
+    - --advertise-client-urls=https://192.168.139.194:2379
+    - --listen-client-urls=https://127.0.0.1:2378,https://192.168.139.194:2379
+root@cks-cp:~# ss -tlnp | grep etcd
+LISTEN 0      4096   192.168.139.194:2380       0.0.0.0:*    users:(("etcd",pid=84124,fd=4))           
+LISTEN 0      4096   192.168.139.194:2379       0.0.0.0:*    users:(("etcd",pid=84124,fd=8))           
+LISTEN 0      4096         127.0.0.1:2378       0.0.0.0:*    users:(("etcd",pid=84124,fd=7))           
+LISTEN 0      4096         127.0.0.1:2381       0.0.0.0:*    users:(("etcd",pid=84124,fd=13))          
 ```
 
 `--listen-client-urls` says `https://127.0.0.1:2378`. Put the port back to 2379, and the API server connects on its next restart.
@@ -838,24 +1107,25 @@ Never change `--data-dir` or the `etcd-data` volume to make etcd start. etcd poi
 
 </details>
 
-```bash
-./certs/cks/task.sh check 2.10
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 2.10
+== check task 2.10
   PASS  the API server answers again
   PASS  etcd uses its server certificate
   PASS  etcd listens for clients on 127.0.0.1:2379
   PASS  the cluster's data survived: ConfigMap cks-canary still exists
   PASS  the etcd pod is Ready
+== task 2.10: 5 passed, 0 failed
 ```
 
 ## Task 11: No pods for a new Deployment
 
 **Time budget:** 7 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 2.11
+```console
+$ ./certs/cks/task.sh setup 2.11
+== setup task 2.11
+deployment.apps/canary created
 ```
 
 > Deployment `canary` in namespace `default` gets no pods. Find out why and fix the control plane.
@@ -863,39 +1133,51 @@ Never change `--data-dir` or the `etcd-data` volume to make etcd start. etcd poi
 <details>
 <summary>Solution</summary>
 
-```bash
-k get deploy,rs,pods -l app=canary      # a Deployment, no ReplicaSet: the controller manager
-k -n kube-system get pods -l tier=control-plane
+```console
+root@cks-cp:~# k get deploy,rs,pods -l app=canary      # a Deployment, no ReplicaSet: the controller manager
+NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/canary   0/1     0            0           2m50s
+root@cks-cp:~# k -n kube-system get pods -l tier=control-plane
+NAME                             READY   STATUS             RESTARTS        AGE
+etcd-cks-cp                      1/1     Running            0               20m
+kube-apiserver-cks-cp            1/1     Running            4 (3m44s ago)   7m8s
+kube-controller-manager-cks-cp   0/1     CrashLoopBackOff   5 (18s ago)     3m
+kube-scheduler-cks-cp            0/1     CrashLoopBackOff   4 (87s ago)     3m1s
 ```
 
 In the test run, both `kube-controller-manager-cks-cp` and `kube-scheduler-cks-cp` showed `CrashLoopBackOff`. The API server runs, so `k logs` works here:
 
-```bash
-k -n kube-system logs kube-scheduler-cks-cp
-k -n kube-system logs kube-controller-manager-cks-cp
+```console
+root@cks-cp:~# k -n kube-system logs kube-scheduler-cks-cp
+I1114 23:26:39.133846       1 serving.go:411] Generated self-signed cert in-memory
+E1114 23:26:39.133939       1 run.go:72] "command failed" err="stat /etc/kubernetes/scheduler.config: no such file or directory"
+root@cks-cp:~# k -n kube-system logs kube-controller-manager-cks-cp
+...
+Error: unknown flag: --cluster-signing-keyfile
 ```
 
 The scheduler said `"command failed" err="stat /etc/kubernetes/scheduler.config: no such file or directory"`, and the controller manager said `Error: unknown flag: --cluster-signing-keyfile`. Fix `--kubeconfig=/etc/kubernetes/scheduler.conf` in `kube-scheduler.yaml` and `--cluster-signing-key-file=` in `kube-controller-manager.yaml`. The controller manager comes first: it creates the ReplicaSet and the pod, and only then does the scheduler have something to place. In the test run, the Deployment rolled out 36 seconds after both fixes.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 2.11
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 2.11
+== check task 2.11
   PASS  kube-scheduler runs and is Ready
   PASS  kube-controller-manager runs and is Ready
   PASS  Deployment canary has a ready pod
   PASS  the manifests use scheduler.conf and --cluster-signing-key-file
+== task 2.11: 4 passed, 0 failed
 ```
 
 ## Task 12: An API server that allows everything
 
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 2.12
+```console
+$ ./certs/cks/task.sh setup 2.12
+== setup task 2.12
+  may the default ServiceAccount list every Secret? yes
 ```
 
 The setup prints what the cluster allows now. In the test run: `may the default ServiceAccount list every Secret? yes`.
@@ -905,8 +1187,9 @@ The setup prints what the cluster allows now. In the test run: `may the default 
 <details>
 <summary>Solution</summary>
 
-```bash
-grep authorization-mode /etc/kubernetes/manifests/kube-apiserver.yaml     # AlwaysAllow
+```console
+root@cks-cp:~# grep authorization-mode /etc/kubernetes/manifests/kube-apiserver.yaml     # AlwaysAllow
+    - --authorization-mode=AlwaysAllow
 ```
 
 Change it to:
@@ -923,15 +1206,14 @@ The same switch has a side effect you notice within minutes. kubeadm's health pr
 
 </details>
 
-```bash
-./certs/cks/task.sh check 2.12
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 2.12
+== check task 2.12
   PASS  the API server uses --authorization-mode=Node,RBAC
   PASS  an anonymous request for kube-system Secrets gets 403
   PASS  the default ServiceAccount may not list Secrets
   PASS  the nodes stay Ready
+== task 2.12: 4 passed, 0 failed
 ```
 
 ## Clean up
