@@ -120,27 +120,41 @@ The list leaves out timeouts on purpose. Otherwise a slow backend would receive 
 
 ### 1. Add a faulty pod
 
-```bash
-kubectl apply -f platform-engineering/manifests/15-faulty-pod.yaml
-kubectl -n shop get pods -l app=backend,version=v1
+```console
+$ kubectl apply -f platform-engineering/manifests/15-faulty-pod.yaml
+deployment.apps/backend-v1-faulty created
+
+$ kubectl -n shop get pods -l app=backend,version=v1
+NAME                                 READY   STATUS    RESTARTS   AGE
+backend-v1-54c86bf9b-glmrn           1/1     Running   0          24m
+backend-v1-54c86bf9b-xqdkd           1/1     Running   0          24m
+backend-v1-faulty-7648f4474b-t47sj   1/1     Running   0          8s
 ```
 
 **What you should see.** Three `backend-v1` pods: the two usual ones and `backend-v1-faulty-...`. All three show `Running` and `1/1` Ready. Kubernetes thinks everything is fine.
 
 Now send 90 requests and count the answers:
 
-```bash
-for i in $(seq 1 90); do curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/api/orders; done | sort | uniq -c
+```console
+$ for i in $(seq 1 90); do curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/api/orders; done | sort | uniq -c
+  59 200
+  31 503
 ```
 
-**What you should see.** About 60 `200` and 30 `503`. One pod in three fails, so one request in three fails. In the test run for this module it was 34 out of 90.
+**What you should see.** About 60 `200` and 30 `503`. One pod in three fails, so one request in three fails. The test runs for this module counted 34 and 31 out of 90.
 
 ### 2. Eject the bad pod
 
-```bash
-kubectl apply -f platform-engineering/manifests/15-outlier-detection.yaml
-for i in $(seq 1 30); do curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/api/orders; done | sort | uniq -c
-for i in $(seq 1 90); do curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/api/orders; done | sort | uniq -c
+```console
+$ kubectl apply -f platform-engineering/manifests/15-outlier-detection.yaml
+destinationrule.networking.istio.io/backend-v1-outlier created
+
+$ for i in $(seq 1 30); do curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/api/orders; done | sort | uniq -c
+  27 200
+   3 503
+
+$ for i in $(seq 1 90); do curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/api/orders; done | sort | uniq -c
+  90 200
 ```
 
 **What you should see.** The first 30 requests still show about three `503`. Those are the "3 errors in a row" that the rule waits for. The next 90 requests all return `200`. The waypoint stopped sending the faulty pod anything.
@@ -156,25 +170,39 @@ Wait 40 seconds and repeat the 90 requests. You'll see about three `503` again. 
 
 Remove the outlier detection and try retries on their own:
 
-```bash
-kubectl -n shop delete destinationrule backend-v1-outlier
-kubectl -n shop delete httproute backend-route
-kubectl apply -f platform-engineering/manifests/15-retries.yaml
-calls() { kubectl -n shop logs deploy/backend-v1-faulty --since=30m | grep -c /api/orders; }
-before=$(calls)
-for i in $(seq 1 90); do curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/api/orders; done | sort | uniq -c
-echo "the faulty pod got $(( $(calls) - before )) of those requests"
+```console
+$ kubectl -n shop delete destinationrule backend-v1-outlier
+destinationrule.networking.istio.io "backend-v1-outlier" deleted
+
+$ kubectl -n shop delete httproute backend-route
+httproute.gateway.networking.k8s.io "backend-route" deleted
+
+$ kubectl apply -f platform-engineering/manifests/15-retries.yaml
+virtualservice.networking.istio.io/backend-retries created
+
+$ calls() { kubectl -n shop logs deploy/backend-v1-faulty --since=30m | grep -c /api/orders; }
+$ before=$(calls)
+$ for i in $(seq 1 90); do curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/api/orders; done | sort | uniq -c
+  90 200
+
+$ echo "the faulty pod got $(( $(calls) - before )) of those requests"
+the faulty pod got 32 of those requests
 ```
 
 **What you should see.** All 90 return `200`, so users notice nothing. But the faulty pod still got about 30 of those requests and failed every one. Each of those failures cost a wasted call, a retry, and extra latency for that user. Retries hid the problem. They didn't fix it.
 
 ### 4. Both together
 
-```bash
-kubectl apply -f platform-engineering/manifests/15-outlier-detection.yaml
-before=$(calls)
-for i in $(seq 1 90); do curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/api/orders; done | sort | uniq -c
-echo "the faulty pod got $(( $(calls) - before )) of those requests"
+```console
+$ kubectl apply -f platform-engineering/manifests/15-outlier-detection.yaml
+destinationrule.networking.istio.io/backend-v1-outlier created
+
+$ before=$(calls)
+$ for i in $(seq 1 90); do curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/api/orders; done | sort | uniq -c
+  90 200
+
+$ echo "the faulty pod got $(( $(calls) - before )) of those requests"
+the faulty pod got 3 of those requests
 ```
 
 **What you should see.** All 90 requests return `200`. The faulty pod got about three requests, the ones it took to eject it. Retries covered those three, and outlier detection handled the rest. Production setups use this pairing.
@@ -205,8 +233,13 @@ echo "the faulty pod got $(( $(calls) - before )) of those requests"
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh
+```console
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 This deletes the faulty pod, the VirtualService and the DestinationRule, and restores the HTTPRoute.

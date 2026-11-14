@@ -69,22 +69,54 @@ Istio now recommends the Gateway API for new setups, and ambient mode builds on 
 
 ### 1. Deploy a classic ingress gateway
 
-```bash
-helm repo update istio
-helm install istio-ingress istio/gateway -n istio-ingress --create-namespace \
+```console
+$ helm repo update istio
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "istio" chart repository
+Update Complete. ⎈Happy Helming!⎈
+
+$ helm install istio-ingress istio/gateway -n istio-ingress --create-namespace \
   --version 1.24.2 --skip-schema-validation --set service.type=ClusterIP --wait
-kubectl -n istio-ingress get pods -l istio=ingress -o jsonpath='{.items[0].spec.containers[0].image}{"\n"}'
+NAME: istio-ingress
+LAST DEPLOYED: Sat Nov 14 23:17:16 2026
+NAMESPACE: istio-ingress
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
+NOTES:
+"istio-ingress" successfully installed!
+
+To learn more about the release, try:
+  $ helm status istio-ingress -n istio-ingress
+  $ helm get all istio-ingress -n istio-ingress
+
+Next steps:
+  * Deploy an HTTP Gateway: https://istio.io/latest/docs/tasks/traffic-management/ingress/ingress-control/
+  * Deploy an HTTPS Gateway: https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/
+
+$ kubectl -n istio-ingress get pods -l istio=ingress -o jsonpath='{.items[0].spec.containers[0].image}{"\n"}'
+docker.io/istio/proxyv2:1.24.2-distroless
 ```
 
 **What you should see.** `docker.io/istio/proxyv2:1.24.2-distroless`. The chart deployed a plain pod, and Istio's injector filled in the Envoy image. The `ClusterIP` setting keeps the gateway off your machine's ports, because the lab's own gateway already uses 8080.
 
 ### 2. Route outside traffic with a Gateway and a VirtualService
 
-```bash
-kubectl apply -f platform-engineering/manifests/16-istio-gateway.yaml -f platform-engineering/manifests/16-ingress-virtualservice.yaml
-kubectl -n istio-ingress port-forward svc/istio-ingress 9080:80 &
-curl -s http://localhost:9080/api/version; echo
+```console
+$ kubectl apply -f platform-engineering/manifests/16-istio-gateway.yaml -f platform-engineering/manifests/16-ingress-virtualservice.yaml
+gateway.networking.istio.io/shop-classic created
+virtualservice.networking.istio.io/shop-classic-ingress created
+
+$ kubectl -n istio-ingress port-forward svc/istio-ingress 9080:80 &
+Forwarding from 127.0.0.1:9080 -> 80
+Forwarding from [::1]:9080 -> 80
+
+$ curl -s http://localhost:9080/api/version; echo
+{"version":"v1","pod":"backend-v1-54c86bf9b-xqdkd"}
 ```
+
+The port-forward runs in the background and prints `Handling connection for 9080` for each request, mixed into the output of later commands. The transcripts in this module leave those lines out.
 
 **What you should see.** You get the backend's version JSON, this time through the classic gateway on port 9080. Open both manifests to see how they split the work:
 
@@ -93,21 +125,35 @@ curl -s http://localhost:9080/api/version; echo
 
 ### 3. Build the canary with subsets
 
-```bash
-kubectl -n shop delete httproute backend-route
-kubectl apply -f platform-engineering/manifests/16-subsets.yaml -f platform-engineering/manifests/16-canary-virtualservice.yaml
-for i in $(seq 1 200); do curl -s -o /dev/null -w "%header{x-app-version}\n" http://localhost:9080/api/orders; done | sort | uniq -c
+```console
+$ kubectl -n shop delete httproute backend-route
+httproute.gateway.networking.k8s.io "backend-route" deleted
+
+$ kubectl apply -f platform-engineering/manifests/16-subsets.yaml -f platform-engineering/manifests/16-canary-virtualservice.yaml
+destinationrule.networking.istio.io/backend-subsets created
+virtualservice.networking.istio.io/backend-canary created
+
+$ for i in $(seq 1 200); do curl -s -o /dev/null -w "%header{x-app-version}\n" http://localhost:9080/api/orders; done | sort | uniq -c
+ 174 v1
+  26 v2
 ```
 
 **What you should see.** About 180 `v1` and 20 `v2`. In the test run for this module, the counts were 174 and 26. You deleted the HTTPRoute first because an HTTPRoute and a VirtualService for the same host would compete. Istio doesn't define which one wins.
 
 ### 4. Send testers to v2 with a header
 
-```bash
-kubectl apply -f platform-engineering/manifests/03-course-client.yaml -f platform-engineering/manifests/03-allow-course-client.yaml
-kubectl -n shop rollout status deploy/course-client
-kubectl -n shop exec deploy/course-client -- sh -c \
+```console
+$ kubectl apply -f platform-engineering/manifests/03-course-client.yaml -f platform-engineering/manifests/03-allow-course-client.yaml
+serviceaccount/course-client unchanged
+deployment.apps/course-client unchanged
+authorizationpolicy.security.istio.io/backend-allow-course-client created
+
+$ kubectl -n shop rollout status deploy/course-client
+deployment "course-client" successfully rolled out
+
+$ kubectl -n shop exec deploy/course-client -- sh -c \
   'for i in $(seq 1 20); do curl -s -o /dev/null -w "%header{x-app-version}\n" -H "x-version: v2" http://backend:8000/api/version; done' | sort | uniq -c
+  20 v2
 ```
 
 **What you should see.** `20 v2`. The first rule in the VirtualService matched the header. Run the command again without `-H "x-version: v2"`, and the 90/10 split returns. This step uses `GET /api/version` because module 3's policy only lets the course client call that path.
@@ -160,9 +206,14 @@ Both do the same job in two shapes. The HTTPRoute uses `parentRefs` where the Vi
 
 ## Clean up
 
-```bash
-kill %1 2>/dev/null       # the port-forward from step 2
-./platform-engineering/reset.sh
+```console
+$ kill %1 2>/dev/null       # the port-forward from step 2
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 This deletes the `istio-ingress` namespace with the classic gateway, the VirtualService and the DestinationRule, and restores the HTTPRoute.
