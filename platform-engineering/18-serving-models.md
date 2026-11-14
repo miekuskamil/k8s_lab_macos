@@ -96,12 +96,39 @@ Autoscaling has the same problem. CPU use says little about how busy a model ser
 
 ### 1. Deploy the model servers
 
-```bash
-kubectl apply -f platform-engineering/manifests/18-namespace.yaml
-kubectl apply -f platform-engineering/manifests/18-llm-qwen.yaml -f platform-engineering/manifests/03-course-client.yaml
-kubectl -n ai get pods -w          # Init, then Running 0/1, then 1/1. Ctrl-C when both are 1/1
-kubectl -n ai logs deploy/llm-qwen -c fetch-model
+```console
+$ kubectl apply -f platform-engineering/manifests/18-namespace.yaml
+namespace/ai created
+persistentvolumeclaim/models created
+servicemonitor.monitoring.coreos.com/ai-models created
+
+$ kubectl apply -f platform-engineering/manifests/18-llm-qwen.yaml -f platform-engineering/manifests/03-course-client.yaml
+deployment.apps/llm-qwen created
+service/llm-qwen created
+serviceaccount/course-client unchanged
+deployment.apps/course-client unchanged
+
+$ kubectl -n ai get pods -w          # Init, then Running 0/1, then 1/1. Ctrl-C when both are 1/1
+NAME                        READY   STATUS     RESTARTS   AGE
+llm-qwen-67bb5b994f-m9f6d   0/1     Init:0/1   0          8s
+llm-qwen-67bb5b994f-s54sk   0/1     Init:0/1   0          8s
+llm-qwen-67bb5b994f-s54sk   0/1     PodInitializing   0          21s
+llm-qwen-67bb5b994f-m9f6d   0/1     PodInitializing   0          22s
+llm-qwen-67bb5b994f-m9f6d   0/1     Running           0          38s
+llm-qwen-67bb5b994f-s54sk   0/1     Running           0          38s
+llm-qwen-67bb5b994f-m9f6d   0/1     Running           0          45s
+llm-qwen-67bb5b994f-m9f6d   1/1     Running           0          45s
+llm-qwen-67bb5b994f-s54sk   1/1     Running           0          45s
+
+$ kubectl -n ai logs deploy/llm-qwen -c fetch-model
+Found 2 pods, using pod/llm-qwen-67bb5b994f-m9f6d
+total 479884
+drwxrwxrwx    1 root     root            66 Nov 14 23:36 .
+drwxr-xr-x    1 root     root            12 Nov 14 23:36 ..
+-rw-r--r--    1 curl_user curl_group 491400032 Nov 14 23:36 qwen2.5-0.5b-instruct-q4_k_m.gguf
 ```
+
+The `-w` watch keeps printing until you press Ctrl-C. The transcript shows it up to the moment both pods turned `1/1`.
 
 **What you should see.** Each pod goes through three stages:
 
@@ -109,13 +136,14 @@ kubectl -n ai logs deploy/llm-qwen -c fetch-model
 2. The server starts and shows `0/1` while it loads the model into memory.
 3. The pod turns `1/1` once the model sits in memory.
 
-In the test run, both pods were ready after 39 seconds.
+Both pods were ready after 39 seconds in one test run and after 45 seconds in another.
 
 Ask a question through the mesh:
 
-```bash
-kubectl -n shop exec deploy/course-client -- curl -s http://llm-qwen.ai.svc.cluster.local:8080/v1/chat/completions \
+```console
+$ kubectl -n shop exec deploy/course-client -- curl -s http://llm-qwen.ai.svc.cluster.local:8080/v1/chat/completions \
   -H 'Content-Type: application/json' -d '{"messages":[{"role":"user","content":"What is Kubernetes?"}],"max_tokens":60}'
+{"choices":[{"finish_reason":"length","index":0,"message":{"role":"assistant","content":"Kubernetes, short for \"containerized\" or \"containerized\" orchestration, is a platform that enables you to deploy and manage containerized applications, applications that run in containers, or containers that run in containers, on a distributed infrastructure. Kubernetes is a high-level, open-source, scalable,"}}],"created":1794699438,"model":"qwen2.5-0.5b","system_fingerprint":"b11889-d854d98ba","object":"chat.completion","usage":{"completion_tokens":60,"prompt_tokens":33,"total_tokens":93,"prompt_tokens_details":{"cached_tokens":0}},"id":"chatcmpl-ISUzQEZZYj4oXzb7JAtj6WTDU5tndA9u","timings":{"cache_n":0,"prompt_n":33,"prompt_ms":389.149,"prompt_per_token_ms":11.79239393939394,"prompt_per_second":84.80042348817548,"predicted_n":60,"predicted_ms":749.409,"predicted_per_token_ms":12.70184745762712,"predicted_per_second":78.72870488611692}}
 ```
 
 **What you should see.** You get JSON with `"model":"qwen2.5-0.5b"`, an answer, and a `timings` block. Compare it with module 17:
@@ -136,8 +164,11 @@ In an earlier test run, a 14-billion-parameter model on the same Mac GPU managed
 
 ### 2. Get stuck behind a long request
 
-```bash
-./platform-engineering/llm-load.sh
+```console
+$ ./platform-engineering/llm-load.sh
+short questions (seconds): 0.1 0.0 0.0 0.1 0.0 25.8 25.4 22.4 21.9 21.5
+long generation: 29 s
+short questions stuck behind it (over 2 s): 5 of 10
 ```
 
 The script works in three steps:
@@ -146,20 +177,37 @@ The script works in three steps:
 2. It sends 10 short questions, half a second apart, all from inside the mesh.
 3. It prints how long each short question took.
 
-**What you should see.** Most short questions take 0.0 to 0.1 seconds. Some take about 20 seconds. Those questions landed on the replica busy with the long story and waited in its queue. In the test runs, 4, 6, 4, 4 and 5 out of 10 got stuck. ztunnel balances connections and knows nothing about what each request costs.
+**What you should see.** Most short questions take 0.0 to 0.1 seconds. Some take about 20 seconds. Those questions landed on the replica busy with the long story and waited in its queue. In the test runs, 4, 6, 4, 4, 5 and 5 out of 10 got stuck. ztunnel balances connections and knows nothing about what each request costs.
 
 ### 3. Balance per request with a waypoint
 
-```bash
-kubectl apply -f platform-engineering/manifests/18-waypoint.yaml
-kubectl label ns ai istio.io/use-waypoint=waypoint
-kubectl -n ai wait --for=condition=Programmed gateway/waypoint
-./platform-engineering/llm-load.sh
-./platform-engineering/llm-load.sh
-./platform-engineering/llm-load.sh
+```console
+$ kubectl apply -f platform-engineering/manifests/18-waypoint.yaml
+gateway.gateway.networking.k8s.io/waypoint created
+
+$ kubectl label ns ai istio.io/use-waypoint=waypoint
+namespace/ai labeled
+
+$ kubectl -n ai wait --for=condition=Programmed gateway/waypoint
+gateway.gateway.networking.k8s.io/waypoint condition met
+
+$ ./platform-engineering/llm-load.sh
+short questions (seconds): 0.1 0.0 0.0 0.1 0.0 0.0 0.1 0.1 25.1 23.1
+long generation: 29 s
+short questions stuck behind it (over 2 s): 2 of 10
+
+$ ./platform-engineering/llm-load.sh
+short questions (seconds): 0.0 0.1 0.0 0.0 0.0 0.1 0.1 0.1 0.0 21.9
+long generation: 29 s
+short questions stuck behind it (over 2 s): 1 of 10
+
+$ ./platform-engineering/llm-load.sh
+short questions (seconds): 0.0 0.1 0.1 0.1 0.0 0.0 0.1 23.0 22.5 20.5
+long generation: 27 s
+short questions stuck behind it (over 2 s): 3 of 10
 ```
 
-**What you should see.** You see fewer stuck questions, but rarely none. The test runs gave 3, 0, 1, 1 and 5 out of 10. That is an average of 2, against 4.6 before. The waypoint's `LEAST_REQUEST` picks two pods at random and sends the request to the one with fewer requests in progress. Two things keep the number above zero:
+**What you should see.** You see fewer stuck questions, but rarely none. The test runs gave 3, 0, 1, 1, 5, 2, 1 and 3 out of 10. That is an average of 2, against 4.7 before. The waypoint's `LEAST_REQUEST` picks two pods at random and sends the request to the one with fewer requests in progress. Two things keep the number above zero:
 
 - With only two replicas, both random picks sometimes land on the busy pod.
 - `LEAST_REQUEST` counts requests, not their size.
@@ -176,15 +224,29 @@ llamacpp:requests_deferred
 
 ### 4. Two models behind one address
 
-```bash
-kubectl apply -f platform-engineering/manifests/18-llm-smol.yaml
-kubectl -n ai rollout status deploy/llm-smol
-kubectl apply -f platform-engineering/manifests/18-route-by-model.yaml
-ask() { kubectl -n shop exec deploy/course-client -- curl -s http://llm.ai.svc.cluster.local:8080/v1/chat/completions \
+```console
+$ kubectl apply -f platform-engineering/manifests/18-llm-smol.yaml
+deployment.apps/llm-smol created
+service/llm-smol created
+
+$ kubectl -n ai rollout status deploy/llm-smol
+Waiting for deployment "llm-smol" rollout to finish: 0 of 1 updated replicas are available...
+deployment "llm-smol" successfully rolled out
+
+$ kubectl apply -f platform-engineering/manifests/18-route-by-model.yaml
+service/llm created
+httproute.gateway.networking.k8s.io/llm-by-model created
+
+$ ask() { kubectl -n shop exec deploy/course-client -- curl -s http://llm.ai.svc.cluster.local:8080/v1/chat/completions \
   -H 'Content-Type: application/json' "$@" | grep -o '"model":"[^"]*"'; }
-ask -d '{"messages":[{"role":"user","content":"Name a colour."}],"max_tokens":12}'
-ask -H 'x-model: smollm2' -d '{"messages":[{"role":"user","content":"Name a colour."}],"max_tokens":12}'
-ask -d '{"model":"smollm2-360m","messages":[{"role":"user","content":"Name a colour."}],"max_tokens":12}'
+$ ask -d '{"messages":[{"role":"user","content":"Name a colour."}],"max_tokens":12}'
+"model":"qwen2.5-0.5b"
+
+$ ask -H 'x-model: smollm2' -d '{"messages":[{"role":"user","content":"Name a colour."}],"max_tokens":12}'
+"model":"smollm2-360m"
+
+$ ask -d '{"model":"smollm2-360m","messages":[{"role":"user","content":"Name a colour."}],"max_tokens":12}'
+"model":"qwen2.5-0.5b"
 ```
 
 **What you should see.** You see `qwen2.5-0.5b`, then `smollm2-360m`, then `qwen2.5-0.5b` again. The third request asked for SmolLM2 in its body, the standard OpenAI way. The route ignored that, because it only reads headers.
@@ -208,8 +270,13 @@ ask -d '{"model":"smollm2-360m","messages":[{"role":"user","content":"Name a col
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh
+```console
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 This deletes the `ai` namespace, the models in it and the ServiceMonitor.
