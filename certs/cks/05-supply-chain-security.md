@@ -4,7 +4,7 @@
 
 **Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running. The course's [module 26](../../course/26-kyverno-policy-as-code.md) explains admission webhooks, which task 5 configures by hand.
 
-Most of the code in a container image came from someone else: a base image, system packages, language libraries. A vulnerable or poisoned piece anywhere in that chain ends up running in your cluster with your permissions. This domain checks the chain at each step, from the Dockerfile to the API server's front door. It has five tasks and takes about 45 minutes.
+Most of the code in a container image came from someone else: a base image, system packages, language libraries. A vulnerable or poisoned piece anywhere in that chain ends up running in your cluster with your permissions. This domain checks the chain at each step, from the Dockerfile to the API server's front door. It has ten tasks and takes about 1 hour 40 minutes.
 
 ## Theory: a check at every step
 
@@ -45,6 +45,14 @@ A **CVE** (Common Vulnerabilities and Exposures entry) is a public record of one
 
 The numbers grow over time without any change to the image, because researchers keep finding bugs in old code. An exam task usually says "delete the pods whose image has CRITICAL vulnerabilities". Scan each distinct image once, not each pod.
 
+### Tags move, digests don't
+
+A tag such as `nginx:1.27-alpine` is a name that the image's owner moves to a new build whenever they like. Two nodes that pull the same tag a week apart may run different code. A **digest** is the SHA-256 checksum of the image's manifest, written `nginx@sha256:6564...`. Change one byte of the image, and the digest changes. So an image named by digest always means exactly one build, and a registry that got broken into has no way to swap it silently.
+
+The digest of the image a pod runs sits in the pod's status, in `containerStatuses[].imageID`. `crictl inspecti <image>` on the node shows it too, as `repoDigests`. Task 8 pins a Deployment to one.
+
+Pin the image you scanned. A digest proves that what runs is what trivy saw, which a tag never proves.
+
 ### SBOMs
 
 An **SBOM** (software bill of materials) is a machine-readable list of every package in an image, with versions and licenses. When the next big CVE arrives, a team with SBOMs searches files instead of rescanning every image. Two formats dominate: **SPDX**, from the Linux Foundation, and **CycloneDX**, from OWASP. The exam allows the docs of **bom**, a Kubernetes SIG tool that writes SPDX. trivy writes both.
@@ -67,6 +75,16 @@ ImagePolicyWebhook needs three files, and the exam usually hands you the last tw
 3. That kubeconfig, whose `cluster.server` is the webhook's URL and whose `certificate-authority` checks the webhook's certificate.
 
 `defaultAllow` decides what happens when the webhook doesn't answer. The test run stopped the back end with `defaultAllow: false`, and every new pod failed: `Post "https://localhost:8443/review?timeout=30s": dial tcp [::1]:8443: connect: connection refused`. That's the safe choice for a registry rule, and the reason the webhook needs high availability in production.
+
+When the webhook goes wrong, the symptoms depend on which file is wrong:
+
+| Fault | What you see |
+|---|---|
+| a path in the admission configuration or the API server flag that doesn't exist, or isn't mounted | the API server exits at start; `crictl logs` names the file |
+| the webhook kubeconfig's `certificate-authority` doesn't sign the back end's certificate | the API server runs, and every new pod fails with an `x509` error, because the call fails and `defaultAllow: false` refuses |
+| the back end is down, with `defaultAllow: true` | everything works, including images the policy forbids. Nobody notices |
+
+The last row is the dangerous one, and task 7 sets it up. A webhook that fails open looks healthy until somebody checks it with an image it should refuse.
 
 The practice cluster runs a small back end on `cks-cp` at `https://localhost:8443/review`, from `certs/cks/cluster/image-policy/`. It allows images from the prefixes in `/etc/image-policy/allowed-registries`, refuses `latest` and untagged images, and logs each verdict to `journalctl -u image-policy`.
 
@@ -325,6 +343,217 @@ In the test run, the first command failed with `image policy webhook backend den
   PASS  a pod from quay.io/evil is refused
 ```
 
+## Task 6: The webhook's files are wrong
+
+**Time budget:** 8 minutes. **Host:** `cks-cp`.
+
+```bash
+./certs/cks/task.sh setup 5.6
+```
+
+> Somebody changed the ImagePolicyWebhook configuration, and the API server doesn't come back. Repair it. The plugin stays enabled, pods stay refused when the back end doesn't answer, and the back end at `https://localhost:8443/review` decides again which images run. Its CA certificate is `/etc/kubernetes/policy-webhook/ca.crt`.
+
+<details>
+<summary>Solution</summary>
+
+`kubectl` fails, so read the API server's last words:
+
+```bash
+crictl ps -a --name kube-apiserver
+crictl logs <id of the newest exited container>
+```
+
+In the test run, it said:
+
+```
+"command failed" err="failed to apply admission: couldn't init admission plugin \"ImagePolicyWebhook\": stat /etc/kubernetes/webhook/kubeconfig.yaml: no such file or directory"
+```
+
+`ls /etc/kubernetes/policy-webhook/` shows the real kubeconfig. Fix `kubeConfigFile` in `/etc/kubernetes/admission/admission-config.yaml`. The API server starts, but every new pod now fails:
+
+```
+Error from server (Forbidden): pods "x509" is forbidden: Post "https://localhost:8443/review?timeout=30s": tls: failed to verify certificate: x509: certificate signed by unknown authority
+```
+
+The kubeconfig's `certificate-authority` points to the cluster's CA, `/etc/kubernetes/pki/ca.crt`, which never signed the back end's certificate. Set it to `/etc/kubernetes/policy-webhook/ca.crt`. The API server reads the kubeconfig only at start, and the manifest didn't change, so restart it the way [04, task 5](04-minimize-microservice-vulnerabilities.md#task-5-rotate-the-encryption-key) does: move the manifest out of the folder and back. Then test:
+
+```bash
+k run t --image=quay.io/evil/miner:1 --dry-run=server
+```
+
+In the test run, that printed `image policy webhook backend denied one or more images: image quay.io/evil/miner:1 is not from an allowed registry`. The refusal now comes from the back end's policy, not from a broken connection.
+
+</details>
+
+```bash
+./certs/cks/task.sh check 5.6
+```
+
+```
+  PASS  the API server answers
+  PASS  ImagePolicyWebhook stays enabled, with defaultAllow: false
+  PASS  a pod with busybox:1.36 is admitted
+  PASS  a pod from quay.io/evil is refused by the back end
+```
+
+## Task 7: The back end is down and nobody noticed
+
+**Time budget:** 6 minutes. **Host:** `cks-cp`.
+
+```bash
+./certs/cks/task.sh setup 5.7
+```
+
+The setup shows the hole. In the test run: `quay.io/evil/miner:1 today: pod/probe created (server dry run)`.
+
+> The cluster admits images from any registry again. Make the API server refuse new pods whenever the image policy back end doesn't answer. Then bring the back end back, so that it starts at boot too, and approved images run again.
+
+<details>
+<summary>Solution</summary>
+
+Two things are wrong, and both have to change:
+
+```bash
+grep defaultAllow /etc/kubernetes/admission/admission-config.yaml     # defaultAllow: true
+systemctl status image-policy                                         # inactive, disabled
+journalctl -u image-policy -n 2
+```
+
+```bash
+sed -i 's/defaultAllow: true/defaultAllow: false/' /etc/kubernetes/admission/admission-config.yaml
+systemctl enable --now image-policy
+```
+
+Restart the API server by moving its manifest out and back, as in task 6, and test both sides:
+
+```bash
+k run ok --image=busybox:1.36 --dry-run=server -- sleep 1         # created
+k run bad --image=quay.io/evil/miner:1 --dry-run=server           # denied
+```
+
+`enable --now` does both halves: `--now` starts the service, `enable` makes it start at boot. Fix only `defaultAllow`, and the cluster refuses every new pod, approved or not, until somebody starts the back end. In the test run, the fix took 36 seconds, most of it the API server restart.
+
+</details>
+
+```bash
+./certs/cks/task.sh check 5.7
+```
+
+```
+  PASS  the admission configuration sets defaultAllow: false
+  PASS  the image-policy service runs and starts at boot
+  PASS  a pod with busybox:1.36 is admitted
+  PASS  a pod from quay.io/evil is refused
+```
+
+## Task 8: Pin an image by digest
+
+**Time budget:** 4 minutes. **Host:** `cks-cp`.
+
+```bash
+./certs/cks/task.sh setup 5.8
+```
+
+> Deployment `web` in namespace `pinned` runs `nginx:1.27-alpine`. Change it to name the exact image it runs now by its digest, so that a moved tag never changes what runs.
+
+<details>
+<summary>Solution</summary>
+
+Read the digest from the running pod, then set it:
+
+```bash
+k -n pinned get pod -l app=web -o jsonpath='{.items[0].status.containerStatuses[0].imageID}'; echo
+k -n pinned set image deploy/web nginx=nginx@sha256:<the digest>
+k -n pinned rollout status deploy web
+```
+
+In the test run, the imageID was `docker.io/library/nginx@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10`. `nginx` in `set image` is the container's name, which `kubectl create deployment` took from the image. Both `nginx@sha256:...` and `nginx:1.27-alpine@sha256:...` work. With both a tag and a digest, the runtime ignores the tag.
+
+</details>
+
+```bash
+./certs/cks/task.sh check 5.8
+```
+
+```
+  PASS  Deployment web names its image by a sha256 digest
+  PASS  the digest is the one nginx:1.27-alpine had on the node
+  PASS  the Deployment has a ready pod
+```
+
+## Task 9: Scan what the cluster runs
+
+**Time budget:** 7 minutes. **Host:** `cks-cp`.
+
+```bash
+./certs/cks/task.sh setup 5.9
+```
+
+> Namespaces `prod-a` and `prod-b` run four Deployments. Find every image among them that has at least one CRITICAL vulnerability, and write those image names, one per line, to `/root/cks/critical-images.txt`. Scale the Deployments that use them to 0 replicas. Leave the others alone.
+
+<details>
+<summary>Solution</summary>
+
+List the images per Deployment, then scan each distinct image once:
+
+```bash
+k get deploy -n prod-a -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[*].image
+k get deploy -n prod-b -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[*].image
+for img in nginx:1.19.0 busybox:1.36 redis:6.0.5 registry.k8s.io/pause:3.10; do
+  echo "$img $(trivy image --quiet --severity CRITICAL $img | grep -m1 Total)"
+done
+printf 'nginx:1.19.0\nredis:6.0.5\n' > /root/cks/critical-images.txt
+k -n prod-a scale deploy web --replicas=0
+k -n prod-b scale deploy cache --replicas=0
+```
+
+In the test run, trivy found 44 CRITICAL findings in `nginx:1.19.0`, 22 in `redis:6.0.5`, and none in `busybox:1.36` or `pause:3.10`. The check runs trivy itself, so it still agrees with you when the database grows. `trivy image` prints nothing for a target without findings, which is why the `Total` line stays empty for the clean images.
+
+</details>
+
+```bash
+./certs/cks/task.sh check 5.9
+```
+
+```
+  PASS  /root/cks/critical-images.txt lists exactly the images with CRITICAL findings
+  PASS  the Deployments running those images are scaled to 0
+  PASS  the Deployments with clean images keep their replica
+```
+
+## Task 10: Which SBOM carries the risk?
+
+**Time budget:** 4 minutes. **Host:** `cks-cp`.
+
+```bash
+./certs/cks/task.sh setup 5.10
+```
+
+> `/root/cks/sboms/` holds three CycloneDX SBOMs from the build system. Without pulling any image, find the SBOMs that list a package with at least one CRITICAL vulnerability. Write their file names, one per line, to `/root/cks/risky-sboms.txt`.
+
+<details>
+<summary>Solution</summary>
+
+`trivy sbom` reads the package list from the file and checks it against the database:
+
+```bash
+cd /root/cks/sboms
+for f in app-*.cdx.json; do echo "$f: $(trivy sbom --quiet --severity CRITICAL $f | grep -m1 Total)"; done
+echo app-2.cdx.json > /root/cks/risky-sboms.txt
+```
+
+In the test run, `app-2.cdx.json` showed `Total: 44 (CRITICAL: 44)`, and the other two printed nothing. That's the point of an SBOM: the scan took under a second per file and needed no registry. `--exit-code 1` makes trivy fail when it finds something, which suits a loop or a CI step.
+
+</details>
+
+```bash
+./certs/cks/task.sh check 5.10
+```
+
+```
+  PASS  /root/cks/risky-sboms.txt names exactly the SBOMs with CRITICAL findings
+```
+
 ## Clean up
 
-Task 5 leaves the webhook on, and every later pod passes through it. Run `./certs/cks/cluster/reset.sh` before the next domain.
+Tasks 5 to 7 leave the webhook on, and every later pod passes through it. Tasks 6 and 7 start from task 5's result and apply its solution when the webhook is off. Run `./certs/cks/cluster/reset.sh` before the next domain.
