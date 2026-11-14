@@ -687,3 +687,15 @@ These terms come from the [CKS track](../certs/cks/README.md) in `certs/cks/`. E
 **Least privilege and defence in depth.** Least privilege means each user, program and credential gets only the rights its job needs. Defence in depth means several independent layers of protection, so one failure doesn't decide the outcome. CKS 03.
 
 **super-admin.conf and system:masters.** `system:masters` is a group that skips authorization entirely. kubeadm puts it only in `super-admin.conf`, and gives `admin.conf` a group with a normal ClusterRoleBinding instead. Both files stay on the control plane, readable by root only. CKS 03.
+
+**Linux capability.** A capability is one slice of root's power, such as `NET_ADMIN` (change network settings), `SYS_ADMIN` (mount and much more) or `NET_BIND_SERVICE` (listen below port 1024). `capabilities.drop: [ALL]` takes every slice away from a container. CKS 04.
+
+**securityContext and no_new_privs.** The securityContext is the part of a pod or container spec that sets its user, capabilities, privilege escalation, read-only root and seccomp profile. `allowPrivilegeEscalation: false` sets the kernel flag `no_new_privs`, so no child process gains rights, not even through a setuid binary such as `sudo`. CKS 04.
+
+**Namespaces and cgroups (Linux).** Linux namespaces give a process its own view of processes, network, mounts and host name. cgroups limit its CPU and memory. Together they make a container, but every container still shares the node's kernel. CKS 04.
+
+**Envelope encryption (KMS provider).** Envelope encryption encrypts data with a data encryption key (DEK) and encrypts that DEK with a key encryption key (KEK) held in an outside key service. The `kms` provider of an EncryptionConfiguration works this way, so the master key never sits on the control plane node. CKS 04.
+
+**Container escape.** A container escape is an attack that breaks out of a container's fences onto the node, usually through a kernel bug, a privileged pod or a `hostPath` mount. CKS 04.
+
+**gVisor Sentry and Kata Containers.** The Sentry is gVisor's user-space kernel: it answers a sandboxed container's syscalls itself and calls the host kernel with only a small set. Kata Containers takes the other route and runs each pod in a lightweight virtual machine with its own kernel. CKS 04.

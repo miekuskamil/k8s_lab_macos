@@ -113,7 +113,7 @@ Cloud virtual machines answer HTTP on `169.254.169.254`, the **metadata service*
 
 Every pod on the node reaches it too, because pod traffic leaves through the node. Attackers love this path. A common pattern is server-side request forgery, or SSRF: an attacker tricks a web application into fetching a URL of the attacker's choice. If the application fetches `http://169.254.169.254/...`, it hands the node's cloud credentials to the attacker, who then leaves the cluster with them and acts on the cloud account directly.
 
-An egress NetworkPolicy closes that path for pods. It allows `0.0.0.0/0` with an `except` list that names `169.254.169.254/32`, so everything else still flows. Clouds add their own fences too. AWS's IMDSv2, for example, demands a session token and lets you set a hop limit of 1, so the answer never travels the extra network hop to a container.
+An egress NetworkPolicy closes that path for pods. It allows `0.0.0.0/0` with an `except` list that names `169.254.169.254/32`, so everything else still flows. Clouds add their own fences too. AWS's IMDSv2, for example, demands a session token from a PUT request first, and a hop limit sets how many network hops that token's answer travels. AWS itself warns that a hop limit of 1 causes problems for containers, which is exactly the effect you want when pods have no business there.
 
 OrbStack has no metadata service, so in this lab you build the policy and prove that other traffic still flows.
 
