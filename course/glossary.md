@@ -1,6 +1,6 @@
 # Glossary
 
-Every Istio resource and term this course uses, in plain words. Each entry starts with one sentence that says what the thing is for. Then it gives the detail, a small example where that helps, and the module that puts it to work. If a module mentions something and you're not sure what it is, look here first.
+Every resource and term the Kubernetes Platform Engineering course and the certification tracks use, in plain words. Each entry starts with one sentence that says what the thing is for. Then it gives the detail, a small example where that helps, and the module that puts it to work. If a module mentions something and you're not sure what it is, look here first.
 
 - [Find the right resource](#find-the-right-resource)
 - [The pieces of Istio](#the-pieces-of-istio)
