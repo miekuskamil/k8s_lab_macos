@@ -681,3 +681,9 @@ These terms come from the [CKS track](../certs/cks/README.md) in `certs/cks/`. E
 **Mirror pod.** A mirror pod is the read-only copy of a static pod that the kubelet creates in the API server, so `kubectl get pods` shows it. Deleting or editing the mirror changes nothing: the manifest file on the node is the truth. CKS 02.
 
 **OIDC authentication.** OIDC (OpenID Connect) is a login standard that lets the API server trust tokens from a company identity provider. People then log in with their company account, and lose access when the company removes it. CKS 02.
+
+**Backdoor.** A backdoor is a hidden way back into a machine that an attacker leaves behind, such as a renamed binary started by a systemd unit. `/proc/<pid>/exe` shows the real file behind a process, whatever it calls itself. CKS 03.
+
+**Least privilege and defence in depth.** Least privilege means each user, program and credential gets only the rights its job needs. Defence in depth means several independent layers of protection, so one failure doesn't decide the outcome. CKS 03.
+
+**super-admin.conf and system:masters.** `system:masters` is a group that skips authorization entirely. kubeadm puts it only in `super-admin.conf`, and gives `admin.conf` a group with a normal ClusterRoleBinding instead. Both files stay on the control plane, readable by root only. CKS 03.
