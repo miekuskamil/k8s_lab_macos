@@ -4,6 +4,8 @@
 
 **Before this module:** module 4.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it).
+
 Networks fail and services slow down. When that happens, you want the damage to stay small. This module adds four protections: timeouts, fault injection, circuit breaking and rate limiting. Then you watch each one act in Grafana, in Jaeger and in the waypoint's access log.
 
 ## Concept: four tools for four failure modes

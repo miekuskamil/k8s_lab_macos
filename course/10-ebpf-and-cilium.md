@@ -4,6 +4,8 @@
 
 **Before this module:** modules 1 and 7, for the comparison.
 
+**You need:** nothing extra. This is a theory module, because Cilium needs its own cluster. The commands in "Look at your own lab" run on this lab.
+
 You will read claims like this one:
 
 > Tools built on eBPF, such as Cilium, dominate new deployments by handling networking, security policies and observability directly in the Linux kernel without sidecar proxies.

@@ -4,6 +4,8 @@
 
 **Before this module:** modules 1, 2 and 7.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `istioctl`, `helm`, and internet access to download Istio 1.25.5. `./scripts/port-forward.sh` running in a spare terminal lets you watch the switch in Kiali.
+
 Every Istio release gets security fixes for about six months. After that you're on your own. So a team that runs Istio upgrades it two or three times a year. In this module you upgrade the lab from Istio 1.24.2 to 1.25.5. You follow the steps Istio recommends for ambient mode. Meanwhile, a stream of requests checks that the shop keeps answering.
 
 **This module is one-way.** Istio has no clean downgrade, so after this module your lab runs 1.25.5. The rest of the course still works on it. To return to the course version, rebuild with `./scripts/teardown.sh --yes && ./scripts/provision.sh`. `provision.sh` notices an upgraded mesh and leaves it alone, so it never mixes two versions.

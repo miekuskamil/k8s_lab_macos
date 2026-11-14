@@ -2,7 +2,9 @@
 
 > New to a term here, like recording rule or burn rate? The [glossary](glossary.md) explains every term in this course.
 
-**Before this module:** module 0, and module 6 helps. You need `./scripts/port-forward.sh` running for Prometheus (http://localhost:9090) and Alertmanager (http://localhost:9093).
+**Before this module:** module 0, and module 6 helps.
+
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it), and `./scripts/port-forward.sh` running in a spare terminal for Prometheus (http://localhost:9090) and Alertmanager (http://localhost:9093).
 
 Module 6 used Prometheus to look at things. In production, teams use it to *wake people up* when something breaks. That takes a different skill, in three parts:
 

@@ -4,6 +4,8 @@
 
 **Before this module:** module 0. Module 24 helps for Grafana. No Istio needed.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `helm`, internet access for the chart, and about 350 MB of free memory.
+
 Metrics tell you a service uses a whole CPU core. Traces tell you which request was slow. Neither tells you *which line of code* burns the CPU or fills the memory. A **profile** answers that question. A profile is a record of which functions used the CPU or the memory, and how much.
 
 **Continuous profiling** collects profiles from every service, all the time. So you look at last Tuesday's 3 a.m. spike after the fact, instead of trying to reproduce it. People call profiles the fourth signal, next to metrics, logs and traces. In this module you install **Grafana Pyroscope**, a database for profiles. You opt a Go app into profiling with two annotations, and then you read the flame graphs.

@@ -4,6 +4,8 @@
 
 **Before this module:** modules 1 to 3.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `istioctl`, and `./scripts/port-forward.sh` running in a spare terminal for Kiali (http://localhost:20001).
+
 Most Istio installations in production still use sidecars, and most Istio documentation assumes them. This module runs sidecar mode next to ambient in the same cluster, with the same istiod, so you compare them directly.
 
 ## Concept: both modes, one control plane

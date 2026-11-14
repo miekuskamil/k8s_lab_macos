@@ -4,6 +4,8 @@
 
 **Before this module:** modules 1 to 7: the incidents mix everything.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it) and `istioctl`.
+
 This module gives you four broken setups to fix, like real on-call shifts. For each one, `./course/incident.sh` breaks something in the cluster. It tells you only what the users see, not what it changed. Your job has three parts:
 
 1. Find the cause with the tools.

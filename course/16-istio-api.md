@@ -4,6 +4,8 @@
 
 **Before this module:** modules 4 and 5.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `helm`, and internet access for Istio's gateway chart.
+
 Most of this course routes traffic with the Gateway API, the Kubernetes standard made of Gateway and HTTPRoute resources. Istio had its own routing API for years before that standard existed. Huge numbers of clusters, blog posts and Helm charts still use the older Istio API, and so does the Istio Certified Associate exam. This module builds two things from module 4 again, the Istio way: an ingress gateway and a canary. By the end, you'll read both styles and translate between them.
 
 Time: about 40 minutes.

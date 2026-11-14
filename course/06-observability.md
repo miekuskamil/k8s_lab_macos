@@ -4,6 +4,8 @@
 
 **Before this module:** modules 4 and 5.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it), and `./scripts/port-forward.sh` running in a spare terminal for Jaeger (http://localhost:16686), Grafana and Kiali.
+
 When something breaks, you need to see what happened. The mesh helps here, because it measures every request it carries, with no code in the application. This module shows three things:
 
 - what the mesh records

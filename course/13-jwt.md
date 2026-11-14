@@ -4,6 +4,8 @@
 
 **Before this module:** modules 3 and 11.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it).
+
 Modules 2 and 3 answered "which workload is calling?" with certificates. That's enough between services. But a shop also has people. Alice browses orders, and Bob the admin creates them. A person has no mesh certificate. So their identity arrives in each request as a token instead. In this module, the ingress gateway learns two things:
 
 1. The gateway checks each token and rejects fakes.

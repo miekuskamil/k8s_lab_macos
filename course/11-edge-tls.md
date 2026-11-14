@@ -4,6 +4,8 @@
 
 **Before this module:** modules 1 to 4.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it), and `openssl`, which ships with macOS.
+
 So far the shop speaks plain HTTP on `localhost:8080`. Inside the mesh that's fine, because ztunnel wraps every hop in mTLS. But the first hop, from your browser to the ingress gateway, travels unencrypted. Anyone on the network path reads it. In this module you close that gap in three steps:
 
 1. You give the gateway an HTTPS listener.

@@ -4,6 +4,8 @@
 
 **Before this module:** modules 3, 5, 6 and 12.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it), Ollama with `qwen2.5:3b`, and the assistant image `k8s-lab/assistant:1.1.0`. [What you need](#what-you-need) below has the details. Step 5 uses Jaeger, so keep `./scripts/port-forward.sh` running in a spare terminal.
+
 AI features are the fastest-growing kind of traffic on Kubernetes right now. Most of them follow one pattern:
 
 1. A normal service gathers some data.

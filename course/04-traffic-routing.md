@@ -4,6 +4,8 @@
 
 **Before this module:** modules 1 to 3.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it) and `istioctl`.
+
 A Kubernetes Service spreads requests evenly over its pods. That's a problem when you release a new version, because you want to choose who gets it. In this module the waypoint makes that choice instead. It sends a fixed percentage to the new version, or it routes by what the request contains.
 
 ## Concept: who decides where a request goes

@@ -4,6 +4,8 @@
 
 **Before this module:** modules 1 to 3, and 11 helps.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it), and internet access: the module calls httpbin.org.
+
 Modules 2 to 5 controlled traffic between your own services. This module looks the other way, at calls from your pods out to the internet. Here is the plan:
 
 1. You find out what the mesh knows about these calls by default. The answer is almost nothing.

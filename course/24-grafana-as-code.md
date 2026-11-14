@@ -2,7 +2,9 @@
 
 > New to a term here, like provisioned dashboard or contact point? The [glossary](glossary.md) explains every term in this course.
 
-**Before this module:** module 23 for the SLO ideas, and module 22 helps. You need `./scripts/port-forward.sh` running for Grafana (http://localhost:3000, `admin` / `k8s-lab-admin`).
+**Before this module:** module 23 for the SLO ideas, and module 22 helps.
+
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it), and `./scripts/port-forward.sh` running in a spare terminal for Grafana (http://localhost:3000, `admin` / `k8s-lab-admin`).
 
 Most teams start with Grafana by clicking. They add a panel here and a dashboard there, and Grafana saves them in its own database. A year later, three things have gone wrong:
 

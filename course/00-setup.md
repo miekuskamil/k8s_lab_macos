@@ -4,6 +4,8 @@
 
 **Before this module:** none. Read [Istio in one picture](start-here.md) first.
 
+**You need:** the lab from `./scripts/provision.sh`, and a browser. This module installs `istioctl`.
+
 In this module you check that the lab works, install `istioctl`, and learn where each tool fits. It takes 15 minutes.
 
 ## Check the lab

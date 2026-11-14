@@ -4,6 +4,8 @@
 
 **Before this module:** modules 1, 4 and 5, and 17 for the AI basics.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it), and internet access: the module downloads about 900 MB of models, once per run.
+
 Module 17 called a model that ran outside the cluster. Plenty of teams run models inside Kubernetes instead. They do it for privacy, for cost, or because a GPU cluster is what they have. This module puts two small model servers into the lab. It then shows three problems that make model serving different from serving a normal API:
 
 1. A model server is a heavy workload that starts slowly.

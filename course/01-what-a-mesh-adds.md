@@ -4,6 +4,8 @@
 
 **Before this module:** module 0.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `istioctl`, and `./scripts/port-forward.sh` running in a spare terminal for Kiali (http://localhost:20001).
+
 You know how Kubernetes moves a packet from one pod to another. This module shows what that path leaves out, and the two ways Istio fills the gap.
 
 ## Concept: what Kubernetes networking does not do

@@ -4,6 +4,8 @@
 
 **Before this module:** modules 3, 17 and 18.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `helm`, internet access for the kagent chart, and Ollama with a model that calls tools, such as `qwen2.5:3b`. Or use Claude, as [Choosing the model](../docs/ai-models.md#3-module-19-kagent) shows.
+
 A plain language model only answers questions. An AI agent goes further and acts. You ask "are all pods in shop healthy?". The agent decides to call a tool that lists pods, reads the result, and replies. Agents that operate Kubernetes are one of the most talked-about topics in the cloud-native world right now.
 
 This module works in four stages:

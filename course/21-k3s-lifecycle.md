@@ -4,6 +4,8 @@
 
 **Before this module:** module 0, and module 20 helps. This module covers plain Kubernetes operations, except for one surprise in step 4.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `openssl`, and internet access for the newer k3s image. Steps 2 and 4 restart k3s, and step 4 breaks the mesh on purpose until step 5 repairs it. Finish other modules' exercises first.
+
 Three jobs keep a cluster alive for years instead of months:
 
 - Renew certificates before they expire.

@@ -4,6 +4,8 @@
 
 **Before this module:** module 2.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it).
+
 mTLS tells the receiver who is calling. Authorization decides whether to let that caller in. In this module you write rules at both layers of the mesh. You also see the gap that opens if you only write one of them.
 
 ## Concept: AuthorizationPolicy compared with NetworkPolicy

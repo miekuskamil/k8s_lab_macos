@@ -4,6 +4,8 @@
 
 **Before this module:** module 0. Module 17 helps: it introduced RAG with a handful of orders. No Istio needed.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `helm`, Ollama with `nomic-embed-text` and `qwen2.5:3b`, and internet access for the Qdrant chart. [What you need](#what-you-need) below has the details.
+
 The most common AI system in companies today isn't a chatbot that knows everything. It's a model that answers from *your* documents, such as runbooks, policies, tickets and wikis. A plain chat model has never seen those documents. So the system answers in two moves:
 
 1. The system finds the passages that match the question.

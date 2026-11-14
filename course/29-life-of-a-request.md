@@ -4,6 +4,8 @@
 
 **Before this module:** module 0. Parts 1 and 2 need no Istio. Part 3 builds on modules 1 and 2 (ambient mode, ztunnel, mTLS identity) and refers to module 3's policies.
 
+**You need:** the lab running (`./scripts/start.sh` starts or repairs it) and `istioctl`. `./scripts/port-forward.sh` running in a spare terminal lets you follow part 3 in Jaeger.
+
 You type `curl localhost:8080/api/orders` and get JSON back about 20 milliseconds later. A lot happens in those 20 milliseconds. Before the request even starts, a pod had to come to life. Then the request crosses the network, the mesh and the apps.
 
 This module follows all of it on your lab, with a command for every hop. It has three parts:
