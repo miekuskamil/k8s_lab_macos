@@ -715,3 +715,15 @@ These terms come from the [CKS track](../certs/cks/README.md) in `certs/cks/`. E
 **Keyless signing and transparency log.** Keyless signing with cosign uses a short-lived certificate tied to an identity, such as a CI login, instead of a long-lived key. The signature goes to a public transparency log, an append-only record anybody checks later. CKS 05.
 
 **Provenance and SLSA.** Provenance is a verifiable record of where an artifact came from and how it was built. SLSA (Supply-chain Levels for Software Artifacts) is a framework that grades how trustworthy that record is. CKS 05.
+
+**Prevention and detection.** Prevention blocks an action before it happens, as seccomp and AppArmor do. Detection notices an action and reports it, as Falco and audit logs do. Prevention needs you to know what to forbid; detection tolerates surprises but acts after the fact. CKS 06.
+
+**seccomp action.** A seccomp action is what the kernel does with a matching syscall: `SCMP_ACT_ALLOW` runs it, `SCMP_ACT_ERRNO` fails it with an error, `SCMP_ACT_KILL_PROCESS` kills the process, and `SCMP_ACT_LOG` runs and logs it. Without a profile, a pod runs `Unconfined` unless the kubelet sets `seccompDefault: true`. CKS 06.
+
+**AppArmor enforce and complain mode.** In enforce mode, an AppArmor profile blocks what its rules deny and logs it. In complain mode, it blocks nothing and only logs, which teams use to learn what an app does before they enforce. CKS 06.
+
+**Audit level and audit backend.** An audit level (`None`, `Metadata`, `Request`, `RequestResponse`) says how much of a request the API server records. The first policy rule that matches sets it. An audit backend writes the events: the log backend to a file, the webhook backend to an outside service. CKS 06.
+
+**Falco driver, priority and output.** Falco's driver is the kernel part that collects syscall events: the modern eBPF probe, an older eBPF probe, or a kernel module. A rule's priority ranges from `EMERGENCY` down to `DEBUG`. Outputs send alerts to standard output, a file, syslog, a program or HTTP, and Falcosidekick forwards them further. CKS 06.
+
+**Assume breach and SIEM.** Assume breach is the stance of planning as if an attacker is already inside, so you focus on limiting and seeing them. A SIEM (security information and event management system) is the central store where teams collect audit logs and alerts off the nodes. CKS 06.

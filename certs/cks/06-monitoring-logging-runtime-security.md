@@ -6,11 +6,131 @@
 
 The other domains try to keep attackers out. This one assumes somebody got in anyway. Then three questions matter: what did they do through the API, what are they doing inside the container right now, and how much damage does the container let them do. Audit logs answer the first, Falco the second, and immutable root file systems, seccomp and AppArmor limit the third. This domain has 13 tasks and takes about 2 hours.
 
-## Theory: watch the API, watch the kernel, limit the damage
+## The domain in one table
 
-### Audit logs
+The other domains try to keep attackers out. This one assumes somebody got in anyway. Then three questions matter, and each task answers one of them:
 
-The API server handles every change to the cluster, so it's the one place that sees who did what. An **audit log** records those requests. kubeadm leaves it off. The **audit policy** decides what to record, rule by rule, and the first rule that matches a request wins. Each rule sets a level:
+| Question | Tool | Task |
+|---|---|---|
+| What did they do through the API? | audit logs | 1, 10, 11 |
+| What are they doing inside the container right now? | Falco | 2, 7, 8, 9 |
+| How much damage does the container let them do? | read-only root, seccomp, AppArmor | 3, 4, 5, 12, 13 |
+| What happened, from start to end? | audit log and Falco together | 6 |
+
+## Concept: syscalls, the kernel boundary
+
+Everything a container does that matters passes one border: the line between the process and the kernel. A **system call**, or syscall, is a request from a program to the kernel. Opening a file is `openat`, starting a program is `execve`, opening a connection is `connect`, changing a file's mode is `chmod`. A process has no other way to touch files, the network or other processes. The course's [module 10](../../platform-engineering/10-ebpf-and-cilium.md#concept-kernel-space-and-user-space) explains this line between user space and kernel space.
+
+That border is the best place to defend, for two reasons:
+
+1. Every action passes it, so a check there misses nothing, whatever language or tool the attacker uses.
+2. Attackers need syscalls too. An exploit that breaks out of a container calls the kernel. A cryptominer opens connections. A shell starts with `execve`.
+
+Three tools in this domain work at the border, each in its own way:
+
+![One system call passes seccomp, then AppArmor, then reaches the kernel; Falco gets a copy and writes an alert](../../docs/diagrams/chapters/cks-runtime-layers.svg)
+
+The diagram follows one `open()` call from a container:
+
+1. The container's process makes the call.
+2. **seccomp** checks the syscall's number against a filter and blocks the ones the profile forbids. It knows nothing about files or paths.
+3. **AppArmor** checks the file path or capability against a profile and blocks what the profile denies.
+4. The kernel does the work, and Falco's probe gets a copy of the event.
+5. Falco matches a rule and writes an alert. It blocks nothing.
+
+gVisor, from [domain 04](04-minimize-microservice-vulnerabilities.md#concept-sandboxes-a-second-kernel), sits in a different place. It answers the syscall itself, before the host kernel ever sees it. The four tools layer like this:
+
+| Tool | Decides by | Action | Stops |
+|---|---|---|---|
+| seccomp | syscall number, sometimes its arguments | block | whole families of kernel features, such as `mount` or `kexec_load` |
+| AppArmor | file path, capability, network access | block | writes to `/etc`, reads of keys, raw sockets |
+| gVisor | everything, by answering it in user space | replace the kernel | kernel bugs from reaching the host |
+| Falco | any field of the event | alert only | nothing, but it tells you |
+
+**Prevention** blocks an action before it happens. **Detection** notices an action and reports it. Prevention needs you to know in advance what to forbid, and a wrong rule breaks the app. Detection tolerates surprises, but the action has already happened. A good setup uses both: prevention for the things you know an app never does, and detection for the rest.
+
+## Concept: seccomp, a filter on syscalls
+
+A typical web server needs a few dozen of the kernel's more than 300 syscalls. The rest are attack surface: each one is kernel code that a bug might hide in. **seccomp** (secure computing mode) is a kernel feature that attaches a filter to a process. The kernel runs the filter on every syscall the process makes, before the syscall does anything.
+
+A seccomp profile is a JSON file with a default action and a list of syscalls with their own action:
+
+| Action | Effect |
+|---|---|
+| `SCMP_ACT_ALLOW` | the syscall runs |
+| `SCMP_ACT_ERRNO` | the syscall fails with an error, such as "Operation not permitted". The process keeps running |
+| `SCMP_ACT_KILL_PROCESS` | the kernel kills the process |
+| `SCMP_ACT_LOG` | the syscall runs, and the kernel logs it. Handy for learning what an app needs |
+
+A pod picks a profile in `securityContext.seccompProfile`:
+
+1. `RuntimeDefault` uses containerd's built-in profile, an allow list that leaves out dangerous syscalls such as `mount`, `reboot` and `kexec_load`. The `restricted` Pod Security level asks for it.
+2. `Localhost` loads a profile from a file on the node, below the kubelet's seccomp folder `/var/lib/kubelet/seccomp/`. The pod names the path below that folder in `localhostProfile`.
+3. `Unconfined` means no filter at all.
+
+Without a setting, a pod runs `Unconfined`, unless the kubelet's `seccompDefault: true` makes `RuntimeDefault` the default.
+
+**What this stops.** A seccomp profile stops a compromised process from reaching kernel code it never needed, which removes whole classes of container escapes before anybody finds the bug.
+
+**Exam traps.** The profile file must exist on the node that runs the pod. With a wrong path, the pod hangs in `CreateContainerError`, and the test run's message named the full path it tried: `cannot load seccomp profile "/var/lib/kubelet/seccomp/profiles/missing.json"`. In task 4, the profile blocked `chmod`, so the container printed `chmod: /tmp/f: Operation not permitted` while writing the file still worked.
+
+## Concept: AppArmor, a filter on paths
+
+seccomp sees only syscall numbers. It says "no `openat` at all" or "`openat` is fine", but never "`openat` is fine except on `/etc/shadow`". **AppArmor** fills that gap. It's a Linux security module, a hook inside the kernel that checks each access against a **profile**: a text file of rules about paths, capabilities and network access.
+
+```text
+profile cks-deny-write flags=(attach_disconnected) {
+  #include <abstractions/base>
+  file,
+  deny /** w,
+}
+```
+
+That profile, from task 5, pulls in the basic rules every program needs, allows file access in general, and denies every write. A profile runs in one of two modes:
+
+1. **Enforce** blocks what the rules deny and logs it.
+2. **Complain** blocks nothing and only logs what enforce mode would block. Teams use it to learn what an app does before they enforce.
+
+A profile works only once it's loaded into the kernel of the node that runs the pod. The sequence on the node is always the same:
+
+```bash
+apparmor_parser -Q /root/cks/cks-deny-write            # parse only: finds syntax errors, loads nothing
+cp /root/cks/cks-deny-write /etc/apparmor.d/           # the boot-time folder, so it survives a reboot
+apparmor_parser -r /etc/apparmor.d/cks-deny-write      # load it, or replace an older version
+aa-status | grep cks-deny-write                        # listed under "profiles are in enforce mode"
+```
+
+A pod asks for a profile with `securityContext.appArmorProfile`. Its `type` is `RuntimeDefault` (the container runtime's default profile), `Localhost` (a profile loaded on the node, named in `localhostProfile`), or `Unconfined`. Before Kubernetes 1.30, an annotation did this job. The exam still shows old tasks with it, but write the field.
+
+**What this stops.** An AppArmor profile stops a compromised process from writing where it shouldn't, reading keys it never needed, or using capabilities the profile denies, even when it runs as root inside the container.
+
+**Exam traps.** The name in `localhostProfile` is the name after `profile` in the file, not the file name. When the pod names a profile the node hasn't loaded, the kubelet refuses to create the container: in the test run, the pod sat in `CreateContainerError` with `apparmor profile not found cks-nginx`. A Deployment's pods land on any node, so every node needs the profile. The OrbStack machines have no AppArmor, because their kernel lacks it: there the kubelet refuses every AppArmor pod with `Cannot enforce AppArmor: AppArmor is not enabled on the host`. So the AppArmor tasks run on the Lima VM.
+
+## Concept: immutable containers
+
+A container image is the whole truth about what should run. Yet by default, the container's root file system is writable. An attacker who gets a shell downloads tools into `/usr/bin`, changes a config file, or replaces a binary, and the change lives as long as the container.
+
+An **immutable** container never changes after it starts. `readOnlyRootFilesystem: true` makes the container's root file system read-only, so there's nowhere to drop a tool or change a file. Most programs still need a few writable folders for caches, sockets and temporary files. Each gets an `emptyDir` volume, a scratch folder that lives as long as the pod. Change happens only by building and deploying a new image, which leaves a record.
+
+**What this stops.** A read-only root stops an attacker from installing tools, planting a backdoor in a binary, or changing configuration at run time. It also makes every change visible, because any write outside the `emptyDir` folders fails.
+
+**Exam traps.** nginx needs three writable folders: `/var/cache/nginx`, `/run` and `/tmp`. Without them, the test run's pod went into `CrashLoopBackOff` with `mkdir() "/var/cache/nginx/client_temp" failed (30: Read-only file system)`. A pod is immutable only when every container says `readOnlyRootFilesystem: true` and none is `privileged`. A privileged container remounts any file system it likes, so its read-only root protects nothing. Task 13 finds both cases.
+
+## Concept: audit logs, the API's flight recorder
+
+The API server handles every change to the cluster, so it's the one place that sees who did what. Without a record, an investigation after an incident has nothing to read. An **audit log** is that record. kubeadm leaves it off.
+
+![A request produces events at each stage inside the API server, the audit policy picks a level with the first rule that matches, and a backend writes the events to a log file or a webhook](../../docs/diagrams/chapters/cks-audit-pipeline.svg)
+
+An event goes through three steps:
+
+1. A request arrives, and the API server produces an event at each **stage** of its life.
+2. The **audit policy** finds the first rule that matches the request and takes its level. Level `None` drops the event.
+3. A **backend** writes the event: the log backend to a file, the webhook backend to an outside service.
+
+The stages are `RequestReceived` (as soon as the request arrives), `ResponseStarted` (only for long-running requests such as a watch), `ResponseComplete` (when the answer is sent), and `Panic` (when the API server crashes on the request). `omitStages` in the policy drops stages you don't need, most often `RequestReceived`.
+
+Each rule sets a level:
 
 | Level | Records |
 |---|---|
@@ -19,15 +139,17 @@ The API server handles every change to the cluster, so it's the one place that s
 | `Request` | metadata plus the object the client sent |
 | `RequestResponse` | metadata plus both the request and the response bodies |
 
-Two habits keep the log useful. Put Secrets, ConfigMaps and TokenReviews at `Metadata` and near the top, because a body at `Request` or above would copy every password into a log file. And end with a catch-all rule, usually `- level: None` or `- level: Metadata`, so you decide what happens to everything else instead of leaving it to chance.
-
 A rule matches on more than the resource. It also takes `users`, `userGroups`, `verbs`, `namespaces` and `nonResourceURLs`, and all the fields in one rule must match. So a single policy logs everything a suspicious user does at `RequestResponse`, drops the noisy `system:kube-proxy` watches with `None`, and logs pod creations at `Request`. Order still decides: a rule for Secrets at `Metadata` above the rule for that user keeps the user's Secret reads free of bodies.
 
-The API server writes the log as one JSON object per line. Four flags control it: the policy file, the log path, and how many days, files and megabytes to keep. Both the policy and the log folder live on the node, so the API server pod needs two `hostPath` volumes, and the log one must be writable.
+The log backend writes one JSON object per line. Four flags control it: the policy file, the log path, and how many days, files and megabytes to keep. Both the policy and the log folder live on the node, so the API server pod needs two `hostPath` volumes, and the log one must be writable.
+
+**What this stops.** An audit log doesn't block anything. It stops an attacker's API activity from going unseen, and it turns "somebody deleted the namespace" into a user name, a time and a source address.
+
+**Exam traps.** Two habits keep the log useful. Put Secrets, ConfigMaps and TokenReviews at `Metadata` and near the top, because a body at `Request` or above would copy every password into a log file. And end with a catch-all rule, usually `- level: None` or `- level: Metadata`, so you decide what happens to everything else instead of leaving it to chance. The API server reads the policy only at start: in task 11, the restart took 42 seconds.
 
 ### Reading an audit log
 
-Every line is one event. Each request produces up to four, one per **stage**: `RequestReceived`, `ResponseStarted` (only for long watches), `ResponseComplete`, and `Panic`. Count the `ResponseComplete` lines, or each request counts twice. A few fields answer most questions:
+Every line is one event, and each request produces up to four. Count the `ResponseComplete` lines, or each request counts twice. A few fields answer most questions:
 
 | Question | Field |
 |---|---|
@@ -39,9 +161,25 @@ Every line is one event. Each request produces up to four, one per **stage**: `R
 
 `grep` finds the candidate lines and `python3 -m json.tool` makes one readable. A list request has no `objectRef.name`, which tells it apart from a `get`.
 
-### Falco
+## Concept: Falco, a camera on the kernel
 
-A **system call**, or syscall, is a request from a program to the kernel: open a file, start a process, open a connection. Everything a container does turns into syscalls, and attackers do too. **Falco** is a CNCF runtime security tool that watches syscalls through an eBPF probe and compares each one with rules. A rule has a condition and an output:
+seccomp and AppArmor block what you predicted. Attackers do things nobody predicted. **Falco** is a CNCF runtime security tool that watches every syscall on the node and reports the ones that match its rules. It works like a security camera: it records and raises the alarm, but it doesn't lock any door.
+
+![A container's syscall reaches the kernel, Falco's eBPF probe copies the event to user space, the rule engine matches it, and the output writes an alert line for you to read](../../docs/diagrams/chapters/cks-falco-path.svg)
+
+An alert takes five steps:
+
+1. A process in a container makes a syscall, for example `execve` for `bash`.
+2. Falco's **driver** in the kernel sees it. The driver is the part that collects events: the modern eBPF probe on the practice cluster, or an older eBPF probe or kernel module elsewhere.
+3. The driver copies the event into a buffer that Falco reads in user space. Falco adds context: the process tree, the container, the pod and its namespace.
+4. The rule engine compares the event with every rule.
+5. A match produces an alert line, sent to the configured **outputs**: standard output, a file, syslog, a program or HTTP. Falcosidekick, a companion service, forwards alerts to chat, SIEMs and more.
+
+Falco runs its rules after the syscall happened, in user space, so it never slows the syscall down and never stops it.
+
+### Rules, lists and macros
+
+A rule has a condition, an output and a priority:
 
 ```yaml
 - rule: Shell in container (cks)
@@ -51,7 +189,7 @@ A **system call**, or syscall, is a request from a program to the kernel: open a
   priority: WARNING
 ```
 
-`spawned_process` and `container` are **macros**, named conditions from Falco's default rules. The `%` fields fill the output with details of the event. Falco loads `/etc/falco/falco_rules.yaml`, then `falco_rules.local.yaml`, then every file in `/etc/falco/rules.d/`. It watches those files and reloads by itself when one changes.
+`spawned_process` and `container` are **macros**, named conditions from Falco's default rules. The `%` fields fill the output with details of the event. The **priority** is one of `EMERGENCY`, `ALERT`, `CRITICAL`, `ERROR`, `WARNING`, `NOTICE`, `INFORMATIONAL` and `DEBUG`, and Falco's `priority` setting drops alerts below a chosen level.
 
 A rules file holds three kinds of items:
 
@@ -61,7 +199,7 @@ A rules file holds three kinds of items:
 
 Lists and macros keep long conditions readable, and a change to a list reaches every rule that uses it.
 
-Never edit `/etc/falco/falco_rules.yaml`. A package upgrade overwrites it, and `dpkg -V falco` shows that you touched it. Change a default rule from a file in `rules.d/` instead, with an `override` block:
+Falco loads `/etc/falco/falco_rules.yaml`, then `falco_rules.local.yaml`, then every file in `/etc/falco/rules.d/`. It watches those files and reloads by itself when one changes. Never edit `/etc/falco/falco_rules.yaml`. A package upgrade overwrites it, and `dpkg -V falco` shows that you touched it. Change a default rule from a file in `rules.d/` instead, with an `override` block:
 
 ```yaml
 - rule: Read sensitive file untrusted
@@ -77,48 +215,47 @@ Never edit `/etc/falco/falco_rules.yaml`. A package upgrade overwrites it, and `
 
 `replace` swaps the field's value. `append` adds to it, which suits a condition (`and not proc.name = backup`) or an output. Files in `rules.d/` load after the default file, so the override finds its rule.
 
-Falco 0.45 adds container and Kubernetes fields to every alert by itself: `container_name=`, `k8s_pod_name=` and `k8s_ns_name=` appear at the end of each line, whatever the rule's own output says. That's how you find the pod behind a default rule's alert.
-
 On the practice cluster, Falco runs as the systemd service `falco-modern-bpf` on `cks-w1` and logs to the journal. `journalctl -u falco-modern-bpf` shows its alerts. Out of the box it already flags, among others, a read of `/etc/shadow` with `Sensitive file opened for reading by non-trusted program`.
 
-Falco on OrbStack sees more than its own node, because every machine shares one kernel. In the test run, Falco on `cks-w1` reported `Log files were tampered` for `/var/log/kubeadm-init.log` on `cks-cp`, and alerted on commands typed into the `cks-cp` shell, listed as `container_id=container/01` with `ns=<NA>`. Filter alerts by `ns=` or `k8s_pod_name=` to see only pods.
+**What this stops.** Falco stops attacks from going unnoticed: a shell in a production container, a package manager running at night, a process reading private keys. It turns minutes of attacker activity into an alert with a pod name.
 
-### Immutable containers
+**Exam traps.** Falco 0.45 adds container and Kubernetes fields to every alert by itself: `container_name=`, `k8s_pod_name=` and `k8s_ns_name=` appear at the end of each line, whatever the rule's own output says. That's how you find the pod behind a default rule's alert. The alert shows the rule's output text, not its name, so search the rules files for the text. Falco on OrbStack sees more than its own node, because every machine shares one kernel. In the test run, Falco on `cks-w1` reported `Log files were tampered` for a file on `cks-cp`, and alerted on commands typed into the `cks-cp` shell with `ns=<NA>`. Filter alerts by `ns=` or `k8s_pod_name=` to see only pods.
 
-An **immutable** container never changes after it starts. Its image is the whole truth. An attacker who finds no writable file system has nowhere to drop a tool, change a config file or replace a binary. `readOnlyRootFilesystem: true` makes the container's root file system read-only. Most programs still need a few writable folders for caches, sockets and temporary files. Each gets an `emptyDir` volume. nginx needs three: `/var/cache/nginx`, `/run` and `/tmp`.
+## Concept: investigating an attack
 
-### seccomp and AppArmor
+An attack moves through phases, and each phase leaves different traces:
 
-![One system call passes seccomp, then AppArmor, then reaches the kernel; Falco gets a copy and writes an alert](../../docs/diagrams/chapters/cks-runtime-layers.svg)
+1. Get in: an exploited app, a stolen token, a leaked kubeconfig.
+2. Look around: list pods and Secrets, read files, scan the network.
+3. Gain more rights: read a token with more power, start a privileged pod.
+4. Reach the goal: steal data, run a miner, plant a backdoor.
+5. Cover the tracks: delete logs, remove the pod.
 
-The diagram follows one `open()` call from a container:
+The audit log shows the API side of each phase. Since 1.30, a service account token's audit entry also names the pod and node it came from, so an API call leads back to a pod. Falco shows what happened inside containers: the shell, the file reads, the downloads. Put the two side by side on one timeline, and you see the whole path.
 
-1. The container's process makes the call.
-2. **seccomp** checks the syscall's number against a filter and blocks the ones the profile forbids. It knows nothing about files or paths.
-3. **AppArmor** checks the file path or capability against a profile and blocks what the profile denies.
-4. The kernel does the work, and Falco's probe gets a copy of the event.
-5. Falco matches a rule and writes an alert. It blocks nothing.
+The response follows a fixed order. First, contain: scale the Deployment to zero or isolate the pod with a deny-all NetworkPolicy, so the attacker stops. Then keep the evidence: copy the logs before anything rotates them. Then remove the cause and every credential the attacker touched.
 
-A seccomp profile is a JSON file with a default action and a list of syscalls with their own action. Kubernetes loads `Localhost` profiles from `/var/lib/kubelet/seccomp/` on the node that runs the pod, and the pod names the path below that folder. `RuntimeDefault` uses containerd's built-in profile, an allow list that leaves out dangerous syscalls such as `mount`, `reboot` and `kexec_load`. The `restricted` standard asks for it.
+**Exam traps.** Exam tasks usually ask for a name: who deleted a Secret and from which pod, or which pod hunts for keys. In task 6, the audit entry's `user.username` named the service account and `user.extra` named the pod. For a Falco alert, take the pod from `k8s_pod_name=`, then its owner with `k get pod -o jsonpath='{.metadata.ownerReferences}'`, because deleting a pod that a ReplicaSet owns only brings a fresh copy back.
 
-An AppArmor profile is a text file of path rules, loaded into the kernel with `apparmor_parser`. A pod asks for it with `securityContext.appArmorProfile`. Before Kubernetes 1.30, an annotation did this job. The exam still shows old tasks with it, but write the field.
+## The bigger picture: assume breach
 
-A profile works only once it's loaded into the kernel of the node that runs the pod. The sequence on the node is always the same:
+Security teams used to aim for a perfect wall. Today the common stance is **assume breach**: plan as if an attacker is already inside, and make sure you see them and limit them. This domain is that stance in practice:
 
-```bash
-apparmor_parser -Q /root/cks/cks-deny-write            # parse only: finds syntax errors, loads nothing
-cp /root/cks/cks-deny-write /etc/apparmor.d/           # the boot-time folder, so it survives a reboot
-apparmor_parser -r /etc/apparmor.d/cks-deny-write      # load it, or replace an older version
-aa-status | grep cks-deny-write                        # listed under "profiles are in enforce mode"
-```
+1. Limit: read-only roots, seccomp and AppArmor shrink what a compromised container does.
+2. See: Falco watches the kernel, and the audit log watches the API.
+3. Respond: the investigation joins both records into one story.
 
-When the pod names a profile the node hasn't loaded, the kubelet refuses to create the container. In the test run, the pod sat in `CreateContainerError` with `apparmor profile not found cks-nginx`.
+Real platform teams ship audit logs and Falco alerts off the node to a central system, often a SIEM (security information and event management system), so an attacker who gets root on a node finds no evidence there to erase. They roll out seccomp and AppArmor in learning mode first (`SCMP_ACT_LOG`, complain mode), then enforce. And they tune Falco rules for weeks, because a tool that raises a hundred false alarms a day trains people to ignore it.
 
-The OrbStack machines have no AppArmor, because their kernel lacks it: there the kubelet refuses every AppArmor pod with `Cannot enforce AppArmor: AppArmor is not enabled on the host`. So the AppArmor tasks run on the Lima VM, whose Ubuntu kernel has it, and the test run saw each profile deny the writes it should.
+## Why this way
 
-### Investigating an attack
+**Why both seccomp and AppArmor?** They see different things. seccomp sees which kernel feature a process asks for, and AppArmor sees which file or capability. A process that needs `openat` passes seccomp, and AppArmor still keeps it away from `/etc`.
 
-An attack moves through phases: get in, look around, gain more rights, reach the goal, cover the tracks. Each phase leaves different traces. The audit log shows API calls, and since 1.30 a service account token's audit entry also names the pod and node it came from. Falco shows what happened inside containers. Put the two side by side, and you see the whole path.
+**Why doesn't Falco block?** Falco reads a copy of each event in user space, after the kernel acted. Blocking would put a slow user-space program in the path of every syscall on the node. Falco leaves blocking to seccomp, AppArmor and admission, and does the one job they don't: noticing the unexpected.
+
+**Why does the first matching audit rule win?** It makes the policy readable from the top. You read down until a rule matches, and that's the answer. Put the specific rules first and the catch-all last.
+
+**Why log Secrets at Metadata and not at None?** You still want to know who read which Secret and when. You don't want the Secret's value in a log file that many more people read than the Secret itself.
 
 ## Task 1: Turn on audit logging
 
