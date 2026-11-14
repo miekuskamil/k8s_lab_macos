@@ -118,6 +118,12 @@ At the baseline, Prometheus has no alert rules: the lab turns the chart's defaul
 | Routes the client sidecar uses | `istioctl proxy-config routes deploy/client -n course-sidecar` |
 | Service, ports and effective mTLS mode of a sidecar pod | `istioctl x describe pod <pod> -n course-sidecar` (sidecar pods only) |
 | Sidecar logs | `kubectl logs <pod> -n <ns> -c istio-proxy --tail=30` |
+| Why did (or didn't) a pod get a sidecar? (module 30) | `istioctl x check-inject -n <ns> <pod>` |
+| SYNCED or STALE per proxy and config kind (module 31) | `istioctl proxy-status -o json`, field `configStatus` |
+| Follow one request: listener, route, cluster, endpoint (module 31) | `istioctl proxy-config listener <pod> -n <ns> --port 8000`, then `route --name 8000`, `cluster --fqdn <host>`, `endpoint --cluster "outbound\|8000\|\|<host>"` |
+| Which certificate does the proxy hold? | `istioctl proxy-config secret <pod> -n <ns>` |
+| Envoy debug logging for a while (module 31) | `istioctl proxy-config log <pod> -n <ns> --level router:debug`, then `--reset` |
+| Which Services does this sidecar know? (module 30) | `istioctl proxy-config cluster <pod> -n <ns> --direction outbound` |
 
 ## Layer 7: the application path, from outside in
 

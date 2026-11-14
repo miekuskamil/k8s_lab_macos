@@ -10,6 +10,7 @@ Every resource and term the Kubernetes Platform Engineering course and the certi
 - [Protocols and identity](#protocols-and-identity)
 - [Envoy response flags](#envoy-response-flags)
 - [Sidecars in depth](#sidecars-in-depth)
+- [Debugging Envoy](#debugging-envoy)
 - [Around the mesh](#around-the-mesh)
 - [AI on Kubernetes](#ai-on-kubernetes)
 - [Kubernetes operations](#kubernetes-operations)
@@ -242,7 +243,7 @@ Envoy writes a short flag into access logs and the `response_flags` metric label
 | `DC` | Downstream connection termination | The caller hung up early |
 | `-` | No flag | Envoy passed the response on unchanged |
 
-Modules 4, 5, 6, 8.
+Modules 4, 5, 6, 8, 31. A flag appears in the log of the proxy that hit the problem, so check both sides: in module 31, `UF` showed only in the server's sidecar log.
 
 ## Sidecars in depth
 
@@ -267,6 +268,26 @@ Modules 4, 5, 6, 8.
 **PassthroughCluster and BlackHoleCluster.** These are two built-in Envoy clusters for unknown destinations. PassthroughCluster sends the connection on unchanged, with no mTLS, routing or metrics. BlackHoleCluster drops it. Access logs name them in the upstream cluster field. Modules 30 and 31.
 
 **pilot-agent.** pilot-agent is the process that starts Envoy inside `istio-proxy`, fetches its certificate and relays its config. `pilot-agent request GET <path>` calls Envoy's admin API from inside the pod, for example `config_dump` or `memory`. Module 30.
+
+## Debugging Envoy
+
+**Listener (Envoy).** A listener is a socket plus a chain of filters inside Envoy, the first of four lookups for each request. It answers "which port, and how do I read it?" A sidecar has one outbound listener per HTTP port, one per TCP Service IP and port, and the catch-all `virtualOutbound` (15001) and `virtualInbound` (15006). Module 31.
+
+**Route (Envoy).** A route is Envoy's table of HTTP rules for one listener port, grouped by virtual host. It picks a cluster by host, path and headers. istiod builds it from Services, VirtualServices and HTTPRoutes. Module 31.
+
+**Cluster (Envoy).** A cluster is Envoy's name for a pool of upstream servers with its own load balancing, connection limits and TLS settings. Its name has four fields, such as `outbound|8000|v1|httpbin.course-debug.svc.cluster.local`: direction, port, subset and host. DestinationRules shape it. Module 31.
+
+**Endpoint (Envoy).** An endpoint is one member of a cluster, a pod IP and port with a health status. istiod builds endpoints from EndpointSlices and sends them over EDS. Module 31.
+
+**xDS sync state.** The xDS sync state is istiod's record of whether a proxy acknowledged the latest config of each kind. `SYNCED` means it did, `STALE` means istiod sent newer config that the proxy hasn't acknowledged yet, and `NOT SENT` means there was nothing to send. `istioctl proxy-status -o json` prints it per kind. Module 31.
+
+**Response code detail.** The response code detail is the longer reason after the response flag in an access log line, such as `no_healthy_upstream`, `route_not_found` or `rbac_access_denied_matched_policy[...]`. `via_upstream` means the app sent the response and Envoy only passed it on. Module 31.
+
+**istioctl analyze.** `istioctl analyze` is a command that checks Istio resources in the cluster, or in files before you apply them, against known mistakes. Each finding has a code such as `IST0101` (missing host or subset), `IST0109` (two VirtualServices for one host) or `IST0173` (a subset that selects no pod). It exits with code 79 on errors. Modules 16 and 31.
+
+**istioctl x describe pod.** `istioctl x describe pod` starts from one sidecar pod and lists the Service, DestinationRule, VirtualService and PeerAuthentication that affect it, with warnings such as a route to an unknown subset. It only understands sidecar pods. Modules 7 and 31.
+
+**Envoy log level.** Envoy has one logger per area, such as `router`, `connection`, `rbac` and `upstream`, each with its own level. `istioctl proxy-config log <pod> --level router:debug` changes a level on the running proxy, and `--reset` sets all of them back to `warning`. Module 31.
 
 ## Around the mesh
 

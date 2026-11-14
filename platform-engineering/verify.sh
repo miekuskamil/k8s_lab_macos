@@ -1003,6 +1003,102 @@ module_30() {
   expect "after the reset course-proxy and course-ambient are gone" "$("${K[@]}" get ns course-proxy course-ambient 2>&1 | grep -c NotFound)" '^2$'
 }
 
+# xDS sync state per proxy in course-debug, one line each: "<pod> Cluster=SYNCED ..."
+debug_sync() {
+  "${I[@]}" proxy-status -o json 2>/dev/null | python3 -c 'import json,sys
+for r in json.load(sys.stdin)["resources"]:
+  if r["node"]["id"].endswith(".course-debug"):
+    print(r["node"]["id"], *[c["typeUrl"].split(".")[-1] + "=" + c.get("configStatus", "?") for c in r["genericXdsConfigs"]])'
+}
+
+module_31() {
+  section "31: debugging Envoy with istioctl"
+  baseline
+  local D=(-n course-debug) node="k3d-${CLUSTER_NAME:-k8s-lab}-server-0" cl="outbound|8000||httpbin.course-debug.svc.cluster.local"
+  local c=(-n course-debug exec deploy/client -c curl --)
+  "${K[@]}" apply -f "$M/31-apps.yaml" -f "$M/31-access-logs.yaml" >/dev/null
+  "${K[@]}" "${D[@]}" rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1
+  "${K[@]}" "${D[@]}" rollout status deploy/client --timeout=180s >/dev/null 2>&1; settle 5
+  expect "both sidecars are SYNCED" "$(debug_sync | grep -c 'Cluster=SYNCED ClusterLoadAssignment=SYNCED Listener=SYNCED RouteConfiguration=SYNCED')" '^2$'
+  expect "listener 8000 hands HTTP to route 8000" "$("${I[@]}" proxy-config listener deploy/client -n course-debug --port 8000 2>/dev/null)" 'Route: 8000'
+  expect "route 8000 holds the httpbin host" "$("${I[@]}" proxy-config route deploy/client -n course-debug --name 8000 2>/dev/null | grep -c 'httpbin.course-debug.svc.cluster.local:8000')" '^1$'
+  expect "the cluster gets endpoints by EDS" "$("${I[@]}" proxy-config cluster deploy/client -n course-debug --fqdn httpbin.course-debug.svc.cluster.local 2>/dev/null | grep -c 'outbound .*EDS')" '^1$'
+  expect "one healthy endpoint on port 8080" "$("${I[@]}" proxy-config endpoint deploy/client -n course-debug --cluster "$cl" 2>/dev/null | grep -c ':8080 .*HEALTHY')" '^1$'
+  expect "the server sidecar has an inbound cluster for 8080" "$("${I[@]}" proxy-config cluster deploy/httpbin -n course-debug --direction inbound 2>/dev/null | grep -c '8080 .*inbound')" '^1$'
+  expect "the client holds an active certificate and root" "$("${I[@]}" proxy-config secret deploy/client -n course-debug 2>/dev/null | grep -cE '^(default|ROOTCA) .*ACTIVE +true')" '^2$'
+  expect "the waypoint's clusters are inbound-vip" "$("${I[@]}" proxy-config cluster deploy/waypoint -n shop 2>/dev/null | grep -c 'backend.shop.svc.cluster.local .*inbound-vip')" '^1$'
+  "${K[@]}" apply -f "$M/31-broken.yaml" >/dev/null; settle 5
+  local out; out="$("${I[@]}" analyze -n course-debug 2>&1)"
+  expect "analyze finds the missing subset, the conflict and the empty subset" "$(echo "$out" | grep -oE 'IST0101|IST0109|IST0173' | sort -u | tr '\n' ' ')" '^IST0101 IST0109 IST0173 $'
+  expect "the route to a missing subset gives 503" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/status/200 2>/dev/null)" '^503$'
+  settle 2
+  expect "the client's log says NC cluster_not_found" "$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --tail=1 2>/dev/null)" '503 NC cluster_not_found'
+  local hb; hb="$("${K[@]}" "${D[@]}" get pod -l app=httpbin -o jsonpath='{.items[0].metadata.name}')"
+  expect "describe warns about the unknown subset" "$("${I[@]}" x describe pod "$hb" -n course-debug 2>/dev/null)" 'UNKNOWN subset v2'
+  "${K[@]}" "${D[@]}" delete virtualservice,destinationrule --all >/dev/null; settle 3
+  local pod cid pid envoy
+  pod="$("${K[@]}" "${D[@]}" get pod -l app=client -o jsonpath='{.items[0].metadata.name}')"
+  cid="$(docker exec "$node" crictl ps --name istio-proxy --label "io.kubernetes.pod.name=$pod" -q 2>/dev/null | head -1)"
+  pid="$(docker exec "$node" crictl inspect --output go-template --template '{{.info.pid}}' "$cid" 2>/dev/null)"
+  envoy="$(docker exec "$node" sh -c "cat /proc/$pid/task/*/children" 2>/dev/null | awk '{print $1}')"
+  expect "pilot-agent's child is envoy" "$(docker exec "$node" cat "/proc/$envoy/comm" 2>/dev/null)" '^envoy$'
+  docker exec "$node" kill -STOP "$envoy"
+  "${K[@]}" apply -f "$M/31-status-only.yaml" >/dev/null
+  local s=""
+  for _ in $(seq 1 10); do settle 2; s="$(debug_sync | grep "^$pod")"; [[ $s == *STALE* ]] && break; done
+  expect "a frozen Envoy goes STALE" "$s" 'RouteConfiguration=STALE'
+  docker exec "$node" kill -CONT "$envoy"
+  for _ in $(seq 1 10); do settle 2; s="$(debug_sync | grep "^$pod")"; [[ $s == *STALE* ]] || break; done
+  expect "awake again, it syncs" "$s" 'Listener=SYNCED RouteConfiguration=SYNCED'
+  expect "retries run out on /status/503" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/status/503 2>/dev/null)" '^503$'
+  expect "no route for /headers" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/headers 2>/dev/null)" '^404$'
+  settle 2
+  out="$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --tail=2 2>/dev/null)"
+  expect "the log shows URX then NR" "$(echo "$out" | grep -oE ' (URX via_upstream|NR route_not_found)' | tr -d '\n')" '^ URX via_upstream NR route_not_found$'
+  "${K[@]}" "${D[@]}" delete virtualservice httpbin >/dev/null
+  "${K[@]}" "${D[@]}" scale deploy httpbin --replicas=0 >/dev/null
+  "${K[@]}" "${D[@]}" wait --for=delete pod -l app=httpbin --timeout=90s >/dev/null 2>&1; settle 3
+  expect "no pods: no healthy upstream" "$("${K[@]}" "${c[@]}" curl -s http://httpbin:8000/status/200 2>/dev/null)" '^no healthy upstream$'
+  settle 2
+  expect "the client's log says UH" "$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --tail=1 2>/dev/null)" '503 UH no_healthy_upstream'
+  "${K[@]}" "${D[@]}" scale deploy httpbin --replicas=1 >/dev/null
+  "${K[@]}" "${D[@]}" rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1; settle 3
+  "${K[@]}" "${D[@]}" patch svc httpbin --type json -p '[{"op":"replace","path":"/spec/ports/0/targetPort","value":9999}]' >/dev/null; settle 5
+  expect "a refused port gives 503" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/status/200 2>/dev/null)" '^503$'
+  settle 2
+  expect "the server's sidecar logs UF" "$("${K[@]}" "${D[@]}" logs deploy/httpbin -c istio-proxy --tail=1 2>/dev/null)" ' 503 [A-Z,]*UF'
+  "${K[@]}" "${D[@]}" patch svc httpbin --type json -p '[{"op":"replace","path":"/spec/ports/0/targetPort","value":"http"}]' >/dev/null; settle 5
+  "${K[@]}" apply -f "$M/31-tight-pool.yaml" >/dev/null; settle 5
+  local overflow; overflow="$("${K[@]}" "${c[@]}" sh -c 'for i in $(seq 1 10); do curl -s -o /dev/null -w "%{http_code}\n" http://httpbin:8000/delay/1 & done; wait' 2>/dev/null | grep -c 503)"
+  between "a pool of one rejects most of ten parallel requests" "$overflow" 5 9
+  settle 2
+  expect "the client's log says UO" "$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --tail=10 2>/dev/null | grep -c ' 503 UO ')" '^[1-9]'
+  "${K[@]}" "${D[@]}" delete destinationrule httpbin >/dev/null
+  expect "the router logger goes to debug at runtime" "$("${I[@]}" proxy-config log deploy/client -n course-debug --level router:debug 2>/dev/null | grep router)" 'router: debug'
+  "${K[@]}" "${c[@]}" curl -s -o /dev/null http://httpbin:8000/status/200 >/dev/null 2>&1; settle 2
+  expect "the proxy logs router debug lines" "$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --since=15s 2>/dev/null | grep -c 'debug.*router')" '^[1-9]'
+  expect "--reset sets it back to warning" "$("${I[@]}" proxy-config log deploy/client -n course-debug --reset 2>/dev/null | grep router)" 'router: warning'
+  local clean=(-n course-debug delete virtualservice,destinationrule,sidecar,authorizationpolicy --all)
+  "${K[@]}" apply -f "$M/31-break-1.yaml" >/dev/null; settle 5
+  "${K[@]}" "${c[@]}" curl -s -o /dev/null http://httpbin:8000/status/200 >/dev/null 2>&1; settle 2
+  expect "break 1: UH on the v1 subset cluster" "$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --tail=1 2>/dev/null)" '503 UH .*outbound\|8000\|v1\|'
+  expect "break 1: analyze names the empty subset" "$("${I[@]}" analyze -n course-debug 2>&1 | grep -c IST0173)" '^1$'
+  "${K[@]}" "${clean[@]}" >/dev/null; "${K[@]}" apply -f "$M/31-break-2.yaml" >/dev/null; settle 5
+  expect "break 2: the call still works" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/status/200 2>/dev/null)" '^200$'
+  expect "break 2: but httpbin sees no client certificate" "$("${K[@]}" "${c[@]}" curl -s http://httpbin:8000/headers 2>/dev/null | grep -c X-Forwarded-Client-Cert)" '^0$'
+  settle 2
+  expect "break 2: the client's log shows PassthroughCluster" "$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --tail=1 2>/dev/null)" 'PassthroughCluster'
+  "${K[@]}" "${clean[@]}" >/dev/null; "${K[@]}" apply -f "$M/31-break-3.yaml" >/dev/null; settle 5
+  expect "break 3: /delay/1 times out with 504" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/delay/1 2>/dev/null)" '^504$'
+  expect "break 3: the route holds a 0.5 s timeout" "$("${I[@]}" proxy-config route deploy/client -n course-debug --name 8000 -o json 2>/dev/null | grep -c '"timeout": "0.500s"')" '^[1-9]'
+  "${K[@]}" "${clean[@]}" >/dev/null; "${K[@]}" apply -f "$M/31-break-4.yaml" >/dev/null 2>&1; settle 5
+  expect "break 4: /anything/order gets 403" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/anything/order 2>/dev/null)" '^403$'
+  settle 2
+  expect "break 4: httpbin's sidecar names the policy" "$("${K[@]}" "${D[@]}" logs deploy/httpbin -c istio-proxy --tail=1 2>/dev/null)" 'policy\[block-anything\]'
+  baseline
+  expect "after the reset course-debug is gone" "$("${K[@]}" get ns course-debug 2>&1 | grep -c NotFound)" '^1$'
+}
+
 # Module 21 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 21
 module_21() {
   section "21: k3s certificates, backups and upgrades (the upgrade is one-way)"
@@ -1111,7 +1207,7 @@ module_14() {
 }
 
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16 20 22 23 24 25 26 28 29 30); fi
+if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16 20 22 23 24 25 26 28 29 30 31); fi
 # Start from the Git baseline, in case an exercise is still applied.
 printf 'Restoring the baseline before the checks\n'
 "$ROOT/platform-engineering/reset.sh" >/dev/null 2>&1

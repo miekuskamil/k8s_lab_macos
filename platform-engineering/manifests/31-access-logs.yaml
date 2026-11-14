@@ -1,0 +1,11 @@
+# Module 31: write one Envoy access log line per request for every sidecar in
+# course-debug. Read them with: kubectl -n course-debug logs deploy/client -c istio-proxy
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: access-logs
+  namespace: course-debug
+spec:
+  accessLogging:
+    - providers:
+        - name: envoy
