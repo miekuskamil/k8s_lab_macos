@@ -245,7 +245,7 @@ deployment "rag" successfully rolled out
 $ kubectl -n course-rag port-forward svc/rag 8090:8000 >/dev/null 2>&1 &
 ```
 
-**What you should see.** The ConfigMap holds 42 files, 637 KiB. A ConfigMap holds at most 1 MiB, so this course fits with room to spare. The app reads only the 33 `.md` files, and it leaves one of them out on purpose: this module itself. The manifest sets `EXCLUDE_FILES: 27-rag-on-kubernetes.md`.
+**What you should see.** The ConfigMap holds 45 files, 944 KiB. A ConfigMap holds at most 1 MiB, so this course still fits, with about 80 KiB to spare. The terminal transcripts in the modules take most of the space. The app reads only the 36 `.md` files, and it leaves one of them out on purpose: this module itself. The manifest sets `EXCLUDE_FILES: 27-rag-on-kubernetes.md`.
 
 There is a reason for that. This module quotes its own test questions and the answers they got. If the index held them, a question like "What is the capital of Denmark?" would find step 6's table, and the model would repeat what it read there. In other words, the test would leak into the data, like exam answers left inside the textbook. Teams keep evaluation questions out of the index for the same reason.
 
