@@ -67,16 +67,53 @@ The tools have settled on open formats. Pyroscope, now part of Grafana, stores p
 
 ### 1. Install Pyroscope
 
-```bash
-helm repo add grafana https://grafana.github.io/helm-charts && helm repo update grafana
-cat platform-engineering/manifests/28-pyroscope-values.yaml
-helm install pyroscope grafana/pyroscope --version 2.4.2 -n course-profiling --create-namespace \
+```console
+$ helm repo add grafana https://grafana.github.io/helm-charts && helm repo update grafana
+"grafana" already exists with the same configuration, skipping
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "grafana" chart repository
+Update Complete. ⎈Happy Helming!⎈
+
+$ cat platform-engineering/manifests/28-pyroscope-values.yaml
+# Pyroscope in single-binary mode, plus the chart's Alloy agent, which discovers pods
+# with profiles.grafana.com/* annotations and pulls their pprof profiles.
+pyroscope:
+  replicaCount: 1
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 512Mi}
+alloy:
+  controller:
+    replicas: 1
+  alloy:
+    resources:
+      requests: {cpu: 20m, memory: 64Mi}
+      limits: {memory: 256Mi}
+
+$ helm install pyroscope grafana/pyroscope --version 2.4.2 -n course-profiling --create-namespace \
   -f platform-engineering/manifests/28-pyroscope-values.yaml --wait
-kubectl -n course-profiling get pods
-kubectl get clusterrole pyroscope-alloy
+NAME: pyroscope
+LAST DEPLOYED: Sun Nov 15 11:03:11 2026
+NAMESPACE: course-profiling
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
+NOTES:
+Thanks for deploying Grafana Pyroscope.
+...
+
+$ kubectl -n course-profiling get pods
+NAME                READY   STATUS    RESTARTS   AGE
+pyroscope-0         1/1     Running   0          60s
+pyroscope-alloy-0   2/2     Running   0          60s
+
+$ kubectl get clusterrole pyroscope-alloy
+NAME              CREATED AT
+pyroscope-alloy   2026-11-15T11:03:11Z
 ```
 
-**What you should see.** In the test run, the install took 81 seconds. Two pods run:
+**What you should see.** In the test runs, the install took 61 to 81 seconds. Two pods run:
 
 - `pyroscope-0` stores and queries profiles.
 - `pyroscope-alloy-0` is the agent.
@@ -85,11 +122,53 @@ kubectl get clusterrole pyroscope-alloy
 
 ### 2. Opt an app in
 
-```bash
-cat platform-engineering/manifests/28-podinfo.yaml
-kubectl apply -f platform-engineering/manifests/28-podinfo.yaml
-kubectl -n course-profiling rollout status deploy/podinfo
-kubectl -n course-profiling exec deploy/podinfo -- wget -qO- localhost:9898/debug/pprof/ | head -5
+```console
+$ cat platform-engineering/manifests/28-podinfo.yaml
+# Module 28: a Go app with pprof built in. --stress-cpu burns one CPU core on purpose,
+# so the flame graph has a clear culprit. The annotations opt the pod into profiling.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: podinfo
+  namespace: course-profiling
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: podinfo}
+  template:
+    metadata:
+      labels: {app: podinfo}
+      annotations:
+        profiles.grafana.com/cpu.scrape: "true"
+        profiles.grafana.com/cpu.port_name: http
+        profiles.grafana.com/memory.scrape: "true"
+        profiles.grafana.com/memory.port_name: http
+        profiles.grafana.com/goroutine.scrape: "true"
+        profiles.grafana.com/goroutine.port_name: http
+        profiles.grafana.com/service_name: podinfo
+    spec:
+      containers:
+        - name: podinfo
+          image: ghcr.io/stefanprodan/podinfo:6.7.1
+          command: ["./podinfo", "--port=9898", "--stress-cpu=1", "--stress-memory=32"]
+          ports:
+            - {name: http, containerPort: 9898}
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 500m, memory: 128Mi}
+
+$ kubectl apply -f platform-engineering/manifests/28-podinfo.yaml
+deployment.apps/podinfo created
+
+$ kubectl -n course-profiling rollout status deploy/podinfo
+deployment "podinfo" successfully rolled out
+
+$ kubectl -n course-profiling exec deploy/podinfo -- wget -qO- localhost:9898/debug/pprof/ | head -5
+<html>
+<head>
+<title>/debug/pprof/</title>
+<style>
+.profile-name{
 ```
 
 **What you should see.** You see an HTML page titled `/debug/pprof/`. This is Go's built-in profiler. It lists profiles such as `allocs`, `goroutine`, `heap` and `profile`. The Deployment's annotations tell Alloy three things:
@@ -120,8 +199,9 @@ Memory profiles sample too, but they count bytes instead of time. Go records the
 
 ### 3. Find the hot code
 
-```bash
-kubectl apply -f platform-engineering/manifests/28-pyroscope-datasource.yaml
+```console
+$ kubectl apply -f platform-engineering/manifests/28-pyroscope-datasource.yaml
+configmap/course-pyroscope-datasource created
 ```
 
 Wait a minute. Then follow these steps:
@@ -135,8 +215,10 @@ Wait a minute. Then follow these steps:
 
 Check it against `kubectl`:
 
-```bash
-kubectl top pod -n course-profiling -l app=podinfo
+```console
+$ kubectl top pod -n course-profiling -l app=podinfo
+NAME                       CPU(cores)   MEMORY(bytes)
+podinfo-6d594b4575-flxj8   501m         43Mi
 ```
 
 **What you should see.** `kubectl top` shows about `500m`, so podinfo runs at its CPU limit. In the test run, Pyroscope counted 132.5 CPU-seconds in five minutes. That's 0.44 of a core, which matches.
@@ -174,8 +256,13 @@ Still on `alloc_space`, find `net/http.(*conn).serve` in the table and click it 
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh
+```console
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 The reset does three things:
