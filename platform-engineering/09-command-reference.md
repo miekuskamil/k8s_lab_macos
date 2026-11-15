@@ -6,9 +6,9 @@
 
 **You need:** nothing extra. Keep it open next to any other module.
 
-Troubleshooting commands for this lab, grouped by layer. Work down the layers: a mesh problem is often a cluster problem underneath. Every command here was run against the lab.
+This page groups the lab's troubleshooting commands by layer, and every command on it ran against the lab. Work down the layers in order, because a mesh problem often turns out to be a cluster problem underneath.
 
-Set the context first. OrbStack switches it to `orbstack` when it restarts:
+Set the context first, because OrbStack switches it to `orbstack` when it restarts:
 
 ```console
 $ kubectl config use-context k3d-k8s-lab
@@ -58,7 +58,7 @@ Switched to context "k3d-k8s-lab".
 
 ## Layer 2b: alerting (modules 23 and 24)
 
-With `./scripts/port-forward.sh` running, Prometheus is on 9090, Alertmanager on 9093 and Grafana on 3000.
+With `./scripts/port-forward.sh` running, Prometheus listens on 9090, Alertmanager on 9093 and Grafana on 3000.
 
 | Question | Command |
 |---|---|
@@ -73,7 +73,7 @@ With `./scripts/port-forward.sh` running, Prometheus is on 9090, Alertmanager on
 | Which dashboards exist in Grafana? | `curl -s -u admin:k8s-lab-admin 'localhost:3000/api/search?type=dash-db'` |
 | Where do Grafana-managed alerts go? | `curl -s -u admin:k8s-lab-admin localhost:3000/api/v1/provisioning/contact-points` |
 
-At the baseline, Prometheus has no alert rules: the lab turns the chart's default rules off. Module 23 adds the first ones.
+At the baseline Prometheus has no alert rules, because the lab turns the chart's default rules off, so module 23 adds the first ones.
 
 ## Layer 3: the Istio control plane
 
@@ -152,7 +152,7 @@ $ kubectl -n shop exec deploy/course-client -- curl -s -m 5 -w " %{http_code}\n"
 RBAC: access denied 403
 ```
 
-The last command answers `403` on a reset lab, as in module 3 step 2. It returns `200` while module 3's allow policy is in place.
+The last command answers `403` on a reset lab, as in module 3 step 2, and `200` while module 3's allow policy stays in place.
 
 ## Queries for the UIs
 
@@ -184,6 +184,6 @@ container_memory_working_set_bytes{namespace="istio-system", pod=~"ztunnel.*", c
 {namespace="shop"} |= "<trace id>"                              # every log line for one request
 ```
 
-**Jaeger.** Search by service `shop-gateway-istio.shop-ingress` to see whole requests from the edge. Use Tags such as `http.status_code=503` or `response_flags=UO`, and Min Duration such as `500ms` to find slow ones.
+**Jaeger.** Search by service `shop-gateway-istio.shop-ingress` to see whole requests from the edge, then narrow them with Tags such as `http.status_code=503` or `response_flags=UO`, and with a Min Duration such as `500ms` to find slow ones.
 
-**Kiali.** Traffic Graph with Display: Security (padlocks), Response Time, and Traffic Distribution. **Istio Config** for validation errors (codes such as `KIA1402`). **Workloads**, a workload, then the Logs, Traces and Envoy tabs.
+**Kiali.** Use the Traffic Graph with Display set to Security (padlocks), Response Time and Traffic Distribution, **Istio Config** for validation errors with codes such as `KIA1402`, and **Workloads**, then a workload, for its Logs, Traces and Envoy tabs.
