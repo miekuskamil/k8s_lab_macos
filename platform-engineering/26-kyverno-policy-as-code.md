@@ -6,7 +6,7 @@
 
 **You need:** the lab running (`./scripts/start.sh` starts or repairs it), `helm`, internet access for the Kyverno chart, and about 230 MB of free memory.
 
-RBAC decides *who* may create a Deployment. It says nothing about *what* the Deployment looks like. A team might use an image tagged `latest`, set no memory limit, or run a container as root. In a bank, an auditor asks you to prove that every workload follows the rules, every day. The auditor also wants every exception written down. **Kyverno** does that inside Kubernetes. It does four jobs:
+RBAC decides *who* may create a Deployment but says nothing about *what* the Deployment looks like, so a team might use an image tagged `latest`, set no memory limit, or run a container as root. In a bank, an auditor asks you to prove every day that every workload follows the rules, with every exception written down, and **Kyverno** does that inside Kubernetes through four jobs:
 
 - It checks every object the API server receives.
 - It fixes what teams forget.
@@ -19,16 +19,16 @@ Time: about 50 minutes. Adds about 230 MB of memory while it runs.
 
 ![Kyverno's mutating and validating webhooks in the API server request path, plus the background and reports controllers](../docs/diagrams/chapters/26-where-kyverno-sits.svg)
 
-The diagram follows one `kubectl apply` or ArgoCD sync:
+One `kubectl apply` or ArgoCD sync passes Kyverno in four steps:
 
 1. You or ArgoCD send an object to the API server.
 2. The API server sends the object to Kyverno's mutating webhook, which adds defaults.
 3. The API server sends the changed object to Kyverno's validating webhook, which allows or denies it.
 4. The API server stores the allowed object.
 
-An **admission webhook** is a call the API server makes to another program before it stores an object. Kyverno registers itself as one and answers in milliseconds. Think of a security check at an airport gate: every object passes it before it boards.
+An **admission webhook** is a call the API server makes to another program before it stores an object, and Kyverno registers itself as one and answers in milliseconds, much like a security check at an airport gate that every object passes before it boards.
 
-Two more Kyverno parts work outside of requests, shown with dotted lines:
+Two more Kyverno parts, drawn with dotted lines, work outside of requests:
 
 - The background controller scans objects that already run and creates generated objects.
 - The reports controller writes the results into PolicyReports.
@@ -42,13 +42,13 @@ Two more Kyverno parts work outside of requests, shown with dotted lines:
 | **generate** | Creates other objects when something appears | quota and default-deny NetworkPolicy for every tenant namespace |
 | **verifyImages** | Checks image signatures | not used here, because it needs signed images |
 
-You write policies as Kubernetes YAML patterns, not as code. For example, `image: "*:* & !*:latest"` means "has a tag, and the tag isn't latest".
+You write policies as Kubernetes YAML patterns rather than code, so `image: "*:* & !*:latest"` means "has a tag, and the tag isn't latest".
 
-You write a rule for Pods, but pods usually come from Deployments, Jobs and other controllers. Kyverno's **autogen** feature copies the rule to Deployments, ReplicaSets, Jobs and CronJobs too. That way the error shows up when you apply the Deployment, not later.
+You write a rule for Pods, but pods usually come from Deployments, Jobs and other controllers, so Kyverno's **autogen** feature copies the rule to Deployments, ReplicaSets, Jobs and CronJobs too, which makes the error show up when you apply the Deployment rather than later.
 
 ## The bigger picture: policy as code
 
-Policies used to live in wiki pages and review checklists. Policy as code puts them in Git, next to everything else, and the cluster enforces them. This gives you three things:
+Policies used to live in wiki pages and review checklists, while policy as code puts them in Git next to everything else and lets the cluster enforce them. This gives you three things:
 
 - the same rule for every team
 - a review for every policy change, like any other change
@@ -59,24 +59,24 @@ The two big tools are:
 - **Kyverno**, a CNCF project with policies written in YAML
 - **OPA Gatekeeper**, with policies written in the Rego language
 
-Kubernetes itself now has **ValidatingAdmissionPolicy**, a built-in validation feature. You write its rules in CEL, the Common Expression Language, a small language for true-or-false checks. Kyverno 1.18 adds its own CEL-based policy types next to the classic `ClusterPolicy`. You'll write one of each.
+Kubernetes itself now has **ValidatingAdmissionPolicy**, a built-in validation feature whose rules you write in CEL, the Common Expression Language, a small language for true-or-false checks. Kyverno 1.18 adds its own CEL-based policy types next to the classic `ClusterPolicy`, and you'll write one of each.
 
-Regulated companies care because policies change what they tell an auditor. "We asked teams to set limits" becomes "the cluster refuses workloads without limits, here's the report, and here are the three written exceptions".
+Regulated companies care because policies change what they tell an auditor: "we asked teams to set limits" becomes "the cluster refuses workloads without limits, here's the report, and here are the three written exceptions".
 
 ## Why this way
 
-**Why Audit before Enforce?** Switching a rule straight to Enforce breaks every team that doesn't comply yet, and often nobody notices. Step 3 shows how. So roll out a rule in four steps:
+**Why Audit before Enforce?** Switching a rule straight to Enforce breaks every team that doesn't comply yet, often without anyone noticing, as step 3 shows. So roll out a rule in four steps:
 
 1. Run the rule in Audit mode.
 2. Read the reports.
 3. Fix the workloads or grant exceptions.
 4. Switch the rule to Enforce.
 
-**Why only one namespace?** A typo in a policy that matches every namespace blocks the whole cluster, including Istio and ArgoCD. Limiting the policies to `course-policy` keeps the lab safe. In production, policies match broadly but exclude system namespaces. Kyverno already excludes its own namespaces by default.
+**Why only one namespace?** A typo in a policy that matches every namespace blocks the whole cluster, including Istio and ArgoCD, so limiting the policies to `course-policy` keeps the lab safe. In production, policies match broadly but exclude system namespaces, and Kyverno already excludes its own namespaces by default.
 
-**Why are exceptions only allowed in the `kyverno` namespace?** If teams wrote exceptions in their own namespaces, every rule would have a self-service way out. Here only the platform team may write to `kyverno`, so only the platform team grants exceptions. Each exception is a reviewed object in Git.
+**Why are exceptions only allowed in the `kyverno` namespace?** If teams wrote exceptions in their own namespaces, every rule would have a self-service way out. Here only the platform team may write to `kyverno`, so only the platform team grants exceptions, and each exception is a reviewed object in Git.
 
-**Why one replica?** It's a laptop. In production, the admission controller runs three replicas. If Kyverno is down and its webhook says `failurePolicy: Fail`, the API server refuses changes everywhere. The install warns about this.
+**Why one replica?** It's a laptop. In production the admission controller runs three replicas, because if Kyverno goes down while its webhook says `failurePolicy: Fail`, the API server refuses changes everywhere, which the install warns about.
 
 ## Do it
 
@@ -188,12 +188,12 @@ updaterequests.kyverno.io                               2026-11-15T10:53:00Z
 validatingpolicies.policies.kyverno.io                  2026-11-15T10:53:00Z
 ```
 
-**What you should see.** In the test runs, the install took 9 to 21 seconds. An earlier run printed two warnings, and the run above printed only the first:
+**What you should see.** In the test runs the install took 9 to 21 seconds. An earlier run printed two warnings, and the run above printed only the first:
 
 - One replica means no high availability.
 - PolicyExceptions start switched off. The values file turns them on.
 
-Four controllers run: admission, background, cleanup and reports. Kyverno created ten webhook configurations by itself. It also created 20 CRDs, including the classic `clusterpolicies.kyverno.io` and the newer CEL types such as `validatingpolicies.policies.kyverno.io`.
+Four controllers run: admission, background, cleanup and reports. Kyverno created ten webhook configurations by itself, plus 20 CRDs, including the classic `clusterpolicies.kyverno.io` and the newer CEL types such as `validatingpolicies.policies.kyverno.io`.
 
 ### Concept: two paths to a verdict
 
@@ -206,17 +206,17 @@ Kyverno checks objects at two different moments, and each answers a different qu
 | With `Enforce` | refuses the request | refuses nothing, only reports |
 | With `Audit` | allows it, records the result | reports |
 
-Both paths end in the same place. The reports controller collects the results into one PolicyReport per namespace. In step 2, the `legacy` app already runs before the policy exists. So its failures come from the background scan that starts when you apply the policy. That's why you wait before reading the reports.
+Both paths end in the same place, because the reports controller collects the results into one PolicyReport per namespace. In step 2 the `legacy` app already runs before the policy exists, so its failures come from the background scan that starts when you apply the policy, which is why you wait before reading the reports.
 
-Two consequences surprise people. First, `Enforce` never stops pods that already run. It only acts on the next request.
+Two consequences surprise people. First, `Enforce` never stops pods that already run, because it acts only on the next request.
 
-Second, admission sees every object separately, including the objects that controllers create. One Deployment turns into three separate requests through the webhooks:
+Second, admission sees every object separately, including the objects that controllers create, so one Deployment turns into three separate requests through the webhooks:
 
 1. You create the Deployment.
 2. The Deployment controller creates a ReplicaSet.
 3. The ReplicaSet controller creates the pods.
 
-So when Kyverno refuses a pod, the refusal goes to the ReplicaSet controller, not to you. It shows up only as an event on the ReplicaSet. Step 3 shows it happen.
+So when Kyverno refuses a pod, the refusal goes to the ReplicaSet controller rather than to you, and it shows up only as an event on the ReplicaSet, as step 3 shows.
 
 ### 2. Audit an app that breaks the rules
 
@@ -279,7 +279,7 @@ require-memory-limits: validation error: Every container needs resources.limits.
 require-memory-limits: validation error: Every container needs resources.limits.memory. rule memory-limit failed at path /spec/containers/0/resources/limits/
 ```
 
-**What you should see.** The policy shows `READY True`, and autogen added `autogen-memory-limit` and `autogen-cronjob-memory-limit` next to the rule you wrote. The `legacy` app keeps running, because Audit blocks nothing. The reports list the Deployment, its ReplicaSet and its Pod, each with one failure: `Every container needs resources.limits.memory.` That's the list you'd hand to an auditor, or to the teams.
+**What you should see.** The policy shows `READY True`, and autogen added `autogen-memory-limit` and `autogen-cronjob-memory-limit` next to the rule you wrote. The `legacy` app keeps running, because Audit blocks nothing, while the reports list the Deployment, its ReplicaSet and its Pod, each with one failure: `Every container needs resources.limits.memory.` That's the list you'd hand to an auditor, or to the teams.
 
 ### 3. Enforce, and see what breaks
 
@@ -333,7 +333,7 @@ $ kubectl -n course-policy run t3 --image=nginx:1.27-alpine
 pod/t3 created
 ```
 
-**What you should see.** `t1` and `t2` get refused with `Use a specific image tag, not latest or none.`, and `t3` gets created. Now the legacy app, which uses `nginx:latest`:
+**What you should see.** `t1` and `t2` get refused with `Use a specific image tag, not latest or none.`, while `t3` gets created. Now the legacy app, which uses `nginx:latest`:
 
 ```console
 $ kubectl -n course-policy rollout restart deploy/legacy
@@ -365,19 +365,19 @@ LAST SEEN   TYPE      REASON         OBJECT                         MESSAGE
 3s          Warning   FailedCreate   replicaset/legacy-6cdcfd69ff   (combined from similar events): Error creating: admission webhook "validate.kyverno.svc-fail" denied the request: ...
 ```
 
-**What you should see.** `kubectl` says `deployment.apps/legacy restarted`, and nothing looks wrong. But three things show that the rollout is stuck:
+**What you should see.** `kubectl` says `deployment.apps/legacy restarted`, and nothing looks wrong, but three things show that the rollout hangs:
 
 - The Deployment reads `UP-TO-DATE 0`.
 - A new ReplicaSet sits at `CURRENT 0`.
 - The events say `Error creating: admission webhook "validate.kyverno.svc-fail" denied the request`.
 
-Here is what happened:
+Three things happened in order:
 
-1. Kyverno let the Deployment update through. By default, it allows updates to objects that already broke a rule. The setting for this is `allowExistingViolations`.
+1. Kyverno let the Deployment update through, because by default it allows updates to objects that already broke a rule, through the setting `allowExistingViolations`.
 2. The Deployment controller created a new ReplicaSet.
 3. Kyverno refused the new ReplicaSet's pod.
 
-The rollout hangs, and the old pod keeps serving. That's the classic way a new policy breaks a team's next deploy without anyone noticing. It's also the reason to audit first.
+The rollout hangs while the old pod keeps serving, which is the classic way a new policy breaks a team's next deploy without anyone noticing, and the reason to audit first.
 
 ### 4. Grant a written exception
 
@@ -417,9 +417,9 @@ disallow-latest-tag:
     rule require-image-tag failed at path /spec/containers/0/image/'
 ```
 
-**What you should see.** The stuck rollout finishes within seconds of the exception. `other` is still refused, because the exception names only the policy, the rules and the `legacy*` objects. In the reports, the image-tag check for `legacy` now shows as **skip**, not pass. That keeps the exception visible.
+**What you should see.** The stuck rollout finishes within seconds of the exception, while `other` still gets refused, because the exception names only the policy, the rules and the `legacy*` objects. In the reports, the image-tag check for `legacy` now shows as **skip** rather than pass, which keeps the exception visible.
 
-Now try the shortcut a team might try. Put the same exception in `course-policy`, for `other*`:
+Now try the shortcut a team might try, putting the same exception in `course-policy` for `other*`:
 
 ```console
 $ sed 's/namespace: kyverno/namespace: course-policy/; s/name: legacy-may-use-latest/name: self-service/; s/"legacy\*"/"other*"/' \
@@ -440,7 +440,7 @@ $ kubectl -n course-policy delete policyexception self-service
 policyexception.kyverno.io "self-service" deleted
 ```
 
-**What you should see.** You get a warning, `PolicyException resource namespace must match the defined namespace`. The object still gets created, but Kyverno ignores it, and `other` stays refused.
+**What you should see.** A warning, `PolicyException resource namespace must match the defined namespace`. The object still gets created, but Kyverno ignores it, so `other` stays refused.
 
 ### 5. Fill in what teams forget
 
@@ -488,7 +488,7 @@ $ kubectl -n course-policy get pod owned -o jsonpath='{.metadata.labels}{"\n"}'
 {"team":"payments"}
 ```
 
-**What you should see.** `plain` got `"team":"unassigned"` and a memory limit of `128Mi` it never asked for. `owned` keeps `"team":"payments"`, because the `+( )` anchor adds a value only when it's missing. Mutation runs before validation, so `plain` also passes the memory-limit rule from step 2.
+**What you should see.** `plain` got `"team":"unassigned"` and a memory limit of `128Mi` it never asked for, while `owned` keeps `"team":"payments"`, because the `+( )` anchor adds a value only when it's missing. Mutation runs before validation, so `plain` also passes the memory-limit rule from step 2.
 
 ### 6. Generate the boilerplate for every tenant
 
@@ -570,7 +570,7 @@ $ kubectl -n course-tenant-a get networkpolicy default-deny-ingress -o jsonpath=
 - `tenant-quota`, which allows 10 pods and 2 GiB of memory limits
 - `default-deny-ingress`
 
-Delete the NetworkPolicy, and it's back at once, with a new uid. `synchronize: true` makes Kyverno guard what it generated. Its labels, such as `app.kubernetes.io/managed-by: kyverno`, show who owns it.
+Delete the NetworkPolicy, and it comes back at once with a new uid, because `synchronize: true` makes Kyverno guard what it generated, and labels such as `app.kubernetes.io/managed-by: kyverno` show who owns it.
 
 ### 7. The CEL style
 
@@ -612,7 +612,7 @@ $ kubectl -n course-policy create deployment with-owner --image=nginx:1.27-alpin
 deployment.apps/with-owner created
 ```
 
-**What you should see.** The webhook `vpol.validate.kyverno.svc-fail` refuses `no-owner` with `Deployments in course-policy need an owner label.`, and `with-owner` gets created. The rule is one CEL expression, `has(object.metadata.labels) && 'owner' in object.metadata.labels`. Kubernetes' built-in ValidatingAdmissionPolicy uses the same language. Compare it with the YAML pattern in step 3. Patterns read like the object they check. CEL reads like code, and it handles logic that patterns express only clumsily.
+**What you should see.** The webhook `vpol.validate.kyverno.svc-fail` refuses `no-owner` with `Deployments in course-policy need an owner label.`, while `with-owner` gets created. The rule is one CEL expression, `has(object.metadata.labels) && 'owner' in object.metadata.labels`, in the same language as Kubernetes' built-in ValidatingAdmissionPolicy. Compare it with the YAML pattern in step 3: patterns read like the object they check, while CEL reads like code and handles logic that patterns express only clumsily.
 
 ## Investigate
 
@@ -624,10 +624,10 @@ deployment.apps/with-owner created
 <details>
 <summary>Answers</summary>
 
-1. The policy refuses their pods, as in step 3. The Deployment update passes, but the new ReplicaSet fails to create pods. The rollout hangs while the old pods keep serving. Before switching, you should have read the PolicyReports from the Audit phase. Every `fail` there becomes a broken deploy under Enforce. Fix those workloads or write exceptions first, and switch on a weekday morning.
-2. With the default `failurePolicy: Fail`, the API server gets no answer from the webhook. So it refuses every request the webhook covers. That's why production runs the admission controller with three replicas and a PodDisruptionBudget. It's also why Kyverno excludes its own namespace and system namespaces from its webhooks. That way, Kyverno always keeps the means to repair itself. Setting `failurePolicy: Ignore` keeps the cluster usable, but it lets anything through while Kyverno is down.
-3. The API server calls all mutating webhooks before any validating webhook. So validation always sees the final object. Step 5 adds a default memory limit, so a pod without a limit still passes `require-memory-limits`. That's often what you want. Mutation fixes the easy cases, and validation catches the rest.
-4. ArgoCD shows the app `Synced`, because the Deployment in the cluster matches Git. Its health shows `Progressing`, then `Degraded` once the progress deadline runs out, because no new pod ever starts. That's the same Synced-and-Degraded pair as in module 22. The reason sits in the ReplicaSet's `FailedCreate` events and in Kyverno's PolicyReports, not in ArgoCD.
+1. The policy refuses their pods, as in step 3: the Deployment update passes, but the new ReplicaSet fails to create pods, so the rollout hangs while the old pods keep serving. Before switching, you should have read the PolicyReports from the Audit phase, because every `fail` there becomes a broken deploy under Enforce. Fix those workloads or write exceptions first, and switch on a weekday morning.
+2. With the default `failurePolicy: Fail`, the API server gets no answer from the webhook, so it refuses every request the webhook covers. That's why production runs the admission controller with three replicas and a PodDisruptionBudget, and why Kyverno excludes its own namespace and system namespaces from its webhooks, so that it always keeps the means to repair itself. Setting `failurePolicy: Ignore` keeps the cluster usable, but lets anything through while Kyverno is down.
+3. The API server calls all mutating webhooks before any validating webhook, so validation always sees the final object. Step 5 adds a default memory limit, so a pod without a limit still passes `require-memory-limits`, which is often what you want, because mutation fixes the easy cases and validation catches the rest.
+4. ArgoCD shows the app `Synced`, because the Deployment in the cluster matches Git, while its health shows `Progressing`, then `Degraded` once the progress deadline runs out, because no new pod ever starts. That's the same Synced-and-Degraded pair as in module 22, and the reason sits in the ReplicaSet's `FailedCreate` events and in Kyverno's PolicyReports, not in ArgoCD.
 
 </details>
 
@@ -645,7 +645,7 @@ Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 The reset works in this order:
 
 1. It deletes the policies, so nothing blocks the clean-up.
-2. It uninstalls Kyverno. The chart's own hook removes the webhooks Kyverno created at runtime, and its CRDs.
+2. It uninstalls Kyverno, whose chart hook removes the webhooks Kyverno created at runtime, and its CRDs.
 3. It deletes the `kyverno`, `course-policy` and `course-tenant-a` namespaces.
 
-In the test run, nothing Kyverno-related was left afterwards.
+In the test run, nothing Kyverno-related remained afterwards.
