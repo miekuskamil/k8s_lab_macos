@@ -209,8 +209,14 @@ The industry calls the goal **provenance**: a verifiable record of where every a
 
 **Time budget:** 4 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 5.1
+```console
+$ ./certs/cks/task.sh setup 5.1
+== setup task 5.1
+FROM ubuntu:latest
+RUN apt-get update && apt-get install -y python3 curl wget netcat-openbsd vim
+COPY app.py /app/app.py
+USER root
+CMD ["python3", "/app/app.py"]
 ```
 
 > Fix `/root/cks/app/Dockerfile`:
@@ -235,23 +241,29 @@ The alpine image already has `python3`, so the `RUN` line goes. The `USER root` 
 
 </details>
 
-```bash
-./certs/cks/task.sh check 5.1
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 5.1
+== check task 5.1
   PASS  the base image has an explicit tag, not latest
   PASS  the base image is a slim, alpine or distroless variant
   PASS  no RUN line installs curl, wget, netcat or vim
   PASS  the last USER is neither root nor 0
+== task 5.1: 4 passed, 0 failed
 ```
 
 ## Task 2: Find and remove vulnerable images
 
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 5.2
+```console
+$ ./certs/cks/task.sh setup 5.2
+== setup task 5.2
+pod/web created
+pod/cache created
+pod/tools created
+pod/cache condition met
+pod/tools condition met
+pod/web condition met
 ```
 
 > Namespace `scan` runs three pods. Use trivy to find the pods whose image has at least one CRITICAL vulnerability, and delete those pods. Leave the others running.
@@ -261,34 +273,44 @@ The alpine image already has `python3`, so the `RUN` line goes. The `USER root` 
 
 List the images, then scan each one:
 
-```bash
-k -n scan get pods -o custom-columns=POD:.metadata.name,IMAGE:.spec.containers[0].image
-trivy image --severity CRITICAL --quiet nginx:1.19.0 | grep Total
-trivy image --severity CRITICAL --quiet redis:6.0.5 | grep Total
-trivy image --severity CRITICAL --quiet busybox:1.36 | grep Total
-k -n scan delete pod web cache
+```console
+root@cks-cp:~# k -n scan get pods -o custom-columns=POD:.metadata.name,IMAGE:.spec.containers[0].image
+POD     IMAGE
+cache   redis:6.0.5
+tools   busybox:1.36
+web     nginx:1.19.0
+root@cks-cp:~# trivy image --severity CRITICAL --quiet nginx:1.19.0 | grep Total
+Total: 44 (CRITICAL: 44)
+root@cks-cp:~# trivy image --severity CRITICAL --quiet redis:6.0.5 | grep Total
+Total: 17 (CRITICAL: 17)
+Total: 5 (CRITICAL: 5)
+root@cks-cp:~# trivy image --severity CRITICAL --quiet busybox:1.36 | grep Total
+root@cks-cp:~# k -n scan delete pod web cache
+pod "web" deleted from scan namespace
+pod "cache" deleted from scan namespace
 ```
 
 `--quiet` hides the progress bars, and the `Total` line gives the count per target. In the test run, trivy reported 44 CRITICAL findings for `nginx:1.19.0`, 22 for `redis:6.0.5` and none for `busybox:1.36`.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 5.2
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 5.2
+== check task 5.2
   PASS  pod web (nginx:1.19.0, CRITICAL findings) is gone
   PASS  pod cache (redis:6.0.5, CRITICAL findings) is gone
   PASS  pod tools (busybox:1.36, no CRITICAL findings) still runs
+== task 5.2: 3 passed, 0 failed
 ```
 
 ## Task 3: Write an SBOM
 
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 5.3
+```console
+$ ./certs/cks/task.sh setup 5.3
+== setup task 5.3
+  /root/cks is ready
 ```
 
 > For the image `registry.k8s.io/kube-proxy:v1.37.1`:
@@ -300,12 +322,20 @@ k -n scan delete pod web cache
 <details>
 <summary>Solution</summary>
 
-```bash
-cd /root/cks
-bom generate --image registry.k8s.io/kube-proxy:v1.37.1 --format json --output kube-proxy.spdx.json
-trivy image --format cyclonedx --output kube-proxy.cdx.json registry.k8s.io/kube-proxy:v1.37.1
-grep -A3 '"name": "iptables"' kube-proxy.spdx.json | grep -m1 versionInfo
-echo 1.8.9-2 > iptables-version.txt
+```console
+root@cks-cp:~# cd /root/cks
+root@cks-cp:~/cks# bom generate --image registry.k8s.io/kube-proxy:v1.37.1 --format json --output kube-proxy.spdx.json
+level=info msg="bom v0.8.0: Generating SPDX Bill of Materials"
+level=info msg="Package SPDXRef-Package-registry.k8s.io-kube-proxy-v1.37.1 has 4 relationships defined"
+...
+root@cks-cp:~/cks# trivy image --format cyclonedx --output kube-proxy.cdx.json registry.k8s.io/kube-proxy:v1.37.1
+2026-11-15T15:05:20Z	INFO	"--format cyclonedx" disables security scanning. Specify "--scanners vuln" explicitly if you want to include vulnerabilities in the "cyclonedx" report.
+2026-11-15T15:05:21Z	INFO	Detected OS	family="debian" version="12.15"
+2026-11-15T15:05:21Z	INFO	Number of language-specific files	num=3
+...
+root@cks-cp:~/cks# grep -A3 '"name": "iptables"' kube-proxy.spdx.json | grep -m1 versionInfo
+      "versionInfo": "1.8.9-2",
+root@cks-cp:~/cks# echo 1.8.9-2 > iptables-version.txt
 ```
 
 bom 0.8.0 writes JSON by default, and `--format tag-value` gives the older text format. Older bom versions defaulted to tag-value, so pass `--format json` anyway. In the test run, bom took 4 seconds and listed 266 packages, trivy listed 172 components, and `iptables` had version `1.8.9-2`. The two tools count differently: bom also lists every Go module inside the Kubernetes binaries.
@@ -314,22 +344,23 @@ An SBOM is also something trivy scans later, without the image: `trivy sbom kube
 
 </details>
 
-```bash
-./certs/cks/task.sh check 5.3
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 5.3
+== check task 5.3
   PASS  /root/cks/kube-proxy.spdx.json is SPDX JSON for kube-proxy v1.37.1
   PASS  /root/cks/kube-proxy.cdx.json is a CycloneDX SBOM
   PASS  /root/cks/iptables-version.txt holds the iptables version from the SBOM
+== task 5.3: 3 passed, 0 failed
 ```
 
 ## Task 4: Static analysis with kubesec
 
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 5.4
+```console
+$ ./certs/cks/task.sh setup 5.4
+== setup task 5.4
+score -39 critical ['Privileged', 'HostPID']
 ```
 
 The setup prints kubesec's verdict on the manifest. In the test run: `score -39 critical ['Privileged', 'HostPID']`.
@@ -339,9 +370,37 @@ The setup prints kubesec's verdict on the manifest. In the test run: `score -39 
 <details>
 <summary>Solution</summary>
 
-```bash
-kubesec scan /root/cks/report.yaml | less
+```console
+root@cks-cp:~# kubesec scan /root/cks/report.yaml | less
+[
+  {
+    "object": "Pod/report.reports",
+    "valid": true,
+    "fileName": "/root/cks/report.yaml",
+    "message": "Failed with a score of -39 points",
+    "score": -39,
+    "scoring": {
+      "critical": [
+        {
+          "id": "Privileged",
+          "selector": "containers[] .securityContext .privileged == true",
+          "reason": "Privileged containers can allow almost completely unrestricted host access",
+          "points": -30
+        },
+        {
+          "id": "HostPID",
+          "selector": ".spec .hostPID == true",
+          "reason": "Sharing the host's PID namespace allows visibility of processes on the host, potentially leaking information such as environment variables and configuration",
+          "points": -9
+        }
+      ],
+      "advise": [
+        {
+          "id": "ApparmorAny",
+...
 ```
+
+The transcript ran the scan without `less`, which pages long output, and shows its first lines.
 
 The `advise` list names the settings that give points. Remove `hostPID` and `privileged`, then add enough of the advice:
 
@@ -371,31 +430,40 @@ spec:
       limits: {cpu: 100m, memory: 32Mi}
 ```
 
-```bash
-kubesec scan /root/cks/report.yaml | grep -E '"score"|"message"'
-k apply -f /root/cks/report.yaml
+```console
+root@cks-cp:~# kubesec scan /root/cks/report.yaml | grep -E '"score"|"message"'
+    "message": "Passed with a score of 10 points",
+    "score": 10,
+root@cks-cp:~# k apply -f /root/cks/report.yaml
+pod/report unchanged
 ```
 
 In the test run, the score went from -39 to 10. The `sleep` command writes nothing, so `readOnlyRootFilesystem` doesn't stop it.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 5.4
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 5.4
+== check task 5.4
   PASS  kubesec finds no critical issue and scores 8 or more
   PASS  pod report runs in namespace reports
   PASS  the running pod has no hostPID and is not privileged
+== task 5.4: 3 passed, 0 failed
 ```
 
 ## Task 5: Allow only approved registries
 
 **Time budget:** 10 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 5.5
+```console
+$ ./certs/cks/task.sh setup 5.5
+== setup task 5.5
+active
+registry.k8s.io/
+docker.io/library/
+quay.io/calico/
+ca.crt
+kubeconfig.yaml
 ```
 
 > An image policy back end runs at `https://localhost:8443/review`. The kubeconfig to reach it is `/etc/kubernetes/policy-webhook/kubeconfig.yaml`.
@@ -434,34 +502,42 @@ The API server reads two folders it doesn't mount yet: `/etc/kubernetes/admissio
 
 When the API server answers again:
 
-```bash
-k run t1 --image=nginx:latest --dry-run=server
-k run t2 --image=busybox:1.36 --dry-run=server -- sleep 1
-journalctl -u image-policy -n 5
+```console
+root@cks-cp:~# k run t1 --image=nginx:latest --dry-run=server
+Error from server (Forbidden): pods "t1" is forbidden: image policy webhook backend denied one or more images: image docker.io/library/nginx:latest has no tag or uses latest
+root@cks-cp:~# k run t2 --image=busybox:1.36 --dry-run=server -- sleep 1
+pod/t2 created (server dry run)
+root@cks-cp:~# journalctl -u image-policy -n 5
+Nov 15 15:04:40 cks-cp systemd[1]: image-policy.service: Deactivated successfully.
+Nov 15 15:04:40 cks-cp systemd[1]: Stopped image-policy.service - ImagePolicyWebhook back end for the CKS practice cluster.
+Nov 15 15:04:40 cks-cp systemd[1]: Started image-policy.service - ImagePolicyWebhook back end for the CKS practice cluster.
+Nov 15 15:06:08 cks-cp python3[32970]: DENY  ['nginx:latest'] image docker.io/library/nginx:latest has no tag or uses latest
+Nov 15 15:06:09 cks-cp python3[32970]: ALLOW ['busybox:1.36']
 ```
 
 In the test run, the first command failed with `image policy webhook backend denied one or more images: image docker.io/library/nginx:latest has no tag or uses latest`, and the second printed `pod/t2 created (server dry run)`. The back end expands short names the way container runtimes do, so `busybox:1.36` counts as `docker.io/library/busybox:1.36`.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 5.5
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 5.5
+== check task 5.5
   PASS  the API server enables ImagePolicyWebhook
   PASS  the admission configuration sets defaultAllow: false
   PASS  a pod with busybox:1.36 is admitted
   PASS  a pod with nginx:latest is refused
   PASS  a pod from quay.io/evil is refused
+== task 5.5: 5 passed, 0 failed
 ```
 
 ## Task 6: The webhook's files are wrong
 
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 5.6
+```console
+$ ./certs/cks/task.sh setup 5.6
+== setup task 5.6
+  the API server restarted with the changed files at 15:06:39
 ```
 
 > Somebody changed the ImagePolicyWebhook configuration, and the API server doesn't come back. Repair it. The plugin stays enabled, pods stay refused when the back end doesn't answer, and the back end at `https://localhost:8443/review` decides again which images run. Its CA certificate is `/etc/kubernetes/policy-webhook/ca.crt`.
@@ -471,16 +547,16 @@ In the test run, the first command failed with `image policy webhook backend den
 
 `kubectl` fails, so read the API server's last words:
 
-```bash
-crictl ps -a --name kube-apiserver
-crictl logs <id of the newest exited container>
+```console
+root@cks-cp:~# crictl ps -a --name kube-apiserver
+CONTAINER           IMAGE               CREATED             STATE               NAME                ATTEMPT             POD ID              POD                     NAMESPACE
+7cf2701fac743       98d6e75e244ec       8 seconds ago       Exited              kube-apiserver      2                   deb178f6957eb       kube-apiserver-cks-cp   kube-system
+root@cks-cp:~# crictl logs <id of the newest exited container>
+...
+E1115 15:06:51.929151       1 run.go:72] "command failed" err="failed to apply admission: couldn't init admission plugin \"ImagePolicyWebhook\": stat /etc/kubernetes/webhook/kubeconfig.yaml: no such file or directory"
 ```
 
-In the test run, it said:
-
-```
-"command failed" err="failed to apply admission: couldn't init admission plugin \"ImagePolicyWebhook\": stat /etc/kubernetes/webhook/kubeconfig.yaml: no such file or directory"
-```
+The transcript ran `crictl logs` with the ID of the newest exited container.
 
 `ls /etc/kubernetes/policy-webhook/` shows the real kubeconfig. Fix `kubeConfigFile` in `/etc/kubernetes/admission/admission-config.yaml`. The API server starts, but every new pod now fails:
 
@@ -490,31 +566,33 @@ Error from server (Forbidden): pods "x509" is forbidden: Post "https://localhost
 
 The kubeconfig's `certificate-authority` points to the cluster's CA, `/etc/kubernetes/pki/ca.crt`, which never signed the back end's certificate. Set it to `/etc/kubernetes/policy-webhook/ca.crt`. The API server reads the kubeconfig only at start, and the manifest didn't change, so restart it the way [04, task 5](04-minimize-microservice-vulnerabilities.md#task-5-rotate-the-encryption-key) does: move the manifest out of the folder and back. Then test:
 
-```bash
-k run t --image=quay.io/evil/miner:1 --dry-run=server
+```console
+root@cks-cp:~# k run t --image=quay.io/evil/miner:1 --dry-run=server
+Error from server (Forbidden): pods "t" is forbidden: image policy webhook backend denied one or more images: image quay.io/evil/miner:1 is not from an allowed registry
 ```
 
 In the test run, that printed `image policy webhook backend denied one or more images: image quay.io/evil/miner:1 is not from an allowed registry`. The refusal now comes from the back end's policy, not from a broken connection.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 5.6
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 5.6
+== check task 5.6
   PASS  the API server answers
   PASS  ImagePolicyWebhook stays enabled, with defaultAllow: false
   PASS  a pod with busybox:1.36 is admitted
   PASS  a pod from quay.io/evil is refused by the back end
+== task 5.6: 4 passed, 0 failed
 ```
 
 ## Task 7: The back end is down and nobody noticed
 
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 5.7
+```console
+$ ./certs/cks/task.sh setup 5.7
+== setup task 5.7
+  quay.io/evil/miner:1 today: pod/probe created (server dry run)
 ```
 
 The setup shows the hole. In the test run: `quay.io/evil/miner:1 today: pod/probe created (server dry run)`.
@@ -526,45 +604,60 @@ The setup shows the hole. In the test run: `quay.io/evil/miner:1 today: pod/prob
 
 Two things are wrong, and both have to change:
 
-```bash
-grep defaultAllow /etc/kubernetes/admission/admission-config.yaml     # defaultAllow: true
-systemctl status image-policy                                         # inactive, disabled
-journalctl -u image-policy -n 2
+```console
+root@cks-cp:~# grep defaultAllow /etc/kubernetes/admission/admission-config.yaml     # defaultAllow: true
+      defaultAllow: true
+root@cks-cp:~# systemctl status image-policy                                         # inactive, disabled
+○ image-policy.service - ImagePolicyWebhook back end for the CKS practice cluster
+     Loaded: loaded (/etc/systemd/system/image-policy.service; disabled; preset: enabled)
+    Drop-In: /run/systemd/system/service.d
+             └─zzz-lxc-service.conf
+     Active: inactive (dead)
+...
+root@cks-cp:~# journalctl -u image-policy -n 2
+Nov 15 15:08:45 cks-cp systemd[1]: image-policy.service: Deactivated successfully.
+Nov 15 15:08:45 cks-cp systemd[1]: Stopped image-policy.service - ImagePolicyWebhook back end for the CKS practice cluster.
 ```
 
-```bash
-sed -i 's/defaultAllow: true/defaultAllow: false/' /etc/kubernetes/admission/admission-config.yaml
-systemctl enable --now image-policy
+```console
+root@cks-cp:~# sed -i 's/defaultAllow: true/defaultAllow: false/' /etc/kubernetes/admission/admission-config.yaml
+root@cks-cp:~# systemctl enable --now image-policy
+Created symlink /etc/systemd/system/multi-user.target.wants/image-policy.service → /etc/systemd/system/image-policy.service.
 ```
 
 Restart the API server by moving its manifest out and back, as in task 6, and test both sides:
 
-```bash
-k run ok --image=busybox:1.36 --dry-run=server -- sleep 1         # created
-k run bad --image=quay.io/evil/miner:1 --dry-run=server           # denied
+```console
+root@cks-cp:~# k run ok --image=busybox:1.36 --dry-run=server -- sleep 1         # created
+pod/ok created (server dry run)
+root@cks-cp:~# k run bad --image=quay.io/evil/miner:1 --dry-run=server           # denied
+Error from server (Forbidden): pods "bad" is forbidden: image policy webhook backend denied one or more images: image quay.io/evil/miner:1 is not from an allowed registry
 ```
 
 `enable --now` does both halves: `--now` starts the service, `enable` makes it start at boot. Fix only `defaultAllow`, and the cluster refuses every new pod, approved or not, until somebody starts the back end. In the test run, the fix took 36 seconds, most of it the API server restart.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 5.7
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 5.7
+== check task 5.7
   PASS  the admission configuration sets defaultAllow: false
   PASS  the image-policy service runs and starts at boot
   PASS  a pod with busybox:1.36 is admitted
   PASS  a pod from quay.io/evil is refused
+== task 5.7: 4 passed, 0 failed
 ```
 
 ## Task 8: Pin an image by digest
 
 **Time budget:** 4 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 5.8
+```console
+$ ./certs/cks/task.sh setup 5.8
+== setup task 5.8
+deployment.apps/web created
+Waiting for deployment "web" rollout to finish: 0 of 1 updated replicas are available...
+deployment "web" successfully rolled out
 ```
 
 > Deployment `web` in namespace `pinned` runs `nginx:1.27-alpine`. Change it to name the exact image it runs now by its digest, so that a moved tag never changes what runs.
@@ -574,32 +667,43 @@ k run bad --image=quay.io/evil/miner:1 --dry-run=server           # denied
 
 Read the digest from the running pod, then set it:
 
-```bash
-k -n pinned get pod -l app=web -o jsonpath='{.items[0].status.containerStatuses[0].imageID}'; echo
-k -n pinned set image deploy/web nginx=nginx@sha256:<the digest>
-k -n pinned rollout status deploy web
+```console
+root@cks-cp:~# k -n pinned get pod -l app=web -o jsonpath='{.items[0].status.containerStatuses[0].imageID}'; echo
+docker.io/library/nginx@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+root@cks-cp:~# k -n pinned set image deploy/web nginx=nginx@sha256:<the digest>
+deployment.apps/web image updated
+root@cks-cp:~# k -n pinned rollout status deploy web
+Waiting for deployment "web" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "web" rollout to finish: 1 old replicas are pending termination...
+deployment "web" successfully rolled out
 ```
+
+The transcript ran the second command with the digest that the first command printed.
 
 In the test run, the imageID was `docker.io/library/nginx@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10`. `nginx` in `set image` is the container's name, which `kubectl create deployment` took from the image. Both `nginx@sha256:...` and `nginx:1.27-alpine@sha256:...` work. With both a tag and a digest, the runtime ignores the tag.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 5.8
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 5.8
+== check task 5.8
   PASS  Deployment web names its image by a sha256 digest
   PASS  the digest is the one nginx:1.27-alpine had on the node
   PASS  the Deployment has a ready pod
+== task 5.8: 3 passed, 0 failed
 ```
 
 ## Task 9: Scan what the cluster runs
 
 **Time budget:** 7 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 5.9
+```console
+$ ./certs/cks/task.sh setup 5.9
+== setup task 5.9
+deployment.apps/web created
+deployment.apps/tools created
+deployment.apps/cache created
+deployment.apps/pause created
 ```
 
 > Namespaces `prod-a` and `prod-b` run four Deployments. Find every image among them that has at least one CRITICAL vulnerability, and write those image names, one per line, to `/root/cks/critical-images.txt`. Scale the Deployments that use them to 0 replicas. Leave the others alone.
@@ -609,37 +713,52 @@ In the test run, the imageID was `docker.io/library/nginx@sha256:65645c7bb6a0661
 
 List the images per Deployment, then scan each distinct image once:
 
-```bash
-k get deploy -n prod-a -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[*].image
-k get deploy -n prod-b -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[*].image
-for img in nginx:1.19.0 busybox:1.36 redis:6.0.5 registry.k8s.io/pause:3.10; do
+```console
+root@cks-cp:~# k get deploy -n prod-a -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[*].image
+NAME    IMAGE
+tools   busybox:1.36
+web     nginx:1.19.0
+root@cks-cp:~# k get deploy -n prod-b -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[*].image
+NAME    IMAGE
+cache   redis:6.0.5
+pause   registry.k8s.io/pause:3.10
+root@cks-cp:~# for img in nginx:1.19.0 busybox:1.36 redis:6.0.5 registry.k8s.io/pause:3.10; do
   echo "$img $(trivy image --quiet --severity CRITICAL $img | grep -m1 Total)"
 done
-printf 'nginx:1.19.0\nredis:6.0.5\n' > /root/cks/critical-images.txt
-k -n prod-a scale deploy web --replicas=0
-k -n prod-b scale deploy cache --replicas=0
+nginx:1.19.0 Total: 44 (CRITICAL: 44)
+busybox:1.36 
+redis:6.0.5 Total: 17 (CRITICAL: 17)
+registry.k8s.io/pause:3.10 
+root@cks-cp:~# printf 'nginx:1.19.0\nredis:6.0.5\n' > /root/cks/critical-images.txt
+root@cks-cp:~# k -n prod-a scale deploy web --replicas=0
+deployment.apps/web scaled
+root@cks-cp:~# k -n prod-b scale deploy cache --replicas=0
+deployment.apps/cache scaled
 ```
 
 In the test run, trivy found 44 CRITICAL findings in `nginx:1.19.0`, 22 in `redis:6.0.5`, and none in `busybox:1.36` or `pause:3.10`. The check runs trivy itself, so it still agrees with you when the database grows. `trivy image` prints nothing for a target without findings, which is why the `Total` line stays empty for the clean images.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 5.9
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 5.9
+== check task 5.9
   PASS  /root/cks/critical-images.txt lists exactly the images with CRITICAL findings
   PASS  the Deployments running those images are scaled to 0
   PASS  the Deployments with clean images keep their replica
+== task 5.9: 3 passed, 0 failed
 ```
 
 ## Task 10: Which SBOM carries the risk?
 
 **Time budget:** 4 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 5.10
+```console
+$ ./certs/cks/task.sh setup 5.10
+== setup task 5.10
+app-1.cdx.json
+app-2.cdx.json
+app-3.cdx.json
 ```
 
 > `/root/cks/sboms/` holds three CycloneDX SBOMs from the build system. Without pulling any image, find the SBOMs that list a package with at least one CRITICAL vulnerability. Write their file names, one per line, to `/root/cks/risky-sboms.txt`.
@@ -649,22 +768,24 @@ In the test run, trivy found 44 CRITICAL findings in `nginx:1.19.0`, 22 in `redi
 
 `trivy sbom` reads the package list from the file and checks it against the database:
 
-```bash
-cd /root/cks/sboms
-for f in app-*.cdx.json; do echo "$f: $(trivy sbom --quiet --severity CRITICAL $f | grep -m1 Total)"; done
-echo app-2.cdx.json > /root/cks/risky-sboms.txt
+```console
+root@cks-cp:~# cd /root/cks/sboms
+root@cks-cp:~/cks/sboms# for f in app-*.cdx.json; do echo "$f: $(trivy sbom --quiet --severity CRITICAL $f | grep -m1 Total)"; done
+app-1.cdx.json: 
+app-2.cdx.json: Total: 44 (CRITICAL: 44)
+app-3.cdx.json: 
+root@cks-cp:~/cks/sboms# echo app-2.cdx.json > /root/cks/risky-sboms.txt
 ```
 
 In the test run, `app-2.cdx.json` showed `Total: 44 (CRITICAL: 44)`, and the other two printed nothing. That's the point of an SBOM: the scan took under a second per file and needed no registry. `--exit-code 1` makes trivy fail when it finds something, which suits a loop or a CI step.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 5.10
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 5.10
+== check task 5.10
   PASS  /root/cks/risky-sboms.txt names exactly the SBOMs with CRITICAL findings
+== task 5.10: 1 passed, 0 failed
 ```
 
 ## Clean up
