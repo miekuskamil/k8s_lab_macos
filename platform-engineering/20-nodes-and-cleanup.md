@@ -85,23 +85,67 @@ Sidecar mode works too, but every moved pod starts a new Envoy.
 
 ### 1. Add a node
 
-```bash
-k3d node create agent --cluster k8s-lab --role agent --wait
-k3d image import k8s-lab/backend:1.0.3 k8s-lab/frontend:1.0.3 k8s-lab/assistant:1.1.0 -c k8s-lab
-kubectl get nodes
-kubectl -n istio-system get pods -o wide | grep -E "ztunnel|cni"
+```console
+$ k3d node create agent --cluster k8s-lab --role agent --wait
+INFO[0000] Adding 1 node(s) to the runtime local cluster 'k8s-lab'...
+INFO[0000] Using the k3d-tools node to gather environment information
+INFO[0000] Starting new tools node...
+INFO[0000] Starting node 'k3d-k8s-lab-tools'
+INFO[0000] HostIP: using network gateway 192.168.107.1 address
+INFO[0000] Starting node 'k3d-agent-0'
+INFO[0003] Successfully created 1 node(s)!
+
+$ k3d image import k8s-lab/backend:1.0.3 k8s-lab/frontend:1.0.3 k8s-lab/assistant:1.1.0 -c k8s-lab
+INFO[0000] Importing image(s) into cluster 'k8s-lab'
+INFO[0000] Starting new tools node...
+INFO[0000] Starting node 'k3d-k8s-lab-tools'
+INFO[0000] Saving 3 image(s) from runtime...
+INFO[0002] Importing images into nodes...
+INFO[0002] Importing images from tarball '/k3d/images/k3d-k8s-lab-images-20261115110539.tar' into node 'k3d-k8s-lab-server-0'...
+INFO[0002] Importing images from tarball '/k3d/images/k3d-k8s-lab-images-20261115110539.tar' into node 'k3d-agent-0'...
+INFO[0007] Removing the tarball(s) from image volume...
+INFO[0008] Removing k3d-tools node...
+INFO[0008] Successfully imported image(s)
+INFO[0008] Successfully imported 3 image(s) into 1 cluster(s)
+
+$ kubectl get nodes
+NAME                   STATUS   ROLES                  AGE   VERSION
+k3d-agent-0            Ready    <none>                 9s    v1.31.5+k3s1
+k3d-k8s-lab-server-0   Ready    control-plane,master   46h   v1.31.5+k3s1
+
+$ kubectl -n istio-system get pods -o wide | grep -E "ztunnel|cni"
+istio-cni-node-8fjgz     1/1     Running   0             9s    192.168.107.4   k3d-agent-0            <none>           <none>
+istio-cni-node-m5l9p     1/1     Running   2 (63m ago)   46h   192.168.107.3   k3d-k8s-lab-server-0   <none>           <none>
+ztunnel-g8xb7            1/1     Running   0             9s    10.42.1.3       k3d-agent-0            <none>           <none>
+ztunnel-htqw5            1/1     Running   2 (63m ago)   46h   10.42.0.113     k3d-k8s-lab-server-0   <none>           <none>
 ```
 
 **What you should see.** `k3d-agent-0` joins as `Ready` within seconds. A second ztunnel pod and a second istio-cni pod start on it by themselves, because they're DaemonSets.
 
 ### 2. Deploy an app over both nodes
 
-```bash
-kubectl apply -f platform-engineering/manifests/20-ops-app.yaml -f platform-engineering/manifests/03-course-client.yaml
-kubectl -n course-ops rollout status deploy/web
-kubectl -n course-ops get pods -o wide
-kubectl -n shop exec deploy/course-client -- sh -c 'for i in $(seq 1 20); do curl -s -o /dev/null -w "%{http_code}\n" http://web.course-ops:8000/status/200; done' | sort | uniq -c
-kubectl -n istio-system logs -l app=ztunnel --since=1m --prefix | grep 'dst.workload="web' | tail -2
+```console
+$ kubectl apply -f platform-engineering/manifests/20-ops-app.yaml -f platform-engineering/manifests/03-course-client.yaml
+namespace/course-ops created
+deployment.apps/web created
+service/web created
+serviceaccount/course-client unchanged
+deployment.apps/course-client unchanged
+
+$ kubectl -n course-ops rollout status deploy/web
+deployment "web" successfully rolled out
+
+$ kubectl -n course-ops get pods -o wide
+NAME                  READY   STATUS    RESTARTS   AGE   IP           NODE                   NOMINATED NODE   READINESS GATES
+web-55b5479f8-2pgn7   1/1     Running   0          8s    10.42.0.28   k3d-k8s-lab-server-0   <none>           <none>
+web-55b5479f8-xgmp8   1/1     Running   0          8s    10.42.1.4    k3d-agent-0            <none>           <none>
+
+$ kubectl -n shop exec deploy/course-client -- sh -c 'for i in $(seq 1 20); do curl -s -o /dev/null -w "%{http_code}\n" http://web.course-ops:8000/status/200; done' | sort | uniq -c
+  20 200
+
+$ kubectl -n istio-system logs -l app=ztunnel --since=1m --prefix | grep 'dst.workload="web' | tail -2
+[pod/ztunnel-g8xb7/istio-proxy] 2026-11-15T11:05:58.431546Z	info	access	connection complete	src.addr=10.42.0.153:51130 src.workload="course-client-595cccd86c-c7gmd" src.namespace="shop" src.identity="spiffe://cluster.local/ns/shop/sa/course-client" dst.addr=10.42.1.4:15008 dst.hbone_addr=10.42.1.4:8080 dst.service="web.course-ops.svc.cluster.local" dst.workload="web-55b5479f8-xgmp8" dst.namespace="course-ops" dst.identity="spiffe://cluster.local/ns/course-ops/sa/default" direction="inbound" bytes_sent=188 bytes_recv=93 duration="2ms"
+[pod/ztunnel-g8xb7/istio-proxy] 2026-11-15T11:05:58.529252Z	info	access	connection complete	src.addr=10.42.0.153:51130 src.workload="course-client-595cccd86c-c7gmd" src.namespace="shop" src.identity="spiffe://cluster.local/ns/shop/sa/course-client" dst.addr=10.42.1.4:15008 dst.hbone_addr=10.42.1.4:8080 dst.service="web.course-ops.svc.cluster.local" dst.workload="web-55b5479f8-xgmp8" dst.namespace="course-ops" dst.identity="spiffe://cluster.local/ns/course-ops/sa/default" direction="inbound" bytes_sent=188 bytes_recv=93 duration="21ms"
 ```
 
 **What you should see.** You see one `web` pod per node and 20 times `200`. You also see log lines from the ztunnel pods on both nodes. Traffic to the pod on `k3d-agent-0` arrives through the ztunnel on that node.
@@ -110,30 +154,74 @@ kubectl -n istio-system logs -l app=ztunnel --since=1m --prefix | grep 'dst.work
 
 In a second terminal, send a request every 0.1 seconds and print anything that isn't a `200`:
 
-```bash
-kubectl -n shop exec deploy/course-client -- sh -c 'while true; do c=$(curl -s -o /dev/null -m 3 -w "%{http_code}" http://web.course-ops:8000/status/200); [ "$c" = 200 ] || echo "$(date +%T) $c"; sleep 0.1; done'
+```console
+$ kubectl -n shop exec deploy/course-client -- sh -c 'while true; do c=$(curl -s -o /dev/null -m 3 -w "%{http_code}" http://web.course-ops:8000/status/200); [ "$c" = 200 ] || echo "$(date +%T) $c"; sleep 0.1; done'
+11:06:08 000
 ```
+
+The loop runs until you press Ctrl-C. It prints only failed requests. During the whole drain in step 3 below, it printed the single line above.
 
 Back in the first terminal:
 
-```bash
-kubectl apply -f platform-engineering/manifests/20-pdb.yaml
-kubectl drain k3d-agent-0 --ignore-daemonsets --delete-emptydir-data
-kubectl -n course-ops get pods -o wide
+```console
+$ kubectl apply -f platform-engineering/manifests/20-pdb.yaml
+poddisruptionbudget.policy/web created
+
+$ kubectl drain k3d-agent-0 --ignore-daemonsets --delete-emptydir-data
+node/k3d-agent-0 cordoned
+Warning: ignoring DaemonSet-managed Pods: istio-system/istio-cni-node-8fjgz, istio-system/ztunnel-g8xb7, kube-system/svclb-shop-gateway-istio-e733c05f-vnb4k
+evicting pod course-ops/web-55b5479f8-xgmp8
+pod/web-55b5479f8-xgmp8 evicted
+node/k3d-agent-0 drained
+
+$ kubectl -n course-ops get pods -o wide
+NAME                  READY   STATUS    RESTARTS   AGE   IP           NODE                   NOMINATED NODE   READINESS GATES
+web-55b5479f8-2pgn7   1/1     Running   0          21s   10.42.0.28   k3d-k8s-lab-server-0   <none>           <none>
+web-55b5479f8-tlvgb   1/1     Running   0          1s    10.42.0.29   k3d-k8s-lab-server-0   <none>           <none>
 ```
 
-**What you should see.** The drain evicts the `web` pod on the agent node in about two seconds. A replacement starts on the server node, and the second terminal prints nothing. In the test run, 348 requests passed during the drain without a single failure.
+**What you should see.** The drain evicts the `web` pod on the agent node in about two seconds. A replacement starts on the server node, and the second terminal prints little or nothing. In one test run, 348 requests passed during the drain without a single failure. In the run above, one request got `000` at the moment the pod left, the only failure.
 
 ### 4. Uncordon, and a budget that blocks you
 
-```bash
-kubectl uncordon k3d-agent-0
-kubectl -n course-ops get pods -o wide            # both pods stay where they are
-kubectl -n course-ops rollout restart deploy/web
-kubectl -n course-ops rollout status deploy/web
-kubectl -n course-ops get pods -o wide            # spread again, maybe both on one node
-kubectl apply -f platform-engineering/manifests/20-pdb-too-strict.yaml
-kubectl drain k3d-agent-0 --ignore-daemonsets --delete-emptydir-data --timeout=30s
+```console
+$ kubectl uncordon k3d-agent-0
+node/k3d-agent-0 uncordoned
+
+$ kubectl -n course-ops get pods -o wide            # both pods stay where they are
+NAME                  READY   STATUS    RESTARTS   AGE   IP           NODE                   NOMINATED NODE   READINESS GATES
+web-55b5479f8-2pgn7   1/1     Running   0          22s   10.42.0.28   k3d-k8s-lab-server-0   <none>           <none>
+web-55b5479f8-tlvgb   1/1     Running   0          2s    10.42.0.29   k3d-k8s-lab-server-0   <none>           <none>
+
+$ kubectl -n course-ops rollout restart deploy/web
+deployment.apps/web restarted
+
+$ kubectl -n course-ops rollout status deploy/web
+deployment "web" successfully rolled out
+
+$ kubectl -n course-ops get pods -o wide            # spread again, maybe both on one node
+NAME                   READY   STATUS    RESTARTS   AGE   IP          NODE          NOMINATED NODE   READINESS GATES
+web-5654b8f5d5-r6ws5   1/1     Running   0          8s    10.42.1.5   k3d-agent-0   <none>           <none>
+web-5654b8f5d5-rbc9t   1/1     Running   0          7s    10.42.1.6   k3d-agent-0   <none>           <none>
+
+$ kubectl apply -f platform-engineering/manifests/20-pdb-too-strict.yaml
+poddisruptionbudget.policy/web configured
+
+$ kubectl drain k3d-agent-0 --ignore-daemonsets --delete-emptydir-data --timeout=30s
+node/k3d-agent-0 cordoned
+Warning: ignoring DaemonSet-managed Pods: istio-system/istio-cni-node-8fjgz, istio-system/ztunnel-g8xb7, kube-system/svclb-shop-gateway-istio-e733c05f-vnb4k
+evicting pod course-ops/web-5654b8f5d5-rbc9t
+evicting pod course-ops/web-5654b8f5d5-r6ws5
+error when evicting pods/"web-5654b8f5d5-r6ws5" -n "course-ops" (will retry after 5s): Cannot evict pod as it would violate the pod's disruption budget.
+error when evicting pods/"web-5654b8f5d5-rbc9t" -n "course-ops" (will retry after 5s): Cannot evict pod as it would violate the pod's disruption budget.
+evicting pod course-ops/web-5654b8f5d5-rbc9t
+evicting pod course-ops/web-5654b8f5d5-r6ws5
+...
+error: unable to drain node "k3d-agent-0" due to error: [error when evicting pods/"web-5654b8f5d5-r6ws5" -n "course-ops": global timeout reached: 30s, error when evicting pods/"web-5654b8f5d5-rbc9t" -n "course-ops": global timeout reached: 30s], continuing command...
+There are pending nodes to be drained:
+ k3d-agent-0
+error when evicting pods/"web-5654b8f5d5-r6ws5" -n "course-ops": global timeout reached: 30s
+error when evicting pods/"web-5654b8f5d5-rbc9t" -n "course-ops": global timeout reached: 30s
 ```
 
 **What you should see.** After the uncordon, nothing moves. After the restart, the pods spread out again. In the test run, both pods landed on the agent node. During the rollout, the old pods still counted, and `ScheduleAnyway` let the scheduler break the spread.
@@ -144,40 +232,104 @@ If no `web` pod sits on the agent node after the restart, the drain finishes at 
 
 Put the sensible budget back:
 
-```bash
-kubectl apply -f platform-engineering/manifests/20-pdb.yaml
+```console
+$ kubectl apply -f platform-engineering/manifests/20-pdb.yaml
+poddisruptionbudget.policy/web configured
 ```
 
 ### 5. Jobs and ReplicaSets that pile up
 
-```bash
-kubectl apply -f platform-engineering/manifests/20-job-ttl.yaml
-kubectl -n course-ops get jobs -w          # Complete, then gone after 30 s. Ctrl-C
-kubectl get rs -A | awk '$3==0' | wc -l     # ReplicaSets scaled to 0, kept for rollbacks
-kubectl get deploy -A -o custom-columns=NAME:.metadata.name,HISTORY:.spec.revisionHistoryLimit | head
+```console
+$ kubectl apply -f platform-engineering/manifests/20-job-ttl.yaml
+job.batch/nightly-report created
+
+$ kubectl -n course-ops get jobs -w          # Complete, then gone after 30 s. Ctrl-C
+NAME             STATUS     COMPLETIONS   DURATION   AGE
+nightly-report   Complete   1/1           4s         8s
+nightly-report   Complete   1/1           4s         34s
+nightly-report   Complete   1/1           4s         34s
+
+$ kubectl get rs -A | awk '$3==0' | wc -l     # ReplicaSets scaled to 0, kept for rollbacks
+       9
+
+$ kubectl get deploy -A -o custom-columns=NAME:.metadata.name,HISTORY:.spec.revisionHistoryLimit | head
+NAME                                       HISTORY
+argocd-applicationset-controller           3
+argocd-redis                               3
+argocd-repo-server                         3
+argocd-server                              3
+cert-manager                               10
+cert-manager-cainjector                    10
+cert-manager-webhook                       10
+web                                        10
+headlamp                                   10
 ```
 
-**What you should see.** The Job disappears 30 seconds after it finishes. Dozens of ReplicaSets sit at 0 replicas, because most Deployments keep the default 10 old versions.
+The `-w` watch keeps running until you press Ctrl-C. The transcript shows it until the Job was gone.
+
+**What you should see.** The Job disappears 30 seconds after it finishes. Old ReplicaSets sit at 0 replicas, because most Deployments keep the default 10 old versions. The count grows with every rollout: 9 on the freshly restarted lab above, dozens on a lab that has run for weeks.
 
 ### 6. Images on the node
 
-```bash
-docker exec k3d-agent-0 crictl images
-docker exec k3d-agent-0 sh -c 'du -sh /var/lib/rancher/k3s/agent/containerd'
-docker exec k3d-agent-0 crictl rmi --prune
-docker exec k3d-agent-0 crictl images
+```console
+$ docker exec k3d-agent-0 crictl images
+IMAGE                              TAG                 IMAGE ID            SIZE
+docker.io/istio/install-cni        1.24.2-distroless   4afcfac315da2       39.7MB
+docker.io/istio/ztunnel            1.24.2              3af94ab8fad8d       49.7MB
+docker.io/k8s-lab/assistant        1.1.0               fbc1eaeb0083c       66.3MB
+docker.io/k8s-lab/backend          1.0.3               54afe50f93cfe       63.1MB
+docker.io/k8s-lab/frontend         1.0.3               1522fce472dd3       63.1MB
+docker.io/mccutchen/go-httpbin     v2.15.0             6ff856710c2d2       15.8MB
+docker.io/rancher/klipper-lb       v0.4.9              8e8709f8caae6       5.68MB
+docker.io/rancher/mirrored-pause   3.6                 7d46a07936af9       253kB
+
+$ docker exec k3d-agent-0 sh -c 'du -sh /var/lib/rancher/k3s/agent/containerd'
+1.1G	/var/lib/rancher/k3s/agent/containerd
+
+$ docker exec k3d-agent-0 crictl rmi --prune
+Deleted: docker.io/k8s-lab/backend:1.0.3
+Deleted: docker.io/k8s-lab/frontend:1.0.3
+Deleted: docker.io/k8s-lab/assistant:1.1.0
+
+$ docker exec k3d-agent-0 crictl images
+IMAGE                              TAG                 IMAGE ID            SIZE
+docker.io/istio/install-cni        1.24.2-distroless   4afcfac315da2       39.7MB
+docker.io/istio/ztunnel            1.24.2              3af94ab8fad8d       49.7MB
+docker.io/mccutchen/go-httpbin     v2.15.0             6ff856710c2d2       15.8MB
+docker.io/rancher/klipper-lb       v0.4.9              8e8709f8caae6       5.68MB
+docker.io/rancher/mirrored-pause   3.6                 7d46a07936af9       253kB
 ```
 
-**What you should see.** In the test run, `crictl rmi --prune` cut the agent node from 1.1 GB to 459 MB. Look at what it deleted: `k8s-lab/frontend` and `k8s-lab/assistant`. Nothing on that node ran them, so the prune treated them as unused. Those images came from `k3d image import`, not from a registry. So if a frontend pod now lands on this node, it fails with `ErrImageNeverPull` or `ImagePullBackOff`. Pruning is safe with a registry and risky without one.
+**What you should see.** In the test run, `crictl rmi --prune` cut the agent node from 1.1 GB to 459 MB. Look at what it deleted: `k8s-lab/frontend` and `k8s-lab/assistant`, and in the run above `k8s-lab/backend` too. Nothing on that node ran them, so the prune treated them as unused. Those images came from `k3d image import`, not from a registry. So if a frontend pod now lands on this node, it fails with `ErrImageNeverPull` or `ImagePullBackOff`. Pruning is safe with a registry and risky without one.
 
 ### 7. Remove the node
 
-```bash
-kubectl drain k3d-agent-0 --ignore-daemonsets --delete-emptydir-data
-k3d node delete k3d-agent-0
-kubectl get nodes                  # still listed, soon NotReady
-kubectl delete node k3d-agent-0
-kubectl get nodes
+```console
+$ kubectl drain k3d-agent-0 --ignore-daemonsets --delete-emptydir-data
+node/k3d-agent-0 already cordoned
+Warning: ignoring DaemonSet-managed Pods: istio-system/istio-cni-node-8fjgz, istio-system/ztunnel-g8xb7, kube-system/svclb-shop-gateway-istio-e733c05f-vnb4k
+evicting pod course-ops/web-5654b8f5d5-rbc9t
+evicting pod course-ops/web-5654b8f5d5-r6ws5
+error when evicting pods/"web-5654b8f5d5-rbc9t" -n "course-ops" (will retry after 5s): Cannot evict pod as it would violate the pod's disruption budget.
+pod/web-5654b8f5d5-r6ws5 evicted
+evicting pod course-ops/web-5654b8f5d5-rbc9t
+pod/web-5654b8f5d5-rbc9t evicted
+node/k3d-agent-0 drained
+
+$ k3d node delete k3d-agent-0
+INFO[0000] Successfully deleted 1 node(s)!
+
+$ kubectl get nodes                  # still listed, soon NotReady
+NAME                   STATUS                     ROLES                  AGE     VERSION
+k3d-agent-0            Ready,SchedulingDisabled   <none>                 2m10s   v1.31.5+k3s1
+k3d-k8s-lab-server-0   Ready                      control-plane,master   46h     v1.31.5+k3s1
+
+$ kubectl delete node k3d-agent-0
+node "k3d-agent-0" deleted
+
+$ kubectl get nodes
+NAME                   STATUS   ROLES                  AGE   VERSION
+k3d-k8s-lab-server-0   Ready    control-plane,master   46h   v1.31.5+k3s1
 ```
 
 **What you should see.** After `k3d node delete`, the machine is gone, but Kubernetes keeps listing the node. After about 40 seconds, the node shows `NotReady`. Only `kubectl delete node` removes it. Cloud providers do this step for you through their cloud controller. On bare metal and in k3d, you do it yourself.
@@ -207,8 +359,13 @@ kubectl get nodes
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh
+```console
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 This deletes the `course-ops` namespace and, if it still exists, drains and removes the agent node.
