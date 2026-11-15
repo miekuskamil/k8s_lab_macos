@@ -124,100 +124,214 @@ The Istio team recommends an optional extra step. Run the **new** version's prec
 
 In the second terminal, send a request every 0.1 seconds and print anything that isn't a `200`:
 
-```bash
-while true; do c=$(curl -s -o /dev/null -m 3 -w '%{http_code}' http://localhost:8080/api/orders); [ "$c" = 200 ] || echo "$(date +%T) $c"; sleep 0.1; done
+```console
+$ while true; do c=$(curl -s -o /dev/null -m 3 -w '%{http_code}' http://localhost:8080/api/orders); [ "$c" = 200 ] || echo "$(date +%T) $c"; sleep 0.1; done
+11:14:49 000
+11:14:49 000
+11:14:50 000
+11:14:50 000
+...
+11:14:53 000
+11:14:53 000
 ```
+
+The loop runs until you press Ctrl-C and prints only failed requests. The transcript shows what it printed during the whole upgrade: 27 lines of `000`, all within four seconds while the gateway moved in step 6.
 
 Back in the first terminal, make sure module 7's sidecar namespace exists, so you upgrade a sidecar too:
 
-```bash
-kubectl apply -f platform-engineering/manifests/07-sidecar-namespace.yaml -f platform-engineering/manifests/07-sidecar-apps.yaml
-helm repo update istio
-helm -n istio-system list
+```console
+$ kubectl apply -f platform-engineering/manifests/07-sidecar-namespace.yaml -f platform-engineering/manifests/07-sidecar-apps.yaml
+namespace/course-sidecar created
+serviceaccount/httpbin created
+serviceaccount/client created
+deployment.apps/httpbin created
+service/httpbin created
+deployment.apps/client created
+
+$ helm repo update istio
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "istio" chart repository
+Update Complete. ⎈Happy Helming!⎈
+
+$ helm -n istio-system list
+NAME      	NAMESPACE   	REVISION	UPDATED                             	STATUS  	CHART         	APP VERSION
+istio-base	istio-system	1       	2026-11-15 11:11:18.064196 +0000 UTC	deployed	base-1.24.2   	1.24.2
+istio-cni 	istio-system	1       	2026-11-15 11:11:24.918523 +0000 UTC	deployed	cni-1.24.2    	1.24.2
+istiod    	istio-system	1       	2026-11-15 11:11:18.778544 +0000 UTC	deployed	istiod-1.24.2 	1.24.2
+ztunnel   	istio-system	1       	2026-11-15 11:11:32.905379 +0000 UTC	deployed	ztunnel-1.24.2	1.24.2
 ```
 
 **What you should see.** Four releases, `istio-base`, `istiod`, `istio-cni` and `ztunnel`, all on 1.24.2.
 
 ### 1. Upgrade the CRDs
 
-```bash
-helm upgrade istio-base istio/base -n istio-system --version 1.25.5 \
+```console
+$ helm upgrade istio-base istio/base -n istio-system --version 1.25.5 \
   -f helm/istio-base-values.yaml --force-conflicts --wait
+Release "istio-base" has been upgraded. Happy Helming!
+NAME: istio-base
+LAST DEPLOYED: Sun Nov 15 11:13:58 2026
+NAMESPACE: istio-system
+STATUS: deployed
+REVISION: 2
+DESCRIPTION: Upgrade complete
+TEST SUITE: None
+...
 ```
 
 ### 2. Install the new control plane as a canary
 
-```bash
-helm install istiod-1-25-5 istio/istiod -n istio-system --version 1.25.5 \
+```console
+$ helm install istiod-1-25-5 istio/istiod -n istio-system --version 1.25.5 \
   --set revision=1-25-5 --set profile=ambient --set global.platform=k3s \
   -f helm/istiod-values.yaml --wait
-kubectl -n istio-system get deploy -l app=istiod -L istio.io/rev
-istioctl proxy-status
+NAME: istiod-1-25-5
+LAST DEPLOYED: Sun Nov 15 11:13:59 2026
+NAMESPACE: istio-system
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
+NOTES:
+...
+
+$ kubectl -n istio-system get deploy -l app=istiod -L istio.io/rev
+NAME            READY   UP-TO-DATE   AVAILABLE   AGE     REV
+istiod          1/1     1            1           2m46s   default
+istiod-1-25-5   1/1     1            1           4s      1-25-5
+
+$ istioctl proxy-status
+NAME                                                 CLUSTER        ISTIOD                    VERSION     SUBSCRIBED TYPES
+client-588f9f56c-j2p7b.course-sidecar                Kubernetes     istiod-5c5bf76f-7c8wc     1.24.2      4 (CDS,LDS,EDS,RDS)
+httpbin-fb884c77d-fj6zz.course-sidecar               Kubernetes     istiod-5c5bf76f-7c8wc     1.24.2      4 (CDS,LDS,EDS,RDS)
+shop-gateway-istio-858774d7cd-4j2bb.shop-ingress     Kubernetes     istiod-5c5bf76f-7c8wc     1.24.2      4 (CDS,LDS,EDS,RDS)
+waypoint-b9b76876f-979z8.shop                        Kubernetes     istiod-5c5bf76f-7c8wc     1.24.2      4 (CDS,LDS,EDS,WDS)
+ztunnel-sc9gw.istio-system                           Kubernetes     istiod-5c5bf76f-7c8wc     1.24.2      2 (WADS,WDS)
 ```
 
 **What you should see.** Two istiod Deployments, `default` and `1-25-5`. `proxy-status` asks the default control plane. It still lists the waypoint, the gateway, ztunnel and the sidecars, because nothing moved yet. The second terminal stays quiet.
 
 ### 3. Upgrade istio-cni in place
 
-```bash
-BIN=$(helm -n istio-system get values istio-cni -o json | python3 -c 'import json,sys; print(json.load(sys.stdin)["cni"]["cniBinDir"])')
-helm upgrade istio-cni istio/cni -n istio-system --version 1.25.5 \
+```console
+$ BIN=$(helm -n istio-system get values istio-cni -o json | python3 -c 'import json,sys; print(json.load(sys.stdin)["cni"]["cniBinDir"])')
+$ helm upgrade istio-cni istio/cni -n istio-system --version 1.25.5 \
   -f helm/istio-cni-values.yaml --set global.platform=k3s --set cni.cniBinDir="$BIN" \
   --force-conflicts --wait
+I1115 11:14:05.161558   79247 warnings.go:107] "Warning: spec.template.metadata.annotations[container.apparmor.security.beta.kubernetes.io/install-cni]: deprecated since v1.30; use the \"appArmorProfile\" field instead"
+Release "istio-cni" has been upgraded. Happy Helming!
+NAME: istio-cni
+LAST DEPLOYED: Sun Nov 15 11:14:04 2026
+NAMESPACE: istio-system
+STATUS: deployed
+REVISION: 2
+DESCRIPTION: Upgrade complete
+TEST SUITE: None
+...
 ```
 
 The first line reuses the plugin directory that `provision.sh` detected on your node.
 
 ### 4. Upgrade ztunnel in place
 
-```bash
-helm upgrade ztunnel istio/ztunnel -n istio-system --version 1.25.5 \
+```console
+$ helm upgrade ztunnel istio/ztunnel -n istio-system --version 1.25.5 \
   -f helm/ztunnel-values.yaml --set revision=1-25-5 --force-conflicts --wait
-istioctl proxy-status --revision 1-25-5
+Release "ztunnel" has been upgraded. Happy Helming!
+NAME: ztunnel
+LAST DEPLOYED: Sun Nov 15 11:14:10 2026
+NAMESPACE: istio-system
+STATUS: deployed
+REVISION: 2
+DESCRIPTION: Upgrade complete
+TEST SUITE: None
+...
+
+$ istioctl proxy-status --revision 1-25-5
+NAME                           CLUSTER        ISTIOD                             VERSION     SUBSCRIBED TYPES
+ztunnel-gvwj2.istio-system     Kubernetes     istiod-1-25-5-5f55c969bc-8bdcf     1.25.5      2 (WADS,WDS)
 ```
 
 **What you should see.** ztunnel now reports to `istiod-1-25-5` with version 1.25.5. Watch the second terminal. In the test run for this module, it stayed silent. Every request is a short new connection, and the restart took well under a second. Long-lived connections would have reset, for example a database pool or a WebSocket.
 
 ### 5. Move the waypoint
 
-```bash
-kubectl -n shop label gateway waypoint istio.io/rev=1-25-5
-kubectl -n shop rollout status deploy/waypoint
-istioctl proxy-status --revision 1-25-5
+```console
+$ kubectl -n shop label gateway waypoint istio.io/rev=1-25-5
+gateway.gateway.networking.k8s.io/waypoint labeled
+
+$ kubectl -n shop rollout status deploy/waypoint
+deployment "waypoint" successfully rolled out
+
+$ istioctl proxy-status --revision 1-25-5
+NAME                               CLUSTER        ISTIOD                             VERSION     SUBSCRIBED TYPES
+waypoint-6685b8ddd4-xlhv6.shop     Kubernetes     istiod-1-25-5-5f55c969bc-8bdcf     1.25.5      4 (CDS,LDS,EDS,WDS)
+ztunnel-gvwj2.istio-system         Kubernetes     istiod-1-25-5-5f55c969bc-8bdcf     1.25.5      2 (WADS,WDS)
 ```
 
 **What you should see.** The waypoint now shows up under the new revision with version 1.25.5. Istio rolled its Deployment the moment the label changed.
 
 ### 6. Move the ingress gateway
 
-```bash
-kubectl -n shop-ingress label gateway shop-gateway istio.io/rev=1-25-5
-kubectl -n shop-ingress rollout status deploy/shop-gateway-istio
+```console
+$ kubectl -n shop-ingress label gateway shop-gateway istio.io/rev=1-25-5
+gateway.gateway.networking.k8s.io/shop-gateway labeled
+
+$ kubectl -n shop-ingress rollout status deploy/shop-gateway-istio
+deployment "shop-gateway-istio" successfully rolled out
 ```
 
-**What you should see.** This time the second terminal prints a burst of `000` lines, about two seconds' worth. In the test run for this module, 17 out of 1,563 requests failed here, and nowhere else. The gateway runs a single replica. For a moment, the load balancer had no ready pod to send new connections to. To avoid this gap, production gateways run at least two replicas with a PodDisruptionBudget.
+**What you should see.** This time the second terminal prints a burst of `000` lines, two to four seconds' worth. In the test runs for this module, 17 out of 1,563 requests failed here in one run and 27 in another, and nowhere else. The gateway runs a single replica. For a moment, the load balancer had no ready pod to send new connections to. To avoid this gap, production gateways run at least two replicas with a PodDisruptionBudget.
 
 ### 7. Move the sidecars
 
-```bash
-kubectl label ns course-sidecar istio-injection- istio.io/rev=1-25-5
-kubectl -n course-sidecar get pods -o jsonpath='{range .items[*]}{.metadata.name} {.spec.containers[1].image}{"\n"}{end}'
-kubectl -n course-sidecar rollout restart deploy
-kubectl -n course-sidecar rollout status deploy/client
-kubectl -n course-sidecar get pods -o jsonpath='{range .items[*]}{.metadata.name} {.spec.containers[1].image}{"\n"}{end}'
-istioctl proxy-status
+```console
+$ kubectl label ns course-sidecar istio-injection- istio.io/rev=1-25-5
+namespace/course-sidecar unlabeled
+
+$ kubectl -n course-sidecar get pods -o jsonpath='{range .items[*]}{.metadata.name} {.spec.containers[1].image}{"\n"}{end}'
+client-588f9f56c-j2p7b docker.io/istio/proxyv2:1.24.2-distroless
+httpbin-fb884c77d-fj6zz docker.io/istio/proxyv2:1.24.2-distroless
+
+$ kubectl -n course-sidecar rollout restart deploy
+deployment.apps/client restarted
+deployment.apps/httpbin restarted
+
+$ kubectl -n course-sidecar rollout status deploy/client
+deployment "client" successfully rolled out
+
+$ kubectl -n course-sidecar get pods -o jsonpath='{range .items[*]}{.metadata.name} {.spec.containers[1].image}{"\n"}{end}'
+client-588f9f56c-j2p7b docker.io/istio/proxyv2:1.24.2-distroless
+client-686495b75f-t8wgr docker.io/istio/proxyv2:1.25.5-distroless
+httpbin-7b4756dc58-9rgnl docker.io/istio/proxyv2:1.25.5-distroless
+
+$ istioctl proxy-status
+NAME     CLUSTER     ISTIOD     VERSION     SUBSCRIBED TYPES
 ```
 
 **What you should see.** The label alone changes nothing, and the pods keep `proxyv2:1.24.2`. After the restart they carry `proxyv2:1.25.5`. Give the old pods a few seconds to go. Then `istioctl proxy-status`, which asks the old control plane, lists nothing at all.
 
 ### 8. Point the defaults at the new control plane
 
-```bash
-helm template istiod istio/istiod --version 1.25.5 -s templates/revision-tags.yaml \
+```console
+$ helm template istiod istio/istiod --version 1.25.5 -s templates/revision-tags.yaml \
   --set revisionTags="{default}" --set revision=1-25-5 -n istio-system | kubectl apply -f -
-helm upgrade istio-base istio/base -n istio-system --version 1.25.5 \
+mutatingwebhookconfiguration.admissionregistration.k8s.io/istio-revision-tag-default created
+
+$ helm upgrade istio-base istio/base -n istio-system --version 1.25.5 \
   -f helm/istio-base-values.yaml --set defaultRevision=1-25-5 --force-conflicts --wait
-kubectl get validatingwebhookconfiguration istiod-default-validator -o jsonpath='{.webhooks[0].clientConfig.service.name}{"\n"}'
+Release "istio-base" has been upgraded. Happy Helming!
+NAME: istio-base
+LAST DEPLOYED: Sun Nov 15 11:15:48 2026
+NAMESPACE: istio-system
+STATUS: deployed
+REVISION: 3
+DESCRIPTION: Upgrade complete
+TEST SUITE: None
+...
+
+$ kubectl get validatingwebhookconfiguration istiod-default-validator -o jsonpath='{.webhooks[0].clientConfig.service.name}{"\n"}'
+istiod-1-25-5
 ```
 
 **What you should see.** `istiod-1-25-5`. The two commands do different jobs:
@@ -227,10 +341,17 @@ kubectl get validatingwebhookconfiguration istiod-default-validator -o jsonpath=
 
 ### 9. Remove the old control plane
 
-```bash
-helm -n istio-system delete istiod
-kubectl -n istio-system get deploy -l app=istiod
-kubectl apply --dry-run=server -f platform-engineering/manifests/12-serviceentry.yaml
+```console
+$ helm -n istio-system delete istiod
+release "istiod" uninstalled
+
+$ kubectl -n istio-system get deploy -l app=istiod
+NAME            READY   UP-TO-DATE   AVAILABLE   AGE
+istiod-1-25-5   1/1     1            1           109s
+
+$ kubectl apply --dry-run=server -f platform-engineering/manifests/12-serviceentry.yaml
+serviceentry.networking.istio.io/httpbin-org created (server dry run)
+destinationrule.networking.istio.io/httpbin-org-tls created (server dry run)
 ```
 
 **What you should see.** Only `istiod-1-25-5` is left. The dry run succeeds, so Istio still validates new resources. Stop the traffic loop with Ctrl-C. The upgrade is done.
@@ -265,6 +386,21 @@ The lab installs Istio with Helm. [Module 32](32-installing-istio.md) installs i
 
 Nothing to clean up: the upgrade stays. To return to Istio 1.24.2 for the rest of the course, rebuild the lab:
 
-```bash
-./scripts/teardown.sh --yes && ./scripts/provision.sh
+```console
+$ ./scripts/teardown.sh --yes && ./scripts/provision.sh
+INFO[0000] Deleting cluster 'k8s-lab'
+INFO[0002] Deleting cluster network 'k3d-k8s-lab'
+INFO[0002] Deleting 1 attached volumes...
+INFO[0002] Removing cluster details from default kubeconfig...
+INFO[0002] Removing standalone kubeconfig file (if there is one)...
+INFO[0002] Successfully deleted cluster k8s-lab!
+...
+Cluster ports
+  ingress gateway 8080, frontend 3000, backend 8000, redis 6379,
+  HBONE tunnel 15008, ztunnel metrics 15020, istiod xDS 15012, istiod metrics 15014
+
+Next steps
+  ./scripts/traffic-test.sh 200                 send 200 requests and print the version split
+  kubectl apply -f manifests/scenarios/a-canary-httproute.yaml
+  see docs/lab-guide.md for scenarios B and C, and platform-engineering/README.md for the Kubernetes Platform Engineering course
 ```
