@@ -47,14 +47,25 @@ grep -nE "\b(can|cannot|can't|could)\b|—|–" platform-engineering/NN-*.md
 grep -nE "\b(is|are|was|were|be|been|being) [a-z]+ed\b" platform-engineering/NN-*.md
 ```
 
-**Explain, don't compress.** The course follows the ByteByteGo newsletter's style. A paragraph that names eight components in four correct sentences teaches nothing.
+**Explain, don't compress, and connect.** The course follows the ByteByteGo newsletter's style: a good engineer explaining to a colleague, as a story that reasons its way forward. A paragraph that names eight components in four correct sentences teaches nothing, and a run of short disconnected sentences teaches nothing either.
 
-- Problem first, then the name: say what goes wrong or what is needed, then the tool that fixes it.
-- A process opens with a short numbered overview (3 to 7 steps, one actor and one action each), then goes deeper step by step.
-- One idea per sentence, no fragments, at most one new term per sentence. Define a term in plain words where it first appears ("X is a ... that ...").
-- More than about three technical names in a paragraph: cut the ones the point doesn't need, or give each its own sentence.
-- Give the why as a purpose clause ("so the reply finds its way back"), and one everyday comparison for each hard idea.
+- Problem first, then the mechanism, then the name: say what goes wrong or what is needed, how the fix works, and only then what it's called.
+- Write connected paragraphs. Sentences mostly 15 to 25 words, joined by the logic ("because", "so", "which means", "much like"). Avoid runs of sentences under 10 words; aim for fewer than one in five.
+- One new term per sentence at most, defined in plain words where it first appears. Explain a technical detail by its effect ("expires after a day, so a stolen one stops working quickly"), not by its label ("short-lived X.509").
+- Carry one worked example through a concept (for example the frontend calling the backend), and end the concept with what it means for the next step or module.
+- One everyday comparison for each hard idea ("like a passport carries the issuing country's stamp").
+- Don't personify components. Plain verbs: "the backend checks the caller", "the proxy rejects the call". Never "the backend wants to know" or "an IP address doesn't answer that question".
+- Never describe the page or its styling in the text ("the yellow box", "on a brown card"). Say what the reader gets.
+- Numbers only when the text uses them; no trivia. Calculations: intuition first, then a short walk-through in words with round numbers.
+- More than about three technical names in a paragraph: cut the ones the point doesn't need.
+- A process may still open with a short numbered overview (3 to 7 steps), but the explanation around it is connected prose.
 - Walk command output step by step, in the same order as the overview.
+
+Before and after, the target voice:
+
+> Before: "A pod needs a name that other pods trust, and the name must survive restarts. Kubernetes already gives every pod one: its ServiceAccount. A pod uses its ServiceAccount to prove who it is to the API server."
+>
+> After: "Before the backend serves an order, it should check which workload sent the request. Allowing every caller that reaches port 8000 is too loose for a service that holds customer orders. The pod's IP address is no good as proof of who is calling: pods restart and get new addresses all the time, so the IP the frontend used a minute ago may belong to a different pod now."
 
 **Values differ per run.** Quote real output, but never hard-code an IP or pod name in a command: look it up (`SVCIP=$(kubectl ... -o jsonpath=...)`). Say "in the test run" next to measured numbers.
 
