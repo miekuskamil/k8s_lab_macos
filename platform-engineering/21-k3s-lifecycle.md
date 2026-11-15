@@ -90,7 +90,7 @@ Pods that already run keep working, because CNI runs only when a sandbox starts 
 
 ## Why this way
 
-**Why stop k3s for a backup?** SQLite keeps recent changes in a write-ahead log (`state.db-wal`) next to the main file, so if you copy the files while k3s writes to them, the log and the main file in your backup may not match. While k3s is stopped, the three files (`state.db`, `-wal`, `-shm`) form a consistent set, while with etcd, `k3s etcd-snapshot save` takes a consistent snapshot while the cluster runs.
+**Why stop k3s for a backup?** SQLite keeps recent changes in a write-ahead log (`state.db-wal`) next to the main file, so if you copy the files while k3s writes to them, the log and the main file in your backup may not match. While k3s stays down, the three files (`state.db`, `-wal`, `-shm`) form a consistent set, while with etcd, `k3s etcd-snapshot save` takes a consistent snapshot while the cluster runs.
 
 **Why does a restore rewind everything?** The datastore holds every object, from Deployments and Secrets to ArgoCD's Applications, so restoring it puts the whole cluster back to the moment of the backup and anything created afterwards disappears. That's why GitOps matters too, because with this lab's config in Git, ArgoCD re-applies the desired state after a restore.
 
