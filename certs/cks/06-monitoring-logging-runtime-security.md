@@ -93,11 +93,12 @@ That profile, from task 5, pulls in the basic rules every program needs, allows 
 
 A profile works only once it's loaded into the kernel of the node that runs the pod. The sequence on the node is always the same:
 
-```bash
-apparmor_parser -Q /root/cks/cks-deny-write            # parse only: finds syntax errors, loads nothing
-cp /root/cks/cks-deny-write /etc/apparmor.d/           # the boot-time folder, so it survives a reboot
-apparmor_parser -r /etc/apparmor.d/cks-deny-write      # load it, or replace an older version
-aa-status | grep cks-deny-write                        # listed under "profiles are in enforce mode"
+```console
+root@cks-lima:~# apparmor_parser -Q /root/cks/cks-deny-write            # parse only: finds syntax errors, loads nothing
+root@cks-lima:~# cp /root/cks/cks-deny-write /etc/apparmor.d/           # the boot-time folder, so it survives a reboot
+root@cks-lima:~# apparmor_parser -r /etc/apparmor.d/cks-deny-write      # load it, or replace an older version
+root@cks-lima:~# aa-status | grep cks-deny-write                        # listed under "profiles are in enforce mode"
+   cks-deny-write
 ```
 
 A pod asks for a profile with `securityContext.appArmorProfile`. Its `type` is `RuntimeDefault` (the container runtime's default profile), `Localhost` (a profile loaded on the node, named in `localhostProfile`), or `Unconfined`. Before Kubernetes 1.30, an annotation did this job. The exam still shows old tasks with it, but write the field.
@@ -261,8 +262,11 @@ Real platform teams ship audit logs and Falco alerts off the node to a central s
 
 **Time budget:** 10 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 6.1
+```console
+$ ./certs/cks/task.sh setup 6.1
+== setup task 6.1
+secret/token created
+0
 ```
 
 > Turn on audit logging in the API server:
@@ -319,20 +323,38 @@ In the API server manifest, after a backup:
 
 When the API server is back, make a request and read the log:
 
-```bash
-k -n audit-me get secret token
-tail -1 /var/log/kubernetes/audit/audit.log | python3 -m json.tool | head -20
+```console
+root@cks-cp:~# k -n audit-me get secret token
+NAME    TYPE     DATA   AGE
+token   Opaque   1      47s
+root@cks-cp:~# tail -1 /var/log/kubernetes/audit/audit.log | python3 -m json.tool | head -20
+{
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1",
+    "level": "Metadata",
+    "auditID": "628cd862-0cb0-45ad-b3fc-70fd076e7d21",
+    "stage": "ResponseComplete",
+    "requestURI": "/api/v1/namespaces/audit-me/secrets/token",
+    "verb": "get",
+    "user": {
+        "username": "kubernetes-admin",
+        "groups": [
+            "kubeadm:cluster-admins",
+            "system:authenticated"
+        ],
+        "extra": {
+            "authentication.kubernetes.io/credential-id": [
+                "X509SHA256=97f9c84ba597c45dc5d5a74c174c4500e4168c67d3cb664da3bcf1e17c6ba026"
+            ]
+        }
+    },
 ```
 
 </details>
 
-```bash
-./certs/cks/task.sh check 6.1
-```
-
-The check makes three requests and looks for each one in the log. In the test run, after the solution:
-
-```
+```console
+$ ./certs/cks/task.sh check 6.1
+== check task 6.1
   PASS  --audit-policy-file is /etc/kubernetes/audit/policy.yaml
   PASS  --audit-log-path is /var/log/kubernetes/audit/audit.log
   PASS  --audit-log-maxage=30, maxbackup=10, maxsize=100
@@ -340,14 +362,21 @@ The check makes three requests and looks for each one in the log. In the test ru
   PASS  no Secret appears with its body
   PASS  a configmap create in audit-me appears at RequestResponse
   PASS  a configmap create in default does not appear
+== task 6.1: 7 passed, 0 failed
 ```
+
+The check makes three requests and looks for each one in the log.
 
 ## Task 2: Catch a shell with Falco
 
 **Time budget:** 8 minutes. **Host:** `cks-w1`.
 
-```bash
-./certs/cks/task.sh setup 6.2
+```console
+$ ./certs/cks/task.sh setup 6.2
+== setup task 6.2
+pod/target created
+pod/target condition met
+active
 ```
 
 > Write a Falco rule named `Shell in container (cks)` in `/etc/falco/rules.d/cks-shell.yaml`. It fires with priority `WARNING` whenever `sh`, `bash`, `ash` or `dash` starts in a container. Its output contains the namespace as `ns=<namespace>`, the pod as `pod=<pod>`, the user and the command line. Then open a shell in pod `target` in namespace `falco-test` and find the alert.
@@ -365,38 +394,39 @@ The check makes three requests and looks for each one in the log. In the test ru
 
 Save it, and Falco reloads by itself. Check the reload and fire the rule:
 
-```bash
-journalctl -u falco-modern-bpf -n 20 | grep cks-shell        # "schema validation: ok"
-k -n falco-test exec target -- sh -c 'echo hello'             # on cks-cp
-journalctl -u falco-modern-bpf --since -1min | grep 'ns=falco-test'
-```
-
-In the test run, the alert read:
-
-```
-Warning shell in container (time=00:27:32.006475786 user=root ns=falco-test pod=target container=target cmd=sh -c echo marker42)
+```console
+root@cks-w1:~# journalctl -u falco-modern-bpf -n 20 | grep cks-shell        # "schema validation: ok"
+Nov 15 15:17:26 cks-w1 falco[35575]:    /etc/falco/rules.d/cks-shell.yaml | schema validation: ok
+root@cks-cp:~# k -n falco-test exec target -- sh -c 'echo hello'             # on cks-cp
+hello
+root@cks-w1:~# journalctl -u falco-modern-bpf --since -1min | grep 'ns=falco-test'
+Nov 15 15:17:33 cks-w1 falco[35575]: 15:17:33.289362971: Warning shell in container (time=15:17:33.289362971 user=root ns=falco-test pod=target container=target cmd=sh -c echo hello) container_id=0d062466cf6a container_name=target container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=target k8s_ns_name=falco-test
 ```
 
 Falco's documentation, which the exam allows, lists every field under "Supported Fields". When a task asks for a format such as `%evt.time,%user.name,%proc.name`, copy it into `output` exactly.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 6.2
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 6.2
+== check task 6.2
   PASS  a rule named 'Shell in container (cks)' exists in /etc/falco/rules.d/
   PASS  falco accepts every rules file
   PASS  a shell in falco-test/target produces the alert with namespace, pod and command
+== task 6.2: 3 passed, 0 failed
 ```
 
 ## Task 3: Make a container immutable
 
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 6.3
+```console
+$ ./certs/cks/task.sh setup 6.3
+== setup task 6.3
+deployment.apps/web created
+service/web exposed
+Waiting for deployment "web" rollout to finish: 0 of 1 updated replicas are available...
+deployment "web" successfully rolled out
 ```
 
 > Deployment `web` in namespace `immutable` runs nginx. Make its container's root file system read-only. nginx must keep serving.
@@ -423,30 +453,39 @@ Falco's documentation, which the exam allows, lists every field under "Supported
 
 Without the volumes, nginx exits at start. In the test run, the pod went into `CrashLoopBackOff`, and its log said `mkdir() "/var/cache/nginx/client_temp" failed (30: Read-only file system)`. Prove both sides:
 
-```bash
-k -n immutable exec deploy/web -- touch /cks-was-here    # Read-only file system
-k -n immutable run t --rm -i --restart=Never --image=busybox:1.36 -- wget -qO- http://web | head -4
+```console
+root@cks-cp:~# k -n immutable exec deploy/web -- touch /cks-was-here    # Read-only file system
+touch: /cks-was-here: Read-only file system
+command terminated with exit code 1
+root@cks-cp:~# k -n immutable run t --rm -i --restart=Never --image=busybox:1.36 -- wget -qO- http://web | head -4
+All commands and output from this session will be recorded in container logs, including credentials and sensitive information passed through the command prompt.
+If you don't see a command prompt, try pressing enter.
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
 ```
 
 </details>
 
-```bash
-./certs/cks/task.sh check 6.3
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 6.3
+== check task 6.3
   PASS  container web has readOnlyRootFilesystem: true
   PASS  the Deployment's pod is Ready
   PASS  writing to / fails inside the pod
   PASS  nginx still serves on the Service
+== task 6.3: 4 passed, 0 failed
 ```
 
 ## Task 4: A seccomp profile
 
 **Time budget:** 6 minutes. **Hosts:** `cks-w1`, then `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 6.4
+```console
+$ ./certs/cks/task.sh setup 6.4
+== setup task 6.4
+-rw-r--r-- 1 root root 149 Nov 15 15:17 /root/cks/no-chmod.json
 ```
 
 > The seccomp profile `/root/cks/no-chmod.json` on `cks-w1` blocks the `chmod` family of syscalls. Install it where the kubelet finds it, as `profiles/no-chmod.json`. Then create pod `locked` in namespace `seccomp` on `cks-w1` with image `busybox:1.36` and command `sleep 1d`, using that profile.
@@ -456,9 +495,9 @@ k -n immutable run t --rm -i --restart=Never --image=busybox:1.36 -- wget -qO- h
 
 On `cks-w1`:
 
-```bash
-mkdir -p /var/lib/kubelet/seccomp/profiles
-cp /root/cks/no-chmod.json /var/lib/kubelet/seccomp/profiles/
+```console
+root@cks-w1:~# mkdir -p /var/lib/kubelet/seccomp/profiles
+root@cks-w1:~# cp /root/cks/no-chmod.json /var/lib/kubelet/seccomp/profiles/
 ```
 
 On `cks-cp`:
@@ -481,33 +520,37 @@ spec:
     command: [sleep, 1d]
 ```
 
-```bash
-k -n seccomp exec locked -- sh -c 'touch /tmp/f && chmod 600 /tmp/f'
+```console
+root@cks-cp:~# k -n seccomp exec locked -- sh -c 'touch /tmp/f && chmod 600 /tmp/f'
+chmod: /tmp/f: Operation not permitted
+command terminated with exit code 1
 ```
 
 In the test run, that printed `chmod: /tmp/f: Operation not permitted`, while writing the file worked. The path in `localhostProfile` is relative to `/var/lib/kubelet/seccomp/`. With a wrong path, the pod hangs in `CreateContainerError`, and the test run's message named the full path it tried: `cannot load seccomp profile "/var/lib/kubelet/seccomp/profiles/missing.json": open ...: no such file or directory`.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 6.4
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 6.4
+== check task 6.4
   PASS  the kubelet finds the profile at /var/lib/kubelet/seccomp/profiles/no-chmod.json
   PASS  pod locked in seccomp uses the Localhost profile profiles/no-chmod.json
   PASS  pod locked runs on cks-w1
   PASS  chmod fails inside pod locked
   PASS  other writes still work inside pod locked
+== task 6.4: 5 passed, 0 failed
 ```
 
 ## Task 5: An AppArmor profile
 
 **Time budget:** 7 minutes. **Host:** `cks-lima`.
 
-```bash
-./certs/cks/cluster/lima.sh start      # once, when the VM is off
-./certs/cks/task.sh setup 6.5
+```console
+$ ./certs/cks/cluster/lima.sh start      # once, when the VM is off
+cluster ready
+$ ./certs/cks/task.sh setup 6.5
+== setup task 6.5
+AppArmor parser error for /root/cks/cks-deny-write in profile /root/cks/cks-deny-write at line 6: syntax error, unexpected TOK_DENY, expecting TOK_ID or TOK_MODE or TOK_SET_VAR
 ```
 
 The setup writes a profile with a mistake and shows the parser's complaint. In the test run: `syntax error, unexpected TOK_DENY, expecting TOK_ID or TOK_MODE or TOK_SET_VAR`.
@@ -533,11 +576,13 @@ profile cks-deny-write flags=(attach_disconnected) {
 
 Then load it the way the theory shows:
 
-```bash
-apparmor_parser -Q /root/cks/cks-deny-write && echo parses
-cp /root/cks/cks-deny-write /etc/apparmor.d/
-apparmor_parser -r /etc/apparmor.d/cks-deny-write
-aa-status | grep cks-deny-write
+```console
+root@cks-lima:~# apparmor_parser -Q /root/cks/cks-deny-write && echo parses
+parses
+root@cks-lima:~# cp /root/cks/cks-deny-write /etc/apparmor.d/
+root@cks-lima:~# apparmor_parser -r /etc/apparmor.d/cks-deny-write
+root@cks-lima:~# aa-status | grep cks-deny-write
+   cks-deny-write
 ```
 
 The pod:
@@ -559,35 +604,45 @@ spec:
         localhostProfile: cks-deny-write
 ```
 
-```bash
-k -n apparmor logs writer
-k -n apparmor exec writer -- cat /proc/1/attr/current
+```console
+root@cks-lima:~# k -n apparmor logs writer
+sh: can't create /tmp/x: Permission denied
+root@cks-lima:~# k -n apparmor exec writer -- cat /proc/1/attr/current
+cks-deny-write (enforce)
 ```
 
 In the test run, the log said `sh: can't create /tmp/x: Permission denied`, and the process's AppArmor label read `cks-deny-write (enforce)`. The name in `localhostProfile` is the name after `profile` in the file, not the file name. Here both are `cks-deny-write`. Before Kubernetes 1.30, the annotation `container.apparmor.security.beta.kubernetes.io/<container>: localhost/<profile>` did this job. Old exam tasks still show it; write the field.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 6.5
-```
-
-In the test run, every check failed before the solution:
-
-```
+```console
+$ ./certs/cks/task.sh check 6.5
+== check task 6.5
   PASS  the profile in /root/cks/cks-deny-write parses and still denies every write
   PASS  profile cks-deny-write is loaded in enforce mode
   PASS  pod writer asks for the Localhost profile cks-deny-write
   PASS  pod writer runs, confined by the profile
   PASS  the write to /tmp/x was denied
+== task 6.5: 5 passed, 0 failed
 ```
+
+In the test run, every check failed before the solution.
 
 ## Task 6: Investigate an attack
 
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 6.6
+```console
+$ ./certs/cks/task.sh setup 6.6
+== setup task 6.6
+serviceaccount/ci-bot created
+serviceaccount/docs-bot created
+role.rbac.authorization.k8s.io/secret-admin created
+rolebinding.rbac.authorization.k8s.io/ci-bot-secrets created
+rolebinding.rbac.authorization.k8s.io/docs-bot-secrets created
+secret/prod-db created
+pod/nightly-cleanup created
+Error from server (NotFound): secrets "prod-db" not found
 ```
 
 The setup needs audit logging. When task 1 isn't done, it applies task 1's solution first.
@@ -600,55 +655,64 @@ The setup needs audit logging. When task 1 isn't done, it applies task 1's solut
 <details>
 <summary>Solution</summary>
 
-```bash
-grep '"verb":"delete"' /var/log/kubernetes/audit/audit.log | grep '"name":"prod-db"' | tail -1 | python3 -m json.tool
-```
-
-The entry in the test run, shortened:
-
-```json
+```console
+root@cks-cp:~# grep '"verb":"delete"' /var/log/kubernetes/audit/audit.log | grep '"name":"prod-db"' | tail -1 | python3 -m json.tool
+{
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1",
+    "level": "Metadata",
+    "auditID": "44486772-5b5f-4492-a70a-a0a2feadf0be",
+    "stage": "ResponseComplete",
+    "requestURI": "/api/v1/namespaces/team-x/secrets/prod-db",
     "verb": "delete",
     "user": {
         "username": "system:serviceaccount:team-x:ci-bot",
-        "extra": {
-            "authentication.kubernetes.io/node-name": ["cks-w1"],
-            "authentication.kubernetes.io/pod-name": ["nightly-cleanup"]
-        }
-    },
-    "sourceIPs": ["192.168.139.60"],
+...
+            "authentication.kubernetes.io/pod-name": [
+                "nightly-cleanup"
+            ],
+...
+    "sourceIPs": [
+        "192.168.139.60"
+    ],
     "userAgent": "curl/8.11.1",
+...
 ```
 
 The pod no longer exists, but its token carried the pod's name, so the log keeps it. The source IP is the node's, not the pod's, because the request left the pod through the node.
 
-```bash
-echo "system:serviceaccount:team-x:ci-bot nightly-cleanup" > /root/cks/culprit.txt
-k -n team-x get rolebinding -o wide | grep ci-bot
-k -n team-x delete rolebinding ci-bot-secrets
-k auth can-i delete secrets -n team-x --as=system:serviceaccount:team-x:ci-bot    # no
+```console
+root@cks-cp:~# echo "system:serviceaccount:team-x:ci-bot nightly-cleanup" > /root/cks/culprit.txt
+root@cks-cp:~# k -n team-x get rolebinding -o wide | grep ci-bot
+ci-bot-secrets     Role/secret-admin   5s                     team-x/ci-bot
+root@cks-cp:~# k -n team-x delete rolebinding ci-bot-secrets
+rolebinding.rbac.authorization.k8s.io "ci-bot-secrets" deleted from team-x namespace
+root@cks-cp:~# k auth can-i delete secrets -n team-x --as=system:serviceaccount:team-x:ci-bot    # no
+no
 ```
 
 `userAgent: curl/8.11.1` is a clue in a real investigation: kubectl and controllers identify themselves differently, so a curl call with a service account token points to a person or a script inside a pod.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 6.6
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 6.6
+== check task 6.6
   PASS  /root/cks/culprit.txt names the ServiceAccount and the pod
   PASS  RoleBinding ci-bot-secrets is gone
   PASS  docs-bot keeps its RoleBinding
   PASS  ci-bot may no longer delete Secrets in team-x
+== task 6.6: 4 passed, 0 failed
 ```
 
 ## Task 7: A Falco rule with a list and a macro
 
 **Time budget:** 8 minutes. **Host:** `cks-w1`.
 
-```bash
-./certs/cks/task.sh setup 6.7
+```console
+$ ./certs/cks/task.sh setup 6.7
+== setup task 6.7
+active
 ```
 
 > Create `/etc/falco/rules.d/cks-pkg.yaml` on `cks-w1` with:
@@ -676,39 +740,57 @@ k auth can-i delete secrets -n team-x --as=system:serviceaccount:team-x:ci-bot  
 
 Falco reloads by itself. Check the reload, then fire the rule from `cks-cp`:
 
-```bash
-journalctl -u falco-modern-bpf -n 20 | grep cks-pkg         # "schema validation: ok"
-k -n falco-test exec target -- apk --version                # on cks-cp
-journalctl -u falco-modern-bpf --since -1min | grep 'package manager'
+```console
+root@cks-w1:~# journalctl -u falco-modern-bpf -n 20 | grep cks-pkg         # "schema validation: ok"
+Nov 15 15:18:21 cks-w1 falco[35575]:    /etc/falco/rules.d/cks-pkg.yaml | schema validation: ok
+root@cks-cp:~# k -n falco-test exec target -- apk --version                # on cks-cp
+apk-tools 2.14.6, compiled for aarch64.
+root@cks-w1:~# journalctl -u falco-modern-bpf --since -1min | grep 'package manager'
+Nov 15 15:17:59 cks-w1 falco[35575]: 15:17:59.158277787: Warning shell in container (time=15:17:59.158277787 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:17:57'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:17:59 cks-w1 falco[35575]: 15:17:59.160025966: Warning shell in container (time=15:17:59.160025966 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:17:57' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:01 cks-w1 falco[35575]: 15:18:01.324540662: Warning shell in container (time=15:18:01.324540662 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:17:59'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:01 cks-w1 falco[35575]: 15:18:01.328347354: Warning shell in container (time=15:18:01.328347354 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:17:59' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:03 cks-w1 falco[35575]: 15:18:03.493870205: Warning shell in container (time=15:18:03.493870205 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:01'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:03 cks-w1 falco[35575]: 15:18:03.495776405: Warning shell in container (time=15:18:03.495776405 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:01' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:05 cks-w1 falco[35575]: 15:18:05.647359524: Warning shell in container (time=15:18:05.647359524 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:03'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:05 cks-w1 falco[35575]: 15:18:05.650652035: Warning shell in container (time=15:18:05.650652035 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:03' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:07 cks-w1 falco[35575]: 15:18:07.807076247: Warning shell in container (time=15:18:07.807076247 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:05'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:07 cks-w1 falco[35575]: 15:18:07.808903124: Warning shell in container (time=15:18:07.808903124 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:05' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:09 cks-w1 falco[35575]: 15:18:09.959029815: Warning shell in container (time=15:18:09.959029815 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:07'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:09 cks-w1 falco[35575]: 15:18:09.962051988: Warning shell in container (time=15:18:09.962051988 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:07' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:12 cks-w1 falco[35575]: 15:18:12.140395932: Warning shell in container (time=15:18:12.140395932 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:09'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:12 cks-w1 falco[35575]: 15:18:12.143786722: Warning shell in container (time=15:18:12.143786722 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:09' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:14 cks-w1 falco[35575]: 15:18:14.321263533: Warning shell in container (time=15:18:14.321263533 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:12'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:14 cks-w1 falco[35575]: 15:18:14.323704702: Warning shell in container (time=15:18:14.323704702 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:12' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:16 cks-w1 falco[35575]: 15:18:16.498213500: Warning shell in container (time=15:18:16.498213500 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:14'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:16 cks-w1 falco[35575]: 15:18:16.501958783: Warning shell in container (time=15:18:16.501958783 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:14' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:18 cks-w1 falco[35575]: 15:18:18.690149265: Warning shell in container (time=15:18:18.690149265 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:16'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:18 cks-w1 falco[35575]: 15:18:18.691812706: Warning shell in container (time=15:18:18.691812706 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:16' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:23 cks-w1 falco[35575]: 15:18:23.930796842: Error package manager in pod (ns=falco-test pod=target proc=apk) container_id=0d062466cf6a container_name=target container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=target k8s_ns_name=falco-test
 ```
 
-In the test run, the alert read:
-
-```
-Error package manager in pod (ns=falco-test pod=target proc=apk) container_id=56b5fdcd4371 container_name=target container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=target k8s_ns_name=falco-test
-```
-
-Everything after the closing bracket is the part Falco 0.45 appends by itself. `falco -V <file>` validates a rules file without starting a second Falco.
+In the alert, everything after the closing bracket is the part Falco 0.45 appends by itself. `falco -V <file>` validates a rules file without starting a second Falco.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 6.7
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 6.7
+== check task 6.7
   PASS  /etc/falco/rules.d/cks-pkg.yaml defines the list cks_pkg_mgrs with apk, apt, apt-get, dpkg and pip
   PASS  /etc/falco/rules.d/cks-pkg.yaml defines the macro cks_in_pod, and the rule uses the macro and the list
   PASS  falco accepts the rules
   PASS  apk in falco-test/target raises an Error alert with ns, pod and process
+== task 6.7: 4 passed, 0 failed
 ```
 
 ## Task 8: Change what a default Falco rule does
 
 **Time budget:** 6 minutes. **Host:** `cks-w1`.
 
-```bash
-./certs/cks/task.sh setup 6.8
+```console
+$ ./certs/cks/task.sh setup 6.8
+== setup task 6.8
+  /etc/falco/falco_rules.yaml matches the package
 ```
 
 > On `cks-w1`, without editing `/etc/falco/falco_rules.yaml`:
@@ -735,10 +817,13 @@ Write the overrides from the theory into `/etc/falco/rules.d/cks-override.yaml`:
 
 Test from `cks-cp`. A shell "with a terminal" needs `-t`:
 
-```bash
-k -n falco-test exec target -- cat /etc/shadow > /dev/null
-k -n falco-test exec -it target -- sh -c 'echo hi'
+```console
+root@cks-cp:~# k -n falco-test exec target -- cat /etc/shadow > /dev/null
+root@cks-cp:~# k -n falco-test exec -it target -- sh -c 'echo hi'
+hi
 ```
+
+The transcript ran the second command inside `script`, which gives `kubectl exec -t` the terminal it needs outside an interactive shell.
 
 On `cks-w1`, `journalctl -u falco-modern-bpf --since -1min` showed this in the test run, and no line about a terminal shell:
 
@@ -750,22 +835,25 @@ The rule's name and its output text differ. Find a rule by name with `grep -n 'r
 
 </details>
 
-```bash
-./certs/cks/task.sh check 6.8
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 6.8
+== check task 6.8
   PASS  /etc/falco/falco_rules.yaml is unchanged
   PASS  reading /etc/shadow in falco-test/target raises a Critical alert
   PASS  a shell with a terminal in falco-test/target raises no alert
+== task 6.8: 3 passed, 0 failed
 ```
 
 ## Task 9: Which pod hunts for keys?
 
 **Time budget:** 6 minutes. **Hosts:** `cks-w1`, then `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 6.9
+```console
+$ ./certs/cks/task.sh setup 6.9
+== setup task 6.9
+deployment.apps/cart created
+deployment.apps/inventory created
+deployment.apps/reports created
 ```
 
 > One of the three Deployments in namespace `shop-runtime` searches the file system for private keys, and a default Falco rule catches it. Write two lines to `/root/cks/falco-finding.txt` on `cks-cp`: the name of the Falco rule, then `<namespace>/<deployment>`. Then delete that Deployment.
@@ -775,42 +863,57 @@ The rule's name and its output text differ. Find a rule by name with `grep -n 'r
 
 On `cks-w1`, filter the alerts by namespace:
 
-```bash
-journalctl -u falco-modern-bpf --since -5min | grep 'k8s_ns_name=shop-runtime' | tail -1
+```console
+root@cks-w1:~# journalctl -u falco-modern-bpf --since -5min | grep 'k8s_ns_name=shop-runtime' | tail -1
+Nov 15 20:24:18 cks-w1 falco[35575]: 16:19:29.686354270: Warning Grep private keys or passwords activities found | evt_type=execve user=root user_uid=0 user_loginuid=-1 process=find proc_exepath=/bin/find parent=sh command=find / -name id_rsa terminal=0 exe_flags=EXE_WRITABLE|EXE_LOWER_LAYER container_id=937f47cf6f85 container_name=busybox container_image_repository=docker.io/library/busybox container_image_tag=1.36 k8s_pod_name=inventory-fcc7f8846-852zt k8s_ns_name=shop-runtime
 ```
 
 In the test run, the line began `Warning Grep private keys or passwords activities found | ... process=find ... command=find / -name id_rsa` and ended with `k8s_pod_name=inventory-fcc7f88...`. The alert shows the rule's output text, not its name. Find the name from the text:
 
-```bash
-grep -B20 'Grep private keys or passwords activities found' /etc/falco/falco_rules.yaml | grep 'rule:' | tail -1
+```console
+root@cks-w1:~# grep -B20 'Grep private keys or passwords activities found' /etc/falco/falco_rules.yaml | grep 'rule:' | tail -1
+- rule: Search Private Keys or Passwords
 ```
 
 That prints `- rule: Search Private Keys or Passwords`. On `cks-cp`, the pod's `app` label names its Deployment:
 
-```bash
-k -n shop-runtime get pod <pod> --show-labels
-printf 'Search Private Keys or Passwords\nshop-runtime/inventory\n' > /root/cks/falco-finding.txt
-k -n shop-runtime delete deploy inventory
+```console
+root@cks-cp:~# k -n shop-runtime get pod <pod> --show-labels
+NAME                        READY   STATUS    RESTARTS   AGE   LABELS
+inventory-fcc7f8846-852zt   1/1     Running   0          41s   app=inventory,pod-template-hash=fcc7f8846
+root@cks-cp:~# printf 'Search Private Keys or Passwords\nshop-runtime/inventory\n' > /root/cks/falco-finding.txt
+root@cks-cp:~# k -n shop-runtime delete deploy inventory
+deployment.apps "inventory" deleted from shop-runtime namespace
 ```
+
+The transcript ran the first command with the name of the inventory pod from the alert in place of `<pod>`.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 6.9
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 6.9
+== check task 6.9
   PASS  /root/cks/falco-finding.txt holds the rule name and shop-runtime/inventory
   PASS  Deployment inventory is gone
   PASS  Deployments cart and reports still run
+== task 6.9: 3 passed, 0 failed
 ```
 
 ## Task 10: Read the audit log like a detective
 
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 6.10
+```console
+$ ./certs/cks/task.sh setup 6.10
+== setup task 6.10
+role.rbac.authorization.k8s.io/secret-admin created
+rolebinding.rbac.authorization.k8s.io/alice-secrets created
+rolebinding.rbac.authorization.k8s.io/bob-secrets created
+rolebinding.rbac.authorization.k8s.io/carol-secrets created
+secret/salaries created
+secret/old-salaries created
+secret/bonus created
+  somebody has been busy in namespace hr
 ```
 
 The setup needs audit logging. When task 1 isn't done, it applies task 1's solution first. Then three users, `alice`, `bob` and `carol`, work in namespace `hr` with client certificates.
@@ -828,42 +931,60 @@ The setup needs audit logging. When task 1 isn't done, it applies task 1's solut
 
 Search for each question, and count only the `ResponseComplete` stage:
 
-```bash
-L=/var/log/kubernetes/audit/audit.log
-grep '"name":"salaries"' $L | grep '"verb":"get"' | grep ResponseComplete | python3 -m json.tool | grep username
-grep '"name":"old-salaries"' $L | grep '"verb":"delete"' | grep ResponseComplete | grep -o '"username":"[^"]*"'
-grep '"verb":"list"' $L | grep '"resource":"secrets","namespace":"hr"' | grep '"username":"carol"' | grep -c ResponseComplete
+```console
+root@cks-cp:~# L=/var/log/kubernetes/audit/audit.log
+root@cks-cp:~# grep '"name":"salaries"' $L | grep '"verb":"get"' | grep ResponseComplete | python3 -m json.tool | grep username
+        "username": "alice",
+root@cks-cp:~# grep '"name":"old-salaries"' $L | grep '"verb":"delete"' | grep ResponseComplete | grep -o '"username":"[^"]*"'
+"username":"bob"
+root@cks-cp:~# grep '"verb":"list"' $L | grep '"resource":"secrets","namespace":"hr"' | grep '"username":"carol"' | grep -c ResponseComplete
+2
 ```
 
 In the test run, the answers were `alice`, `bob` and `2`. Task 1's policy logs Secrets at `Metadata`, so each line names the user and the object but holds no Secret data.
 
-```bash
-printf 'alice\nbob\n2\n' > /root/cks/audit-answers.txt
-k -n hr get rolebinding -o wide | grep bob
-k -n hr delete rolebinding bob-secrets
+```console
+root@cks-cp:~# printf 'alice\nbob\n2\n' > /root/cks/audit-answers.txt
+root@cks-cp:~# k -n hr get rolebinding -o wide | grep bob
+bob-secrets     Role/secret-admin   1s    bob              
+root@cks-cp:~# k -n hr delete rolebinding bob-secrets
+rolebinding.rbac.authorization.k8s.io "bob-secrets" deleted from hr namespace
 ```
 
 `grep` on a JSON line depends on the order of its fields, so test each pattern against one line first. When a pattern finds nothing, fall back to `python3`.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 6.10
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 6.10
+== check task 6.10
   PASS  line 1 of /root/cks/audit-answers.txt: alice read salaries
   PASS  line 2: bob deleted old-salaries
   PASS  line 3: carol listed the Secrets 2 times
   PASS  bob may no longer delete Secrets in hr, alice and carol keep their rights
+== task 6.10: 4 passed, 0 failed
 ```
 
 ## Task 11: An audit policy per user and per resource
 
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 6.11
+```console
+$ ./certs/cks/task.sh setup 6.11
+== setup task 6.11
+rolebinding.rbac.authorization.k8s.io/alice-edit created
+secret/s1 created
+apiVersion: audit.k8s.io/v1
+kind: Policy
+omitStages: [RequestReceived]
+rules:
+- level: Metadata
+  resources:
+  - group: ""
+    resources: [secrets]
+- level: RequestResponse
+  namespaces: [audit-me]
+- level: None
 ```
 
 > Replace the audit policy `/etc/kubernetes/audit/policy.yaml`, keeping the API server's audit flags:
@@ -906,34 +1027,41 @@ rules:
 
 The API server reads the policy only at start, and the manifest doesn't change, so restart it by moving the manifest out and back, as in [04, task 5](04-minimize-microservice-vulnerabilities.md#task-5-rotate-the-encryption-key). In the test run, that took 42 seconds. Then make traffic and read the newest lines:
 
-```bash
-k -n audit-11 run p1 --image=busybox:1.36 -- sleep 1
-tail -3 /var/log/kubernetes/audit/audit.log | grep -o '"level":"[A-Za-z]*","auditID[^,]*,"stage":"[A-Za-z]*","requestURI":"[^"]*","verb":"[a-z]*"'
+```console
+root@cks-cp:~# k -n audit-11 run p1 --image=busybox:1.36 -- sleep 1
+pod/p1 created
+root@cks-cp:~# tail -3 /var/log/kubernetes/audit/audit.log | grep -o '"level":"[A-Za-z]*","auditID[^,]*,"stage":"[A-Za-z]*","requestURI":"[^"]*","verb":"[a-z]*"'
+"level":"Metadata","auditID":"67d8da68-59fe-4e59-8bae-a7246e98ad01","stage":"ResponseStarted","requestURI":"/api/v1/namespaces/seccomp/configmaps?allowWatchBookmarks=true\u0026fieldSelector=metadata.name%3Dkube-root-ca.crt\u0026resourceVersion=1511\u0026resourceVersionMatch=NotOlderThan\u0026sendInitialEvents=true\u0026timeout=56m10s\u0026timeoutSeconds=3370\u0026watch=true","verb":"watch"
+"level":"Metadata","auditID":"2fc51c1a-eaee-4119-95ba-0e8a2235e3c3","stage":"ResponseStarted","requestURI":"/api/v1/configmaps?allowWatchBookmarks=true\u0026labelSelector=OWNER%21%3DTILLER\u0026resourceVersion=1637\u0026resourceVersionMatch=NotOlderThan\u0026sendInitialEvents=true\u0026timeout=5m48s\u0026timeoutSeconds=348\u0026watch=true","verb":"watch"
+"level":"Request","auditID":"e7e96e72-907f-4cb5-a7a3-3b6481421657","stage":"ResponseComplete","requestURI":"/api/v1/namespaces/audit-11/pods?fieldManager=kubectl-run","verb":"create"
 ```
 
 </details>
 
-```bash
-./certs/cks/task.sh check 6.11
-```
-
-The check makes requests as `alice` and as the admin, then looks for each one. In the test run, it failed three of six items before the solution:
-
-```
+```console
+$ ./certs/cks/task.sh check 6.11
+== check task 6.11
   PASS  alice's get on a Secret appears at Metadata
   PASS  alice's Deployment create appears at RequestResponse
   PASS  an admin's pod create appears at Request
   PASS  an admin's pod get does not appear
   PASS  a ConfigMap create appears at Metadata
   PASS  events appear nowhere in the log since the change
+== task 6.11: 6 passed, 0 failed
 ```
+
+The check makes requests as `alice` and as the admin, then looks for each one. In the test run, it failed three of six items before the solution.
 
 ## Task 12: AppArmor for a Deployment
 
 **Time budget:** 6 minutes. **Host:** `cks-lima`.
 
-```bash
-./certs/cks/task.sh setup 6.12
+```console
+$ ./certs/cks/task.sh setup 6.12
+== setup task 6.12
+deployment.apps/web created
+  web-6c48cbcc8b-87qfj CreateContainerError
+  Error: failed to get container spec opts: failed to generate apparmor spec opts: apparmor profile not found cks-nginx
 ```
 
 The setup shows the Deployment's pod and its error. In the test run: `CreateContainerError` and `failed to generate apparmor spec opts: apparmor profile not found cks-nginx`.
@@ -945,42 +1073,65 @@ The setup shows the Deployment's pod and its error. In the test run: `CreateCont
 
 The file exists, but nothing loaded it into the kernel:
 
-```bash
-aa-status | grep cks-nginx || echo not loaded
-apparmor_parser -r /etc/apparmor.d/cks-nginx
-aa-status | grep cks-nginx
-k -n aa-web rollout restart deploy web
-k -n aa-web rollout status deploy web
+```console
+root@cks-lima:~# aa-status | grep cks-nginx || echo not loaded
+not loaded
+root@cks-lima:~# apparmor_parser -r /etc/apparmor.d/cks-nginx
+root@cks-lima:~# aa-status | grep cks-nginx
+   cks-nginx
+root@cks-lima:~# k -n aa-web rollout restart deploy web
+deployment.apps/web restarted
+root@cks-lima:~# k -n aa-web rollout status deploy web
+Waiting for deployment "web" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "web" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "web" rollout to finish: 1 old replicas are pending termination...
+deployment "web" successfully rolled out
 ```
 
 The profile allows nginx everything except writes below `/usr/share/nginx/html`. Prove both sides:
 
-```bash
-k -n aa-web exec deploy/web -- sh -c 'echo x > /usr/share/nginx/html/index.html'    # Permission denied
-k -n aa-web exec deploy/web -- wget -qO- http://127.0.0.1 | head -4                  # the nginx page
+```console
+root@cks-lima:~# k -n aa-web exec deploy/web -- sh -c 'echo x > /usr/share/nginx/html/index.html'    # Permission denied
+sh: can't create /usr/share/nginx/html/index.html: Permission denied
+command terminated with exit code 1
+root@cks-lima:~# k -n aa-web exec deploy/web -- wget -qO- http://127.0.0.1 | head -4                  # the nginx page
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
 ```
 
 A process started with `kubectl exec` runs under the container's profile too, which is why the first command fails. The kubelet retries a failed container with a growing delay, so `rollout restart` gets a new pod at once instead of waiting.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 6.12
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 6.12
+== check task 6.12
   PASS  profile cks-nginx is loaded in enforce mode
   PASS  Deployment web has a ready pod
   PASS  a write below /usr/share/nginx/html fails with Permission denied
   PASS  a write to /tmp still works, and nginx serves
+== task 6.12: 4 passed, 0 failed
 ```
 
 ## Task 13: Pods that are not immutable
 
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 6.13
+```console
+$ ./certs/cks/task.sh setup 6.13
+== setup task 6.13
+pod/frozen created
+pod/frozen-too created
+pod/writable created
+pod/half-frozen created
+pod/frozen-but-privileged created
+  frozen
+  frozen-but-privileged
+  frozen-too
+  half-frozen
+  writable
 ```
 
 > Namespace `immutable-check` runs five pods. Delete every pod in which some container may write to its root file system, or runs privileged. Leave the others running.
@@ -990,25 +1141,32 @@ A process started with `kubectl exec` runs under the container's profile too, wh
 
 Print each container's two settings, one line per pod:
 
-```bash
-k -n immutable-check get pods -o jsonpath='{range .items[*]}{.metadata.name}{": ro="}{.spec.containers[*].securityContext.readOnlyRootFilesystem}{" priv="}{.spec.containers[*].securityContext.privileged}{"\n"}{end}'
+```console
+root@cks-cp:~# k -n immutable-check get pods -o jsonpath='{range .items[*]}{.metadata.name}{": ro="}{.spec.containers[*].securityContext.readOnlyRootFilesystem}{" priv="}{.spec.containers[*].securityContext.privileged}{"\n"}{end}'
+frozen: ro=true priv=
+frozen-but-privileged: ro=true priv=true
+frozen-too: ro=true priv=
+half-frozen: ro=true priv=
+writable: ro= priv=
 ```
 
 A pod is immutable only when every container says `ro=true` and none says `priv=true`. In the test run, three pods failed that test: `writable` (no setting), `half-frozen` (one of its two containers has no setting) and `frozen-but-privileged`. A privileged container remounts any file system it likes, so its read-only root protects nothing.
 
-```bash
-k -n immutable-check delete pod writable half-frozen frozen-but-privileged
+```console
+root@cks-cp:~# k -n immutable-check delete pod writable half-frozen frozen-but-privileged
+pod "writable" deleted from immutable-check namespace
+pod "half-frozen" deleted from immutable-check namespace
+pod "frozen-but-privileged" deleted from immutable-check namespace
 ```
 
 </details>
 
-```bash
-./certs/cks/task.sh check 6.13
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 6.13
+== check task 6.13
   PASS  writable, half-frozen and frozen-but-privileged are gone
   PASS  frozen and frozen-too still run
+== task 6.13: 2 passed, 0 failed
 ```
 
 ## Clean up

@@ -466,7 +466,7 @@ mkdir -p /root/mock
 EOF
   w1_sh 'rm -f /etc/falco/rules.d/m3.yaml'
 }
-m3_alert() { w1_sh "journalctl -u falco-modern-bpf --since '-2min' --no-pager | grep -q 'Alert Grep private keys or passwords activities found.*k8s_ns_name=m3-run'"; }
+m3_alert() { w1_sh "journalctl -u falco-modern-bpf --since '-2min' --no-pager | grep -v journalctl | grep -q 'Alert Grep private keys or passwords activities found.*k8s_ns_name=m3-run'"; }
 score_m15() {
   check_w1 "falco_rules.yaml is unchanged, and an override in rules.d raises the rule to ALERT" \
     "! dpkg -V falco | grep -q falco_rules.yaml && grep -rqs 'rule: Search Private Keys or Passwords' /etc/falco/rules.d/ && grep -rqsi 'priority: *alert' /etc/falco/rules.d/"
