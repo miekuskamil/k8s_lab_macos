@@ -10,9 +10,28 @@ This is the hardest of the three. When the clock starts, the API server refuses 
 
 1. Start fresh. On your Mac:
 
-   ```bash
-   ./certs/cks/cluster/reset.sh && ./certs/cks/cluster/lima.sh reset
-   MOCK=3 ./certs/cks/mock-exam/setup.sh
+   ```console
+   $ ./certs/cks/cluster/reset.sh && ./certs/cks/cluster/lima.sh reset
+   === wiping cks-w1
+   === wiping cks-cp
+   ...
+   === 1/7 machines
+   ...
+   === 7/7 ingress-nginx 1.15.1 on NodePorts 30080 and 30443
+   ...
+   === ready
+   ...
+   === wiping the cluster on cks-lima
+   ...
+   === 4/4 Cilium 1.20.4
+   ...
+   cluster ready
+   $ MOCK=3 ./certs/cks/mock-exam/setup.sh
+   == setting up task 11: Rotate to a new provider
+   == setting up task 2: One port range, two selectors
+   ...
+   Ready. The clock runs from now: 2 hours. Open certs/cks/mock-exam-3.md.
+   Score yourself at any time with MOCK=3 ./certs/cks/mock-exam/score.sh
    ```
 
    In the final test run, the OrbStack reset took 3 minutes 7 seconds, the Lima reset 1 minute 54 seconds, and the setup 1 minute 13 seconds. The setup breaks the control plane in its last steps, so it doesn't wait for any pods.
@@ -55,10 +74,18 @@ This is the hardest of the three. When the clock starts, the API server refuses 
 
 `kubectl` itself fails at first, because of task 13. Fix that first, then:
 
-```bash
-k -n kube-system get pods -l tier=control-plane
-k -n kube-system logs kube-controller-manager-cks-cp | tail -2
-k -n kube-system logs kube-scheduler-cks-cp | tail -2
+```console
+root@cks-cp:~# k -n kube-system get pods -l tier=control-plane
+NAME                             READY   STATUS             RESTARTS      AGE
+etcd-cks-cp                      1/1     Running            10            9m37s
+kube-apiserver-cks-cp            1/1     Running            0             4s
+kube-controller-manager-cks-cp   0/1     CrashLoopBackOff   1 (10s ago)   27s
+kube-scheduler-cks-cp            0/1     CrashLoopBackOff   5 (68s ago)   9m37s
+root@cks-cp:~# k -n kube-system logs kube-controller-manager-cks-cp | tail -2
+I1115 21:06:14.835680       1 leaderelection.go:304] "Failed to renew lease" lock="kube-system/kube-controller-manager" err="context canceled"
+E1115 21:06:14.835729       1 controllermanager.go:413] "leaderelection lost/stopped"
+root@cks-cp:~# k -n kube-system logs kube-scheduler-cks-cp | tail -2
+Error: invalid argument "127.0.0.1:10259" for "--bind-address" flag: failed to parse IP: "127.0.0.1:10259"
 ```
 
 In the test run, the scheduler said:
@@ -163,11 +190,14 @@ spec:
 <details>
 <summary>Solution</summary>
 
-```bash
-k -n m3-web create secret tls m3-tls --cert=/root/mock/m3.crt --key=/root/mock/m3.key
-k -n m3-web create ingress sites --class=nginx \
+```console
+root@cks-cp:~# k -n m3-web create secret tls m3-tls --cert=/root/mock/m3.crt --key=/root/mock/m3.key
+secret/m3-tls created
+root@cks-cp:~# k -n m3-web create ingress sites --class=nginx \
   --rule="shop.m3.local/*=shop:80,tls=m3-tls" --rule="blog.m3.local/*=blog:80,tls=m3-tls"
-curl -sk --resolve blog.m3.local:30443:127.0.0.1 https://blog.m3.local:30443/
+ingress.networking.k8s.io/sites created
+root@cks-cp:~# curl -sk --resolve blog.m3.local:30443:127.0.0.1 https://blog.m3.local:30443/
+blog
 ```
 
 One `tls` entry lists both hosts with the same Secret. The certificate's subject alternative names cover both, so the controller serves it for each.
@@ -183,19 +213,41 @@ One `tls` entry lists both hosts with the same Secret. The certificate's subject
 <details>
 <summary>Solution</summary>
 
-```bash
-k get clusterrole -l rbac.m3/aggregate=true
-k get clusterrole ops-config -o yaml        # configmaps and secrets
+```console
+root@cks-cp:~# k get clusterrole -l rbac.m3/aggregate=true
+NAME         CREATED AT
+ops-config   2026-11-15T21:01:53Z
+ops-pods     2026-11-15T21:01:53Z
+root@cks-cp:~# k get clusterrole ops-config -o yaml        # configmaps and secrets
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+...
+  labels:
+    rbac.m3/aggregate: "true"
+  name: ops-config
+...
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  verbs:
+  - get
+  - list
 ```
 
 Remove `secrets` from `ops-config`, so ConfigMaps stay readable, and add a labelled ClusterRole for Deployments:
 
-```bash
-k edit clusterrole ops-config                 # resources: [configmaps]
-k create clusterrole ops-deploys --verb=get,list,watch --resource=deployments.apps $do > d.yaml
-vim d.yaml                                    # labels: {rbac.m3/aggregate: "true"}
-k apply -f d.yaml
+```console
+root@cks-cp:~# k edit clusterrole ops-config                 # resources: [configmaps]
+root@cks-cp:~# k create clusterrole ops-deploys --verb=get,list,watch --resource=deployments.apps $do > d.yaml
+root@cks-cp:~# vim d.yaml                                    # labels: {rbac.m3/aggregate: "true"}
+root@cks-cp:~# k apply -f d.yaml
+clusterrole.rbac.authorization.k8s.io/ops-deploys created
 ```
+
+The transcript leaves out both editor sessions: the first removes `secrets` from the rules of `ops-config`, the second adds the label to `d.yaml`.
 
 Deleting `ops-config` would remove the Secrets too, and take ConfigMaps with it, which the check catches. [02, task 5](02-cluster-hardening.md#task-5-aggregated-clusterroles) has the theory.
 
@@ -210,13 +262,19 @@ Deleting `ops-config` would remove the Secrets too, and take ConfigMaps with it,
 <details>
 <summary>Solution</summary>
 
-```bash
-k -n m3-ci delete secret --field-selector type=kubernetes.io/service-account-token
-k -n m3-ci patch sa builder -p '{"automountServiceAccountToken": false}'
-k -n m3-ci get pod build -o yaml > build.yaml
-vim build.yaml           # delete the kube-api-access volume and its volumeMount
-k -n m3-ci replace --force -f build.yaml
+```console
+root@cks-cp:~# k -n m3-ci delete secret --field-selector type=kubernetes.io/service-account-token
+secret "builder-token" deleted from m3-ci namespace
+root@cks-cp:~# k -n m3-ci patch sa builder -p '{"automountServiceAccountToken": false}'
+serviceaccount/builder patched
+root@cks-cp:~# k -n m3-ci get pod build -o yaml > build.yaml
+root@cks-cp:~# vim build.yaml           # delete the kube-api-access volume and its volumeMount
+root@cks-cp:~# k -n m3-ci replace --force -f build.yaml
+pod "build" deleted from m3-ci namespace
+pod/build replaced
 ```
+
+The transcript leaves out the editor session.
 
 A running pod keeps its token, so it needs recreating. The exported YAML spells out the `kube-api-access-...` volume the API server added. Left in, it mounts the token whatever the ServiceAccount says, so delete it and its mount.
 
@@ -244,9 +302,16 @@ A running pod keeps its token, so it needs recreating. The exported YAML spells 
 <details>
 <summary>Solution</summary>
 
-```bash
-sshd -T | grep -E '^(permitrootlogin|passwordauthentication|x11forwarding) '
-grep -rnE '^(PermitRootLogin|PasswordAuthentication|X11Forwarding)' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/
+```console
+root@cks-w1:~# sshd -T | grep -E '^(permitrootlogin|passwordauthentication|x11forwarding) '
+permitrootlogin yes
+passwordauthentication yes
+x11forwarding yes
+root@cks-w1:~# grep -rnE '^(PermitRootLogin|PasswordAuthentication|X11Forwarding)' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/
+/etc/ssh/sshd_config:99:X11Forwarding yes
+/etc/ssh/sshd_config.d/05-vendor.conf:1:PasswordAuthentication yes
+/etc/ssh/sshd_config.d/05-vendor.conf:2:PermitRootLogin yes
+/etc/ssh/sshd_config.d/05-vendor.conf:3:X11Forwarding yes
 ```
 
 All three come from `/etc/ssh/sshd_config.d/05-vendor.conf`, which sshd reads before the main file. Set each to `no` there, then `sshd -t && systemctl restart ssh`.
@@ -316,18 +381,22 @@ Restart the API server, run `k get secrets -A -o json | k replace -f -`, delete 
 <details>
 <summary>Solution</summary>
 
-```bash
-crictl ps -a --name kube-apiserver
-crictl logs <id of the newest exited container>
+```console
+root@cks-cp:~# crictl ps -a --name kube-apiserver
+CONTAINER           IMAGE               CREATED              STATE               NAME                ATTEMPT             POD ID              POD                     NAMESPACE
+ef0e95360c41f       98d6e75e244ec       About a minute ago   Exited              kube-apiserver      4                   a507ff2270144       kube-apiserver-cks-cp   kube-system
+root@cks-cp:~# crictl logs <id of the newest exited container>
+I1115 21:04:10.180684       1 options.go:261] external host was not specified, using 192.168.139.194
+W1115 21:04:10.180739       1 authentication.go:841] AnonymousAuth is not allowed with the AlwaysAllow authorizer. Resetting AnonymousAuth to false. You should use a different authorizer
+I1115 21:04:10.182935       1 server.go:151] Version: v1.37.1
+I1115 21:04:10.182950       1 server.go:153] "Golang settings" GOGC="" GOMAXPROCS="" GOTRACEBACK=""
+E1115 21:04:10.448200       1 options.go:205] The manifest file is empty, ignoring.
+E1115 21:04:10.459263       1 run.go:72] "command failed" err="failed to apply admission: couldn't init admission plugin \"ImagePolicyWebhook\": stat /etc/kubernetes/policy-webhook/kube.yaml: no such file or directory"
 ```
 
-In the test run, the log ended with:
+The transcript ran `crictl logs` with the ID of the newest exited container.
 
-```
-"command failed" err="failed to apply admission: couldn't init admission plugin \"ImagePolicyWebhook\": stat /etc/kubernetes/policy-webhook/kube.yaml: no such file or directory"
-```
-
-`ls /etc/kubernetes/policy-webhook/` shows `kubeconfig.yaml`, so fix `kubeConfigFile` in `/etc/kubernetes/admission/m3.yaml`. The API server still doesn't start, with the same `stat ... no such file or directory`, now for the right file name: the colleague mounted `/etc/kubernetes/admission` into the pod, but not `/etc/kubernetes/policy-webhook`. Add a `volumeMount` and a `hostPath` volume for it, as [05, task 5](05-supply-chain-security.md#task-5-allow-only-approved-registries) shows. Do this task first: until the API server runs, no other task on `cks-cp` works.
+The last log line names the file the API server misses. `ls /etc/kubernetes/policy-webhook/` shows `kubeconfig.yaml`, so fix `kubeConfigFile` in `/etc/kubernetes/admission/m3.yaml`. The API server still doesn't start, with the same `stat ... no such file or directory`, now for the right file name: the colleague mounted `/etc/kubernetes/admission` into the pod, but not `/etc/kubernetes/policy-webhook`. Add a `volumeMount` and a `hostPath` volume for it, as [05, task 5](05-supply-chain-security.md#task-5-allow-only-approved-registries) shows. Do this task first: until the API server runs, no other task on `cks-cp` works.
 
 </details>
 
@@ -340,17 +409,28 @@ In the test run, the log ended with:
 <details>
 <summary>Solution</summary>
 
-```bash
-k -n m3-prod get deploy -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[0].image
-for img in redis:6.0.5 nginx:1.27-alpine registry.k8s.io/pause:3.10 busybox:1.36; do
+```console
+root@cks-cp:~# k -n m3-prod get deploy -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[0].image
+NAME      IMAGE
+front     nginx:1.27-alpine
+idle      registry.k8s.io/pause:3.10
+session   redis:6.0.5
+tools     busybox:1.36
+root@cks-cp:~# for img in redis:6.0.5 nginx:1.27-alpine registry.k8s.io/pause:3.10 busybox:1.36; do
   echo "$img $(trivy image --quiet --severity CRITICAL $img | grep -m1 Total)"
 done
+redis:6.0.5 Total: 17 (CRITICAL: 17)
+nginx:1.27-alpine Total: 3 (CRITICAL: 3)
+registry.k8s.io/pause:3.10 
+busybox:1.36 
 ```
 
 In the test run, trivy found 22 CRITICAL findings in `redis:6.0.5` and 3 in `nginx:1.27-alpine`, and none in the other two. So delete `session` and `front`:
 
-```bash
-k -n m3-prod delete deploy session front
+```console
+root@cks-cp:~# k -n m3-prod delete deploy session front
+deployment.apps "session" deleted from m3-prod namespace
+deployment.apps "front" deleted from m3-prod namespace
 ```
 
 The check runs trivy itself and compares, so it still agrees with you after the database changes. A fairly new image such as `nginx:1.27-alpine` has findings too; the task asks about CRITICAL ones, not about age.
@@ -375,17 +455,23 @@ The check runs trivy itself and compares, so it still agrees with you after the 
     priority: replace
 ```
 
-```bash
-journalctl -u falco-modern-bpf --since -2min | grep 'Alert Grep private keys' | grep -o 'k8s_pod_name=[^ ]*' | tail -1
+```console
+root@cks-w1:~# journalctl -u falco-modern-bpf --since -2min | grep 'Alert Grep private keys' | grep -o 'k8s_pod_name=[^ ]*' | tail -1
+k8s_pod_name=indexer-7d5f9f7b4d-zgcnl
 ```
 
 The pod's `app` label names the Deployment `indexer`:
 
-```bash
-k -n m3-run get pod <pod> --show-labels
-echo indexer > /root/mock/key-hunter.txt
-k -n m3-run scale deploy indexer --replicas=0
+```console
+root@cks-cp:~# k -n m3-run get pod <pod> --show-labels
+NAME                       READY   STATUS    RESTARTS   AGE   LABELS
+indexer-7d5f9f7b4d-zgcnl   1/1     Running   0          16m   app=indexer,pod-template-hash=7d5f9f7b4d
+root@cks-cp:~# echo indexer > /root/mock/key-hunter.txt
+root@cks-cp:~# k -n m3-run scale deploy indexer --replicas=0
+deployment.apps/indexer scaled
 ```
+
+The transcript ran the first command with the pod name that the alert printed in place of `<pod>`.
 
 `indexer` runs `grep -rs "BEGIN RSA PRIVATE" /etc` in a loop, which matches the rule's macro `private_key_or_password`. The alert line starts with the new priority, `Alert`, once the override has loaded.
 
@@ -434,8 +520,8 @@ Deployments live in the API group `apps`, not in the core group `""`. With `grou
 <details>
 <summary>Solution</summary>
 
-```bash
-cp /root/mock/no-mkdir.json /var/lib/kubelet/seccomp/m3.json          # on cks-w1
+```console
+root@cks-w1:~# mkdir -p /var/lib/kubelet/seccomp && cp /root/mock/no-mkdir.json /var/lib/kubelet/seccomp/m3.json          # on cks-w1
 ```
 
 ```yaml
@@ -455,7 +541,7 @@ spec:
   volumes: [{name: data, emptyDir: {}}]
 ```
 
-`k -n m3-sec exec locked -- mkdir /data/d` fails with `Operation not permitted`, while `echo ok > /data/f` works. The read-only root alone would allow both in `/data`; the seccomp profile makes the difference.
+A fresh kubeadm node has no `/var/lib/kubelet/seccomp` folder until somebody creates it, which is why the command starts with `mkdir -p`. `k -n m3-sec exec locked -- mkdir /data/d` fails with `Operation not permitted`, while `echo ok > /data/f` works. The read-only root alone would allow both in `/data`; the seccomp profile makes the difference.
 
 </details>
 
