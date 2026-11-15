@@ -36,7 +36,7 @@ EOF
 setup_4_2() {
   oncp <<EOF
 kubectl create ns vault-test --dry-run=client -o yaml | kubectl apply -f - >/dev/null
-for i in $(seq 1 30); do kubectl -n vault-test get sa default >/dev/null 2>&1 && break; sleep 1; done
+for i in \$(seq 1 30); do kubectl -n vault-test get sa default >/dev/null 2>&1 && break; sleep 1; done
 kubectl -n vault-test create secret generic db-creds --from-literal=password=Sup3rS3cret 2>/dev/null
 $ETCDCTL get /registry/secrets/vault-test/db-creds | grep -a -o -m1 "Sup3rS3cret"
 EOF
