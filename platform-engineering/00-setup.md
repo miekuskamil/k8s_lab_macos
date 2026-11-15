@@ -6,7 +6,7 @@
 
 **You need:** the lab from `./scripts/provision.sh`, and a browser. This module installs `istioctl`.
 
-In this module you check that the lab works, install `istioctl`, and learn where each tool fits. It takes 15 minutes.
+Every later module assumes a healthy lab and a working `istioctl`, so this module checks the first and installs the second. It also shows which tool answers which question, so that you know where to look when something breaks. It takes 15 minutes.
 
 ## Check the lab
 
@@ -37,7 +37,7 @@ shop-apps               Synced        Healthy
 shop-base               Synced        Healthy
 ```
 
-All twelve Applications should show `Synced` and `Healthy`. Then open the UIs in a spare terminal and leave it running:
+All twelve Applications should show `Synced` and `Healthy`, because ArgoCD reports any drift from Git on this list. Then open the UIs in a spare terminal and leave it running:
 
 ```console
 $ ./scripts/port-forward.sh
@@ -52,11 +52,11 @@ Headlamp    http://localhost:4466
 Port-forwards are running. Press Ctrl-C to stop.
 ```
 
-The [course README](README.md#before-you-start) lists every UI. One tip: keep Headlamp (http://localhost:4466) open in a tab. It shows every pod, its logs and its events in one place, and it needs no login.
+The [course README](README.md#before-you-start) lists every UI. Keep Headlamp (http://localhost:4466) open in a tab, because it shows every pod with its logs and events in one place and needs no login.
 
 ## Install istioctl
 
-`istioctl` is to Istio what `kubectl` is to Kubernetes. It reads the mesh's state and explains it. Install it with Homebrew on macOS, or from the [Istio releases page](https://github.com/istio/istio/releases) on Linux.
+`istioctl` does for Istio what `kubectl` does for Kubernetes: it reads the mesh's state and explains it in plain terms. Install it with Homebrew on macOS, or from the [Istio releases page](https://github.com/istio/istio/releases) on Linux.
 
 ```console
 $ brew install istioctl
@@ -72,7 +72,7 @@ data plane version: 1.24.2 (3 proxies)
 
 ### On Linux and WSL (Ubuntu 24.04)
 
-Homebrew is macOS only. Download the release that matches the control plane instead:
+Homebrew runs only on macOS, so on Linux you download the release that matches the control plane instead:
 
 ```bash
 ARCH=$(dpkg --print-architecture)
@@ -83,17 +83,17 @@ istioctl version
 
 Your client then reports 1.24.2, the same as the control plane. [Running the lab on Linux and WSL2](../docs/linux-and-wsl.md) covers the rest of the setup, WSL2 memory and the few commands that differ.
 
-**What you should see.** The `istioctl version` lines in the macOS transcript above. It's fine for the client to be newer than the control plane. Every command in this course ran with client 1.32 against control plane 1.24. If a command fails with an unknown field error, install the matching client from the releases page.
+**What you should see.** The `istioctl version` lines from the macOS transcript above. A client newer than the control plane works fine, and every command in this course ran with client 1.32 against control plane 1.24. If a command fails with an unknown field error, install the matching client from the releases page.
 
-The "3 proxies" line counts the proxies that take orders from istiod, the Istio control plane:
+The "3 proxies" line counts the proxies that take their configuration from istiod, the Istio control plane:
 
 - the ingress gateway, which is an Envoy proxy
 - the waypoint, which is also an Envoy proxy
 - ztunnel, which is a separate program written in Rust, not Envoy
 
-The shop's own pods are not in the count. Module 1 explains why.
+The shop's own pods don't appear in the count, and module 1 explains why.
 
-If you see more than 3, something from a later module is still running. Module 7's two sidecar pods, for example, add 2 more, so you'd see 5. To get back to the starting point, run:
+A count above 3 means something from a later module is still running. Module 7's two sidecar pods, for example, add 2 more, so you'd see 5. To get back to the starting point, run:
 
 ```console
 $ ./platform-engineering/reset.sh --all
@@ -105,7 +105,7 @@ Asking ArgoCD to sync istio-config from Git
 Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
-Plain `./platform-engineering/reset.sh` keeps the module 7 namespaces, so you may return to that module later. `--all` removes them too.
+Plain `./platform-engineering/reset.sh` keeps the module 7 namespaces so that you may return to that module later, while `--all` removes them too.
 
 The three version lines come from three places:
 
@@ -113,13 +113,13 @@ The three version lines come from three places:
 2. It asks istiod for the control plane version.
 3. It asks istiod which proxies it sends configuration to right now.
 
-This third line is useful when something breaks. A proxy that lost its connection to istiod drops out of the count. So a number lower than you expect is a first clue that a proxy no longer gets its configuration.
+The third line earns its place when something breaks. A proxy that loses its connection to istiod drops out of the count, so a number lower than you expect is a first clue that some proxy no longer receives its configuration.
 
 ## The tools and what each one answers
 
 ![Five tools and the question each one answers](../docs/diagrams/chapters/00-observability-tools.svg)
 
-Kiali and Grafana read the same Prometheus data. Kiali turns it into a live map of the mesh. Grafana turns it into graphs over time. Use Kiali to find which edge, the arrow between two services, is broken. Then use Grafana to see since when and how badly.
+Kiali and Grafana read the same Prometheus data but show it in different shapes. Kiali draws a live map of the mesh, while Grafana draws graphs over time. So you use Kiali to find which edge, the arrow between two services, is broken, and then Grafana to see since when and how badly.
 
 ## Learn Kiali in five minutes
 
@@ -137,11 +137,11 @@ Backend versions:
 
 1. **Overview** lists namespaces with a health badge. Click `shop`.
 2. **Traffic Graph** draws the services and the calls between them. Choose namespace `shop` and `shop-ingress`, then set Display to show "Traffic Animation" and "Security". A padlock on an edge means mTLS.
-3. **Applications**, **Workloads** and **Services** list the same pods from three angles. Each view has tabs for metrics, traces and logs.
+3. **Applications**, **Workloads** and **Services** list the same pods from three angles, and each view has tabs for metrics, traces and logs.
 4. **Istio Config** lists every Istio resource and flags invalid ones with a red icon.
 
-Kiali is read-only in this course. You make every change with `kubectl` so it stays in your shell history.
+The course uses Kiali only to look. You make every change with `kubectl`, so that each change stays in your shell history.
 
 ## What the verification run showed
 
-`./platform-engineering/verify.sh` replays every module against the lab. Run it whenever you change the lab. Run it again after this course to check your own work. The summary of the last run is at the end of [the course README](README.md#check-that-the-course-works).
+`./platform-engineering/verify.sh` replays every module against the lab, so run it whenever you change the lab and again after the course to check your own work. The summary of the last run sits at the end of [the course README](README.md#check-that-the-course-works).

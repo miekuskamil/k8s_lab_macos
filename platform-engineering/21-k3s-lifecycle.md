@@ -12,15 +12,15 @@ Three jobs keep a cluster alive for years instead of months:
 - Take backups, and restore one at least once to prove it works.
 - Upgrade Kubernetes on time.
 
-This module does all three on the lab's k3s. The upgrade is a patch release, the kind most people treat as harmless. Yet it takes the whole mesh down. Finding out why is the point of the exercise.
+This module does all three on the lab's k3s. The upgrade is a patch release, the kind most people treat as harmless, yet it takes the whole mesh down, and finding out why is the point of the exercise.
 
-**The upgrade is one-way.** After step 4, the lab runs k3s v1.31.14. The rest of the course works on it. To return to the course version, rebuild: `./scripts/teardown.sh --yes && ./scripts/provision.sh`.
+**The upgrade is one-way.** After step 4 the lab runs k3s v1.31.14, and the rest of the course works on it. To return to the course version, rebuild: `./scripts/teardown.sh --yes && ./scripts/provision.sh`.
 
 Time: about 60 minutes.
 
 ## Concept: where k3s keeps its state
 
-k3s packs a whole Kubernetes control plane into one binary. On the lab's node, k3s keeps its state in these places:
+k3s packs a whole Kubernetes control plane into one binary, and on the lab's node it keeps its state in these places:
 
 | What | Where | Notes |
 |---|---|---|
@@ -31,8 +31,8 @@ k3s packs a whole Kubernetes control plane into one binary. On the lab's node, k
 
 The backup method depends on the datastore:
 
-- With several servers, k3s switches to embedded etcd (`--cluster-init`). Then `k3s etcd-snapshot save` takes the backups.
-- With SQLite, a backup is a copy of the `db` folder and the token, taken while k3s is stopped.
+- With several servers, k3s switches to embedded etcd (`--cluster-init`), and `k3s etcd-snapshot save` takes the backups.
+- With SQLite, a backup is a copy of the `db` folder and the token, taken while k3s stays down.
 
 ## Concept: certificates in k3s
 
@@ -41,13 +41,13 @@ The backup method depends on the datastore:
 | CAs (client CA, server CA) | 10 years | not automatic |
 | Client and server certificates | 1 year | automatic: k3s renews any certificate within 120 days of expiry every time it starts |
 
-So a k3s node that restarts at least once every eight months never sees an expired certificate. In other words, any restart in the last 120 days of a certificate's year renews it. A node that runs for a year without a restart does see one. Then kubelets lose contact with the API server, and `kubectl` gets `x509: certificate has expired`. As an early warning, k3s raises a Kubernetes Warning event, `CertificateExpirationWarning`, within 120 days of expiry.
+So a k3s node that restarts at least once every eight months never sees an expired certificate, because any restart in the last 120 days of a certificate's year renews it. A node that runs for a year without a restart does see one, and then kubelets lose contact with the API server and `kubectl` gets `x509: certificate has expired`. As an early warning, k3s raises a Kubernetes Warning event, `CertificateExpirationWarning`, within 120 days of expiry.
 
-`k3s certificate rotate` is a different tool. It replaces the keys, which you need after a key leaks. Step 2 shows what it changes and what it leaves alone.
+`k3s certificate rotate` is a different tool, which replaces the keys, as you need after a key leaks. Step 2 shows what it changes and what it leaves alone.
 
 ## The bigger picture: why clusters fall behind
 
-At the time of the test run for this module, the newest stable k3s was v1.37.2, while the lab ran v1.31. Each Kubernetes minor version gets patches for about 14 months. You may only move one minor version at a time. So a cluster six versions behind needs six upgrades in a row, each with its own deprecations.
+At the time of the test run for this module, the newest stable k3s was v1.37.2, while the lab ran v1.31. Each Kubernetes minor version gets patches for about 14 months, and you may move only one minor version at a time, so a cluster six versions behind needs six upgrades in a row, each with its own deprecations.
 
 Clusters fall behind through a loop:
 
@@ -55,48 +55,46 @@ Clusters fall behind through a loop:
 2. The next upgrade gets bigger and riskier.
 3. Teams postpone that one too, and the loop starts again.
 
-The way out is the same as for Istio in module 14. Upgrade often, in small steps, with automation and a rehearsed rollback. In k3s and RKE2, the automation is the **system-upgrade-controller**. It works like this:
+The way out is the same as for Istio in module 14: upgrade often, in small steps, with automation and a rehearsed rollback. In k3s and RKE2 the automation is the **system-upgrade-controller**, which works like this:
 
 1. You write a `Plan` with a target version.
 2. The controller cordons one node.
 3. The controller upgrades that node, then moves on to the next one.
 
-The upgrade in this module shows the other half of the job: knowing what depends on what. The lab's Istio 1.24 supports Kubernetes 1.28 to 1.31. So the lab may take any 1.31 patch, but not 1.32 until Istio moves first.
+The upgrade in this module shows the other half of the job, knowing what depends on what. The lab's Istio 1.24 supports Kubernetes 1.28 to 1.31, so the lab may take any 1.31 patch, but not 1.32 until Istio moves first.
 
 ## Concept: how a pod gets its network, and how one missing file stops it
 
-Step 4 breaks pod networking, so you'll need this picture first. A new pod has no network until a chain of small programs sets it up. These programs are the Container Network Interface (CNI) plugins. containerd runs the chain every time it creates a pod sandbox, the small container that holds the pod's network:
+Step 4 breaks pod networking, so you need this picture first. A new pod has no network until a chain of small programs, the Container Network Interface (CNI) plugins, sets it up, and containerd runs the chain every time it creates a pod sandbox, the small container that holds the pod's network:
 
 1. containerd reads the CNI config.
 2. containerd runs each plugin in the config as a separate program, in order, from its plugin directory.
 3. On the lab's node, flannel runs first and gives the pod an IP address.
 4. istio-cni runs last and sets up ambient redirection.
 
-Removing a sandbox runs the same chain backwards, with the command `DEL` instead of `ADD`. The diagram shows what happens when the istio-cni plugin file is missing:
+Removing a sandbox runs the same chain backwards, with the command `DEL` instead of `ADD`. Here is what happens when the istio-cni plugin file is missing:
 
 ![The CNI chain stops when the istio-cni plugin file is missing, and flannel's lease stays](../docs/diagrams/chapters/21-cni-chain.svg)
 
-Follow the diagram from top to bottom:
-
-1. flannel's `ADD` succeeds. It hands the pod an address and writes a lease file for it.
+1. flannel's `ADD` succeeds, handing the pod an address and writing a lease file for it.
 2. istio-cni's `ADD` fails, because the plugin isn't in the directory.
 3. containerd cleans up by running `DEL` backwards, and it fails again at istio-cni.
 4. The chain stops there, so flannel's `DEL` never runs, and the lease stays.
 
-That leftover lease matters. flannel's IP manager is called host-local IPAM (IP address management). It keeps one file per handed-out address, and the node's range holds 254 addresses. Think of a hotel with 254 rooms where guests check in but never check out: sooner or later, no rooms are left. So a missing plugin does two kinds of damage:
+That leftover lease matters, because flannel's IP manager, called host-local IPAM (IP address management), keeps one file per handed-out address, and the node's range holds 254 addresses. Think of a hotel with 254 rooms where guests check in but never check out, so sooner or later no rooms are left. A missing plugin therefore does two kinds of damage:
 
 - No new pod starts.
 - Every failed attempt keeps an address.
 
-Pods that already run keep working, because CNI only runs when a sandbox starts or stops. In k3d, though, a k3s restart restarts the whole node container. So every pod on that node needs a new sandbox at once.
+Pods that already run keep working, because CNI runs only when a sandbox starts or stops. In k3d, though, a k3s restart restarts the whole node container, so every pod on that node needs a new sandbox at once.
 
 ## Why this way
 
-**Why stop k3s for a backup?** SQLite keeps recent changes in a write-ahead log (`state.db-wal`) next to the main file. If you copy the files while k3s writes to them, the log and the main file in your backup may not match. While k3s is stopped, the three files (`state.db`, `-wal`, `-shm`) form a consistent set. With etcd, `k3s etcd-snapshot save` takes a consistent snapshot while the cluster runs.
+**Why stop k3s for a backup?** SQLite keeps recent changes in a write-ahead log (`state.db-wal`) next to the main file, so if you copy the files while k3s writes to them, the log and the main file in your backup may not match. While k3s is stopped, the three files (`state.db`, `-wal`, `-shm`) form a consistent set, while with etcd, `k3s etcd-snapshot save` takes a consistent snapshot while the cluster runs.
 
-**Why does a restore rewind everything?** The datastore holds every object: Deployments, Secrets, ArgoCD's Applications, all of it. Restoring it puts the whole cluster back to the moment of the backup. Anything created afterwards disappears. That's why GitOps matters too. With this lab's config in Git, ArgoCD re-applies the desired state after a restore.
+**Why does a restore rewind everything?** The datastore holds every object, from Deployments and Secrets to ArgoCD's Applications, so restoring it puts the whole cluster back to the moment of the backup and anything created afterwards disappears. That's why GitOps matters too, because with this lab's config in Git, ArgoCD re-applies the desired state after a restore.
 
-**Why does the upgrade run as a privileged Job?** The Job replaces the k3s binary on the node itself and restarts k3s. To do that, it mounts the node's file system and runs with host namespaces, so it needs those rights. In k3d, k3s is the container's main process. So when k3s restarts, Docker restarts the whole node container.
+**Why does the upgrade run as a privileged Job?** The Job replaces the k3s binary on the node itself and restarts k3s, so it mounts the node's file system and runs with host namespaces, which needs those rights. In k3d, k3s is the container's main process, so when k3s restarts, Docker restarts the whole node container.
 
 ## Do it
 
@@ -122,7 +120,7 @@ $ kubectl get events -A --field-selector reason=CertificateExpirationWarning
 No resources found
 ```
 
-**What you should see.** You see a table of every certificate file with its subject and expiry date. Client and server certificates expire a year from the day the lab was built. The CAs expire in ten years. The columns differ between k3s versions. After the upgrade in step 4, the same command adds `RESIDUAL TIME` and `STATUS`. Your kubeconfig's admin certificate shows the same one-year date. You see no warning events yet.
+**What you should see.** A table of every certificate file with its subject and expiry date, where client and server certificates expire a year from the day the lab was built and the CAs in ten years. The columns differ between k3s versions, and after the upgrade in step 4 the same command adds `RESIDUAL TIME` and `STATUS`. Your kubeconfig's admin certificate shows the same one-year date, and you see no warning events yet.
 
 ### 2. Rotate them
 
@@ -169,7 +167,7 @@ k3d-k8s-lab-server-0   Ready    control-plane,master   8m52s   v1.31.5+k3s1
 - The client CA keeps its old key.
 - `kubectl` still works, because a trusted CA still signs your kubeconfig's certificate.
 
-Look at the expiry date, though. In the test run, it didn't move. Rotation and renewal are different jobs. Rotation replaces keys. Renewal extends dates, and it happens at startup within 120 days of expiry. The old certificates sit in a backup folder, `/var/lib/rancher/k3s/server/tls-<timestamp>`.
+The expiry date didn't move in the test run, though, because rotation and renewal are different jobs: rotation replaces keys, while renewal extends dates and happens at startup within 120 days of expiry. The old certificates sit in a backup folder, `/var/lib/rancher/k3s/server/tls-<timestamp>`.
 
 ### 3. Back up and restore the datastore
 
@@ -243,7 +241,7 @@ $ kubectl -n default get configmaps | grep backup
 before-backup        1      4m22s
 ```
 
-**What you should see.** The backup folder holds `state.db` (about 70 MB in the test run) plus `state.db-wal` and `state.db-shm`. After the restore, `before-backup` is back and `after-backup` is gone. The cluster returned to the moment of the backup. Clean up with `kubectl -n default delete configmap before-backup`.
+**What you should see.** The backup folder holds `state.db` (about 70 MB in the test run) plus `state.db-wal` and `state.db-shm`. After the restore, `before-backup` is back and `after-backup` is gone, because the cluster returned to the moment of the backup. Clean up with `kubectl -n default delete configmap before-backup`.
 
 ### 4. Upgrade k3s, and watch the mesh break
 
@@ -262,7 +260,7 @@ $ while true; do echo "$(date +%T) $(curl -s -o /dev/null -m 3 -w '%{http_code}'
 11:30:08 000
 ```
 
-The loop prints one line per second until you press Ctrl-C. The transcript shows an excerpt from the whole of step 4: the lines turned from `200` to `000` about 20 seconds after the plan started.
+The loop prints one line per second until you press Ctrl-C, and the transcript shows an excerpt from the whole of step 4, where the lines turned from `200` to `000` about 20 seconds after the plan started.
 
 Install the system-upgrade-controller and give it a plan:
 
@@ -299,9 +297,9 @@ NAME                   STATUS                     ROLES                  AGE   V
 k3d-k8s-lab-server-0   Ready,SchedulingDisabled   control-plane,master   13m   v1.31.5+k3s1
 ```
 
-Here the watch stopped by itself when the upgrade restarted the API server, before the new version showed. Run `kubectl get nodes` again to see `v1.31.14+k3s1`.
+Here the watch stopped by itself when the upgrade restarted the API server, before the new version showed, so run `kubectl get nodes` again to see `v1.31.14+k3s1`.
 
-**What you should see.** A Job named `apply-server-plan-on-...` runs. Within about 20 seconds, the node reports `v1.31.14+k3s1`, and the plan shows `Complete`. The upgrade looks like a success.
+**What you should see.** A Job named `apply-server-plan-on-...` runs, and within about 20 seconds the node reports `v1.31.14+k3s1` and the plan shows `Complete`, so the upgrade looks like a success.
 
 Now look at the second terminal and at the pods:
 
@@ -330,12 +328,12 @@ $ docker logs --since 3m k3d-k8s-lab-server-0 2>&1 | grep -o 'failed (add): [^"]
   26 failed (add): unable to push CNI event (status code 500): partial add error: no ztunnel connection\\n\
 ```
 
-**What you should see.** The shop stops answering. Pods hang in `ContainerCreating` and `Terminating`. The node's log repeats two errors:
+**What you should see.** The shop stops answering, pods hang in `ContainerCreating` and `Terminating`, and the node's log repeats two errors:
 
 - `failed to find plugin "istio-cni"`
 - a little later, `no IP addresses available in range set: 10.42.0.1-10.42.0.254`
 
-In the run above, the log was read early. It already showed the missing plugin, plus `no ztunnel connection` while ztunnel restarted, but the addresses had not run out yet.
+In the run above, the log was read early, so it already showed the missing plugin, plus `no ztunnel connection` while ztunnel restarted, but the addresses had not run out yet.
 
 ### 5. Find out why, and repair it
 
@@ -349,7 +347,7 @@ $ helm -n istio-system get values istio-cni -o json | grep -o '"cniBinDir":"[^"]
 "cniBinDir":"/bin"
 ```
 
-**What you should see.** containerd now searches `/var/lib/rancher/k3s/data/cni`. The config writes this as `bin_dirs = [...]`, which is containerd 2's format. Istio's plugin still sits in `/bin`, where k3s 1.31.5 used to look. In other words, the patch release moved the plugin directory and left Istio's plugin behind. The damage then follows the chain from the concept section:
+**What you should see.** containerd now searches `/var/lib/rancher/k3s/data/cni`, written as `bin_dirs = [...]`, which is containerd 2's format, while Istio's plugin still sits in `/bin`, where k3s 1.31.5 used to look. The patch release moved the plugin directory and left Istio's plugin behind, and the damage then follows the chain from the concept section:
 
 1. Every pod start and stop calls a plugin that isn't there.
 2. Each half-finished attempt keeps an IP address.
@@ -392,7 +390,7 @@ Still not ready:
 2. The lease script frees the leaked addresses.
 3. After `start.sh`, the shop answers `200` again.
 
-In the test runs, the lease count dropped to 35 and to 32: each time exactly the addresses that running pods held. In the run above, `start.sh` still listed the upgrade Job's old pod, stuck in `Unknown`, and exited with an error. That pod belongs to the finished plan, not to the shop, which answered `200` again.
+In the test runs the lease count dropped to 35 and to 32, each time exactly the addresses that running pods held. In the run above, `start.sh` still listed the upgrade Job's old pod, stuck in `Unknown`, and exited with an error, but that pod belongs to the finished plan, not to the shop, which answered `200` again.
 
 ## Investigate
 
@@ -406,11 +404,11 @@ In the test runs, the lease count dropped to 35 and to 32: each time exactly the
 
 1. Three things would have caught it:
    - A staging cluster that takes every upgrade a week earlier, with the same Istio version.
-   - The release notes of every patch in between. They list component updates such as containerd.
+   - The release notes of every patch in between, which list component updates such as containerd.
    - A check after each node's upgrade that a new pod on that node starts and serves traffic, before the plan moves to the next node. With `concurrency: 1`, a failed check stops the damage at one node.
-2. The plan's job was to replace the k3s binary and get the node back to `Ready`. Both happened. Nothing in the plan checks the workloads. "Upgrade done" and "cluster healthy" are separate checks, and only the second one matters to users.
-3. A datastore restore rewinds the whole cluster. Every change since the backup disappears, not just the deleted Deployment. To bring back one object, re-apply it from Git, which ArgoCD would do here on its own. Or restore the object with a tool that backs up individual objects, such as Velero.
-4. The client and server certificates expire after 12 months, because k3s only renews them at startup. Kubelets lose contact with the API server, and `kubectl` fails with `x509: certificate has expired`. To find out in advance, use one of these:
+2. The plan's job was to replace the k3s binary and get the node back to `Ready`, and both happened, while nothing in the plan checks the workloads. "Upgrade done" and "cluster healthy" are separate checks, and only the second one matters to users.
+3. A datastore restore rewinds the whole cluster, so every change since the backup disappears, not just the deleted Deployment. To bring back one object, re-apply it from Git, which ArgoCD would do here on its own, or restore it with a tool that backs up individual objects, such as Velero.
+4. The client and server certificates expire after 12 months, because k3s renews them only at startup, so kubelets lose contact with the API server and `kubectl` fails with `x509: certificate has expired`. To find out in advance, use one of these:
    - Watch for `CertificateExpirationWarning` events.
    - Alert on certificate expiry from Prometheus.
    - Restart (or upgrade) each node more often than every eight months.
@@ -428,4 +426,4 @@ Asking ArgoCD to sync istio-config from Git
 Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
-This removes the backup marker ConfigMaps. The k3s upgrade stays. To return to v1.31.5, rebuild the lab.
+This removes the backup marker ConfigMaps, while the k3s upgrade stays, so to return to v1.31.5 you rebuild the lab.
