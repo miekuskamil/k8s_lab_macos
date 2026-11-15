@@ -72,8 +72,11 @@ Each mode also takes a version label, such as `pod-security.kubernetes.io/enforc
 
 **Exam traps.** Enforce never touches pods that already run, the same lesson the course's [module 26](../../platform-engineering/26-kyverno-policy-as-code.md#concept-two-paths-to-a-verdict) teaches for Kyverno. A Deployment's existing pods keep running after you label the namespace. The refusal hits the next pod the ReplicaSet creates, and it shows up only as an event on the ReplicaSet. A server-side dry run of the label lists the pods that would break the rule before you apply it:
 
-```bash
-k label --dry-run=server --overwrite ns secure-apps pod-security.kubernetes.io/enforce=restricted
+```console
+root@cks-cp:~# k label --dry-run=server --overwrite ns secure-apps pod-security.kubernetes.io/enforce=restricted
+Warning: existing pods in namespace "secure-apps" violate the new PodSecurity enforce level "restricted:latest"
+Warning: app-7459c748d4-h5vfj: allowPrivilegeEscalation != false, unrestricted capabilities, runAsNonRoot != true, seccompProfile
+namespace/secure-apps labeled (server dry run)
 ```
 
 In the test run, that printed `Warning: existing pods in namespace "secure-apps" violate the new PodSecurity enforce level "restricted:latest"`, then the four reasons for the one pod.
@@ -248,8 +251,12 @@ Real platform teams set these once, centrally, so app teams never think about th
 
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 4.1
+```console
+$ ./certs/cks/task.sh setup 4.1
+== setup task 4.1
+deployment.apps/app created
+Waiting for deployment "app" rollout to finish: 0 of 1 updated replicas are available...
+deployment "app" successfully rolled out
 ```
 
 > 1. Make namespace `secure-apps` enforce the `restricted` Pod Security Standard, and warn about it too.
@@ -260,8 +267,11 @@ Real platform teams set these once, centrally, so app teams never think about th
 
 Label first, and read the warning:
 
-```bash
-k label ns secure-apps pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/warn=restricted
+```console
+root@cks-cp:~# k label ns secure-apps pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/warn=restricted
+Warning: existing pods in namespace "secure-apps" violate the new PodSecurity enforce level "restricted:latest"
+Warning: app-7459c748d4-h5vfj: allowPrivilegeEscalation != false, unrestricted capabilities, runAsNonRoot != true, seccompProfile
+namespace/secure-apps labeled
 ```
 
 The warning names the four gaps: `allowPrivilegeEscalation != false, unrestricted capabilities, runAsNonRoot != true, seccompProfile`. Fix each one in the pod template with `k -n secure-apps edit deploy app`:
@@ -285,23 +295,25 @@ Then `k -n secure-apps rollout status deploy app`. The new pod starts, and the o
 
 </details>
 
-```bash
-./certs/cks/task.sh check 4.1
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 4.1
+== check task 4.1
   PASS  namespace secure-apps enforces the restricted standard
   PASS  Deployment app has a ready pod that the namespace admitted
   PASS  no running pod in secure-apps violates restricted
   PASS  a privileged pod is refused in secure-apps
+== task 4.1: 4 passed, 0 failed
 ```
 
 ## Task 2: Encrypt Secrets at rest
 
 **Time budget:** 10 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 4.2
+```console
+$ ./certs/cks/task.sh setup 4.2
+== setup task 4.2
+secret/db-creds created
+Sup3rS3cret
 ```
 
 The setup creates Secret `db-creds` in namespace `vault-test` and prints the password as it sits in etcd, in clear text.
@@ -315,11 +327,14 @@ The setup creates Secret `db-creds` in namespace `vault-test` and prints the pas
 
 Make a 32-byte key and the file:
 
-```bash
-mkdir -p /etc/kubernetes/enc
-head -c 32 /dev/urandom | base64
-vim /etc/kubernetes/enc/enc.yaml
+```console
+root@cks-cp:~# mkdir -p /etc/kubernetes/enc
+root@cks-cp:~# head -c 32 /dev/urandom | base64
+E0Go46ihI4xopds2NYObxwfMWXzBzQ/ClXMezcOs0Mw=
+root@cks-cp:~# vim /etc/kubernetes/enc/enc.yaml
 ```
+
+The transcript leaves out the editor session.
 
 ```yaml
 apiVersion: apiserver.config.k8s.io/v1
@@ -351,36 +366,48 @@ Back up the API server manifest, then add the flag, a volume mount and a volume,
 
 When the API server is back, rewrite every Secret and look at etcd:
 
-```bash
-k get secrets -A -o json | k replace -f -
-ETCDCTL_API=3 etcdctl --endpoints=https://127.0.0.1:2379 \
+```console
+root@cks-cp:~# k get secrets -A -o json | k replace -f -
+secret/ingress-nginx-admission replaced
+secret/bootstrap-token-6uqqt7 replaced
+secret/bootstrap-token-acm1tv replaced
+secret/db-creds replaced
+root@cks-cp:~# ETCDCTL_API=3 etcdctl --endpoints=https://127.0.0.1:2379 \
   --cacert=/etc/kubernetes/pki/etcd/ca.crt \
   --cert=/etc/kubernetes/pki/apiserver-etcd-client.crt \
   --key=/etc/kubernetes/pki/apiserver-etcd-client.key \
   get /registry/secrets/vault-test/db-creds --print-value-only | head -c 48 | od -c
+{"level":"warn","ts":"2026-11-15T12:45:23.919374Z","caller":"flags/flag.go:94","msg":"unrecognized environment variable","environment-variable":"ETCDCTL_API=3"}
+0000000   k   8   s   :   e   n   c   :   a   e   s   c   b   c   :   v
+0000020   1   :   k   e   y   1   : 021 372 257 242 365 263   E 353 177
+0000040   G 362 240 201 250   [   w 316   G   d   G 353 200 225 206 025
+0000060
 ```
 
 The certificate paths come from the API server's own `--etcd-*` flags, so `grep etcd /etc/kubernetes/manifests/kube-apiserver.yaml` finds them when you forget. etcdctl 3.7 no longer needs `ETCDCTL_API=3` and prints a warning about it, but older versions in exam environments still need it. In the test run, the value started with `k8s:enc:aescbc:v1:key1:`, and the replace rewrote 4 Secrets.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 4.2
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 4.2
+== check task 4.2
   PASS  the API server runs with --encryption-provider-config
   PASS  Secret db-creds is stored with prefix k8s:enc:aescbc:v1:
   PASS  the password no longer appears in etcd in clear text
   PASS  kubectl still reads the Secret
+== task 4.2: 4 passed, 0 failed
 ```
 
 ## Task 3: A Secret as a file, not an environment variable
 
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 4.3
+```console
+$ ./certs/cks/task.sh setup 4.3
+== setup task 4.3
+secret/api-token created
+pod/api created
+pod/api condition met
 ```
 
 > Pod `api` in namespace `orders` reads Secret `api-token` through the environment variable `API_TOKEN`. Change it to read the Secret as a read-only file at `/etc/api/token`, and remove the variable. Keep the pod name.
@@ -390,11 +417,15 @@ The certificate paths come from the API server's own `--etcd-*` flags, so `grep 
 
 A pod's containers don't change in place, so save, delete and recreate:
 
-```bash
-k -n orders get pod api -o yaml > api.yaml
-vim api.yaml       # remove env, add volumeMounts and volumes
-k -n orders replace --force -f api.yaml
+```console
+root@cks-cp:~# k -n orders get pod api -o yaml > api.yaml
+root@cks-cp:~# vim api.yaml       # remove env, add volumeMounts and volumes
+root@cks-cp:~# k -n orders replace --force -f api.yaml
+pod "api" deleted from orders namespace
+pod/api replaced
 ```
+
+The transcript leaves out the editor session, which makes the change the YAML below shows.
 
 ```yaml
 spec:
@@ -413,22 +444,27 @@ spec:
 
 </details>
 
-```bash
-./certs/cks/task.sh check 4.3
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 4.3
+== check task 4.3
   PASS  pod api has no environment variable from a Secret
   PASS  pod api mounts Secret api-token read-only at /etc/api
   PASS  the token is readable at /etc/api/token
+== task 4.3: 3 passed, 0 failed
 ```
 
 ## Task 4: Sandbox a pod with gVisor
 
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 4.4
+```console
+$ ./certs/cks/task.sh setup 4.4
+== setup task 4.4
+deployment.apps/untrusted created
+Waiting for deployment "untrusted" rollout to finish: 0 of 1 updated replicas are available...
+deployment "untrusted" successfully rolled out
+[plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runsc]
+  runtime_type = 'io.containerd.runsc.v1'
 ```
 
 > 1. Create a RuntimeClass `gvisor` for the containerd handler `runsc`.
@@ -447,33 +483,47 @@ metadata:
 handler: runsc
 ```
 
-```bash
-k apply -f rc.yaml
-k -n sandbox patch deploy untrusted -p '{"spec":{"template":{"spec":{"runtimeClassName":"gvisor"}}}}'
-k -n sandbox rollout status deploy untrusted
-k -n sandbox exec deploy/untrusted -- dmesg | head -2
+```console
+root@cks-cp:~# k apply -f rc.yaml
+runtimeclass.node.k8s.io/gvisor created
+root@cks-cp:~# k -n sandbox patch deploy untrusted -p '{"spec":{"template":{"spec":{"runtimeClassName":"gvisor"}}}}'
+deployment.apps/untrusted patched
+root@cks-cp:~# k -n sandbox rollout status deploy untrusted
+Waiting for deployment "untrusted" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "untrusted" rollout to finish: 1 old replicas are pending termination...
+deployment "untrusted" successfully rolled out
+root@cks-cp:~# k -n sandbox exec deploy/untrusted -- dmesg | head -2
+[   0.000000] Starting gVisor...
+[   0.577100] Recruiting cron-ies...
 ```
 
 `dmesg` inside a gVisor pod shows gVisor's own made-up kernel log. In the test run: `[   0.000000] Starting gVisor...`. A normal pod gets `dmesg: klogctl: Operation not permitted` instead, because it shares the host kernel and may not read its log.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 4.4
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 4.4
+== check task 4.4
   PASS  RuntimeClass gvisor uses handler runsc
   PASS  Deployment untrusted uses RuntimeClass gvisor
   PASS  the running pod's kernel is gVisor
+== task 4.4: 3 passed, 0 failed
 ```
 
 ## Task 5: Rotate the encryption key
 
 **Time budget:** 10 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 4.5
+```console
+$ ./certs/cks/task.sh setup 4.5
+== setup task 4.5
+secret/app-secret created
+  - aescbc:
+      keys:
+      - name: key1
+        secret: <hidden>
+  - identity: {}
+  stored as: k8s:enc:aescbc:v1:key1:
 ```
 
 The setup starts from task 2's result and applies its solution when encryption is off. It prints how the Secret sits in etcd. In the test run: `stored as: k8s:enc:aescbc:v1:key1:`.
@@ -485,11 +535,14 @@ The setup starts from task 2's result and applies its solution when encryption i
 
 Step 1, the new key on top:
 
-```bash
-cp /etc/kubernetes/enc/enc.yaml /root/
-head -c 32 /dev/urandom | base64
-vim /etc/kubernetes/enc/enc.yaml
+```console
+root@cks-cp:~# cp /etc/kubernetes/enc/enc.yaml /root/
+root@cks-cp:~# head -c 32 /dev/urandom | base64
+VvafQ3jl97ZKzGW2k5m9h7sM6DnRbNypf8PEEsrWgO4=
+root@cks-cp:~# vim /etc/kubernetes/enc/enc.yaml
 ```
+
+The transcript leaves out the editor session.
 
 ```yaml
   - aescbc:
@@ -502,45 +555,61 @@ vim /etc/kubernetes/enc/enc.yaml
 
 Step 2, a restart. The API server reads the file only at start, and the manifest didn't change, so the kubelet sees no reason to restart it. Move the manifest out of the folder and back:
 
-```bash
-mv /etc/kubernetes/manifests/kube-apiserver.yaml /root/
-watch crictl ps --name kube-apiserver        # wait until the container is gone
-mv /root/kube-apiserver.yaml /etc/kubernetes/manifests/
+```console
+root@cks-cp:~# mv /etc/kubernetes/manifests/kube-apiserver.yaml /root/
+root@cks-cp:~# watch crictl ps --name kube-apiserver        # wait until the container is gone
+CONTAINER           IMAGE               CREATED             STATE               NAME                ATTEMPT             POD ID              POD                 NAMESPACE
+root@cks-cp:~# mv /root/kube-apiserver.yaml /etc/kubernetes/manifests/
 ```
+
+`watch` redraws its screen every 2 seconds until you press Ctrl-C. The transcript shows the last screen, with the container gone.
 
 Step 3, rewrite, once `k get nodes` answers again:
 
-```bash
-k get secrets -A -o json | k replace -f -
+```console
+root@cks-cp:~# k get secrets -A -o json | k replace -f -
+secret/ingress-nginx-admission replaced
+secret/bootstrap-token-6uqqt7 replaced
+secret/bootstrap-token-acm1tv replaced
+secret/api-token replaced
+secret/app-secret replaced
+secret/db-creds replaced
 ```
 
 Step 4: delete the two `key1` lines, and restart the API server the same way. Then prove it with etcdctl, using the variables from task 2:
 
-```bash
-etcdctl ... get /registry/secrets/rotate-me/app-secret --print-value-only | head -c 23; echo
+```console
+root@cks-cp:~# etcdctl ... get /registry/secrets/rotate-me/app-secret --print-value-only | head -c 23; echo
+{"level":"warn","ts":"2026-11-15T12:48:03.539579Z","caller":"flags/flag.go:94","msg":"unrecognized environment variable","environment-variable":"ETCDCTL_API=3"}
+k8s:enc:aescbc:v1:key2:
 ```
 
-In the test run, that printed `k8s:enc:aescbc:v1:key2:`. The rewrite touched 5 Secrets, and the two restarts made the whole rotation take 71 seconds.
+The `...` in the command stands for the etcdctl flags of task 2. The transcript ran it with them.
+
+In the test run, that printed `k8s:enc:aescbc:v1:key2:`. The rewrite touched 5 Secrets in one test run and 6 in another, and the two restarts made the whole rotation take 71 seconds.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 4.5
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 4.5
+== check task 4.5
   PASS  app-secret is stored with key2
   PASS  every Secret in etcd is stored with key2
   PASS  the configuration no longer holds key1, and key2 comes first
   PASS  kubectl still reads app-secret
+== task 4.5: 4 passed, 0 failed
 ```
 
 ## Task 6: Pod Security levels, modes and versions
 
 **Time budget:** 4 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 4.6
+```console
+$ ./certs/cks/task.sh setup 4.6
+== setup task 4.6
+deployment.apps/legacy created
+Waiting for deployment "legacy" rollout to finish: 0 of 1 updated replicas are available...
+deployment "legacy" successfully rolled out
 ```
 
 > Namespace `psa-levels` runs Deployment `legacy` with nginx as root. Configure Pod Security for the namespace:
@@ -553,42 +622,47 @@ In the test run, that printed `k8s:enc:aescbc:v1:key2:`. The rewrite touched 5 S
 <details>
 <summary>Solution</summary>
 
-```bash
-k label ns psa-levels \
+```console
+root@cks-cp:~# k label ns psa-levels \
   pod-security.kubernetes.io/enforce=baseline pod-security.kubernetes.io/enforce-version=v1.37 \
   pod-security.kubernetes.io/warn=restricted pod-security.kubernetes.io/warn-version=latest \
   pod-security.kubernetes.io/audit=restricted pod-security.kubernetes.io/audit-version=latest
+namespace/psa-levels labeled
 ```
 
 Write `latest` explicitly even though it's the default: the task asks for it, and a check reads the label. Test both levels with server-side dry runs:
 
-```bash
-k -n psa-levels run t1 --image=busybox:1.36 --privileged --dry-run=server -- sleep 1   # Forbidden
-k -n psa-levels run t2 --image=nginx:1.27-alpine --dry-run=server                      # Warning, then created
+```console
+root@cks-cp:~# k -n psa-levels run t1 --image=busybox:1.36 --privileged --dry-run=server -- sleep 1   # Forbidden
+Error from server (Forbidden): pods "t1" is forbidden: violates PodSecurity "baseline:v1.37": privileged (container "t1" must not set securityContext.privileged=true)
+root@cks-cp:~# k -n psa-levels run t2 --image=nginx:1.27-alpine --dry-run=server                      # Warning, then created
+Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "t2" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "t2" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "t2" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "t2" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
+pod/t2 created (server dry run)
 ```
 
 In the test run, the second command printed `Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false ...` and then `pod/t2 created (server dry run)`. nginx as root passes `baseline`, so `legacy` keeps running.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 4.6
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 4.6
+== check task 4.6
   PASS  enforce is baseline, pinned to v1.37
   PASS  warn and audit are restricted, at version latest
   PASS  a privileged pod is refused
   PASS  a root nginx pod is admitted, with a restricted warning
   PASS  Deployment legacy keeps its ready pod
+== task 4.6: 5 passed, 0 failed
 ```
 
 ## Task 7: Cluster-wide Pod Security defaults with exemptions
 
 **Time budget:** 10 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 4.7
+```console
+$ ./certs/cks/task.sh setup 4.7
+== setup task 4.7
+  a privileged pod in psa-default today: pod/t created (server dry run)
 ```
 
 The setup shows the cluster's default today. In the test run, a privileged pod in an unlabelled namespace got `pod/t created (server dry run)`.
@@ -618,34 +692,57 @@ Write the file from the theory section, then point the API server at it. Back up
 
 The "Enforce Pod Security Standards by configuring the built-in admission controller" page in the Kubernetes docs holds the YAML. Once the API server answers, test three namespaces:
 
-```bash
-k -n psa-default run t1 --image=busybox:1.36 --privileged --dry-run=server -- sleep 1        # Forbidden
-k -n psa-default run t2 --image=nginx:1.27-alpine --dry-run=server                           # Warning, then created
-k -n monitoring-agents run t3 --image=busybox:1.36 --privileged --dry-run=server -- sleep 1  # created, exempt
+```console
+root@cks-cp:~# k -n psa-default run t1 --image=busybox:1.36 --privileged --dry-run=server -- sleep 1        # Forbidden
+Error from server (Forbidden): pods "t1" is forbidden: violates PodSecurity "baseline:latest": privileged (container "t1" must not set securityContext.privileged=true)
+root@cks-cp:~# k -n psa-default run t2 --image=nginx:1.27-alpine --dry-run=server                           # Warning, then created
+Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "t2" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "t2" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "t2" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "t2" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
+pod/t2 created (server dry run)
+root@cks-cp:~# k -n monitoring-agents run t3 --image=busybox:1.36 --privileged --dry-run=server -- sleep 1  # created, exempt
+pod/t3 created (server dry run)
 ```
 
 In the test run, the restart took 61 seconds. The defaults hit every namespace without labels from then on, including ones created later.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 4.7
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 4.7
+== check task 4.7
   PASS  the API server reads /etc/kubernetes/admission/psa.yaml
   PASS  a privileged pod in the unlabelled namespace psa-default is refused
   PASS  a root nginx pod in psa-default gets a restricted warning but runs
   PASS  a privileged pod in monitoring-agents is admitted
   PASS  the API server pod is Ready
+== task 4.7: 5 passed, 0 failed
 ```
 
 ## Task 8: Pods that reach into the node
 
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 4.8
+```console
+$ ./certs/cks/task.sh setup 4.8
+== setup task 4.8
+pod/web created
+Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "c" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "c" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "c" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "c" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
+Warning: would violate PodSecurity "restricted:latest": host namespaces (hostPID=true), allowPrivilegeEscalation != false (container "c" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "c" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "c" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "c" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
+pod/node-debug created
+Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "c" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "c" must set securityContext.capabilities.drop=["ALL"]), restricted volume types (volume "host" uses restricted volume type "hostPath"), runAsNonRoot != true (pod or container "c" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "c" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
+pod/log-reader created
+pod/api created
+Warning: would violate PodSecurity "restricted:latest": host namespaces (hostNetwork=true), allowPrivilegeEscalation != false (container "c" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "c" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "c" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "c" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
+pod/net-tool created
+Warning: would violate PodSecurity "restricted:latest": privileged (container "c" must not set securityContext.privileged=true), allowPrivilegeEscalation != false (container "c" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "c" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "c" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "c" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
+pod/metrics created
+pod/cache created
+  team-blue/log-reader
+  team-blue/node-debug
+  team-blue/web
+  team-green/api
+  team-green/cache
+  team-green/metrics
+  team-green/net-tool
 ```
 
 > Namespaces `team-blue` and `team-green` run seven pods. Delete every pod that shares a host namespace (PID, network or IPC), mounts a `hostPath` volume, or runs a privileged container. Leave the others running.
@@ -655,41 +752,53 @@ In the test run, the restart took 61 seconds. The defaults hit every namespace w
 
 `jsonpath` prints the fields side by side, one pod per line:
 
-```bash
-for n in team-blue team-green; do
+```console
+root@cks-cp:~# for n in team-blue team-green; do
   k -n $n get pods -o jsonpath='{range .items[*]}{.metadata.name}{" pid="}{.spec.hostPID}{" net="}{.spec.hostNetwork}{" ipc="}{.spec.hostIPC}{" priv="}{.spec.containers[*].securityContext.privileged}{" vols="}{.spec.volumes[*].hostPath.path}{"\n"}{end}'
 done
+log-reader pid= net= ipc= priv= vols=/
+node-debug pid=true net= ipc= priv= vols=
+web pid= net= ipc= priv= vols=
+api pid= net= ipc= priv= vols=
+cache pid= net= ipc= priv= vols=
+metrics pid= net= ipc= priv=true vols=
+net-tool pid= net=true ipc= priv= vols=
 ```
 
 Empty fields mean "not set". In the test run, four pods had something: `node-debug` (hostPID), `log-reader` (a hostPath of `/`), `net-tool` (hostNetwork) and `metrics` (privileged). `cache` mounts an `emptyDir`, which lives inside the pod's own storage and is harmless here.
 
-```bash
-k -n team-blue delete pod node-debug log-reader
-k -n team-green delete pod net-tool metrics
+```console
+root@cks-cp:~# k -n team-blue delete pod node-debug log-reader
+pod "node-debug" deleted from team-blue namespace
+pod "log-reader" deleted from team-blue namespace
+root@cks-cp:~# k -n team-green delete pod net-tool metrics
+pod "net-tool" deleted from team-green namespace
+pod "metrics" deleted from team-green namespace
 ```
 
 Both namespaces carry `pod-security.kubernetes.io/enforce=privileged`, which explains how those pods got in. Changing the label to `baseline` afterwards keeps new ones out.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 4.8
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 4.8
+== check task 4.8
   PASS  node-debug (hostPID) is gone
   PASS  log-reader (hostPath /) is gone
   PASS  net-tool (hostNetwork) is gone
   PASS  metrics (privileged) is gone
   PASS  web, api and cache still run
+== task 4.8: 5 passed, 0 failed
 ```
 
 ## Task 9: A sandbox only on the nodes that have it
 
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
-```bash
-./certs/cks/task.sh setup 4.9
+```console
+$ ./certs/cks/task.sh setup 4.9
+== setup task 4.9
+  runsc on cks-w1: /usr/local/bin/runsc   runsc on cks-cp: none
 ```
 
 > Only `cks-w1` has gVisor. Label it `sandbox=gvisor`. Create a RuntimeClass `gvisor-pinned` for the handler `runsc` that sends its pods only to nodes with that label. Then create Deployment `scanner` in namespace `sandbox-sched`, image `busybox:1.36`, command `sleep 1d`, 3 replicas, with that RuntimeClass.
@@ -697,8 +806,9 @@ Both namespaces carry `pod-security.kubernetes.io/enforce=privileged`, which exp
 <details>
 <summary>Solution</summary>
 
-```bash
-k label node cks-w1 sandbox=gvisor
+```console
+root@cks-cp:~# k label node cks-w1 sandbox=gvisor
+node/cks-w1 labeled
 ```
 
 ```yaml
@@ -712,34 +822,49 @@ scheduling:
     sandbox: gvisor
 ```
 
-```bash
-k -n sandbox-sched create deploy scanner --image=busybox:1.36 --replicas=3 $do -- sleep 1d > scanner.yaml
-vim scanner.yaml      # add runtimeClassName: gvisor-pinned under the pod template's spec
-k apply -f scanner.yaml
-k -n sandbox-sched get pods -o wide
+```console
+root@cks-cp:~# k -n sandbox-sched create deploy scanner --image=busybox:1.36 --replicas=3 $do -- sleep 1d > scanner.yaml
+root@cks-cp:~# vim scanner.yaml      # add runtimeClassName: gvisor-pinned under the pod template's spec
+root@cks-cp:~# k apply -f scanner.yaml
+Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "busybox" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "busybox" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "busybox" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "busybox" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
+deployment.apps/scanner created
+root@cks-cp:~# k -n sandbox-sched get pods -o wide
+NAME                       READY   STATUS    RESTARTS   AGE   IP              NODE     NOMINATED NODE   READINESS GATES
+scanner-85dff684c9-hssgc   1/1     Running   0          1s    10.244.135.82   cks-w1   <none>           <none>
+scanner-85dff684c9-rh2lt   1/1     Running   0          1s    10.244.135.80   cks-w1   <none>           <none>
+scanner-85dff684c9-xxxts   1/1     Running   0          1s    10.244.135.81   cks-w1   <none>           <none>
 ```
+
+The transcript leaves out the editor session, which adds `runtimeClassName: gvisor-pinned`.
 
 In the test run, all three pods landed on `cks-w1`, and each one carried `nodeSelector: {"sandbox":"gvisor"}`, copied in from the RuntimeClass.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 4.9
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 4.9
+== check task 4.9
   PASS  cks-w1 carries the label sandbox=gvisor, cks-cp does not
   PASS  RuntimeClass gvisor-pinned uses runsc and schedules onto sandbox=gvisor
   PASS  Deployment scanner has 3 ready pods, all on cks-w1, all under gVisor
+== task 4.9: 3 passed, 0 failed
 ```
 
 ## Task 10: Pod-to-pod encryption with Cilium
 
 **Time budget:** 5 minutes. **Host:** `cks-lima`.
 
-```bash
-./certs/cks/cluster/lima.sh start      # once, when the VM is off
-./certs/cks/task.sh setup 4.10
+```console
+$ ./certs/cks/cluster/lima.sh start      # once, when the VM is off
+...
+time="2026-11-15T12:56:22Z" level=info msg="READY. Run `limactl shell cks-lima` to open the shell."
+cluster ready
+$ ./certs/cks/task.sh setup 4.10
+== setup task 4.10
+pod/web created
+service/web created
+pod/client created
+Encryption: Disabled (1/1 nodes)
 ```
 
 > Turn on WireGuard encryption for pod traffic in Cilium on `cks-lima`. Pods must keep reaching each other.
@@ -749,27 +874,38 @@ In the test run, all three pods landed on `cks-w1`, and each one carried `nodeSe
 
 The Cilium docs' "WireGuard Transparent Encryption" page gives the Helm values. The `cilium` command line tool applies them to the installed release:
 
-```bash
-cilium upgrade --version 1.20.4 --reuse-values --set encryption.enabled=true --set encryption.type=wireguard
-k -n kube-system rollout restart ds/cilium
-k -n kube-system rollout status ds/cilium
-cilium encrypt status
-ip link show cilium_wg0
+```console
+root@cks-lima:~# cilium upgrade --version 1.20.4 --reuse-values --set encryption.enabled=true --set encryption.type=wireguard
+ℹ️  Using Cilium version 1.20.4
+🔮 Auto-detected cluster name: cks-lima
+🔮 Auto-detected kube-proxy has been installed
+⚠️  You maybe need to restart Cilium pods for configmap changes to take effect
+root@cks-lima:~# k -n kube-system rollout restart ds/cilium
+daemonset.apps/cilium restarted
+root@cks-lima:~# k -n kube-system rollout status ds/cilium
+Waiting for daemon set "cilium" rollout to finish: 0 out of 1 new pods have been updated...
+Waiting for daemon set "cilium" rollout to finish: 0 out of 1 new pods have been updated...
+Waiting for daemon set "cilium" rollout to finish: 0 of 1 updated pods are available...
+daemon set "cilium" successfully rolled out
+root@cks-lima:~# cilium encrypt status
+Encryption: Wireguard (1/1 nodes)
+root@cks-lima:~# ip link show cilium_wg0
+16: cilium_wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1405 qdisc noqueue state UNKNOWN mode DEFAULT group default 
+    link/none 
 ```
 
 The upgrade only changes the `cilium-config` ConfigMap, and the agents read it at start, so the restart is part of the job. The test run missed it once: the upgrade printed `You maybe need to restart Cilium pods for configmap changes to take effect`, and `cilium encrypt status` kept saying `Disabled`. After the restart, it said `Encryption: Wireguard (1/1 nodes)`, 12 seconds later.
 
 </details>
 
-```bash
-./certs/cks/task.sh check 4.10
-```
-
-```
+```console
+$ ./certs/cks/task.sh check 4.10
+== check task 4.10
   PASS  cilium-config has enable-wireguard: true
   PASS  cilium encrypt status reports Wireguard on every node
   PASS  the node has the WireGuard interface cilium_wg0
   PASS  pods still reach each other
+== task 4.10: 4 passed, 0 failed
 ```
 
 ## Clean up
