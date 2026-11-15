@@ -589,7 +589,7 @@ A generator is the part of an ApplicationSet that produces the list of Applicati
    - Change `replicas` in Git and push, which keeps Git the truth, and add a refresh annotation or use a webhook so the change applies in seconds.
    - When Git is slow to change, for example because of review rules or a broken pipeline, turn off `selfHeal` for that Application first and scale by hand, then open a follow-up task to put the number in Git.
 
-   At 3 a.m. the Git path is the right default when a push and a refresh take a minute, because nothing drifts and nothing needs cleaning up later. If pushing to Git is blocked, turning off `selfHeal` and scaling by hand is the faster fix, and the follow-up task keeps Git from overwriting your fix at the next sync.
+   At 3 a.m. the Git path is the right default when a push and a refresh take a minute, because nothing drifts and nothing needs cleaning up later. If something blocks pushes to Git, turning off `selfHeal` and scaling by hand is the faster fix, and the follow-up task keeps Git from overwriting your fix at the next sync.
 
    Many teams also let an HPA own the replica count and leave `replicas` out of Git altogether, so autoscaling never fights ArgoCD.
 2. Alert on health, firing when an Application stays `Degraded` or `Progressing` for longer than its rollout normally takes. ArgoCD exports the metric `argocd_app_info` for Prometheus, with `health_status` and `sync_status` labels. `OutOfSync` happens for a few seconds on every push, and with `selfHeal` off it's often intended, so an `OutOfSync` alert is noisy: a short `OutOfSync` is normal, while a long `Degraded` is an outage.
