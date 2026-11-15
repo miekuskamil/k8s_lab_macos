@@ -6,13 +6,13 @@
 
 **You need:** the lab running (`./scripts/start.sh` starts or repairs it) and `istioctl`.
 
-This module gives you four broken setups to fix, like real on-call shifts. For each one, `./platform-engineering/incident.sh` breaks something in the cluster. It tells you only what the users see, not what it changed. Your job has three parts:
+This module gives you four broken setups to fix, like real on-call shifts. For each one, `./platform-engineering/incident.sh` breaks something in the cluster and tells you only what the users see, not what it changed, so your job has three parts:
 
 1. Find the cause with the tools.
 2. Prove it with evidence.
 3. Fix it.
 
-The answers are folded away at the end of each incident. Try for at least 15 minutes before you open one.
+Each incident ends with its answer folded away, and you should try for at least 15 minutes before you open one.
 
 ## How to investigate
 
@@ -27,14 +27,14 @@ $ ./platform-engineering/load.sh 600 /api/orders 5
 Sending about 5 requests per second to http://localhost:8080/api/orders for 600s. Press Ctrl-C to stop.
 ```
 
-Turn on the waypoint's access log once. It helps in every incident:
+Turn on the waypoint's access log once, because it helps in every incident:
 
 ```console
 $ kubectl apply -f platform-engineering/manifests/06-waypoint-access-logs.yaml
 telemetry.telemetry.istio.io/waypoint-access-logs created
 ```
 
-When Envoy fails a request, it adds a short code, a response flag, that says why. You find the flag in the access log and in `istio_requests_total{response_flags=...}`. It is the fastest clue you have:
+When Envoy fails a request, it adds a short code, a response flag, that says why. You find the flag in the access log and in `istio_requests_total{response_flags=...}`, and it's the fastest clue you have:
 
 | Flag | Meaning |
 |---|---|
@@ -48,13 +48,13 @@ When Envoy fails a request, it adds a short code, a response flag, that says why
 
 ## Concept: who wrote the error?
 
-An error page in a mesh has many possible authors, so first find out who wrote it. Without a mesh, an error came from your app or your ingress controller. In the shop, a request passes three more components on its way:
+Without a mesh, an error came from your app or your ingress controller, but in the shop a request passes three more components on its way, so an error page has many possible authors:
 
 - the gateway's Envoy, at the entrance,
 - ztunnel, on every hop between pods,
 - the waypoint's Envoy, in front of the backend.
 
-Each of them writes errors of its own, and each leaves a different kind of evidence. Ask "which component answered?" before you ask "why?". Otherwise you search the wrong logs.
+Each of them writes errors of its own and leaves a different kind of evidence, so ask "which component answered?" before you ask "why?", or you search the wrong logs.
 
 | What curl shows | Who wrote it | Where to look next |
 |---|---|---|
@@ -63,9 +63,9 @@ Each of them writes errors of its own, and each leaves a different kind of evide
 | `000`, a reset, no HTTP status at all | Nothing at L7 answered: ztunnel closed the connection, or nothing listens | The ztunnel log |
 | The app's own JSON error | The app | The app's logs in Loki |
 
-Traces give a second clue. Each component that handles a request adds a span to the trace, like a stamp in a passport. In this lab the gateway, the waypoint and the backend write spans. ztunnel writes none. A trace that ends early shows you the last component that saw the request. So count the spans before you read them.
+Traces give a second clue, because each component that handles a request adds a span to the trace, like a stamp in a passport. In this lab the gateway, the waypoint and the backend write spans while ztunnel writes none, so a trace that ends early shows you the last component that saw the request, and counting the spans comes before reading them.
 
-One case leaves almost no trace at all. Sometimes ztunnel refuses a connection at L4 and no Envoy sits in front of it. Then the refusal shows up in no trace and in no HTTP metric. Only the ztunnel log records it.
+One case leaves almost no trace at all. When ztunnel refuses a connection at L4 and no Envoy sits in front of it, the refusal shows up in no trace and no HTTP metric, so only the ztunnel log records it.
 
 ---
 
@@ -90,11 +90,11 @@ Repair the lab with: ./platform-engineering/incident.sh stop
 <details>
 <summary>Evidence the lab produced, and the answer</summary>
 
-- `curl` returns `403` with body `RBAC: access denied`. That body is Envoy's, not the app's.
-- New traces have 2 spans, from the gateway and the waypoint. The backend never sees the request.
-- Prometheus shows `response_code="403"` and `destination_workload="unknown"`. The waypoint refused the request before it chose a backend pod. That's why there is no destination workload.
-- The access log shows `403 - rbac_access_denied_matched_policy[none]`. No ALLOW rule matched.
-- The cause is a typo. `backend-allow-frontend` now names `cluster.local/ns/shop/sa/front-end`. The real service account is `frontend`, without a hyphen. One wrong character in a principal locks out the only real caller.
+- `curl` returns `403` with body `RBAC: access denied`, which is Envoy's body, not the app's.
+- New traces have 2 spans, from the gateway and the waypoint, so the backend never sees the request.
+- Prometheus shows `response_code="403"` and `destination_workload="unknown"`, because the waypoint refused the request before it chose a backend pod.
+- The access log shows `403 - rbac_access_denied_matched_policy[none]`, which means no ALLOW rule matched.
+- The cause is a typo: `backend-allow-frontend` now names `cluster.local/ns/shop/sa/front-end`, while the real service account is `frontend`, without a hyphen. One wrong character in a principal locks out the only real caller.
 
 ```console
 $ kubectl -n shop get authorizationpolicy backend-allow-frontend -o jsonpath='{.spec.rules[0].from[0].source.principals}'
@@ -106,7 +106,7 @@ frontend
 
 **Fix.** `./platform-engineering/incident.sh stop`, or `kubectl apply -f manifests/istio/security.yaml`.
 
-**Lesson.** A principal is a plain string to Istio. Istio does not check that the service account exists. Kiali flags some of these broken references in **Istio Config**. The reliable check is to test every policy change with a real request.
+**Lesson.** Istio treats a principal as a plain string and never checks that the service account exists. Kiali flags some of these broken references in **Istio Config**, but the reliable check is to test every policy change with a real request.
 
 </details>
 
@@ -142,15 +142,15 @@ Backend versions:
 <details>
 <summary>Evidence the lab produced, and the answer</summary>
 
-- With 12 requests per second to a 300 ms endpoint, 596 of 708 requests failed with `503` in one run. The full 300 second run in the transcript above failed 2960 of 3540.
-- The failures took 5 to 6 ms. That is too fast for a real call, so the waypoint rejected them without calling the backend.
-- Prometheus shows `response_code="503", response_flags="UO"`. The access log shows `503 UO upstream_reset_before_response_started{overflow}`.
-- `UO` means a connection pool overflowed. A pool limits how many requests wait for the backend at once, and only a DestinationRule's `connectionPool` sets one. `kubectl get destinationrule -A` finds `course-incident` on `backend-v1`, with `maxConnections: 1` and `http1MaxPendingRequests: 1`.
-- In Jaeger, the failed traces have 2 spans, from the gateway and the waypoint. They carry the tag `response_flags=UO`.
+- With 12 requests per second to a 300 ms endpoint, 596 of 708 requests failed with `503` in one run, and the full 300 second run in the transcript above failed 2960 of 3540.
+- The failures took 5 to 6 ms, which is too fast for a real call, so the waypoint rejected them without calling the backend.
+- Prometheus shows `response_code="503", response_flags="UO"`, and the access log shows `503 UO upstream_reset_before_response_started{overflow}`.
+- `UO` means a connection pool overflowed. A pool limits how many requests wait for the backend at once, and only a DestinationRule's `connectionPool` sets one, so `kubectl get destinationrule -A` finds `course-incident` on `backend-v1`, with `maxConnections: 1` and `http1MaxPendingRequests: 1`.
+- In Jaeger, the failed traces have 2 spans, from the gateway and the waypoint, with the tag `response_flags=UO`.
 
 **Fix.** `kubectl -n shop delete destinationrule course-incident`, or `./platform-engineering/incident.sh stop`.
 
-**Lesson.** A pool limit that is too small hides at quiet times and breaks at busy times. Under load, it behaves like an outage. At low traffic, the service looks healthy. Set limits from the number of concurrent requests you measured. Grafana shows you that number.
+**Lesson.** A pool limit that is too small hides at quiet times, when the service looks healthy, and under load behaves like an outage. Set limits from the number of concurrent requests you measured, which Grafana shows you.
 
 </details>
 
@@ -177,8 +177,8 @@ Repair the lab with: ./platform-engineering/incident.sh stop
 <details>
 <summary>Evidence the lab produced, and the answer</summary>
 
-- All 295 requests returned 200. 97 went to v1, and 198 went to v2.
-- p95 latency is the time that 95% of requests stay under. At the waypoint it was about 10 ms for v1 and about 975 ms for v2. Inside the app it was 5 ms for v1 and 975 ms for v2. So the app itself is slow, and the mesh adds almost nothing.
+- All 295 requests returned 200, with 97 going to v1 and 198 to v2.
+- p95 latency, the time that 95% of requests stay under, was about 10 ms for v1 and about 975 ms for v2 at the waypoint, and 5 ms for v1 and 975 ms for v2 inside the app. So the app itself runs slowly, and the mesh adds almost nothing.
 - Two changes work together here:
   - `backend-route` now sends 70% of traffic to v2. The baseline is 0%.
   - v2 runs with `EXTRA_LATENCY_MS=700`.
@@ -191,11 +191,11 @@ $ kubectl -n shop get deploy backend-v2 -o jsonpath='{.spec.template.spec.contai
 700
 ```
 
-- ArgoCD shows `istio-config` as OutOfSync, because the route in the cluster differs from Git. That is the fastest way to see that someone changed it.
+- ArgoCD shows `istio-config` as OutOfSync, because the route in the cluster differs from Git, which is the fastest way to see that someone changed it.
 
 **Fix.** `./platform-engineering/incident.sh stop`.
 
-**Lesson.** A canary that got promoted too far looks like a general slowdown. The mesh measures latency per version for free. That measurement tells "v2 is slow" apart from "everything is slow".
+**Lesson.** A canary promoted too far looks like a general slowdown. The mesh measures latency per version for free, and that measurement tells "v2 is slow" apart from "everything is slow".
 
 </details>
 
@@ -222,20 +222,20 @@ Repair the lab with: ./platform-engineering/incident.sh stop
 <details>
 <summary>Evidence the lab produced, and the answer</summary>
 
-- The frontend returns the 502 itself. Its logs show `"message":"backend unreachable"`, and the body is the frontend's own error JSON.
-- New traces have 1 span, the gateway's. Nothing after the frontend reports.
-- `istioctl waypoint list -n shop` says `No waypoints found`. `ztunnel-config services` still lists `backend` with WAYPOINT `None`. Meanwhile the Service keeps its `istio.io/use-waypoint: waypoint` label.
-- Prometheus has no waypoint metrics at all for the period. ztunnel's log is full of errors for connections to the backend.
-- The cause is a missing waypoint. Someone deleted the `waypoint` Gateway. The chain of failure goes like this:
+- The frontend returns the 502 itself: its logs show `"message":"backend unreachable"`, and the body is the frontend's own error JSON.
+- New traces have 1 span, the gateway's, so nothing after the frontend reports.
+- `istioctl waypoint list -n shop` says `No waypoints found`, and `ztunnel-config services` still lists `backend` with WAYPOINT `None`, while the Service keeps its `istio.io/use-waypoint: waypoint` label.
+- Prometheus has no waypoint metrics at all for the period, while ztunnel's log fills with errors for connections to the backend.
+- The cause is a missing waypoint, because someone deleted the `waypoint` Gateway. The chain of failure goes like this:
   1. The backend Services still say "use the waypoint".
   2. ztunnel has nowhere to send the traffic.
   3. The connection fails.
 
-  A direct connection to the backend pods would fail too. The L4 policy only admits the waypoint's identity, so it would refuse the frontend.
+  A direct connection to the backend pods would fail too, because the L4 policy admits only the waypoint's identity.
 
 **Fix.** Run `./platform-engineering/incident.sh stop`, which re-applies `manifests/istio/waypoint.yaml`. ArgoCD would also show `istio-config` as OutOfSync, with the Gateway missing.
 
-**Lesson.** A waypoint is a real dependency on the request path. If it disappears, requests stop. Monitor it like any other service. Alert on its pods' readiness and on `istio_requests_total{reporter="waypoint"}` dropping to zero.
+**Lesson.** A waypoint is a real dependency on the request path, so when it disappears, requests stop. Monitor it like any other service, with alerts on its pods' readiness and on `istio_requests_total{reporter="waypoint"}` dropping to zero.
 
 </details>
 
