@@ -37,6 +37,9 @@ if helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kyverno status kyverno 
   "${K[@]}" -n kyverno delete policyexceptions.kyverno.io --all --ignore-not-found >/dev/null 2>&1 || true
   helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kyverno uninstall kyverno --wait >/dev/null 2>&1 || true
 fi
+# The hook sometimes leaves the TTL and cleanup webhooks behind; remove any that remain.
+"${K[@]}" get validatingwebhookconfigurations,mutatingwebhookconfigurations -o name 2>/dev/null \
+  | grep -i kyverno | xargs -r "${K[@]}" delete --ignore-not-found >/dev/null 2>&1 || true
 "${K[@]}" delete namespace kyverno course-policy course-tenant-a --ignore-not-found >/dev/null
 # Module 25: Helm releases first, because the Collector's ClusterRole and binding
 # outlive a namespace delete. Then the namespace and Grafana's Tempo data source.
