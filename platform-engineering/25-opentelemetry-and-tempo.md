@@ -90,24 +90,148 @@ Job adverts for platform and observability roles ask for OpenTelemetry more ofte
 
 Install the back ends first, then the apps that send to them. The order matters for speed. In the test run, one app started before its Collector existed. Its exporter failed, then waited longer and longer between retries. It took about two and a half minutes to deliver its first trace. In the right order, the first trace was searchable 22 seconds after the app started.
 
-```bash
-helm repo add grafana https://grafana.github.io/helm-charts && helm repo update grafana
-cat platform-engineering/manifests/25-tempo-values.yaml
-helm install tempo grafana/tempo --version 1.24.4 -n course-otel --create-namespace \
+```console
+$ helm repo add grafana https://grafana.github.io/helm-charts && helm repo update grafana
+"grafana" already exists with the same configuration, skipping
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "grafana" chart repository
+Update Complete. ⎈Happy Helming!⎈
+
+$ cat platform-engineering/manifests/25-tempo-values.yaml
+# Grafana Tempo in single-binary mode: one pod that receives, stores and queries traces.
+# Traces live on an emptyDir and expire after 6 hours. Fine for a lab, not for production.
+tempo:
+  retention: 6h
+  reportingEnabled: false
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+  # 384Mi was too low: a structural TraceQL query (>>) got Tempo OOM-killed three times.
+  # GOMEMLIMIT makes Go's garbage collector work harder before the container limit.
+  extraEnv:
+    - name: GOMEMLIMIT
+      value: 600MiB
+  resources:
+    requests: {cpu: 20m, memory: 128Mi}
+    limits: {memory: 768Mi}
+persistence:
+  enabled: false
+
+$ helm install tempo grafana/tempo --version 1.24.4 -n course-otel --create-namespace \
   -f platform-engineering/manifests/25-tempo-values.yaml --wait
+level=WARN msg="this chart is deprecated"
+NAME: tempo
+LAST DEPLOYED: Sun Nov 15 10:46:46 2026
+NAMESPACE: course-otel
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
 ```
 
 **What you should see.** After about 50 seconds, Helm prints `STATUS: deployed`, and a `tempo-0` pod runs. Tempo listens for OTLP on 4317 and 4318 and answers queries on 3200. Its memory limit is 768 MiB. In the test run, a limit of 384 MiB was too small. One structural query from step 5 got Tempo OOM-killed, that is, killed for running out of memory, three times in a row.
 
 ### 2. Install the Collector
 
-```bash
-helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts && helm repo update open-telemetry
-cat platform-engineering/manifests/25-collector-values.yaml
-helm install otel-collector open-telemetry/opentelemetry-collector --version 0.178.0 -n course-otel \
+```console
+$ helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts && helm repo update open-telemetry
+"open-telemetry" already exists with the same configuration, skipping
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "open-telemetry" chart repository
+Update Complete. ⎈Happy Helming!⎈
+
+$ cat platform-engineering/manifests/25-collector-values.yaml
+# The OpenTelemetry Collector as one Deployment ("gateway" mode).
+# Pipeline: receive OTLP -> add Kubernetes labels -> fix the service name -> batch -> send to Tempo and Jaeger,
+# and turn spans into request metrics that Prometheus scrapes.
+mode: deployment
+fullnameOverride: otel-collector
+image:
+  # The contrib build carries the span_metrics connector and the k8s_attributes processor.
+  repository: otel/opentelemetry-collector-contrib
+presets:
+  # Adds the k8s_attributes processor and the RBAC it needs to read pod metadata.
+  kubernetesAttributes:
+    enabled: true
+ports:
+  spanmetrics:
+    enabled: true
+    containerPort: 8889
+    servicePort: 8889
+    protocol: TCP
+resources:
+  requests: {cpu: 20m, memory: 64Mi}
+  limits: {memory: 256Mi}
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc: {endpoint: "${env:MY_POD_IP}:4317"}
+        http: {endpoint: "${env:MY_POD_IP}:4318"}
+  processors:
+    memory_limiter:
+      check_interval: 5s
+      limit_percentage: 80
+      spike_limit_percentage: 25
+    batch: {}
+    # The app hard-codes service.name "backend" in its code. Fix it centrally: name each
+    # service after its Kubernetes Deployment, which k8s_attributes added just before.
+    transform/service_name:
+      trace_statements:
+        - context: resource
+          statements:
+            - set(attributes["service.name"], attributes["k8s.deployment.name"]) where attributes["k8s.deployment.name"] != nil
+  connectors:
+    span_metrics:
+      histogram:
+        explicit:
+          buckets: [5ms, 25ms, 100ms, 250ms, 500ms, 1s, 2s]
+      # This app's instrumentation uses the older attribute name http.status_code.
+      # Newer semantic conventions call it http.response.status_code.
+      dimensions:
+        - name: http.status_code
+  exporters:
+    otlp_grpc/tempo:
+      endpoint: tempo.course-otel.svc.cluster.local:4317
+      tls: {insecure: true}
+    otlp_grpc/jaeger:
+      endpoint: jaeger-collector.observability.svc.cluster.local:4317
+      tls: {insecure: true}
+    prometheus:
+      endpoint: "${env:MY_POD_IP}:8889"
+  service:
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [memory_limiter, k8s_attributes, transform/service_name, batch]
+        exporters: [otlp_grpc/tempo, otlp_grpc/jaeger, span_metrics]
+      metrics:
+        receivers: [span_metrics]
+        processors: [batch]
+        exporters: [prometheus]
+      logs: null
+
+$ helm install otel-collector open-telemetry/opentelemetry-collector --version 0.178.0 -n course-otel \
   -f platform-engineering/manifests/25-collector-values.yaml --wait
-kubectl -n course-otel logs deploy/otel-collector | grep "Everything is ready"
-kubectl get clusterrole otel-collector
+NAME: otel-collector
+LAST DEPLOYED: Sun Nov 15 10:47:28 2026
+NAMESPACE: course-otel
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
+NOTES:
+
+$ kubectl -n course-otel logs deploy/otel-collector | grep "Everything is ready"
+2026-11-15T10:47:29.800Z	info	service@v0.163.0/service.go:256	Everything is ready. Begin running and processing data.	{"resource": {"host.name": "k3d-k8s-lab-server-0", "k8s.namespace.name": "course-otel", "k8s.node.ip": "192.168.107.3", "k8s.node.name": "k3d-k8s-lab-server-0", "k8s.pod.ip": "10.42.0.221", "k8s.pod.name": "otel-collector-7f46d5755-nrklw", "service.instance.id": "3a567192-36ae-4f7d-9c8d-52333281d4bb", "service.name": "otelcol-contrib", "service.version": "0.163.2"}}
+
+$ kubectl get clusterrole otel-collector
+NAME             CREATED AT
+otel-collector   2026-11-15T10:47:28Z
 ```
 
 **What you should see.** The install takes seconds, and the log ends with `Everything is ready. Begin running and processing data.` Read the values file top to bottom. It defines the receivers, processors, connector and exporters from the diagram. The two pipelines at the end wire them together. The `kubernetesAttributes` preset also created a **ClusterRole**. The ClusterRole lets the Collector read pod metadata in the whole cluster.
@@ -116,13 +240,31 @@ This chart version renamed some components. The older names `otlp`, `k8sattribut
 
 ### 3. Deploy an app that sends traces to the Collector
 
-```bash
-kubectl apply -f platform-engineering/manifests/25-orders-app.yaml
-kubectl -n course-otel get pods
-grep -B2 -A1 OTEL_EXPORTER platform-engineering/manifests/25-orders-app.yaml
+```console
+$ kubectl apply -f platform-engineering/manifests/25-orders-app.yaml
+secret/redis-auth created
+deployment.apps/redis created
+service/redis created
+deployment.apps/orders created
+service/orders created
+deployment.apps/traffic created
+
+$ kubectl -n course-otel get pods
+NAME                             READY   STATUS    RESTARTS   AGE
+orders-8468957849-j9sjd          1/1     Running   0          8s
+otel-collector-7f46d5755-nrklw   1/1     Running   0          10s
+redis-6b994cfc5f-ndnnq           1/1     Running   0          8s
+tempo-0                          1/1     Running   0          52s
+traffic-54466f7f76-jcrz5         1/1     Running   0          8s
+
+$ grep -B2 -A1 OTEL_EXPORTER platform-engineering/manifests/25-orders-app.yaml
+            # The only tracing setting the app needs: where to send spans. Its code
+            # hard-codes service.name "backend"; the Collector renames it to "orders".
+            - {name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector.course-otel.svc.cluster.local:4318"}
+            # 5% of /api/ requests fail with 503, so there are errors to find.
 ```
 
-**What you should see.** Three pods run:
+**What you should see.** Three new pods run next to Tempo and the Collector:
 
 - `orders`, which uses the shop's backend image
 - `redis`
@@ -143,11 +285,14 @@ Bigger setups often make a related mistake. A node agent forwards data to a gate
 
 ### 4. See what the Collector added
 
-```bash
-kubectl -n course-otel port-forward svc/tempo 3200:3200 >/dev/null 2>&1 &
-sleep 30      # the first trace took 22 seconds in the test run
-curl -s "localhost:3200/api/search/tag/service.name/values"; echo
-curl -s "localhost:3200/api/search/tags?scope=resource"; echo
+```console
+$ kubectl -n course-otel port-forward svc/tempo 3200:3200 >/dev/null 2>&1 &
+$ sleep 30      # the first trace took 22 seconds in the test run
+$ curl -s "localhost:3200/api/search/tag/service.name/values"; echo
+{"tagValues":["orders"],"metrics":{"inspectedBytes":"54956"}}
+
+$ curl -s "localhost:3200/api/search/tags?scope=resource"; echo
+{"tagNames":["container.image.name","k8s.cluster.uid","k8s.container.name","k8s.deployment.name","k8s.namespace.name","k8s.node.name","k8s.pod.name","k8s.pod.start_time","k8s.pod.uid","k8s.replicaset.name","k8s.replicaset.uid","service.instance.id","service.name","service.namespace","service.version","telemetry.sdk.language","telemetry.sdk.name","telemetry.sdk.version"],"metrics":{"inspectedBytes":"56510"}}
 ```
 
 **What you should see.** The service is `orders`, not `backend`, because the `transform` processor renamed it. The resource attributes include `k8s.deployment.name`, `k8s.namespace.name`, `k8s.node.name`, `k8s.pod.name` and `container.image.name`. The app never sent those. `k8s_attributes` looked up the sending pod by its IP and added them. Every trace now tells you exactly which pod, image and node produced it.
@@ -192,8 +337,10 @@ Note the name `http.status_code`. This app uses the older attribute name. Newer 
 
 Prometheus scrapes the output of the `span_metrics` connector. A PodMonitor tells Prometheus which pods to scrape. Apply the PodMonitor and the Grafana data source if you haven't yet. Then wait a few minutes. A new PodMonitor reaches Prometheus through a Secret update, and that took up to four minutes in the test runs.
 
-```bash
-kubectl apply -f platform-engineering/manifests/25-collector-podmonitor.yaml -f platform-engineering/manifests/25-tempo-datasource.yaml
+```console
+$ kubectl apply -f platform-engineering/manifests/25-collector-podmonitor.yaml -f platform-engineering/manifests/25-tempo-datasource.yaml
+podmonitor.monitoring.coreos.com/otel-collector created
+configmap/course-tempo-datasource created
 ```
 
 In Grafana Explore, Prometheus:
@@ -230,9 +377,14 @@ Open Jaeger (http://localhost:16686) and pick the service `orders`.
 
 ## Clean up
 
-```bash
-kill %1 2>/dev/null
-./platform-engineering/reset.sh
+```console
+$ kill %1 2>/dev/null
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 The reset does three things:
