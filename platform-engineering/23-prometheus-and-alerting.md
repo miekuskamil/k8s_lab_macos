@@ -125,10 +125,63 @@ histogram_quantile(0.95, sum by (le) (rate(istio_request_duration_milliseconds_b
 
 ### 3. Add the SLO rules and a receiver
 
-```bash
-cat platform-engineering/manifests/23-shop-slo.yaml
-kubectl apply -f platform-engineering/manifests/23-alert-receiver.yaml -f platform-engineering/manifests/23-shop-slo.yaml
-kubectl -n course-alerts rollout status deploy/alert-receiver
+```console
+$ cat platform-engineering/manifests/23-shop-slo.yaml
+# Module 23: an availability SLO for the backend, 99% of requests without a 5xx.
+# The error budget is the other 1%. "Burn rate" is how fast you spend it:
+# a burn rate of 1 uses exactly the whole budget over the SLO period, 14.4 uses it 14.4 times faster.
+#
+# Real SLOs use windows of 1 hour and 5 minutes for a fast burn. The lab shrinks them to
+# 5 minutes and 1 minute so you see an alert within minutes instead of an hour.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: shop-slo
+  namespace: course-alerts
+spec:
+  groups:
+    - name: shop-slo-recording
+      interval: 30s
+      rules:
+        # Recording rules: Prometheus computes these every 30 s and stores the result
+        # as a new, cheap series. Dashboards and alerts read the result instead of
+        # recomputing the full query every time.
+        - record: shop:backend_error_ratio:rate1m
+          expr: |
+            sum(rate(istio_requests_total{reporter="waypoint", destination_service_namespace="shop", destination_canonical_service="backend", response_code=~"5.."}[1m]))
+            /
+            sum(rate(istio_requests_total{reporter="waypoint", destination_service_namespace="shop", destination_canonical_service="backend"}[1m]))
+        - record: shop:backend_error_ratio:rate5m
+          expr: |
+            sum(rate(istio_requests_total{reporter="waypoint", destination_service_namespace="shop", destination_canonical_service="backend", response_code=~"5.."}[5m]))
+            /
+            sum(rate(istio_requests_total{reporter="waypoint", destination_service_namespace="shop", destination_canonical_service="backend"}[5m]))
+    - name: shop-slo-alerts
+      rules:
+        - alert: ShopBackendErrorBudgetBurn
+          # Burn rate 14.4 on a 1% budget means an error ratio above 14.4%. The long window
+          # proves it's serious, the short one that it's still happening, so the alert
+          # also clears within a minute or two of the fix.
+          expr: |
+            shop:backend_error_ratio:rate5m > (14.4 * 0.01)
+            and
+            shop:backend_error_ratio:rate1m > (14.4 * 0.01)
+          for: 1m
+          labels:
+            severity: page
+          annotations:
+            summary: "The backend spends its 1% error budget too fast"
+            description: "5xx ratio over 5m is {{ $value | humanizePercentage }}."
+
+$ kubectl apply -f platform-engineering/manifests/23-alert-receiver.yaml -f platform-engineering/manifests/23-shop-slo.yaml
+namespace/course-alerts created
+deployment.apps/alert-receiver created
+service/alert-receiver created
+alertmanagerconfig.monitoring.coreos.com/shop-pager created
+prometheusrule.monitoring.coreos.com/shop-slo created
+
+$ kubectl -n course-alerts rollout status deploy/alert-receiver
+deployment "alert-receiver" successfully rolled out
 ```
 
 Then open http://localhost:9090/rules and http://localhost:9093/#/status.
@@ -165,16 +218,31 @@ So expect `pending` about a minute after the fault, and `firing` a minute later.
 
 Add module 15's faulty backend pod, which fails every request, and keep traffic flowing:
 
-```bash
-kubectl apply -f platform-engineering/manifests/15-faulty-pod.yaml
-./platform-engineering/load.sh 600 &
+```console
+$ kubectl apply -f platform-engineering/manifests/15-faulty-pod.yaml
+deployment.apps/backend-v1-faulty created
+
+$ ./platform-engineering/load.sh 600 &
+Sending about 5 requests per second to http://localhost:8080/api/orders for 600s. Press Ctrl-C to stop.
 ```
 
 Watch http://localhost:9090/alerts, and the receiver:
 
-```bash
-kubectl -n course-alerts logs deploy/alert-receiver -f | grep -o '"status":"[a-z]*"\|"alertname":"[A-Za-z]*"'
+```console
+$ kubectl -n course-alerts logs deploy/alert-receiver -f | grep -o '"status":"[a-z]*"\|"alertname":"[A-Za-z]*"'
+"status":"firing"
+"status":"firing"
+"alertname":"ShopBackendErrorBudgetBurn"
+"alertname":"ShopBackendErrorBudgetBurn"
+"alertname":"ShopBackendErrorBudgetBurn"
+"status":"resolved"
+"status":"resolved"
+"alertname":"ShopBackendErrorBudgetBurn"
+"alertname":"ShopBackendErrorBudgetBurn"
+"alertname":"ShopBackendErrorBudgetBurn"
 ```
+
+The command keeps following the log until you press Ctrl-C. The transcript shows what it printed through step 5, until the alert resolved.
 
 **What you should see.** In the test run:
 
@@ -184,17 +252,18 @@ kubectl -n course-alerts logs deploy/alert-receiver -f | grep -o '"status":"[a-z
 | 61 s | **pending** | 32.6% |
 | 121 s | **firing** | 31.9% |
 
-One pod in three fails, so about a third of requests fail. That's 33 times the budget. The alert sat in `pending` for one minute because of `for: 1m`, and then fired. The receiver logged `"status":"firing"` with `"alertname":"ShopBackendErrorBudgetBurn"`. That webhook is the message Slack or PagerDuty would get.
+One pod in three fails, so about a third of requests fail. That's 33 times the budget. The alert sat in `pending` for one minute because of `for: 1m`, and then fired. The receiver logged `"status":"firing"` with `"alertname":"ShopBackendErrorBudgetBurn"`. That webhook is the message Slack or PagerDuty would get. In the run above, the first `firing` webhook arrived 130 seconds after the fault.
 
 ### 5. Fix it, and watch it clear
 
-```bash
-kubectl delete -f platform-engineering/manifests/15-faulty-pod.yaml
+```console
+$ kubectl delete -f platform-engineering/manifests/15-faulty-pod.yaml
+deployment.apps "backend-v1-faulty" deleted
 ```
 
 Keep the receiver's log open, and query `shop:backend_error_ratio:rate5m` in Prometheus every half minute.
 
-**What you should see.** In the test run, the alert cleared **60 seconds** after the fix. At that moment the 5-minute ratio still read 26.5%. The alert cleared because the 1-minute window had dropped below the threshold, and the `and` needs both windows above it. The 5-minute ratio alone took **201 seconds** to fall below 14.4%. So a single-window alert would have kept paging for more than three minutes after the problem was gone. The receiver then logged `"status":"resolved"`, because the route sets `sendResolved: true`.
+**What you should see.** In the test run, the alert cleared **60 seconds** after the fix. At that moment the 5-minute ratio still read 26.5%. The alert cleared because the 1-minute window had dropped below the threshold, and the `and` needs both windows above it. The 5-minute ratio alone took **201 seconds** to fall below 14.4%. So a single-window alert would have kept paging for more than three minutes after the problem was gone. The receiver then logged `"status":"resolved"`, because the route sets `sendResolved: true`. In the run above, that webhook arrived 116 seconds after the fix.
 
 Stop the load with `kill %1`.
 
@@ -231,8 +300,13 @@ Also query `istio_requests_total{destination_workload="backend-v1-faulty"}` righ
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh
+```console
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 This deletes the `course-alerts` namespace, and with it the receiver, the AlertmanagerConfig and the SLO rules. It also deletes module 15's faulty pod if it's still there. Alertmanager itself stays, because it's part of the lab now.

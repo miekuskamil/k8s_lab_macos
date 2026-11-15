@@ -10,8 +10,9 @@ Troubleshooting commands for this lab, grouped by layer. Work down the layers: a
 
 Set the context first. OrbStack switches it to `orbstack` when it restarts:
 
-```bash
-kubectl config use-context k3d-k8s-lab
+```console
+$ kubectl config use-context k3d-k8s-lab
+Switched to context "k3d-k8s-lab".
 ```
 
 ## Layer 0: the host and the cluster containers
@@ -128,11 +129,30 @@ At the baseline, Prometheus has no alert rules: the lab turns the chart's defaul
 
 ## Layer 7: the application path, from outside in
 
-```bash
-curl -sv http://localhost:8080/api/orders 2>&1 | grep -E "^< HTTP|^< server|^< x-"      # status and proxy headers
-./scripts/traffic-test.sh 100 10                                                       # status and version split
-kubectl -n shop exec deploy/course-client -- curl -s -m 5 -w " %{http_code}\n" http://backend:8000/api/version   # from inside the mesh
+```console
+$ curl -sv http://localhost:8080/api/orders 2>&1 | grep -E "^< HTTP|^< server|^< x-"      # status and proxy headers
+< HTTP/1.1 200 OK
+< x-app-version: v1
+< x-served-by: backend-v1-54c86bf9b-xqdkd
+< x-envoy-upstream-service-time: 9
+< server: istio-envoy
+
+$ ./scripts/traffic-test.sh 100 10                                                       # status and version split
+Sending 100 requests to http://localhost:8080/api/orders with concurrency 10
+
+Status codes
+  200  100  (100%)
+
+Backend versions
+  v1  100  (100%)
+
+Average latency 25 ms, slowest 95 ms
+
+$ kubectl -n shop exec deploy/course-client -- curl -s -m 5 -w " %{http_code}\n" http://backend:8000/api/version   # from inside the mesh
+RBAC: access denied 403
 ```
+
+The last command answers `403` on a reset lab, as in module 3 step 2. It returns `200` while module 3's allow policy is in place.
 
 ## Queries for the UIs
 

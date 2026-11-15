@@ -77,10 +77,36 @@ Whichever you choose, check where the notification actually goes. Step 4 shows w
 
 ### 1. Look at the dashboard as code
 
-```bash
-less platform-engineering/manifests/24-slo-dashboard.yaml
-kubectl apply -f platform-engineering/manifests/24-slo-dashboard.yaml
+```console
+$ less platform-engineering/manifests/24-slo-dashboard.yaml
+# Module 24: a dashboard as code. Grafana's sidecar loads every ConfigMap with the
+# label grafana_dashboard=1, in any namespace, and removes the dashboard when the ConfigMap goes.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-dashboards
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shop-slo-dashboard
+  namespace: course-dashboards
+  labels:
+    grafana_dashboard: "1"
+data:
+  shop-slo.json: |
+    {
+      "uid": "shop-slo",
+      "title": "Shop SLO",
+      "tags": [
+...
+
+$ kubectl apply -f platform-engineering/manifests/24-slo-dashboard.yaml
+namespace/course-dashboards created
+configmap/shop-slo-dashboard created
 ```
+
+`less` opens the file in a pager. Scroll with the arrow keys and press `q` to quit. The transcript shows the first lines.
 
 Open Grafana, Dashboards, and find **Shop SLO**.
 
@@ -101,14 +127,16 @@ Grafana also offers a built-in variable, `$__rate_interval`. It picks a safe ran
 
 ### 2. Feed it traffic, then break the backend
 
-```bash
-./platform-engineering/load.sh 300 &
+```console
+$ ./platform-engineering/load.sh 300 &
+Sending about 5 requests per second to http://localhost:8080/api/orders for 300s. Press Ctrl-C to stop.
 ```
 
 Wait a minute, then look at the dashboard. Then:
 
-```bash
-kubectl apply -f platform-engineering/manifests/15-faulty-pod.yaml
+```console
+$ kubectl apply -f platform-engineering/manifests/15-faulty-pod.yaml
+deployment.apps/backend-v1-faulty created
 ```
 
 Switch `Window` between `1m`, `5m` and `30m` while the fault runs.
@@ -122,8 +150,9 @@ Switch `Window` between `1m`, `5m` and `30m` while the fault runs.
 
 With the faulty pod, the test run showed 89.7% availability and a burn rate of 10.3 over 5 minutes, still climbing. The 503 responses appear as their own line in the status-code panel. The `1m` window jumps first, and `30m` barely moves. Remove the fault and keep the load running:
 
-```bash
-kubectl delete -f platform-engineering/manifests/15-faulty-pod.yaml
+```console
+$ kubectl delete -f platform-engineering/manifests/15-faulty-pod.yaml
+deployment.apps "backend-v1-faulty" deleted
 ```
 
 ### 3. Try to change it in the UI
@@ -134,11 +163,35 @@ Edit any panel, change its title, and click Save.
 
 ### 4. A Grafana-managed alert
 
-```bash
-cat platform-engineering/manifests/24-grafana-rule.json
-P=k8s-lab-admin
-curl -s -u admin:$P -H 'Content-Type: application/json' -X POST localhost:3000/api/folders -d '{"uid":"course","title":"Course"}'
-curl -s -u admin:$P -H 'Content-Type: application/json' -X POST localhost:3000/api/v1/provisioning/alert-rules -d @platform-engineering/manifests/24-grafana-rule.json
+```console
+$ cat platform-engineering/manifests/24-grafana-rule.json
+{
+  "uid": "shop-burn-grafana",
+  "title": "Shop backend burns its error budget (Grafana-managed)",
+  "ruleGroup": "course",
+  "folderUID": "course",
+  "condition": "C",
+  "for": "1m",
+  "noDataState": "OK",
+  "execErrState": "Error",
+  "labels": {"severity": "page"},
+  "annotations": {"summary": "Same condition as module 23, evaluated by Grafana"},
+  "data": [
+    {"refId": "A", "datasourceUid": "prometheus", "relativeTimeRange": {"from": 300, "to": 0},
+     "model": {"refId": "A", "instant": true,
+       "expr": "sum(rate(istio_requests_total{reporter=\"waypoint\", destination_canonical_service=\"backend\", response_code=~\"5..\"}[5m])) / sum(rate(istio_requests_total{reporter=\"waypoint\", destination_canonical_service=\"backend\"}[5m]))"}},
+    {"refId": "C", "datasourceUid": "__expr__",
+     "model": {"refId": "C", "type": "threshold", "expression": "A",
+       "conditions": [{"evaluator": {"type": "gt", "params": [0.144]}}]}}
+  ]
+}
+
+$ P=k8s-lab-admin
+$ curl -s -u admin:$P -H 'Content-Type: application/json' -X POST localhost:3000/api/folders -d '{"uid":"course","title":"Course"}'
+{"id":5,"uid":"course","orgId":0,"title":"Course","url":"/dashboards/f/course/course","hasAcl":false,"canSave":true,"canEdit":true,"canAdmin":true,"canDelete":true,"createdBy":"admin","created":"2026-11-15T10:46:01.405732036Z","updatedBy":"admin","updated":"2026-11-15T10:46:01.405732078Z","version":1}
+
+$ curl -s -u admin:$P -H 'Content-Type: application/json' -X POST localhost:3000/api/v1/provisioning/alert-rules -d @platform-engineering/manifests/24-grafana-rule.json
+{"id":1,"uid":"shop-burn-grafana","orgID":1,"folderUID":"course","ruleGroup":"course","title":"Shop backend burns its error budget (Grafana-managed)","condition":"C","data":[{"refId":"A","queryType":"","relativeTimeRange":{"from":300,"to":0},"datasourceUid":"prometheus","model":{"expr":"sum(rate(istio_requests_total{reporter=\"waypoint\", destination_canonical_service=\"backend\", response_code=~\"5..\"}[5m])) / sum(rate(istio_requests_total{reporter=\"waypoint\", destination_canonical_service=\"backend\"}[5m]))","instant":true,"intervalMs":1000,"maxDataPoints":43200,"refId":"A"}},{"refId":"C","queryType":"","relativeTimeRange":{"from":0,"to":0},"datasourceUid":"__expr__","model":{"conditions":[{"evaluator":{"params":[0.144],"type":"gt"}}],"expression":"A","intervalMs":1000,"maxDataPoints":43200,"refId":"C","type":"threshold"}}],"updated":"2026-11-15T10:46:01.455053289Z","noDataState":"OK","execErrState":"Error","for":"1m","annotations":{"summary":"Same condition as module 23, evaluated by Grafana"},"labels":{"severity":"page"},"provenance":"api","isPaused":false,"notification_settings":null,"record":null}
 ```
 
 The rule has the same condition as module 23's, but with one 5-minute window only. Open Alerting, Alert rules in Grafana and watch it for a few minutes. Then open Alerting, Contact points.
@@ -203,9 +256,14 @@ These two links broke earlier in the course's life. The data source settings had
 
 ## Clean up
 
-```bash
-kill %1 2>/dev/null
-./platform-engineering/reset.sh
+```console
+$ kill %1 2>/dev/null
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 This deletes the `course-dashboards` namespace, and with it the dashboard. It also deletes the Grafana-managed rule and the `Course` folder, which live only in Grafana's database.

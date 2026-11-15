@@ -10,16 +10,46 @@ In this module you check that the lab works, install `istioctl`, and learn where
 
 ## Check the lab
 
-```bash
-./scripts/start.sh               # safe to run any time, repairs the cluster after a reboot
-kubectl config current-context   # k3d-k8s-lab
-kubectl -n argocd get applications
+```console
+$ ./scripts/start.sh               # safe to run any time, repairs the cluster after a reboot
+Cluster k8s-lab is running and CoreDNS is healthy.
+kubectl context is k3d-k8s-lab
+Waiting for istio-cni and ztunnel
+Waiting for every pod to become Ready (up to 3 minutes)
+All pods are Ready. The shop is at http://localhost:8080. Run ./scripts/port-forward.sh for the other UIs.
+
+$ kubectl config current-context   # k3d-k8s-lab
+k3d-k8s-lab
+
+$ kubectl -n argocd get applications
+NAME                    SYNC STATUS   HEALTH STATUS
+alloy                   Synced        Healthy
+cert-manager            Synced        Healthy
+cert-manager-config     Synced        Healthy
+headlamp                Synced        Healthy
+istio-config            Synced        Healthy
+kiali                   Synced        Healthy
+kube-prometheus-stack   Synced        Healthy
+loki                    Synced        Healthy
+observability-config    Synced        Healthy
+root                    Synced        Healthy
+shop-apps               Synced        Healthy
+shop-base               Synced        Healthy
 ```
 
 All twelve Applications should show `Synced` and `Healthy`. Then open the UIs in a spare terminal and leave it running:
 
-```bash
-./scripts/port-forward.sh
+```console
+$ ./scripts/port-forward.sh
+ArgoCD      http://localhost:8081
+Grafana     http://localhost:3000
+Prometheus  http://localhost:9090
+Alertmanager http://localhost:9093
+Jaeger      http://localhost:16686
+Kiali       http://localhost:20001
+Headlamp    http://localhost:4466
+
+Port-forwards are running. Press Ctrl-C to stop.
 ```
 
 The [course README](README.md#before-you-start) lists every UI. One tip: keep Headlamp (http://localhost:4466) open in a tab. It shows every pod, its logs and its events in one place, and it needs no login.
@@ -28,9 +58,16 @@ The [course README](README.md#before-you-start) lists every UI. One tip: keep He
 
 `istioctl` is to Istio what `kubectl` is to Kubernetes. It reads the mesh's state and explains it. Install it with Homebrew on macOS, or from the [Istio releases page](https://github.com/istio/istio/releases) on Linux.
 
-```bash
-brew install istioctl
-istioctl version
+```console
+$ brew install istioctl
+Warning: istioctl 1.32.0 is already installed and up-to-date.
+To reinstall 1.32.0, run:
+  brew reinstall istioctl
+
+$ istioctl version
+client version: 1.32.0
+control plane version: 1.24.2
+data plane version: 1.24.2 (3 proxies)
 ```
 
 ### On Linux and WSL (Ubuntu 24.04)
@@ -46,15 +83,7 @@ istioctl version
 
 Your client then reports 1.24.2, the same as the control plane. [Running the lab on Linux and WSL2](../docs/linux-and-wsl.md) covers the rest of the setup, WSL2 memory and the few commands that differ.
 
-**What you should see.**
-
-```text
-client version: 1.32.0
-control plane version: 1.24.2
-data plane version: 1.24.2 (3 proxies)
-```
-
-It's fine for the client to be newer than the control plane. Every command in this course ran with client 1.32 against control plane 1.24. If a command fails with an unknown field error, install the matching client from the releases page.
+**What you should see.** The `istioctl version` lines in the macOS transcript above. It's fine for the client to be newer than the control plane. Every command in this course ran with client 1.32 against control plane 1.24. If a command fails with an unknown field error, install the matching client from the releases page.
 
 The "3 proxies" line counts the proxies that take orders from istiod, the Istio control plane:
 
@@ -66,8 +95,14 @@ The shop's own pods are not in the count. Module 1 explains why.
 
 If you see more than 3, something from a later module is still running. Module 7's two sidecar pods, for example, add 2 more, so you'd see 5. To get back to the starting point, run:
 
-```bash
-./platform-engineering/reset.sh --all
+```console
+$ ./platform-engineering/reset.sh --all
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Removing the course namespaces and the course client
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 Plain `./platform-engineering/reset.sh` keeps the module 7 namespaces, so you may return to that module later. `--all` removes them too.
@@ -90,8 +125,14 @@ Kiali and Grafana read the same Prometheus data. Kiali turns it into a live map 
 
 Start some traffic, then open http://localhost:20001:
 
-```bash
-./platform-engineering/load.sh 300
+```console
+$ ./platform-engineering/load.sh 300
+Sending about 5 requests per second to http://localhost:8080/api/orders for 300s. Press Ctrl-C to stop.
+
+Status codes:
+  200  1480
+Backend versions:
+  v1  1480
 ```
 
 1. **Overview** lists namespaces with a health badge. Click `shop`.

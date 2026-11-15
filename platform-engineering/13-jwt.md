@@ -126,21 +126,41 @@ Istio does more with checked tokens than this module shows. For example, `output
 
 ### 1. Read a token
 
-```bash
-python3 -c 'import sys,base64,json; p=open(sys.argv[1]).read().strip().split(".")[1]; print(json.dumps(json.loads(base64.urlsafe_b64decode(p+"==")),indent=2))' platform-engineering/jwt/admin.jwt
+```console
+$ python3 -c 'import sys,base64,json; p=open(sys.argv[1]).read().strip().split(".")[1]; print(json.dumps(json.loads(base64.urlsafe_b64decode(p+"==")),indent=2))' platform-engineering/jwt/admin.jwt
+{
+  "iss": "https://idp.k8s-lab.local",
+  "aud": "shop",
+  "sub": "bob",
+  "groups": [
+    "customers",
+    "admin"
+  ],
+  "iat": 1794495144,
+  "exp": 2109855144
+}
 ```
 
 **What you should see.** The claims from the concept section. Try `alice.jwt` and `forged.jwt` too. The forged token claims to be an admin, and its JSON looks just as convincing. Only the signature tells it apart.
 
 ### 2. Check tokens, but don't demand them yet
 
-```bash
-kubectl apply -f platform-engineering/manifests/13-request-authentication.yaml
-for t in alice expired forged; do
+```console
+$ kubectl apply -f platform-engineering/manifests/13-request-authentication.yaml
+requestauthentication.security.istio.io/shop-jwt created
+
+$ for t in alice expired forged; do
   curl -s -o /dev/null -w "$t -> %{http_code}\n" -H "Authorization: Bearer $(cat platform-engineering/jwt/$t.jwt)" http://localhost:8080/api/orders
 done
-curl -s -o /dev/null -w "no token -> %{http_code}\n" http://localhost:8080/api/orders
-curl -s -H "Authorization: Bearer $(cat platform-engineering/jwt/expired.jwt)" http://localhost:8080/api/orders; echo
+alice -> 200
+expired -> 401
+forged -> 401
+
+$ curl -s -o /dev/null -w "no token -> %{http_code}\n" http://localhost:8080/api/orders
+no token -> 200
+
+$ curl -s -H "Authorization: Bearer $(cat platform-engineering/jwt/expired.jwt)" http://localhost:8080/api/orders; echo
+Jwt is expired
 ```
 
 **What you should see.**
@@ -154,23 +174,32 @@ The last line prints Envoy's reason, `Jwt is expired`. The gateway stopped the b
 
 ### 3. Demand a token for the API, and admin rights for writes
 
-```bash
-kubectl apply -f platform-engineering/manifests/13-require-jwt.yaml
-curl -s -o /dev/null -w "page without token -> %{http_code}\n" http://localhost:8080/
-curl -s -o /dev/null -w "API without token -> %{http_code}\n" http://localhost:8080/api/orders
-curl -s -o /dev/null -w "alice reads -> %{http_code}\n" -H "Authorization: Bearer $(cat platform-engineering/jwt/alice.jwt)" http://localhost:8080/api/orders
+```console
+$ kubectl apply -f platform-engineering/manifests/13-require-jwt.yaml
+authorizationpolicy.security.istio.io/shop-require-jwt created
+
+$ curl -s -o /dev/null -w "page without token -> %{http_code}\n" http://localhost:8080/
+page without token -> 200
+
+$ curl -s -o /dev/null -w "API without token -> %{http_code}\n" http://localhost:8080/api/orders
+API without token -> 403
+
+$ curl -s -o /dev/null -w "alice reads -> %{http_code}\n" -H "Authorization: Bearer $(cat platform-engineering/jwt/alice.jwt)" http://localhost:8080/api/orders
+alice reads -> 200
 ```
 
 **What you should see.** The page answers `200`. The API without a token answers `403`. Alice gets `200`.
 
 Now try to create an order, first as Alice, then as Bob the admin:
 
-```bash
-for t in alice admin; do
+```console
+$ for t in alice admin; do
   curl -s -o /dev/null -w "$t creates -> %{http_code}\n" -X POST \
     -H "Content-Type: application/json" -d '{"item":"book","quantity":1}' \
     -H "Authorization: Bearer $(cat platform-engineering/jwt/$t.jwt)" http://localhost:8080/api/orders
 done
+alice creates -> 403
+admin creates -> 201
 ```
 
 **What you should see.** `alice creates -> 403` and `admin creates -> 201`. Bob passed because the third rule in `13-require-jwt.yaml` matched. That rule looks for `admin` in `request.auth.claims[groups]`. Open the file and read the three rules again. Each rule is a door, and a request needs one open door to pass.
@@ -210,8 +239,13 @@ sum by (response_code, destination_service) (istio_requests_total{source_workloa
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh
+```console
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 This removes the RequestAuthentication and the AuthorizationPolicy from `shop-ingress`. The API answers without a token again.

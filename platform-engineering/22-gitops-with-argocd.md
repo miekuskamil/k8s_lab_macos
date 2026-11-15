@@ -87,12 +87,23 @@ ArgoCD and Flux, both CNCF graduated projects, are the two common agents. Danish
 
 ### 1. Start a Git server
 
-```bash
-kubectl apply -f platform-engineering/manifests/22-gitea.yaml
-kubectl -n course-gitops rollout status deploy/gitea
-kubectl -n course-gitops exec deploy/gitea -- gitea admin user create --username lab \
+```console
+$ kubectl apply -f platform-engineering/manifests/22-gitea.yaml
+namespace/course-gitops created
+namespace/course-gitops-dev created
+namespace/course-gitops-prod created
+deployment.apps/gitea created
+service/gitea created
+
+$ kubectl -n course-gitops rollout status deploy/gitea
+Waiting for deployment "gitea" rollout to finish: 0 of 1 updated replicas are available...
+deployment "gitea" successfully rolled out
+
+$ kubectl -n course-gitops exec deploy/gitea -- gitea admin user create --username lab \
   --password lab-gitops-pass --email lab@example.invalid --admin --must-change-password=false
-kubectl -n course-gitops port-forward svc/gitea 3001:3000 >/dev/null 2>&1 &
+New user 'lab' has been successfully created!
+
+$ kubectl -n course-gitops port-forward svc/gitea 3001:3000 >/dev/null 2>&1 &
 ```
 
 **What you should see.** The last command prints `New user 'lab' has been successfully created!`. Gitea now answers on http://localhost:3001. To browse it, sign in as `lab` with the password `lab-gitops-pass`. The manifest also creates the namespaces `course-gitops-dev` and `course-gitops-prod`. It does this because the project from step 2 won't allow ArgoCD to create namespaces.
@@ -101,16 +112,40 @@ kubectl -n course-gitops port-forward svc/gitea 3001:3000 >/dev/null 2>&1 &
 
 Run this from the lab's folder. `C` remembers where it is, for later copy commands.
 
-```bash
-C=$PWD
-cp -R platform-engineering/gitops-repo /tmp/podinfo-gitops && cd /tmp/podinfo-gitops
-git init -q -b main && git add . && git commit -qm "podinfo, dev and prod"
-git push http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
-cd -
-kubectl apply -f platform-engineering/manifests/22-project.yaml -f platform-engineering/manifests/22-app-dev.yaml
-kubectl -n argocd get app podinfo-dev -w        # Ctrl-C at Synced Healthy
-kubectl -n course-gitops-dev get pods
+```console
+$ C=$PWD
+$ cp -R platform-engineering/gitops-repo /tmp/podinfo-gitops && cd /tmp/podinfo-gitops
+$ git init -q -b main && git add . && git commit -qm "podinfo, dev and prod"
+$ git push http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
+Enumerating objects: 11, done.
+Counting objects: 100% (11/11), done.
+Delta compression using up to 15 threads
+Compressing objects: 100% (7/7), done.
+Writing objects: 100% (11/11), 1.19 KiB | 1.19 MiB/s, done.
+Total 11 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: . Processing 1 references
+remote: Processed 1 references in total
+To http://localhost:3001/lab/podinfo-gitops.git
+ * [new branch]      main -> main
+
+$ cd -
+/Users/you/k8s_lab_macos
+
+$ kubectl apply -f platform-engineering/manifests/22-project.yaml -f platform-engineering/manifests/22-app-dev.yaml
+appproject.argoproj.io/team-shop created
+Warning: metadata.finalizers: "resources-finalizer.argocd.argoproj.io": prefer a domain-qualified finalizer name to avoid accidental conflicts with other finalizer writers
+application.argoproj.io/podinfo-dev created
+
+$ kubectl -n argocd get app podinfo-dev -w        # Ctrl-C at Synced Healthy
+NAME          SYNC STATUS   HEALTH STATUS
+podinfo-dev   Synced        Healthy
+
+$ kubectl -n course-gitops-dev get pods
+NAME                     READY   STATUS    RESTARTS   AGE
+podinfo-6cff6cdd-n9nrs   1/1     Running   0          9s
 ```
+
+The `-w` watch keeps running until you press Ctrl-C. The transcript shows it up to `Synced Healthy`.
 
 The repository holds [podinfo](https://github.com/stefanprodan/podinfo), a tiny web app made for GitOps demos, as a Kustomize base with two overlays, `envs/dev` and `envs/prod`. Gitea creates the repository on the first push.
 
@@ -131,89 +166,210 @@ A common mistake is to put `replicas` in Git and also attach an HPA, the autosca
 
 ### 3. Drift, with and without self-heal
 
-```bash
-kubectl -n course-gitops-dev scale deploy/podinfo --replicas=3
-sleep 20; kubectl -n argocd get app podinfo-dev
-kubectl -n course-gitops-dev get deploy podinfo
-kubectl -n argocd patch app podinfo-dev --type merge -p '{"spec":{"syncPolicy":{"automated":{"selfHeal":true}}}}'
-kubectl -n course-gitops-dev get deploy podinfo -w     # Ctrl-C when it's back to 1
-kubectl -n course-gitops-dev scale deploy/podinfo --replicas=3
-kubectl -n course-gitops-dev get deploy podinfo
+```console
+$ kubectl -n course-gitops-dev scale deploy/podinfo --replicas=3
+deployment.apps/podinfo scaled
+
+$ sleep 20; kubectl -n argocd get app podinfo-dev
+NAME          SYNC STATUS   HEALTH STATUS
+podinfo-dev   OutOfSync     Healthy
+
+$ kubectl -n course-gitops-dev get deploy podinfo
+NAME      READY   UP-TO-DATE   AVAILABLE   AGE
+podinfo   3/3     3            3           38s
+
+$ kubectl -n argocd patch app podinfo-dev --type merge -p '{"spec":{"syncPolicy":{"automated":{"selfHeal":true}}}}'
+application.argoproj.io/podinfo-dev patched
+
+$ kubectl -n course-gitops-dev get deploy podinfo -w     # Ctrl-C when it's back to 1
+NAME      READY   UP-TO-DATE   AVAILABLE   AGE
+podinfo   1/1     1            1           46s
+
+$ kubectl -n course-gitops-dev scale deploy/podinfo --replicas=3
+deployment.apps/podinfo scaled
+
+$ kubectl -n course-gitops-dev get deploy podinfo
+NAME      READY   UP-TO-DATE   AVAILABLE   AGE
+podinfo   1/1     1            1           56s
 ```
+
+The `-w` watch keeps running until you press Ctrl-C. The transcript shows it until the Deployment was back to 1 replica.
 
 **What you should see.** First the app shows `OutOfSync Healthy`, and the 3 replicas stay. ArgoCD noticed the drift but only reported it. After the patch, the Deployment drops back to 1 replica within 2 seconds. ArgoCD undoes the second `kubectl scale` just as fast. In the test run, only 1 replica was left by the time the next command ran.
 
 ### 4. Ship a change through Git
 
-```bash
-cd /tmp/podinfo-gitops
-sed -i.bak 's/hello from git/hello from commit 2/' base/deployment.yaml
-git commit -qam "new message" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
-cd -
-kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.sync.revision}{"\n"}' -w
+```console
+$ cd /tmp/podinfo-gitops
+$ sed -i.bak 's/hello from git/hello from commit 2/' base/deployment.yaml
+$ git commit -qam "new message" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
+remote: . Processing 1 references
+remote: Processed 1 references in total
+
+$ cd -
+/Users/you/k8s_lab_macos
+
+$ kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.sync.revision}{"\n"}' -w
+fdfebead6040fa5222c9ed4903650ae981e4c358
+fdfebead6040fa5222c9ed4903650ae981e4c358
+0bea22f49baffa173b568d9892093b2b148ee2b8
+0bea22f49baffa173b568d9892093b2b148ee2b8
+...
 ```
+
+The `-w` watch keeps running until you press Ctrl-C. The transcript shows it until the new commit appeared.
 
 `sed -i.bak` edits the file in place on both macOS and Linux, and keeps the old version as `deployment.yaml.bak`. `git commit -a` only commits files Git already tracks, so the `.bak` files stay out of the repository.
 
 Wait. Then make a second change, and this time tell ArgoCD to look right away:
 
-```bash
-cd /tmp/podinfo-gitops
-sed -i.bak 's/hello from commit 2/hello from commit 3/' base/deployment.yaml
-git commit -qam "message 3" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
-cd -
-kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
-kubectl -n course-gitops-dev rollout status deploy/podinfo
-kubectl -n course-gitops-dev exec deploy/podinfo -- wget -qO- localhost:9898 | grep message
+```console
+$ cd /tmp/podinfo-gitops
+$ sed -i.bak 's/hello from commit 2/hello from commit 3/' base/deployment.yaml
+$ git commit -qam "message 3" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
+remote: . Processing 1 references
+remote: Processed 1 references in total
+
+$ cd -
+/Users/you/k8s_lab_macos
+
+$ kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
+application.argoproj.io/podinfo-dev annotated
+
+$ kubectl -n course-gitops-dev rollout status deploy/podinfo
+deployment "podinfo" successfully rolled out
+
+$ kubectl -n course-gitops-dev exec deploy/podinfo -- wget -qO- localhost:9898 | grep message
+  "message": "hello from commit 3",
 ```
 
 **What you should see.** In the test run, the first commit took 228 seconds to appear. That's because ArgoCD polls Git every 3 minutes, plus some random jitter. With the annotation, the second commit took 1 second. The pod then answers `"message": "hello from commit 3"`. In production, a Git webhook does the same job as the annotation. GitHub or GitLab calls ArgoCD on every push.
 
 ### 5. A bad release, and `git revert`
 
-```bash
-cd /tmp/podinfo-gitops
-sed -i.bak 's/podinfo:6.7.1/podinfo:6.7.99/' base/deployment.yaml
-git commit -qam "bump podinfo" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
-cd -
-kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
-kubectl -n argocd get app podinfo-dev -w           # Ctrl-C at Degraded, after about a minute
-kubectl -n course-gitops-dev get pods
+```console
+$ cd /tmp/podinfo-gitops
+$ sed -i.bak 's/podinfo:6.7.1/podinfo:6.7.99/' base/deployment.yaml
+$ git commit -qam "bump podinfo" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
+remote: . Processing 1 references
+remote: Processed 1 references in total
+
+$ cd -
+/Users/you/k8s_lab_macos
+
+$ kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
+application.argoproj.io/podinfo-dev annotated
+
+$ kubectl -n argocd get app podinfo-dev -w           # Ctrl-C at Degraded, after about a minute
+NAME          SYNC STATUS   HEALTH STATUS
+podinfo-dev   Synced        Progressing
+podinfo-dev   Synced        Degraded
+
+$ kubectl -n course-gitops-dev get pods
+NAME                       READY   STATUS             RESTARTS   AGE
+podinfo-545b74bb5-n2hl8    0/1     ImagePullBackOff   0          64s
+podinfo-7f68644c46-9ctxr   1/1     Running            0          72s
 ```
 
-**What you should see.** In the test run, the app showed `Synced Degraded` after 61 seconds. There are two pods:
+The `-w` watch keeps running until you press Ctrl-C. The transcript shows it up to `Degraded`.
 
-- The new pod is in `ErrImagePull`, because tag 6.7.99 doesn't exist.
+**What you should see.** In the test runs, the app showed `Synced Degraded` after 56 to 61 seconds. There are two pods:
+
+- The new pod is in `ErrImagePull` or `ImagePullBackOff`, because tag 6.7.99 doesn't exist.
 - The old pod is still `Running` and serving traffic.
 
 A rolling update never removes the old pod before the new one is ready, so users noticed nothing. ArgoCD's resource list explains the health status: `Deployment "podinfo" exceeded its progress deadline`.
 
 Roll back the GitOps way:
 
-```bash
-cd /tmp/podinfo-gitops
-git revert --no-edit HEAD && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
-git log --oneline -3
-cd -
-kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
-kubectl -n argocd get app podinfo-dev
-kubectl -n course-gitops-dev get pods
+```console
+$ cd /tmp/podinfo-gitops
+$ git revert --no-edit HEAD && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
+[main e0a5717] Revert "bump podinfo"
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+remote: . Processing 1 references
+remote: Processed 1 references in total
+
+$ git log --oneline -3
+e0a5717 (HEAD -> main) Revert "bump podinfo"
+32948fb bump podinfo
+6dc4465 message 3
+
+$ cd -
+/Users/you/k8s_lab_macos
+
+$ kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
+application.argoproj.io/podinfo-dev annotated
+
+$ kubectl -n argocd get app podinfo-dev
+NAME          SYNC STATUS   HEALTH STATUS
+podinfo-dev   Synced        Healthy
+
+$ kubectl -n course-gitops-dev get pods
+NAME                       READY   STATUS    RESTARTS   AGE
+podinfo-7f68644c46-9ctxr   1/1     Running   0          80s
 ```
 
 **What you should see.** Within seconds the app is `Synced Healthy` and the broken pod is gone. `git log` shows the bad commit and its revert, both with your name. ArgoCD's UI also has a History and Rollback button. It only works with automated sync turned off, and afterwards Git says something different from the cluster. A revert keeps Git the single source of truth.
 
 ### 6. Ordered deploys: hooks and waves
 
-```bash
-cat platform-engineering/gitops-extras/migrate-job.yaml platform-engineering/gitops-extras/config-wave.yaml
-cd /tmp/podinfo-gitops
-cp "$C"/platform-engineering/gitops-extras/{migrate-job,config-wave}.yaml base/
-printf '  - migrate-job.yaml\n  - config-wave.yaml\n' >> base/kustomization.yaml
-git add . && git commit -qm "migration hook and settings" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
-cd -
-kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
-for i in $(seq 1 8); do kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.operationState.phase}: {.status.operationState.message}{"\n"}'; sleep 3; done
-kubectl -n course-gitops-dev logs job/migrate
+```console
+$ cat platform-engineering/gitops-extras/migrate-job.yaml platform-engineering/gitops-extras/config-wave.yaml
+# A PreSync hook: ArgoCD runs this Job before it applies anything else, and waits for it.
+# A failing hook stops the sync, which is what you want from a database migration.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: busybox:1.36
+          command: ["sh", "-c", "echo migrating the schema; sleep 10; echo done"]
+# Sync wave -1: ArgoCD applies this before the Deployment (wave 0) and waits until it's healthy.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: podinfo-settings
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+data:
+  feature: "orders-v2"
+
+$ cd /tmp/podinfo-gitops
+$ cp "$C"/platform-engineering/gitops-extras/{migrate-job,config-wave}.yaml base/
+$ printf '  - migrate-job.yaml\n  - config-wave.yaml\n' >> base/kustomization.yaml
+$ git add . && git commit -qm "migration hook and settings" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
+remote: . Processing 1 references
+remote: Processed 1 references in total
+
+$ cd -
+/Users/you/k8s_lab_macos
+
+$ kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
+application.argoproj.io/podinfo-dev annotated
+
+$ for i in $(seq 1 8); do kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.operationState.phase}: {.status.operationState.message}{"\n"}'; sleep 3; done
+Running: waiting for completion of hook batch/Job/migrate
+Running: waiting for completion of hook batch/Job/migrate
+Running: waiting for completion of hook batch/Job/migrate
+Succeeded: successfully synced (all tasks run)
+Succeeded: successfully synced (all tasks run)
+Succeeded: successfully synced (all tasks run)
+Succeeded: successfully synced (all tasks run)
+Succeeded: successfully synced (all tasks run)
+
+$ kubectl -n course-gitops-dev logs job/migrate
+migrating the schema
+done
 ```
 
 **What you should see.** The sync status moves through three messages:
@@ -235,26 +391,48 @@ This order matters for database migrations. The new app version needs the new sc
 
 Now make the migration fail:
 
-```bash
-cd /tmp/podinfo-gitops
-sed -i.bak 's/echo done"/echo schema conflict; exit 1"/' base/migrate-job.yaml
-sed -i.bak 's/hello from commit 3/hello from commit 5/' base/deployment.yaml
-git commit -qam "migration that fails" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
-cd -
-kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
-sleep 40; kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.operationState.message}{"\n"}'
-kubectl -n course-gitops-dev get deploy podinfo -o jsonpath='{.spec.template.spec.containers[0].env[0].value}{"\n"}'
+```console
+$ cd /tmp/podinfo-gitops
+$ sed -i.bak 's/echo done"/echo schema conflict; exit 1"/' base/migrate-job.yaml
+$ sed -i.bak 's/hello from commit 3/hello from commit 5/' base/deployment.yaml
+$ git commit -qam "migration that fails" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
+remote: . Processing 1 references
+remote: Processed 1 references in total
+
+$ cd -
+/Users/you/k8s_lab_macos
+
+$ kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
+application.argoproj.io/podinfo-dev annotated
+
+$ sleep 40; kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.operationState.message}{"\n"}'
+one or more synchronization tasks completed unsuccessfully. Retrying attempt #2 at 10:26AM.
+
+$ kubectl -n course-gitops-dev get deploy podinfo -o jsonpath='{.spec.template.spec.containers[0].env[0].value}{"\n"}'
+hello from commit 3
 ```
 
 **What you should see.** The message reads `one or more synchronization tasks completed unsuccessfully. Retrying attempt #...`, and the Deployment still says `hello from commit 3`. The failed migration stopped the release before the new version went out. That's exactly what you want from a schema migration.
 
 Undo it, and watch how long the fix waits:
 
-```bash
-cd /tmp/podinfo-gitops && git revert --no-edit HEAD && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main; cd -
-kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
-kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.operationState.phase} retry {.status.operationState.retryCount}{"\n"}' -w
+```console
+$ cd /tmp/podinfo-gitops && git revert --no-edit HEAD && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main; cd -
+[main 9c7004c] Revert "migration that fails"
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+remote: . Processing 1 references
+remote: Processed 1 references in total
+/Users/you/k8s_lab_macos
+
+$ kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
+application.argoproj.io/podinfo-dev annotated
+
+$ kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.operationState.phase} retry {.status.operationState.retryCount}{"\n"}' -w
+Running retry 2
+Running retry 3
 ```
+
+The `-w` watch keeps running until you press Ctrl-C. The transcript shows its first 30 seconds.
 
 **What you should see.** The operation stays `Running` for a few minutes before your revert takes effect. The next step explains why, and how to skip the wait.
 
@@ -270,62 +448,123 @@ Plain Kubernetes has no such queue. A Deployment controller always works toward 
 
 A teammate commits a ClusterRole that reads every resource in the cluster:
 
-```bash
-cat platform-engineering/gitops-extras/sneaky-clusterrole.yaml
-cd /tmp/podinfo-gitops
-cp "$C"/platform-engineering/gitops-extras/sneaky-clusterrole.yaml base/
-printf '  - sneaky-clusterrole.yaml\n' >> base/kustomization.yaml
-git add . && git commit -qm "let podinfo read everything" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
-cd -
-kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
-sleep 10
-kubectl -n argocd get app podinfo-dev -o jsonpath='{range .status.operationState.syncResult.resources[?(@.kind=="ClusterRole")]}{.message}{"\n"}{end}'
-kubectl get clusterrole podinfo-reads-everything
+```console
+$ cat platform-engineering/gitops-extras/sneaky-clusterrole.yaml
+# Someone on the team commits this. The AppProject allows no cluster-scoped resources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: podinfo-reads-everything
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get", "list"]
+
+$ cd /tmp/podinfo-gitops
+$ cp "$C"/platform-engineering/gitops-extras/sneaky-clusterrole.yaml base/
+$ printf '  - sneaky-clusterrole.yaml\n' >> base/kustomization.yaml
+$ git add . && git commit -qm "let podinfo read everything" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
+remote: . Processing 1 references
+remote: Processed 1 references in total
+
+$ cd -
+/Users/you/k8s_lab_macos
+
+$ kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
+application.argoproj.io/podinfo-dev annotated
+
+$ sleep 10
+$ kubectl -n argocd get app podinfo-dev -o jsonpath='{range .status.operationState.syncResult.resources[?(@.kind=="ClusterRole")]}{.message}{"\n"}{end}'
+resource rbac.authorization.k8s.io:ClusterRole is not permitted in project team-shop
+
+$ kubectl get clusterrole podinfo-reads-everything
+Error from server (NotFound): clusterroles.rbac.authorization.k8s.io "podinfo-reads-everything" not found
 ```
 
 **What you should see.** The first command prints `resource rbac.authorization.k8s.io:ClusterRole is not permitted in project team-shop`. The second prints `NotFound` for the ClusterRole. ArgoCD refused the whole sync, so nothing from that commit reached the cluster.
 
 Revert it, and look at the operation:
 
-```bash
-cd /tmp/podinfo-gitops && git revert --no-edit HEAD && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main; cd -
-kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
-kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.operationState.phase}: {.status.operationState.message}{"\n"}'
+```console
+$ cd /tmp/podinfo-gitops && git revert --no-edit HEAD && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main; cd -
+[main d3a79ac] Revert "let podinfo read everything"
+ 3 files changed, 28 deletions(-)
+ delete mode 100644 base/migrate-job.yaml.bak
+ delete mode 100644 base/sneaky-clusterrole.yaml
+remote: . Processing 1 references
+remote: Processed 1 references in total
+/Users/you/k8s_lab_macos
+
+$ kubectl -n argocd annotate app podinfo-dev argocd.argoproj.io/refresh=normal --overwrite
+application.argoproj.io/podinfo-dev annotated
+
+$ kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.operationState.phase}: {.status.operationState.message}{"\n"}'
+Running: one or more synchronization tasks are not valid. Retrying attempt #2 at 10:32AM.
 ```
 
 **What you should see.** The operation is still `Running` and still shows `Retrying attempt #...` for the *old* commit. An automated sync that fails retries up to 5 times, with a longer pause each time. In the test run, the failing operation kept retrying from 20:48:15 to 20:53:25. A revert pushed in the middle only took effect after that. During an incident, you don't have those 5 minutes. Stop the retries yourself:
 
-```bash
-kubectl -n argocd patch app podinfo-dev --type merge -p '{"status":{"operationState":{"phase":"Terminating"}}}'
-kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.sync.status} {.status.health.status}: {.status.operationState.message}{"\n"}'
+```console
+$ kubectl -n argocd patch app podinfo-dev --type merge -p '{"status":{"operationState":{"phase":"Terminating"}}}'
+application.argoproj.io/podinfo-dev patched
+
+$ kubectl -n argocd get app podinfo-dev -o jsonpath='{.status.sync.status} {.status.health.status}: {.status.operationState.message}{"\n"}'
+Synced Healthy: Operation terminated (retried 2 times).
 ```
 
 **What you should see.** Within a second the command prints `Synced Healthy: Operation terminated (retried 2 times).`. With the `argocd` CLI, `argocd app terminate-op podinfo-dev` does the same thing. The UI also has a Terminate button on a running sync.
 
 ### 8. One template, many environments
 
-```bash
-kubectl -n argocd delete app podinfo-dev
-kubectl -n course-gitops-dev get all
-kubectl apply -f platform-engineering/manifests/22-appset.yaml
-sleep 20; kubectl -n argocd get app podinfo-dev podinfo-prod
-kubectl get deploy -A | grep course-gitops-
-kubectl -n argocd get app podinfo-prod -o jsonpath='{.metadata.ownerReferences[0].kind}/{.metadata.ownerReferences[0].name}{"\n"}'
+```console
+$ kubectl -n argocd delete app podinfo-dev
+application.argoproj.io "podinfo-dev" deleted
+
+$ kubectl -n course-gitops-dev get all
+No resources found in course-gitops-dev namespace.
+
+$ kubectl apply -f platform-engineering/manifests/22-appset.yaml
+applicationset.argoproj.io/podinfo created
+
+$ sleep 20; kubectl -n argocd get app podinfo-dev podinfo-prod
+NAME           SYNC STATUS   HEALTH STATUS
+podinfo-dev    Synced        Healthy
+podinfo-prod   Synced        Healthy
+
+$ kubectl get deploy -A | grep course-gitops-
+course-gitops-dev    podinfo                                    1/1     1            1           13s
+course-gitops-prod   podinfo                                    2/2     2            2           13s
+
+$ kubectl -n argocd get app podinfo-prod -o jsonpath='{.metadata.ownerReferences[0].kind}/{.metadata.ownerReferences[0].name}{"\n"}'
+ApplicationSet/podinfo
 ```
 
 **What you should see.** Deleting the Application removed its Deployment, Service and pods. The finalizer did that. Next, the ApplicationSet created `podinfo-dev` and `podinfo-prod` from one template. An ApplicationSet is a template that generates Applications. Both were `Synced Healthy` within about 20 seconds. The overlays give dev 1 replica and prod 2. Both Applications carry an owner reference to `ApplicationSet/podinfo`.
 
 Delete one and see what happens, then remove a file from Git:
 
-```bash
-kubectl -n argocd delete app podinfo-prod
-sleep 20; kubectl -n argocd get app podinfo-prod
-cd /tmp/podinfo-gitops
-git rm -q base/config-wave.yaml && sed -i.bak '/config-wave.yaml/d' base/kustomization.yaml
-git commit -qam "drop the settings ConfigMap" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
-cd -
-for a in dev prod; do kubectl -n argocd annotate app podinfo-$a argocd.argoproj.io/refresh=normal --overwrite; done
-sleep 25; kubectl get cm -A | grep podinfo-settings
+```console
+$ kubectl -n argocd delete app podinfo-prod
+application.argoproj.io "podinfo-prod" deleted
+
+$ sleep 20; kubectl -n argocd get app podinfo-prod
+NAME           SYNC STATUS   HEALTH STATUS
+podinfo-prod   Synced        Healthy
+
+$ cd /tmp/podinfo-gitops
+$ git rm -q base/config-wave.yaml && sed -i.bak '/config-wave.yaml/d' base/kustomization.yaml
+$ git commit -qam "drop the settings ConfigMap" && git push -q http://lab:lab-gitops-pass@localhost:3001/lab/podinfo-gitops.git main
+remote: . Processing 1 references
+remote: Processed 1 references in total
+
+$ cd -
+/Users/you/k8s_lab_macos
+
+$ for a in dev prod; do kubectl -n argocd annotate app podinfo-$a argocd.argoproj.io/refresh=normal --overwrite; done
+application.argoproj.io/podinfo-dev annotated
+application.argoproj.io/podinfo-prod annotated
+
+$ sleep 25; kubectl get cm -A | grep podinfo-settings
 ```
 
 **What you should see.** About 20 seconds later, `podinfo-prod` is back and `Healthy`. The ApplicationSet owns it, so it recreates it. `grep` finds no `podinfo-settings` ConfigMap. The file left Git, so `prune: true` deleted the ConfigMap from both namespaces.
@@ -363,9 +602,15 @@ A generator is the part of an ApplicationSet that produces the list of Applicati
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh
-kill %1 2>/dev/null; rm -rf /tmp/podinfo-gitops
+```console
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
+
+$ kill %1 2>/dev/null; rm -rf /tmp/podinfo-gitops
 ```
 
 This deletes:

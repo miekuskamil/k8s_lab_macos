@@ -107,46 +107,69 @@ There's also a security problem. Ollama, like many model servers, has **no authe
 
 ### 1. Deploy the assistant
 
-```bash
-kubectl apply -f platform-engineering/manifests/17-assistant.yaml
-kubectl -n shop set env deploy/assistant OLLAMA_MODEL=qwen2.5:3b
-kubectl -n shop rollout status deploy/assistant
-curl -s http://localhost:8080/api/model; echo
+```console
+$ kubectl apply -f platform-engineering/manifests/17-assistant.yaml
+serviceaccount/assistant created
+deployment.apps/assistant created
+service/assistant created
+httproute.gateway.networking.k8s.io/assistant created
+
+$ kubectl -n shop set env deploy/assistant OLLAMA_MODEL=qwen2.5:3b
+$ kubectl -n shop rollout status deploy/assistant
+deployment "assistant" successfully rolled out
+
+$ curl -s http://localhost:8080/api/model; echo
+{"model":"qwen2.5:3b","ollama":"http://host.docker.internal:11434","max_tokens":120}
 ```
 
 **What you should see.** `{"model":"qwen2.5:3b","ollama":"http://host.docker.internal:11434","max_tokens":120}`. The output shows the model, the Ollama URL, and a cap on answer length. On a Mac with more memory, set any other model from `ollama list` by name. If you get `no healthy upstream` right after the rollout, wait a few seconds. The gateway hasn't received the new pod's address yet.
 
 ### 2. Ask a question, and meet a 403
 
-```bash
-ask() { curl -s -m 180 -X POST http://localhost:8080/api/ask -H 'Content-Type: application/json' -d "{\"question\":\"$1\"}"; echo; }
-ask "How many orders are there?"
+```console
+$ ask() { curl -s -m 180 -X POST http://localhost:8080/api/ask -H 'Content-Type: application/json' -d "{\"question\":\"$1\"}"; echo; }
+$ ask "How many orders are there?"
+{"error":"backend call failed: Client error '403 Forbidden' for url 'http://backend.shop.svc.cluster.local:8000/api/orders?limit=10'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403","trace_id":"b040ff903391cb8940f41ade522f3250"}
 ```
 
 **What you should see.** You get an error: `backend call failed: Client error '403 Forbidden'`. The assistant asked the backend for orders, and the backend's waypoint refused `sa/assistant`. Allow the assistant, for `GET /api/orders` only:
 
-```bash
-kubectl apply -f platform-engineering/manifests/17-allow-assistant.yaml
-ask "How many orders are there, and what was ordered?"
+```console
+$ kubectl apply -f platform-engineering/manifests/17-allow-assistant.yaml
+authorizationpolicy.security.istio.io/backend-allow-assistant created
+
+$ ask "How many orders are there, and what was ordered?"
+{"answer":"There are 5 orders. The items ordered are verify, find-me, book, life, and book.","model":"qwen2.5:3b","input_tokens":390,"output_tokens":23,"model_seconds":0.46,"orders_seen":5,"trace_id":"9511b1c3b479aff17a13a4c8b5c1a670"}
 ```
 
-**What you should see.** You get a real answer, plus three numbers: `input_tokens`, `output_tokens` and `model_seconds`. In the test run for this module, the call used 197 input tokens and 20 output tokens. The first call took 1.34 seconds, because Ollama loaded the model into memory. The same question right after took 0.34 seconds.
+**What you should see.** You get a real answer, plus three numbers: `input_tokens`, `output_tokens` and `model_seconds`. In the test runs for this module, the call used 197 to 390 input tokens and 20 to 25 output tokens. The count grows with the number of orders in Redis. A first call took 1.34 to 2.54 seconds, because Ollama loaded the model into memory. With the model loaded, the same question took 0.34 to 0.46 seconds.
 
 Read the answers critically. When asked which item was ordered most, the model replied that "book" was. It added: "There is no item named verify in the order data". In fact, one order was for `verify`. A small model contradicts its own context now and then. Module 27 looks at that problem in depth.
 
 ### 3. See what the mesh knows about the model
 
-```bash
-kubectl -n istio-system logs ds/ztunnel --since=5m | grep 'src.workload="assistant' | grep 11434 | tail -1
+```console
+$ kubectl -n istio-system logs ds/ztunnel --since=5m | grep 'src.workload="assistant' | grep 11434 | tail -1
+2026-11-14T23:34:47.698315Z	info	access	connection complete	src.addr=10.42.0.67:37346 src.workload="assistant-788d9f78bb-nfx4c" src.namespace="shop" dst.addr=0.250.250.254:11434 direction="outbound" bytes_sent=1364 bytes_recv=497 duration="453ms"
 ```
 
 **What you should see.** You see `dst.addr=` followed by an IP and port 11434, something like `0.250.250.254:11434`. The log shows no name. Now register Ollama with the mesh:
 
-```bash
-kubectl apply -f platform-engineering/manifests/17-ollama-serviceentry.yaml
-kubectl -n shop rollout restart deploy/assistant && kubectl -n shop rollout status deploy/assistant
-ask "Which item was ordered most?"
-kubectl -n istio-system logs ds/ztunnel --since=1m | grep 'src.workload="assistant' | grep host.docker | tail -1
+```console
+$ kubectl apply -f platform-engineering/manifests/17-ollama-serviceentry.yaml
+serviceentry.networking.istio.io/ollama created
+
+$ kubectl -n shop rollout restart deploy/assistant && kubectl -n shop rollout status deploy/assistant
+deployment.apps/assistant restarted
+Waiting for deployment "assistant" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "assistant" rollout to finish: 1 old replicas are pending termination...
+deployment "assistant" successfully rolled out
+
+$ ask "Which item was ordered most?"
+{"answer":"The item \"book\" was ordered most, with a total of 2 orders.","model":"qwen2.5:3b","input_tokens":385,"output_tokens":18,"model_seconds":0.4,"orders_seen":5,"trace_id":"12633631edb0833d9a29765d62441c8f"}
+
+$ kubectl -n istio-system logs ds/ztunnel --since=1m | grep 'src.workload="assistant' | grep host.docker | tail -1
+2026-11-14T23:35:14.951831Z	info	access	connection complete	src.addr=10.42.0.68:47994 src.workload="assistant-55f74d448-tbt4x" src.namespace="shop" src.identity="spiffe://cluster.local/ns/shop/sa/assistant" dst.addr=10.42.0.211:15008 dst.hbone_addr=240.240.0.11:11434 dst.service="host.docker.internal" dst.workload="waypoint-b9b76876f-f7cpq" dst.namespace="shop" dst.identity="spiffe://cluster.local/ns/shop/sa/waypoint" direction="outbound" bytes_sent=1344 bytes_recv=594 duration="396ms"
 ```
 
 **What you should see.** You see `dst.service="host.docker.internal"` and `dst.workload="waypoint-..."`. Model calls now pass through the waypoint, under a name. You restarted the assistant so that it gets a fresh pod. The new pod resolves the name to the ServiceEntry's virtual IP, as in module 12.
@@ -161,13 +184,24 @@ Ollama listens for more than chat requests:
 
 Allow only the assistant, and only chat and read-only calls:
 
-```bash
-kubectl apply -f platform-engineering/manifests/17-ollama-policy.yaml -f platform-engineering/manifests/03-course-client.yaml
-kubectl -n shop rollout status deploy/course-client
-kubectl -n shop exec deploy/course-client -- curl -s -o /dev/null -w "list models -> %{http_code}\n" http://host.docker.internal:11434/api/tags
-kubectl -n shop exec deploy/course-client -- curl -s -o /dev/null -w "delete a model -> %{http_code}\n" \
+```console
+$ kubectl apply -f platform-engineering/manifests/17-ollama-policy.yaml -f platform-engineering/manifests/03-course-client.yaml
+authorizationpolicy.security.istio.io/ollama-chat-only created
+serviceaccount/course-client unchanged
+deployment.apps/course-client unchanged
+
+$ kubectl -n shop rollout status deploy/course-client
+deployment "course-client" successfully rolled out
+
+$ kubectl -n shop exec deploy/course-client -- curl -s -o /dev/null -w "list models -> %{http_code}\n" http://host.docker.internal:11434/api/tags
+list models -> 403
+
+$ kubectl -n shop exec deploy/course-client -- curl -s -o /dev/null -w "delete a model -> %{http_code}\n" \
   -X DELETE -d '{"model":"lab-model-that-does-not-exist"}' http://host.docker.internal:11434/api/delete
-ask "How many orders are there?"
+delete a model -> 403
+
+$ ask "How many orders are there?"
+{"answer":"There are 5 orders in the recent order data.","model":"qwen2.5:3b","input_tokens":385,"output_tokens":12,"model_seconds":0.32,"orders_seen":5,"trace_id":"d3de7ec7c54d74050c01f5e0cec20d3b"}
 ```
 
 **What you should see.** The course client gets `403` for both calls, and the assistant gets a normal answer. The delete call uses a model name that doesn't exist, so nothing would break even without the policy. Don't test this with a real model name.
@@ -197,18 +231,26 @@ sum by (type) (assistant_llm_tokens_total)
 
 ### 6. Watch a timeout cut a model call off
 
-```bash
-kubectl apply -f platform-engineering/manifests/17-llm-timeout.yaml
-ask "How many orders are there?"
+```console
+$ kubectl apply -f platform-engineering/manifests/17-llm-timeout.yaml
+httproute.gateway.networking.k8s.io/ollama-timeout created
+
+$ ask "How many orders are there?"
+{"error":"model call failed: Server error '504 Gateway Timeout' for url 'http://host.docker.internal:11434/api/chat'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/504","trace_id":"fe8bffb976aeeda0e3b415676daa8d5e"}
 ```
 
 **What you should see.** You get `model call failed: Server error '504 Gateway Timeout'` after a tenth of a second. The route allows 100 ms, and even a two-word answer took more than twice that in step 5. So the route timeout on the waypoint fired before the model finished. If you run Homebrew's Ollama on a Mac, look at its log:
 
-```bash
-tail -n 5 /opt/homebrew/var/log/ollama.log
+```console
+$ tail -n 5 /opt/homebrew/var/log/ollama.log
+slot print_timing: id  0 | task 102 |       total time =     191.48 ms /    23 tokens
+slot print_timing: id  0 | task 102 |    graphs reused =         98
+slot      release: id  0 | task 102 | stop processing: n_tokens = 396, truncated = 0
+srv  update_slots: all slots are idle
+[GIN] 2026/11/14 - 23:35:24 | 200 |  318.795042ms |       127.0.0.1 | POST     "/api/chat"
 ```
 
-In the test run, the log showed the call ending with status `500` after 3 seconds. That run used a 3-second timeout. Next, the log showed `srv stop: cancel task`. When the waypoint closed the connection, Ollama stopped generating. Not every model server does that. A server that keeps going after the client left burns GPU time for nobody.
+In the test run, the log showed the call ending with status `500` after 3 seconds. That run used a 3-second timeout. Next, the log showed `srv stop: cancel task`. When the waypoint closed the connection, Ollama stopped generating. Not every model server does that. A server that keeps going after the client left burns GPU time for nobody. In the run above, the answer needed only about 0.3 seconds. Ollama finished it and logged `200`, although the waypoint had given up after 100 ms.
 
 ## Investigate
 
@@ -241,8 +283,13 @@ In the test run, the log showed the call ending with status `500` after 3 second
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh
+```console
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 This removes the assistant, its route and policies, the ServiceEntry and the timeout. Ollama on your machine keeps running.

@@ -77,8 +77,9 @@ The canary route in this module sits on the east-west path. It splits the fronte
 
 Start steady traffic in a second terminal and leave it running during the module:
 
-```bash
-./platform-engineering/load.sh 900 /api/version 5
+```console
+$ ./platform-engineering/load.sh 900 /api/version 5
+Sending about 5 requests per second to http://localhost:8080/api/version for 900s. Press Ctrl-C to stop.
 ```
 
 **What you should see.** You see `Sending about 5 requests per second to http://localhost:8080/api/version for 900s. Press Ctrl-C to stop.` Then the script prints nothing until it ends. At the end, it prints the status codes and backend versions it counted. It runs in the background while you work, so Prometheus and Kiali always have fresh numbers.
@@ -87,32 +88,47 @@ Open Kiali's **Traffic Graph** for namespace `shop`. Set the graph type to "Vers
 
 **1. Canary: 90% to v1, 10% to v2.**
 
-```bash
-kubectl apply -f manifests/scenarios/a-canary-httproute.yaml
-./scripts/traffic-test.sh 300 10 /api/version
-```
+```console
+$ kubectl apply -f manifests/scenarios/a-canary-httproute.yaml
+httproute.gateway.networking.k8s.io/backend-route configured
 
-**What you should see.** You see `httproute.gateway.networking.k8s.io/backend-route configured`, then:
+$ ./scripts/traffic-test.sh 300 10 /api/version
+Sending 300 requests to http://localhost:8080/api/version with concurrency 10
 
-```text
 Status codes
   200  300  (100%)
 
 Backend versions
-  v1  271  (90%)
-  v2  29  (10%)
+  v1  267  (89%)
+  v2  33  (11%)
+
+Average latency 38 ms, slowest 179 ms
 ```
+
+**What you should see.** You see `httproute.gateway.networking.k8s.io/backend-route configured`, then about 90% v1 and 10% v2.
 
 Your numbers wobble around 270 and 30, because the waypoint rolls the dice for each request. The route already existed with 100% to v1. So `kubectl apply` changed it in place, and the waypoint uses the new weights within a few seconds. In Kiali, the `v2` edge starts to carry traffic after about a minute. Kiali shows a rate over a one minute window, so the edge appears once that window has data.
 
 **2. Half and half.**
 
-```bash
-kubectl apply -f platform-engineering/manifests/04-route-50-50.yaml
-./scripts/traffic-test.sh 300 10 /api/version
+```console
+$ kubectl apply -f platform-engineering/manifests/04-route-50-50.yaml
+httproute.gateway.networking.k8s.io/backend-route configured
+
+$ ./scripts/traffic-test.sh 300 10 /api/version
+Sending 300 requests to http://localhost:8080/api/version with concurrency 10
+
+Status codes
+  200  300  (100%)
+
+Backend versions
+  v1  153  (51%)
+  v2  147  (49%)
+
+Average latency 36 ms, slowest 185 ms
 ```
 
-**What you should see.** You see about 150 each. The lab got `v1 151` and `v2 149`. A minute later, Kiali's two edges from the `backend` service node carry about the same rate. Each carries close to 2.5 requests per second from the load script. In a real release, this is where you would watch v2's error rate and latency before going further.
+**What you should see.** You see about 150 each. The lab got `v1 151` and `v2 149` in one run, and `v1 153` and `v2 147` in another. A minute later, Kiali's two edges from the `backend` service node carry about the same rate. Each carries close to 2.5 requests per second from the load script. In a real release, this is where you would watch v2's error rate and latency before going further.
 
 ### Concept: how the waypoint picks a rule
 
@@ -130,11 +146,57 @@ Inside one rule, the `weight` values from steps 1 and 2 still apply. Matching pi
 
 **3. Route by path, not by chance.**
 
-```bash
-cat platform-engineering/manifests/04-route-by-path.yaml
-kubectl apply -f platform-engineering/manifests/04-route-by-path.yaml
-./scripts/traffic-test.sh 50 5 /api/version     # 50 of 50 to v2
-./scripts/traffic-test.sh 50 5 /api/orders      # 50 of 50 to v1
+```console
+$ cat platform-engineering/manifests/04-route-by-path.yaml
+# Route by request content, not by chance: /api/version always goes to v2,
+# everything else stays on v1. Rules are matched most-specific first.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend-route
+  namespace: shop
+spec:
+  parentRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 8000
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/version
+      backendRefs:
+        - name: backend-v2
+          port: 8000
+    - backendRefs:
+        - name: backend-v1
+          port: 8000
+
+$ kubectl apply -f platform-engineering/manifests/04-route-by-path.yaml
+httproute.gateway.networking.k8s.io/backend-route configured
+
+$ ./scripts/traffic-test.sh 50 5 /api/version     # 50 of 50 to v2
+Sending 50 requests to http://localhost:8080/api/version with concurrency 5
+
+Status codes
+  200  50  (100%)
+
+Backend versions
+  v2  50  (100%)
+
+Average latency 72 ms, slowest 386 ms
+
+$ ./scripts/traffic-test.sh 50 5 /api/orders      # 50 of 50 to v1
+Sending 50 requests to http://localhost:8080/api/orders with concurrency 5
+
+Status codes
+  200  50  (100%)
+
+Backend versions
+  v1  50  (100%)
+
+Average latency 29 ms, slowest 87 ms
 ```
 
 **What you should see.** The first test reports `v2  50  (100%)`, and the second reports `v1  50  (100%)`. The waypoint rolls no dice this time. The path decides.
@@ -143,17 +205,17 @@ The route has two rules. The first matches the path prefix `/api/version` and se
 
 **4. See what the waypoint received.**
 
-```bash
-istioctl proxy-config routes deploy/waypoint -n shop | grep -E "MATCH|backend.shop"
+```console
+$ istioctl proxy-config routes deploy/waypoint -n shop | grep -E "MATCH|backend.shop"
+NAME                                                        VHOST NAME            DOMAINS     MATCH                       VIRTUAL SERVICE
+inbound-vip|8000|http|backend.shop.svc.cluster.local        inbound|http|8000     *           /*                          backend-route-0-istio-autogenerated-k8s-gateway.shop
+inbound-vip|8000|http|backend.shop.svc.cluster.local        inbound|http|8000     *           /*                          backend-route-0-istio-autogenerated-k8s-gateway.shop
+inbound-vip|8000|http|backend.shop.svc.cluster.local        inbound|http|8000     *           PathPrefix:/api/version     backend-route-0-istio-autogenerated-k8s-gateway.shop
+inbound-vip|8000|http|backend.shop.svc.cluster.local        inbound|http|8000     *           /*                          backend-route-0-istio-autogenerated-k8s-gateway.shop
+inbound-vip|8000|http|backend.shop.svc.cluster.local        inbound|http|8000     *           /*                          backend-route-0-istio-autogenerated-k8s-gateway.shop
 ```
 
-**What you should see.** You see rows like these, and probably a few more:
-
-```text
-NAME                                                  VHOST NAME          DOMAINS  MATCH                    VIRTUAL SERVICE
-inbound-vip|8000|http|backend.shop.svc.cluster.local  inbound|http|8000   *        PathPrefix:/api/version  backend-route-0-istio-autogenerated-k8s-gateway.shop
-inbound-vip|8000|http|backend.shop.svc.cluster.local  inbound|http|8000   *        /*                       backend-route-0-istio-autogenerated-k8s-gateway.shop
-```
+**What you should see.** You see one `PathPrefix:/api/version` row and several `/*` rows.
 
 Notice two things.
 
@@ -170,14 +232,17 @@ The waypoint's config dump shows this. The listener `main_internal` has an `acti
 1. In Grafana, open the dashboard **Shop mesh and traffic experiments**, panel "Backend request rate by workload". Watch it while you move from step 1 to step 3. How long after `kubectl apply` does the graph change, and why does it take that long?
 2. Break the route on purpose and find it two ways:
 
-   ```bash
-   sed 's/name: backend-v2/name: backend-v3/' platform-engineering/manifests/04-route-by-path.yaml | kubectl apply -f -
+   ```console
+   $ sed 's/name: backend-v2/name: backend-v3/' platform-engineering/manifests/04-route-by-path.yaml | kubectl apply -f -
+   httproute.gateway.networking.k8s.io/backend-route configured
    ```
 
    In Kiali **Istio Config**, `backend-route` gets a red icon with `KIA1402 Reference doesn't have a valid service`. Without Kiali, the route's own status says the same:
 
-   ```bash
-   kubectl -n shop get httproute backend-route -o jsonpath='{range .status.parents[0].conditions[*]}{.type}={.status} {.reason}{"\n"}{end}'
+   ```console
+   $ kubectl -n shop get httproute backend-route -o jsonpath='{range .status.parents[0].conditions[*]}{.type}={.status} {.reason}{"\n"}{end}'
+   Accepted=True Accepted
+   ResolvedRefs=False BackendNotFound
    ```
 
    The status shows `Accepted=True`, which means the YAML is valid. But it also shows `ResolvedRefs=False BackendNotFound`. What happens to requests for `/api/version` meanwhile, and to `/api/orders`? Try it, then run `./platform-engineering/reset.sh`.
@@ -201,6 +266,11 @@ The waypoint's config dump shows this. The listener `main_internal` has an `acti
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh
+```console
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```

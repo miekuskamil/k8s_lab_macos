@@ -22,14 +22,16 @@ Work from symptoms to cause, and from the outside in:
 
 Keep traffic flowing during each incident so the graphs have data:
 
-```bash
-./platform-engineering/load.sh 600 /api/orders 5
+```console
+$ ./platform-engineering/load.sh 600 /api/orders 5
+Sending about 5 requests per second to http://localhost:8080/api/orders for 600s. Press Ctrl-C to stop.
 ```
 
 Turn on the waypoint's access log once. It helps in every incident:
 
-```bash
-kubectl apply -f platform-engineering/manifests/06-waypoint-access-logs.yaml
+```console
+$ kubectl apply -f platform-engineering/manifests/06-waypoint-access-logs.yaml
+telemetry.telemetry.istio.io/waypoint-access-logs created
 ```
 
 When Envoy fails a request, it adds a short code, a response flag, that says why. You find the flag in the access log and in `istio_requests_total{response_flags=...}`. It is the fastest clue you have:
@@ -69,8 +71,10 @@ One case leaves almost no trace at all. Sometimes ztunnel refuses a connection a
 
 ## Incident 1: "Every page says access denied"
 
-```bash
-./platform-engineering/incident.sh 1
+```console
+$ ./platform-engineering/incident.sh 1
+Incident 1 is active. Users are complaining. Open http://localhost:8080 and investigate.
+Repair the lab with: ./platform-engineering/incident.sh stop
 ```
 
 **Users report.** The shop loads but shows no orders. Creating an order fails.
@@ -92,9 +96,12 @@ One case leaves almost no trace at all. Sometimes ztunnel refuses a connection a
 - The access log shows `403 - rbac_access_denied_matched_policy[none]`. No ALLOW rule matched.
 - The cause is a typo. `backend-allow-frontend` now names `cluster.local/ns/shop/sa/front-end`. The real service account is `frontend`, without a hyphen. One wrong character in a principal locks out the only real caller.
 
-```bash
-kubectl -n shop get authorizationpolicy backend-allow-frontend -o jsonpath='{.spec.rules[0].from[0].source.principals}'
-kubectl -n shop get pod -l app=frontend -o jsonpath='{.items[0].spec.serviceAccountName}'
+```console
+$ kubectl -n shop get authorizationpolicy backend-allow-frontend -o jsonpath='{.spec.rules[0].from[0].source.principals}'
+["cluster.local/ns/shop/sa/front-end"]
+
+$ kubectl -n shop get pod -l app=frontend -o jsonpath='{.items[0].spec.serviceAccountName}'
+frontend
 ```
 
 **Fix.** `./platform-engineering/incident.sh stop`, or `kubectl apply -f manifests/istio/security.yaml`.
@@ -107,9 +114,20 @@ kubectl -n shop get pod -l app=frontend -o jsonpath='{.items[0].spec.serviceAcco
 
 ## Incident 2: "Slow pages fail, fast ones work"
 
-```bash
-./platform-engineering/incident.sh 2
-./platform-engineering/load.sh 300 "/api/slow?ms=300" 12
+```console
+$ ./platform-engineering/incident.sh 2
+Incident 2 is active. Users are complaining. Open http://localhost:8080 and investigate.
+Repair the lab with: ./platform-engineering/incident.sh stop
+
+$ ./platform-engineering/load.sh 300 "/api/slow?ms=300" 12
+Sending about 12 requests per second to http://localhost:8080/api/slow?ms=300 for 300s. Press Ctrl-C to stop.
+
+Status codes:
+  200  580
+  503  2960
+Backend versions:
+  unknown  2960
+  v1  580
 ```
 
 **Users report.** The shop works for some requests and returns errors for others, more often when it is busy.
@@ -124,7 +142,7 @@ kubectl -n shop get pod -l app=frontend -o jsonpath='{.items[0].spec.serviceAcco
 <details>
 <summary>Evidence the lab produced, and the answer</summary>
 
-- With 12 requests per second to a 300 ms endpoint, 596 of 708 requests failed with `503`.
+- With 12 requests per second to a 300 ms endpoint, 596 of 708 requests failed with `503` in one run. The full 300 second run in the transcript above failed 2960 of 3540.
 - The failures took 5 to 6 ms. That is too fast for a real call, so the waypoint rejected them without calling the backend.
 - Prometheus shows `response_code="503", response_flags="UO"`. The access log shows `503 UO upstream_reset_before_response_started{overflow}`.
 - `UO` means a connection pool overflowed. A pool limits how many requests wait for the backend at once, and only a DestinationRule's `connectionPool` sets one. `kubectl get destinationrule -A` finds `course-incident` on `backend-v1`, with `maxConnections: 1` and `http1MaxPendingRequests: 1`.
@@ -140,8 +158,10 @@ kubectl -n shop get pod -l app=frontend -o jsonpath='{.items[0].spec.serviceAcco
 
 ## Incident 3: "No errors, but the shop got slow"
 
-```bash
-./platform-engineering/incident.sh 3
+```console
+$ ./platform-engineering/incident.sh 3
+Incident 3 is active. Users are complaining. Open http://localhost:8080 and investigate.
+Repair the lab with: ./platform-engineering/incident.sh stop
 ```
 
 **Users report.** No errors at all. The shop is noticeably slower than yesterday.
@@ -163,9 +183,12 @@ kubectl -n shop get pod -l app=frontend -o jsonpath='{.items[0].spec.serviceAcco
   - `backend-route` now sends 70% of traffic to v2. The baseline is 0%.
   - v2 runs with `EXTRA_LATENCY_MS=700`.
 
-```bash
-kubectl -n shop get httproute backend-route -o jsonpath='{.spec.rules[0].backendRefs[*].weight}{"\n"}'
-kubectl -n shop get deploy backend-v2 -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="EXTRA_LATENCY_MS")].value}{"\n"}'
+```console
+$ kubectl -n shop get httproute backend-route -o jsonpath='{.spec.rules[0].backendRefs[*].weight}{"\n"}'
+30 70
+
+$ kubectl -n shop get deploy backend-v2 -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="EXTRA_LATENCY_MS")].value}{"\n"}'
+700
 ```
 
 - ArgoCD shows `istio-config` as OutOfSync, because the route in the cluster differs from Git. That is the fastest way to see that someone changed it.
@@ -180,8 +203,10 @@ kubectl -n shop get deploy backend-v2 -o jsonpath='{.spec.template.spec.containe
 
 ## Incident 4: "Bad gateway"
 
-```bash
-./platform-engineering/incident.sh 4
+```console
+$ ./platform-engineering/incident.sh 4
+Incident 4 is active. Users are complaining. Open http://localhost:8080 and investigate.
+Repair the lab with: ./platform-engineering/incident.sh stop
 ```
 
 **Users report.** Every API request fails with 502. The shop's page itself still loads.
@@ -218,9 +243,29 @@ kubectl -n shop get deploy backend-v2 -o jsonpath='{.spec.template.spec.containe
 
 ## After all four
 
-```bash
-./platform-engineering/incident.sh stop
-./platform-engineering/verify.sh 8
+```console
+$ ./platform-engineering/incident.sh stop
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
+
+$ ./platform-engineering/verify.sh 8
+Restoring the baseline before the checks
+
+== Module 8: incidents
+  ok    incident 1 shows 403
+  ok    incident 2 shows 503 under parallel load (117)
+  ok    incident 3 returns no errors (100)
+  ok    incident 3 sends most traffic to v2 (70)
+  ok    incident 3 makes v2 slow (v2 answers take 0.6 s or more)
+  ok    incident 4 shows 502
+  ok    after the repair the shop answers 200
+
+Restoring the baseline
+
+7 checks passed, 0 failed
 ```
 
 The verify script reproduces each incident and checks its symptom, so it also tells you whether the lab is back to normal.

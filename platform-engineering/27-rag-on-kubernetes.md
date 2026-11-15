@@ -93,37 +93,159 @@ Teams also learn that the hard part isn't the vector database. The hard part is 
 
 ### 1. Install Qdrant
 
-```bash
-helm repo add qdrant https://qdrant.github.io/qdrant-helm && helm repo update qdrant
-cat platform-engineering/manifests/27-qdrant-values.yaml
-helm install qdrant qdrant/qdrant --version 1.20.0 -n course-rag --create-namespace \
+```console
+$ helm repo add qdrant https://qdrant.github.io/qdrant-helm && helm repo update qdrant
+"qdrant" already exists with the same configuration, skipping
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "qdrant" chart repository
+Update Complete. ⎈Happy Helming!⎈
+
+$ cat platform-engineering/manifests/27-qdrant-values.yaml
+# Qdrant, a vector database, as one replica with a 1 GiB volume from k3s' local-path storage.
+replicaCount: 1
+persistence:
+  size: 1Gi
+resources:
+  requests: {cpu: 20m, memory: 64Mi}
+  limits: {memory: 512Mi}
+
+$ helm install qdrant qdrant/qdrant --version 1.20.0 -n course-rag --create-namespace \
   -f platform-engineering/manifests/27-qdrant-values.yaml --wait
-kubectl -n course-rag get pods,pvc
+NAME: qdrant
+LAST DEPLOYED: Sun Nov 15 11:00:50 2026
+NAMESPACE: course-rag
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+NOTES:
+Qdrant v1.20.0 has been deployed successfully.
+...
+
+$ kubectl -n course-rag get pods,pvc
+NAME           READY   STATUS    RESTARTS   AGE
+pod/qdrant-0   1/1     Running   0          14s
+
+NAME                                            STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+persistentvolumeclaim/qdrant-storage-qdrant-0   Bound    pvc-63189388-1487-469b-a6b4-b4fa23591d14   1Gi        RWO            local-path     <unset>                 14s
 ```
 
 **What you should see.** In the test run, the install took 24 seconds. Qdrant runs as a StatefulSet pod, `qdrant-0`. It has a `Bound` 1 GiB volume from k3s' `local-path` storage, so the vectors survive a pod restart.
 
 ### 2. Build the service and give it to the cluster
 
-```bash
-less apps/rag/main.py
-docker build -t k8s-lab/rag:1.2.0 apps/rag
-k3d image import k8s-lab/rag:1.2.0 -c k8s-lab
+```console
+$ less apps/rag/main.py
+"""Course RAG: answers questions about this course from its own Markdown files.
+
+Ingest: split every .md file in DOCS_DIR into chunks at its headings, turn each chunk
+into a vector with an Ollama embedding model, and store vectors plus text in Qdrant.
+Ask: embed the question, fetch the closest chunks from Qdrant, and give them to a chat
+model as the only context it may answer from.
+
+Talks to Qdrant and Ollama over plain HTTP, so every step is visible in the code.
+"""
+
+import hashlib
+import os
+import re
+import time
+from pathlib import Path
+...
+
+$ docker build -t k8s-lab/rag:1.2.0 apps/rag
+...
+#13 exporting config sha256:f9d5918a19794c5aa9ec03600b1fb5280597b876bdec04524bf6bf270250111a done
+#13 exporting attestation manifest sha256:3473c69361eaa825e6915fe725bf1001cfa2b005d6eee2fa21bd908bd9ade287 0.0s done
+#13 exporting manifest list sha256:e7f8a170f3cc4ed1ab5dfa42b1dd911dabf7d8f525ca80b1491d8b9a37a09c55 0.0s done
+#13 naming to docker.io/k8s-lab/rag:1.2.0 done
+#13 unpacking to docker.io/k8s-lab/rag:1.2.0 0.0s done
+#13 DONE 0.1s
+
+$ k3d image import k8s-lab/rag:1.2.0 -c k8s-lab
+INFO[0000] Importing image(s) into cluster 'k8s-lab'
+INFO[0000] Starting new tools node...
+INFO[0000] Starting node 'k3d-k8s-lab-tools'
+INFO[0000] Saving 1 image(s) from runtime...
+INFO[0001] Importing images into nodes...
+INFO[0001] Importing images from tarball '/k3d/images/k3d-k8s-lab-images-20261115110105.tar' into node 'k3d-k8s-lab-server-0'...
+INFO[0002] Removing the tarball(s) from image volume...
+INFO[0003] Removing k3d-tools node...
+INFO[0003] Successfully imported image(s)
+INFO[0003] Successfully imported 1 image(s) into 1 cluster(s)
 ```
+
+`less` opens the file in a pager. Scroll with the arrow keys and press `q` to quit. The transcript shows the first lines of the file and the last lines of the build.
 
 **What you should see.** Docker built a 274 MB image in about 10 seconds, and then k3d printed `Successfully imported 1 image(s)`. The lab has no registry. Instead, `k3d image import` copies the image straight into the node, like the shop's images. Read `main.py` top to bottom. It defines the functions `chunks_of`, `embed` and `search`, and then the `/ingest`, `/search` and `/ask` endpoints.
 
 ### 3. Give it the documents, and start it
 
-```bash
-kubectl -n course-rag create configmap course-docs --from-file=platform-engineering/
-cat platform-engineering/manifests/27-rag-app.yaml
-kubectl apply -f platform-engineering/manifests/27-rag-app.yaml
-kubectl -n course-rag rollout status deploy/rag
-kubectl -n course-rag port-forward svc/rag 8090:8000 >/dev/null 2>&1 &
+```console
+$ kubectl -n course-rag create configmap course-docs --from-file=platform-engineering/
+configmap/course-docs created
+
+$ cat platform-engineering/manifests/27-rag-app.yaml
+# Module 27: the RAG service. It reads the course's Markdown from the course-docs
+# ConfigMap (created in step 3), stores vectors in Qdrant, and calls Ollama on your Mac
+# for embeddings and answers.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag
+  namespace: course-rag
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: rag}
+  template:
+    metadata:
+      labels: {app: rag}
+    spec:
+      containers:
+        - name: rag
+          image: k8s-lab/rag:1.2.0
+          imagePullPolicy: IfNotPresent
+          ports: [{name: http, containerPort: 8000}]
+          env:
+            - {name: OLLAMA_URL, value: "http://host.docker.internal:11434"}
+            - {name: QDRANT_URL, value: "http://qdrant.course-rag.svc.cluster.local:6333"}
+            - {name: EMBED_MODEL, value: nomic-embed-text}
+            - {name: CHAT_MODEL, value: "qwen2.5:3b"}
+            - {name: DOCS_DIR, value: /docs}
+            - {name: EXCLUDE_FILES, value: 27-rag-on-kubernetes.md}
+          volumeMounts:
+            - {name: docs, mountPath: /docs, readOnly: true}
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+          resources:
+            requests: {cpu: 20m, memory: 64Mi}
+            limits: {memory: 256Mi}
+      volumes:
+        - name: docs
+          configMap:
+            name: course-docs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rag
+  namespace: course-rag
+spec:
+  selector: {app: rag}
+  ports: [{name: http, port: 8000}]
+
+$ kubectl apply -f platform-engineering/manifests/27-rag-app.yaml
+deployment.apps/rag created
+service/rag created
+
+$ kubectl -n course-rag rollout status deploy/rag
+Waiting for deployment "rag" rollout to finish: 0 of 1 updated replicas are available...
+deployment "rag" successfully rolled out
+
+$ kubectl -n course-rag port-forward svc/rag 8090:8000 >/dev/null 2>&1 &
 ```
 
-**What you should see.** The ConfigMap holds 42 files, 637 KiB. A ConfigMap holds at most 1 MiB, so this course fits with room to spare. The app reads only the 33 `.md` files, and it leaves one of them out on purpose: this module itself. The manifest sets `EXCLUDE_FILES: 27-rag-on-kubernetes.md`.
+**What you should see.** The ConfigMap holds 45 files, 944 KiB. A ConfigMap holds at most 1 MiB, so this course still fits, with about 80 KiB to spare. The terminal transcripts in the modules take most of the space. The app reads only the 36 `.md` files, and it leaves one of them out on purpose: this module itself. The manifest sets `EXCLUDE_FILES: 27-rag-on-kubernetes.md`.
 
 There is a reason for that. This module quotes its own test questions and the answers they got. If the index held them, a question like "What is the capital of Denmark?" would find step 6's table, and the model would repeat what it read there. In other words, the test would leak into the data, like exam answers left inside the textbook. Teams keep evaluation questions out of the index for the same reason.
 
@@ -131,12 +253,18 @@ The app reaches Ollama on your Mac as `host.docker.internal:11434`, the same way
 
 ### 4. Ingest the course
 
-```bash
-curl -s -X POST localhost:8090/ingest; echo
-kubectl get --raw /api/v1/namespaces/course-rag/services/qdrant:6333/proxy/collections/course | python3 -m json.tool | grep -E "points_count|status"
+```console
+$ curl -s -X POST localhost:8090/ingest; echo
+{"files":35,"chunks":717,"dimensions":768,"embed_model":"nomic-embed-text","embed_prefixes":true,"embed_seconds":11.4,"total_seconds":11.7}
+
+$ kubectl get --raw /api/v1/namespaces/course-rag/services/qdrant:6333/proxy/collections/course | python3 -m json.tool | grep -E "points_count|status"
+        "status": "green",
+        "optimizer_status": "ok",
+        "points_count": 717,
+    "status": "ok",
 ```
 
-**What you should see.** `"files":32,"chunks":543,"dimensions":768,"embed_prefixes":true`, with the embedding done in about 8 seconds on the Mac's GPU. Qdrant reports `"points_count": 543` and `"status": "green"`. Your counts drift a little whenever the course text changes.
+**What you should see.** `"files":32,"chunks":543,"dimensions":768,"embed_prefixes":true` in one test run, and `"files":35,"chunks":717` in the run above, after the course grew. The embedding took 8 to 12 seconds on the Mac's GPU. Qdrant reports the same number as `points_count`, and `"status": "green"`. Your counts drift a little whenever the course text changes.
 
 ### Concept: task prefixes
 
@@ -167,14 +295,66 @@ Read the score as a ranking, not a probability. A score of 0.70 doesn't mean "70
 
 ### 5. Look at retrieval on its own
 
-```bash
-curl -s -G localhost:8090/search --data-urlencode "q=how do I roll back a bad release with ArgoCD" | python3 -m json.tool
-curl -s -G localhost:8090/search --data-urlencode "q=Why is my pod stuck in Pending?" --data-urlencode k=10 | python3 -m json.tool
+```console
+$ curl -s -G localhost:8090/search --data-urlencode "q=how do I roll back a bad release with ArgoCD" | python3 -m json.tool
+{
+    "question": "how do I roll back a bad release with ArgoCD",
+    "results": [
+        {
+            "score": 0.703,
+            "file": "22-gitops-with-argocd.md",
+            "heading": "Investigate"
+        },
+        {
+            "score": 0.685,
+            "file": "22-gitops-with-argocd.md",
+            "heading": "5. A bad release, and `git revert`"
+        },
+        {
+            "score": 0.682,
+            "file": "README.md",
+            "heading": "A note on ArgoCD"
+        },
+        {
+            "score": 0.678,
+            "file": "22-gitops-with-argocd.md",
+            "heading": "Investigate"
+        }
+    ]
+}
+
+$ curl -s -G localhost:8090/search --data-urlencode "q=Why is my pod stuck in Pending?" --data-urlencode k=10 | python3 -m json.tool
+{
+    "question": "Why is my pod stuck in Pending?",
+    "results": [
+        {
+            "score": 0.688,
+            "file": "21-k3s-lifecycle.md",
+            "heading": "Concept: how a pod gets its network, and how one missing file stops it"
+        },
+        {
+            "score": 0.688,
+            "file": "23-prometheus-and-alerting.md",
+            "heading": "4. Break it, get paged"
+        },
+        {
+            "score": 0.678,
+            "file": "20-nodes-and-cleanup.md",
+            "heading": "Concept: PodDisruptionBudgets"
+        },
+        {
+            "score": 0.677,
+...
+            "file": "30-sidecar-in-depth.md",
+            "heading": "8. Set the sidecar's own resources"
+        }
+    ]
+}
 ```
 
-**What you should see.** For the rollback question, every result in the top five comes from the right place, mostly module 22. The step that does the rollback, `5. A bad release, and git revert`, came second in the test run (score 0.691), just behind module 22's Investigate section (0.703). The question shares few words with it, and the search still found it. That's the strength of embeddings.
+**What you should see.** For the rollback question, every result in the top five comes from the right place, mostly module 22. The step that does the rollback, `5. A bad release, and git revert`, came second in the test runs (score 0.685 to 0.691), just behind module 22's Investigate section (0.703). The question shares few words with it, and the search still found it. That's the strength of embeddings.
 
-The second question shows the weakness. The section that answers it best is module 29's `4. Make the scheduler say no`: it makes two pods stay Pending and reads the scheduler's reasons. In the test run, it came **8th**. Ahead of it were seven passages that mention pods and problems: a network failure in module 21, an alert in module 23, PodDisruptionBudgets in module 20. With the default of 4 results, the model never sees the right section. That's a retrieval miss.
+The second question shows the weakness. The section that answers it best is module 29's `4. Make the scheduler say no`: it makes two pods stay Pending and reads the scheduler's reasons. In the test runs, it came **8th**, and **6th** in the run above. Ahead of it were passages that mention pods and problems: a network failure in module 21, an alert in module 23, PodDisruptionBudgets in module 20. With the default of 4 results, the model never sees the right section. That's a retrieval miss.
 
 ### Concept: what the chat model actually receives
 
@@ -191,11 +371,91 @@ The chunks also make up most of the input. A token is a piece of a word, and mod
 
 ### 6. Ask
 
-```bash
-ask() { curl -s -X POST localhost:8090/ask -H 'content-type: application/json' -d "{\"question\":\"$1\"}" | python3 -m json.tool; }
-ask "Why is my pod stuck in Pending?"
-ask "Which Kyverno chart version does module 26 install?"
-ask "What is the capital of Denmark?"
+```console
+$ ask() { curl -s -X POST localhost:8090/ask -H 'content-type: application/json' -d "{\"question\":\"$1\"}" | python3 -m json.tool; }
+$ ask "Why is my pod stuck in Pending?"
+{
+    "answer": "A pod stuck in Pending state could be due to a missing CNI (Container Networking Interface) plugin. This is mentioned in the context where it states that a missing plugin causes no new pod to start and keeps an address, keeping the pod in a Pending state.",
+    "sources": [
+        {
+            "n": 1,
+            "score": 0.688,
+            "file": "21-k3s-lifecycle.md",
+            "heading": "Concept: how a pod gets its network, and how one missing file stops it"
+        },
+        {
+            "n": 2,
+            "score": 0.688,
+            "file": "23-prometheus-and-alerting.md",
+            "heading": "4. Break it, get paged"
+        },
+        {
+            "n": 3,
+            "score": 0.678,
+            "file": "20-nodes-and-cleanup.md",
+            "heading": "Concept: PodDisruptionBudgets"
+...
+    "input_tokens": 1198,
+    "output_tokens": 54,
+    "retrieve_seconds": 0.03,
+    "total_seconds": 0.8
+}
+
+$ ask "Which Kyverno chart version does module 26 install?"
+{
+    "answer": "Module 26 installs the Kyverno chart version 3.8.2. This information is provided in the command executed to install Kyverno: `helm install kyverno kyverno/kyverno --version 3.8.2 -n kyverno --create-namespace -f platform-engineering/manifests/26-kyverno-values.yaml --wait`.",
+    "sources": [
+        {
+            "n": 1,
+            "score": 0.734,
+            "file": "26-kyverno-policy-as-code.md",
+            "heading": "Module 26: Kyverno, policy as code"
+        },
+        {
+            "n": 2,
+            "score": 0.717,
+            "file": "26-kyverno-policy-as-code.md",
+            "heading": "1. Install Kyverno"
+        },
+        {
+            "n": 3,
+            "score": 0.716,
+            "file": "26-kyverno-policy-as-code.md",
+            "heading": "1. Install Kyverno"
+...
+    "input_tokens": 1420,
+    "output_tokens": 83,
+    "retrieve_seconds": 0.03,
+    "total_seconds": 1.6
+}
+
+$ ask "What is the capital of Denmark?"
+{
+    "answer": "I don't know.",
+    "sources": [
+        {
+            "n": 1,
+            "score": 0.534,
+            "file": "glossary.md",
+            "heading": "CKS exam track"
+        },
+        {
+            "n": 2,
+            "score": 0.525,
+            "file": "glossary.md",
+            "heading": "CKS exam track"
+        },
+        {
+            "n": 3,
+            "score": 0.519,
+            "file": "17-llm-in-the-mesh.md",
+            "heading": "On Linux and WSL (Ubuntu 24.04)"
+...
+    "input_tokens": 1355,
+    "output_tokens": 6,
+    "retrieve_seconds": 0.03,
+    "total_seconds": 0.3
+}
 ```
 
 **What you should see.** In the test run:
@@ -204,22 +464,54 @@ ask "What is the capital of Denmark?"
 |---|---|---|
 | Pod stuck in Pending | "a PodDisruptionBudget (PDB) can cause a pod to be stuck in the Pending state" | wrong, and confident. A PDB never keeps a pod Pending. The model had only the four related passages from step 5 |
 | Kyverno chart version | "3.8.2" | right, from module 26 |
-| Capital of Denmark | "I don't know." | right. The best match scored 0.545, against about 0.70 to 0.78 for course questions |
+| Capital of Denmark | "I don't know." | right. The best match scored 0.534 to 0.545, against about 0.70 to 0.78 for course questions |
 
-Answers took 0.7 to 2.7 seconds, nearly all of it the chat model. Retrieval took 0.03 to 0.05 seconds. The first question used 1,024 input tokens, mostly the four chunks.
+Answers took 0.3 to 2.8 seconds, nearly all of it the chat model. Retrieval took 0.03 to 0.05 seconds. The first question used 1,024 to 1,198 input tokens, mostly the four chunks. In the run above, the Pending answer blamed a missing CNI plugin instead of a PDB, from the first of the same four passages: just as wrong, and just as confident.
 
 Look at the first answer's sources. Retrieval found *related* text, about pods and things that go wrong, and the model built a plausible answer from it. The model followed its rules: it used only the context and cited it. The context was simply the wrong context. That's the most common way RAG fails, and no better prompt fixes it.
 
 ### 7. Trade tokens for recall
 
-```bash
-kubectl -n course-rag set env deploy/rag TOP_K=8
-kubectl -n course-rag rollout status deploy/rag
-kubectl -n course-rag port-forward svc/rag 8090:8000 >/dev/null 2>&1 &
-ask "Why is my pod stuck in Pending?"
+The new setting starts a new pod. The port-forward from step 3 still holds port 8090 for the old pod, so the third line stops it before it opens a new one.
+
+```console
+$ kubectl -n course-rag set env deploy/rag TOP_K=8
+deployment.apps/rag env updated
+
+$ kubectl -n course-rag rollout status deploy/rag
+deployment "rag" successfully rolled out
+
+$ kill %1 2>/dev/null; kubectl -n course-rag port-forward svc/rag 8090:8000 >/dev/null 2>&1 &
+$ ask "Why is my pod stuck in Pending?"
+{
+    "answer": "A pod stuck in the \"Pending\" state can occur due to several reasons, including issues with the node's resource availability, node taints, or node's nodeSelector requirements not being met. Additionally, the pod might be waiting for a required dependency, such as a service or a network configuration, to be available. In the context provided, a missing CNI plugin file can also cause a pod to remain in the \"Pending\" state. When the CNI plugin file is missing, the CNI chain stops, preventing the pod from getting its network, and thus the pod remains in the \"Pending\" state. To resolve this, the missing CNI plugin file needs to be restored or replaced.",
+    "sources": [
+        {
+            "n": 1,
+            "score": 0.688,
+            "file": "21-k3s-lifecycle.md",
+            "heading": "Concept: how a pod gets its network, and how one missing file stops it"
+        },
+        {
+            "n": 2,
+            "score": 0.688,
+            "file": "23-prometheus-and-alerting.md",
+            "heading": "4. Break it, get paged"
+        },
+        {
+            "n": 3,
+            "score": 0.678,
+            "file": "20-nodes-and-cleanup.md",
+            "heading": "Concept: PodDisruptionBudgets"
+...
+    "input_tokens": 2816,
+    "output_tokens": 143,
+    "retrieve_seconds": 0.07,
+    "total_seconds": 4.2
+}
 ```
 
-**What you should see.** The sources now include `4. Make the scheduler say no`, in 8th place. The answer changes with it: it now names the scheduler, which finds no node with enough resources or with matching labels. Some of the earlier noise stays in, because the PDB passage is still among the eight. The input grows from 1,024 to 2,332 tokens for the same question.
+**What you should see.** The sources now include `4. Make the scheduler say no`, in 8th place in the test run and 6th in the run above. The answer changes with it: it now names the scheduler, which finds no node with enough resources or with matching labels. Some of the earlier noise stays in, because the PDB passage is still among the eight. The input grows from 1,024 to 2,332 tokens for the same question in the test run, and from 1,198 to 2,816 in the run above.
 
 More results means fewer misses and a higher bill per question. With a hosted model, input tokens cost money. With a local one, they cost time. Put it back with `kubectl -n course-rag set env deploy/rag TOP_K-`.
 
@@ -246,9 +538,14 @@ More results means fewer misses and a higher bill per question. With a hosted mo
 
 ## Clean up
 
-```bash
-kill %1 %2 2>/dev/null
-./platform-engineering/reset.sh
+```console
+$ kill %1 %2 2>/dev/null
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 This uninstalls Qdrant and deletes `course-rag`, and the volume with it. The `k8s-lab/rag` image stays in Docker, and the two models stay in Ollama. Remove them with `ollama rm nomic-embed-text qwen2.5:3b` if you need the disk space.

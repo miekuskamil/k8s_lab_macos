@@ -140,17 +140,23 @@ These commands use `docker exec` into the k3d node container, which is safe and 
 
 **1. kube-proxy's iptables rules.** In your lab, kube-proxy implements Services with iptables. Cilium would replace these rules with a BPF map.
 
-```bash
-docker exec k3d-k8s-lab-server-0 sh -c 'iptables-save | grep -c "^-A KUBE-SVC"'
-docker exec k3d-k8s-lab-server-0 sh -c 'iptables-save | grep "^-A KUBE-SVC" | head -3'
+```console
+$ docker exec k3d-k8s-lab-server-0 sh -c 'iptables-save | grep -c "^-A KUBE-SVC"'
+89
+
+$ docker exec k3d-k8s-lab-server-0 sh -c 'iptables-save | grep "^-A KUBE-SVC" | head -3'
+-A KUBE-SVC-25JPQJRBQQAODVM3 ! -s 10.42.0.0/16 -d 10.43.62.182/32 -p tcp -m comment --comment "shop-ingress/shop-gateway-istio:status-port cluster IP" -m tcp --dport 15021 -j KUBE-MARK-MASQ
+-A KUBE-SVC-25JPQJRBQQAODVM3 -m comment --comment "shop-ingress/shop-gateway-istio:status-port -> 10.42.0.172:15021" -j KUBE-SEP-UJEXWIBNEWKBROAO
+-A KUBE-SVC-6HUQW3D3MMFEZMIW ! -s 10.42.0.0/16 -d 10.43.106.27/32 -p tcp -m comment --comment "shop/waypoint:mesh cluster IP" -m tcp --dport 15008 -j KUBE-MARK-MASQ
 ```
 
-You should see several dozen rules, 77 when this module was written. You also see lines like `-A KUBE-SVC-... -d 10.43.x.x/32 ... --dport 8000 -j KUBE-SEP-...`. Each Service adds rules. For each new connection, the kernel walks through the rules in order, like reading a phone book page by page. A BPF map works more like a direct lookup. On clusters with thousands of Services, removing that walk is one of Cilium's real advantages.
+You should see several dozen rules, 77 when this module was written and 89 in a later run. You also see lines like `-A KUBE-SVC-... -d 10.43.x.x/32 ... --dport 8000 -j KUBE-SEP-...`. Each Service adds rules. For each new connection, the kernel walks through the rules in order, like reading a phone book page by page. A BPF map works more like a direct lookup. On clusters with thousands of Services, removing that walk is one of Cilium's real advantages.
 
 **2. No eBPF file system.** Cilium keeps its maps alive across agent restarts by saving them in a special `bpf` file system at `/sys/fs/bpf`. Your node has none mounted:
 
-```bash
-docker exec k3d-k8s-lab-server-0 sh -c 'mount | grep " type bpf" || echo "no bpffs mounted"'
+```console
+$ docker exec k3d-k8s-lab-server-0 sh -c 'mount | grep " type bpf" || echo "no bpffs mounted"'
+no bpffs mounted
 ```
 
 This is one reason you don't simply add Cilium to this lab. Two things would have to change:
@@ -160,20 +166,28 @@ This is one reason you don't simply add Cilium to this lab. Two things would hav
 
 **3. The kernel is new enough.** Cilium needs a recent kernel. Check yours:
 
-```bash
-kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.kernelVersion}{"\n"}'
+```console
+$ kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.kernelVersion}{"\n"}'
+7.2.12-orbstack-00394-gbecdd6130068
 ```
 
 OrbStack ships a 7.x kernel, far above Cilium's minimum. The kernel is not the blocker. The cluster setup is.
 
 **4. What the ambient L4 layer costs.** Compare with the sidecar numbers from module 7:
 
-```bash
-kubectl top pods -n istio-system
-kubectl top pods -n shop | grep waypoint
+```console
+$ kubectl top pods -n istio-system
+NAME                     CPU(cores)   MEMORY(bytes)
+istio-cni-node-m5l9p     1m           21Mi
+istiod-5c5bf76f-gtmzl    2m           63Mi
+kiali-67954d6c48-sr4qq   6m           35Mi
+ztunnel-htqw5            5m           20Mi
+
+$ kubectl top pods -n shop | grep waypoint
+waypoint-b9b76876f-8wrwf      2m           31Mi
 ```
 
-Module 7 measured 12 to 16 MiB for ztunnel, 29 to 36 MiB for the waypoint, and 35 to 39 MiB for each sidecar. Cilium's agent typically uses more memory than ztunnel. That's because it also does the work that flannel and kube-proxy do here, pod networking and Services.
+Module 7 measured 12 to 16 MiB for ztunnel, 29 to 37 MiB for the waypoint, and 35 to 39 MiB for each sidecar. The run above, with load traffic flowing, showed 20 MiB for ztunnel and 31 MiB for the waypoint. Cilium's agent typically uses more memory than ztunnel. That's because it also does the work that flannel and kube-proxy do here, pod networking and Services.
 
 ## Investigate
 

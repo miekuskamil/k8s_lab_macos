@@ -102,25 +102,65 @@ Pods that already run keep working, because CNI only runs when a sandbox starts 
 
 ### 1. Check the certificates
 
-```bash
-docker exec k3d-k8s-lab-server-0 k3s certificate check --output table
-kubectl config view --raw -o jsonpath='{.users[?(@.name=="admin@k3d-k8s-lab")].user.client-certificate-data}' | base64 -d | openssl x509 -noout -subject -enddate
-kubectl get events -A --field-selector reason=CertificateExpirationWarning
+```console
+$ docker exec k3d-k8s-lab-server-0 k3s certificate check --output table
+time="2026-11-15T11:22:42Z" level=info msg="Server detected, checking agent and server certificates"
+
+CERTIFICATE                      SUBJECT                                             STATUS  EXPIRES
+-----------                      -------                                             ------  -------
+client-kubelet.crt               CN=system:node:k3d-k8s-lab-server-0,O=system:nodes  OK      2027-11-15T11:16:03Z
+client-kubelet.crt               CN=k3s-client-ca@1794741362                         OK      2036-11-12T11:16:02Z
+...
+client-controller.crt            CN=system:kube-controller-manager                   OK      2027-11-15T11:16:02Z
+client-controller.crt            CN=k3s-client-ca@1794741362                         OK      2036-11-12T11:16:02Z
+
+$ kubectl config view --raw -o jsonpath='{.users[?(@.name=="admin@k3d-k8s-lab")].user.client-certificate-data}' | base64 -d | openssl x509 -noout -subject -enddate
+subject=O=system:masters, CN=system:admin
+notAfter=Nov 15 11:16:02 2027 GMT
+
+$ kubectl get events -A --field-selector reason=CertificateExpirationWarning
+No resources found
 ```
 
 **What you should see.** You see a table of every certificate file with its subject and expiry date. Client and server certificates expire a year from the day the lab was built. The CAs expire in ten years. The columns differ between k3s versions. After the upgrade in step 4, the same command adds `RESIDUAL TIME` and `STATUS`. Your kubeconfig's admin certificate shows the same one-year date. You see no warning events yet.
 
 ### 2. Rotate them
 
-```bash
-key() { docker exec k3d-k8s-lab-server-0 cat /var/lib/rancher/k3s/server/tls/$1 | openssl x509 -noout -pubkey | openssl sha256; }
-key client-admin.crt; key client-ca.crt
-docker exec k3d-k8s-lab-server-0 k3s certificate rotate
-docker restart k3d-k8s-lab-server-0
-./scripts/start.sh
-key client-admin.crt; key client-ca.crt
-docker exec k3d-k8s-lab-server-0 k3s certificate check --output table | grep "system:admin"
-kubectl get nodes
+```console
+$ key() { docker exec k3d-k8s-lab-server-0 cat /var/lib/rancher/k3s/server/tls/$1 | openssl x509 -noout -pubkey | openssl sha256; }
+$ key client-admin.crt; key client-ca.crt
+SHA2-256(stdin)= 17f2b93c3aad80743e17948de0ea187ff073c1c3c77f4c8a8ed430179717d71c
+SHA2-256(stdin)= ef0e4e73ad333dd189bc0bb08d0d7a849ef02a2580e9c3028b53caaf181695b5
+
+$ docker exec k3d-k8s-lab-server-0 k3s certificate rotate
+time="2026-11-15T11:22:42Z" level=info msg="Server detected, rotating agent and server certificates"
+time="2026-11-15T11:22:42Z" level=info msg="Rotating dynamic listener certificate"
+...
+time="2026-11-15T11:22:42Z" level=info msg="Successfully backed up certificates to /var/lib/rancher/k3s/server/tls-1794741762, please restart k3s server or agent to rotate certificates"
+
+$ docker restart k3d-k8s-lab-server-0
+k3d-k8s-lab-server-0
+
+$ ./scripts/start.sh
+Restarting cluster k8s-lab through k3d so it can repair CoreDNS
+kubectl context is k3d-k8s-lab
+Waiting for istio-cni and ztunnel
+Recreating observability/alertmanager-kube-prometheus-stack-alertmanager-0: its network came up before the mesh was ready
+...
+Waiting for every pod to become Ready (up to 3 minutes)
+All pods are Ready. The shop is at http://localhost:8080. Run ./scripts/port-forward.sh for the other UIs.
+
+$ key client-admin.crt; key client-ca.crt
+SHA2-256(stdin)= 1e7da96ab8227410a160a6c0da030ba243a9482ca2308b642f3e9aea5db8744c
+SHA2-256(stdin)= ef0e4e73ad333dd189bc0bb08d0d7a849ef02a2580e9c3028b53caaf181695b5
+
+$ docker exec k3d-k8s-lab-server-0 k3s certificate check --output table | grep "system:admin"
+time="2026-11-15T11:24:56Z" level=info msg="Server detected, checking agent and server certificates"
+client-admin.crt                 CN=system:admin,O=system:masters                    OK      2027-11-15T11:22:53Z
+
+$ kubectl get nodes
+NAME                   STATUS   ROLES                  AGE     VERSION
+k3d-k8s-lab-server-0   Ready    control-plane,master   8m52s   v1.31.5+k3s1
 ```
 
 **What you should see.** Three things stand out:
@@ -133,31 +173,74 @@ Look at the expiry date, though. In the test run, it didn't move. Rotation and r
 
 ### 3. Back up and restore the datastore
 
-```bash
-B=/tmp/k3s-backup; rm -rf $B; mkdir -p $B
-kubectl -n default create configmap before-backup --from-literal=note="made before the backup"
-k3d cluster stop k8s-lab
-docker cp k3d-k8s-lab-server-0:/var/lib/rancher/k3s/server/db $B/
-docker cp k3d-k8s-lab-server-0:/var/lib/rancher/k3s/server/token $B/token
-ls -la $B/db
-k3d cluster start k8s-lab && ./scripts/start.sh
+```console
+$ B=/tmp/k3s-backup; rm -rf $B; mkdir -p $B
+$ kubectl -n default create configmap before-backup --from-literal=note="made before the backup"
+configmap/before-backup created
+
+$ k3d cluster stop k8s-lab
+INFO[0000] Stopping cluster 'k8s-lab'
+INFO[0020] Stopped cluster 'k8s-lab'
+
+$ docker cp k3d-k8s-lab-server-0:/var/lib/rancher/k3s/server/db $B/
+Successfully copied 72.7MB to /tmp/k3s-backup/
+
+$ docker cp k3d-k8s-lab-server-0:/var/lib/rancher/k3s/server/token $B/token
+Successfully copied 97B (transferred 2.05kB) to /tmp/k3s-backup/token
+
+$ ls -la $B/db
+total 142040
+drwx------@ 6 test  wheel       192 Nov 15 11:16 .
+drwxr-xr-x@ 4 test  wheel       128 Nov 15 11:25 ..
+drwx------@ 3 test  wheel        96 Nov 15 11:16 etcd
+-rw-r--r--@ 1 test  wheel  65568768 Nov 15 11:25 state.db
+-rw-r--r--@ 1 test  wheel     32768 Nov 15 11:25 state.db-shm
+-rw-r--r--@ 1 test  wheel   7119392 Nov 15 11:25 state.db-wal
+
+$ k3d cluster start k8s-lab && ./scripts/start.sh
+INFO[0000] Using the k3d-tools node to gather environment information
+INFO[0000] Starting new tools node...
+INFO[0000] Starting node 'k3d-k8s-lab-tools'
+...
+Recreating shop/waypoint-b9b76876f-x97ch: its network came up before the mesh was ready
+Waiting for every pod to become Ready (up to 3 minutes)
+All pods are Ready. The shop is at http://localhost:8080. Run ./scripts/port-forward.sh for the other UIs.
 ```
 
 Now change the cluster, as if something went wrong:
 
-```bash
-kubectl -n default create configmap after-backup --from-literal=note="made after the backup"
-kubectl -n default delete configmap before-backup
+```console
+$ kubectl -n default create configmap after-backup --from-literal=note="made after the backup"
+configmap/after-backup created
+
+$ kubectl -n default delete configmap before-backup
+configmap "before-backup" deleted
 ```
 
 Then restore the backup:
 
-```bash
-k3d cluster stop k8s-lab
-docker cp $B/db/. k3d-k8s-lab-server-0:/var/lib/rancher/k3s/server/db/
-docker cp $B/token k3d-k8s-lab-server-0:/var/lib/rancher/k3s/server/token
-k3d cluster start k8s-lab && ./scripts/start.sh
-kubectl -n default get configmaps | grep backup
+```console
+$ k3d cluster stop k8s-lab
+INFO[0000] Stopping cluster 'k8s-lab'
+INFO[0020] Stopped cluster 'k8s-lab'
+
+$ docker cp $B/db/. k3d-k8s-lab-server-0:/var/lib/rancher/k3s/server/db/
+Successfully copied 72.7MB (transferred 72.7MB) to k3d-k8s-lab-server-0:/var/lib/rancher/k3s/server/db/
+
+$ docker cp $B/token k3d-k8s-lab-server-0:/var/lib/rancher/k3s/server/token
+Successfully copied 97B (transferred 2.05kB) to k3d-k8s-lab-server-0:/var/lib/rancher/k3s/server/token
+
+$ k3d cluster start k8s-lab && ./scripts/start.sh
+INFO[0000] Using the k3d-tools node to gather environment information
+INFO[0000] Starting new tools node...
+INFO[0000] Starting node 'k3d-k8s-lab-tools'
+...
+Recreating shop/waypoint-b9b76876f-x97ch: its network came up before the mesh was ready
+Waiting for every pod to become Ready (up to 3 minutes)
+All pods are Ready. The shop is at http://localhost:8080. Run ./scripts/port-forward.sh for the other UIs.
+
+$ kubectl -n default get configmaps | grep backup
+before-backup        1      4m22s
 ```
 
 **What you should see.** The backup folder holds `state.db` (about 70 MB in the test run) plus `state.db-wal` and `state.db-shm`. After the restore, `before-backup` is back and `after-backup` is gone. The cluster returned to the moment of the backup. Clean up with `kubectl -n default delete configmap before-backup`.
@@ -166,28 +249,85 @@ kubectl -n default get configmaps | grep backup
 
 Keep the shop in view in a second terminal:
 
-```bash
-while true; do echo "$(date +%T) $(curl -s -o /dev/null -m 3 -w '%{http_code}' http://localhost:8080/api/orders)"; sleep 1; done
+```console
+$ while true; do echo "$(date +%T) $(curl -s -o /dev/null -m 3 -w '%{http_code}' http://localhost:8080/api/orders)"; sleep 1; done
+11:29:18 200
+11:29:19 200
+...
+11:29:39 200
+11:29:40 000
+11:29:41 000
+11:29:42 000
+...
+11:30:08 000
 ```
+
+The loop prints one line per second until you press Ctrl-C. The transcript shows an excerpt from the whole of step 4: the lines turned from `200` to `000` about 20 seconds after the plan started.
 
 Install the system-upgrade-controller and give it a plan:
 
-```bash
-SUC=https://github.com/rancher/system-upgrade-controller/releases/download/v0.20.2
-kubectl apply -f $SUC/crd.yaml -f $SUC/system-upgrade-controller.yaml
-kubectl -n system-upgrade rollout status deploy/system-upgrade-controller
-kubectl apply -f platform-engineering/manifests/21-upgrade-plan.yaml
-kubectl -n system-upgrade get plans,jobs
-kubectl get nodes -w            # watch the version change, then Ctrl-C
+```console
+$ SUC=https://github.com/rancher/system-upgrade-controller/releases/download/v0.20.2
+$ kubectl apply -f $SUC/crd.yaml -f $SUC/system-upgrade-controller.yaml
+customresourcedefinition.apiextensions.k8s.io/plans.upgrade.cattle.io created
+namespace/system-upgrade created
+serviceaccount/system-upgrade created
+role.rbac.authorization.k8s.io/system-upgrade-controller created
+clusterrole.rbac.authorization.k8s.io/system-upgrade-controller created
+clusterrole.rbac.authorization.k8s.io/system-upgrade-controller-drainer created
+rolebinding.rbac.authorization.k8s.io/system-upgrade created
+clusterrolebinding.rbac.authorization.k8s.io/system-upgrade created
+clusterrolebinding.rbac.authorization.k8s.io/system-upgrade-drainer created
+configmap/default-controller-env created
+deployment.apps/system-upgrade-controller created
+
+$ kubectl -n system-upgrade rollout status deploy/system-upgrade-controller
+deployment "system-upgrade-controller" successfully rolled out
+
+$ kubectl apply -f platform-engineering/manifests/21-upgrade-plan.yaml
+plan.upgrade.cattle.io/server-plan created
+
+$ kubectl -n system-upgrade get plans,jobs
+NAME                                 IMAGE                 CHANNEL   VERSION         COMPLETE   MESSAGE
+plan.upgrade.cattle.io/server-plan   rancher/k3s-upgrade             v1.31.14+k3s1   False
+
+NAME                                                                        STATUS    COMPLETIONS   DURATION   AGE
+job.batch/apply-server-plan-on-k3d-k8s-lab-server-0-with-c1647c0365-7d8fe   Running   0/1           8s         8s
+
+$ kubectl get nodes -w            # watch the version change, then Ctrl-C
+NAME                   STATUS                     ROLES                  AGE   VERSION
+k3d-k8s-lab-server-0   Ready,SchedulingDisabled   control-plane,master   13m   v1.31.5+k3s1
 ```
+
+Here the watch stopped by itself when the upgrade restarted the API server, before the new version showed. Run `kubectl get nodes` again to see `v1.31.14+k3s1`.
 
 **What you should see.** A Job named `apply-server-plan-on-...` runs. Within about 20 seconds, the node reports `v1.31.14+k3s1`, and the plan shows `Complete`. The upgrade looks like a success.
 
 Now look at the second terminal and at the pods:
 
-```bash
-kubectl get pods -A | grep -vE "Running|Completed"
-docker logs --since 3m k3d-k8s-lab-server-0 2>&1 | grep -o 'failed (add): [^"]*' | sort | uniq -c
+```console
+$ kubectl get pods -A | grep -vE "Running|Completed"
+NAMESPACE        NAME                                                              READY   STATUS              RESTARTS       AGE
+argocd           argocd-repo-server-9dbff86d5-6vmhb                                0/1     Unknown             0              4m40s
+kube-system      coredns-5c5cd8fc79-545ss                                          0/1     ContainerCreating   0              4s
+kube-system      coredns-ccb96694c-ztsn2                                           1/1     Terminating         1 (11s ago)    4m39s
+kube-system      local-path-provisioner-5cf85fd84d-zp9nt                           0/1     Terminating         1 (11s ago)    4m38s
+kube-system      local-path-provisioner-646d4d78cb-9tdc5                           0/1     ContainerCreating   0              4s
+kube-system      metrics-server-564cb4ff68-dbv56                                   0/1     ContainerCreating   0              4s
+kube-system      metrics-server-5985cbc9d7-rdr47                                   0/1     Terminating         1 (11s ago)    4m38s
+kube-system      svclb-shop-gateway-istio-3f04f073-jms8r                           0/2     Terminating         10 (11s ago)   12m
+observability    alertmanager-kube-prometheus-stack-alertmanager-0                 0/2     Unknown             0              106s
+observability    prometheus-kube-prometheus-stack-prometheus-0                     0/2     Unknown             0              106s
+shop-ingress     shop-gateway-istio-67ddbc7479-7zhpc                               0/1     ContainerCreating   0              2s
+shop             waypoint-7f8ffdcbcb-krpcw                                         0/1     ContainerCreating   0              2s
+system-upgrade   apply-server-plan-on-k3d-k8s-lab-server-0-with-c1647c0365-8x4q6   0/1     Init:0/1            0              1s
+system-upgrade   apply-server-plan-on-k3d-k8s-lab-server-0-with-c1647c0365-dxdrd   0/1     Unknown             0              24s
+
+$ docker logs --since 3m k3d-k8s-lab-server-0 2>&1 | grep -o 'failed (add): [^"]*' | sort | uniq -c
+   6 failed (add): failed to find plugin \
+   2 failed (add): failed to find plugin \\\
+  78 failed (add): unable to push CNI event (status code 500): partial add error: no ztunnel connection
+  26 failed (add): unable to push CNI event (status code 500): partial add error: no ztunnel connection\\n\
 ```
 
 **What you should see.** The shop stops answering. Pods hang in `ContainerCreating` and `Terminating`. The node's log repeats two errors:
@@ -195,13 +335,18 @@ docker logs --since 3m k3d-k8s-lab-server-0 2>&1 | grep -o 'failed (add): [^"]*'
 - `failed to find plugin "istio-cni"`
 - a little later, `no IP addresses available in range set: 10.42.0.1-10.42.0.254`
 
+In the run above, the log was read early. It already showed the missing plugin, plus `no ztunnel connection` while ztunnel restarted, but the addresses had not run out yet.
+
 ### 5. Find out why, and repair it
 
 Compare where containerd looks for CNI plugins with where Istio put its plugin:
 
-```bash
-docker exec k3d-k8s-lab-server-0 grep -n "bin_dir" /var/lib/rancher/k3s/agent/etc/containerd/config.toml
-helm -n istio-system get values istio-cni -o json | grep -o '"cniBinDir":"[^"]*"'
+```console
+$ docker exec k3d-k8s-lab-server-0 grep -n "bin_dir" /var/lib/rancher/k3s/agent/etc/containerd/config.toml
+31:  bin_dirs = ["/var/lib/rancher/k3s/data/cni"]
+
+$ helm -n istio-system get values istio-cni -o json | grep -o '"cniBinDir":"[^"]*"'
+"cniBinDir":"/bin"
 ```
 
 **What you should see.** containerd now searches `/var/lib/rancher/k3s/data/cni`. The config writes this as `bin_dirs = [...]`, which is containerd 2's format. Istio's plugin still sits in `/bin`, where k3s 1.31.5 used to look. In other words, the patch release moved the plugin directory and left Istio's plugin behind. The damage then follows the chain from the concept section:
@@ -212,10 +357,33 @@ helm -n istio-system get values istio-cni -o json | grep -o '"cniBinDir":"[^"]*"
 
 Repair it in three steps:
 
-```bash
-./scripts/provision.sh            # re-reads the plugin directory and moves istio-cni there
-./platform-engineering/fix-ip-leases.sh         # frees the IPs that no pod holds
-./scripts/start.sh                # recreates mesh pods that came up during the outage
+```console
+$ ./scripts/provision.sh            # re-reads the plugin directory and moves istio-cni there
+
+==> Checking prerequisites
+ ok  kubectl found at /usr/local/bin/kubectl
+ ok  helm found at /opt/homebrew/bin/helm
+ ok  k3d found at /opt/homebrew/bin/k3d
+ ok  git found at /usr/bin/git
+...
+  HBONE tunnel 15008, ztunnel metrics 15020, istiod xDS 15012, istiod metrics 15014
+
+Next steps
+  ./scripts/traffic-test.sh 200                 send 200 requests and print the version split
+  kubectl apply -f manifests/scenarios/a-canary-httproute.yaml
+  see docs/lab-guide.md for scenarios B and C, and platform-engineering/README.md for the Kubernetes Platform Engineering course
+
+$ ./platform-engineering/fix-ip-leases.sh         # frees the IPs that no pod holds
+IP leases on k3d-k8s-lab-server-0: 250 before, 32 after (pods hold 32)
+
+$ ./scripts/start.sh                # recreates mesh pods that came up during the outage
+Cluster k8s-lab is running and CoreDNS is healthy.
+kubectl context is k3d-k8s-lab
+Waiting for istio-cni and ztunnel
+Waiting for every pod to become Ready (up to 3 minutes)
+Waiting again (up to 3 minutes)
+Still not ready:
+  system-upgrade/apply-server-plan-on-k3d-k8s-lab-server-0-with-c1647c0365-dxdrd
 ```
 
 **What you should see.** Each script shows its effect:
@@ -224,7 +392,7 @@ Repair it in three steps:
 2. The lease script frees the leaked addresses.
 3. After `start.sh`, the shop answers `200` again.
 
-In the test run, the lease count dropped to 35: exactly the addresses that running pods held.
+In the test runs, the lease count dropped to 35 and to 32: each time exactly the addresses that running pods held. In the run above, `start.sh` still listed the upgrade Job's old pod, stuck in `Unknown`, and exited with an error. That pod belongs to the finished plan, not to the shop, which answered `200` again.
 
 ## Investigate
 
@@ -251,8 +419,13 @@ In the test run, the lease count dropped to 35: exactly the addresses that runni
 
 ## Clean up
 
-```bash
-./platform-engineering/reset.sh
+```console
+$ ./platform-engineering/reset.sh
+Removing course rules from the shop namespace
+Applying the baseline Istio config from manifests/istio
+Turning off the backend experiment settings
+Asking ArgoCD to sync istio-config from Git
+Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
 This removes the backup marker ConfigMaps. The k3s upgrade stays. To return to v1.31.5, rebuild the lab.
