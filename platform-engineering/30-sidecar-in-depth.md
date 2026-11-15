@@ -6,9 +6,7 @@
 
 **You need:** the lab running (`./scripts/start.sh` starts or repairs it), `istioctl`, and Docker access to the lab node (`docker exec k3d-k8s-lab-server-0 ...`), as in module 29.
 
-Module 7 showed that a sidecar appears in your pod and carries its traffic. This module opens the box. A team that runs sidecars in production meets four puzzles sooner or later. A pod comes up without a sidecar. One connection skips the mesh. Every proxy uses 40 MiB while its app uses 5. And somebody asks whether ambient would cost less. You work through each one on the lab, with numbers.
-
-The module works through four topics in order:
+Module 7 showed that a sidecar appears in your pod and carries its traffic, and this module opens the box. A team that runs sidecars in production meets four puzzles sooner or later: a pod comes up without a sidecar, one connection skips the mesh, every proxy uses 40 MiB while its app uses 5, and somebody asks whether ambient would cost less. You work through each one on the lab, with numbers, in four topics:
 
 1. How the injector decides which pods get a sidecar.
 2. How a few iptables rules hand every connection to Envoy.
@@ -19,9 +17,9 @@ Time: about 50 minutes. Adds about 150 MiB while it runs: two pods with sidecars
 
 ## Concept: four webhooks decide who gets a sidecar
 
-A mutating admission webhook is a call the API server makes before it stores an object, so an outside service edits the object first. Module 7 showed that istiod's injector works this way. The surprise is that istiod registers not one webhook but four. Each one has its own selectors, and the API server calls istiod only if one of them matches the new pod.
+A mutating admission webhook is a call the API server makes before it stores an object, so an outside service edits the object first, and module 7 showed that istiod's injector works this way. The surprise is that istiod registers four webhooks rather than one, each with its own selectors, and the API server calls istiod only if one of them matches the new pod.
 
-The selectors look at labels in two places. A namespace selector reads the labels on the pod's namespace. An object selector reads the labels on the pod itself. Both must match for a webhook to fire. Here are the four, as the lab registers them:
+The selectors look at labels in two places: a namespace selector reads the labels on the pod's namespace, while an object selector reads the labels on the pod itself, and both must match for a webhook to fire. Here are the four, as the lab registers them:
 
 | Webhook | Namespace must have | Pod must have |
 |---|---|---|
@@ -33,18 +31,18 @@ The selectors look at labels in two places. A namespace selector reads the label
 Three rules follow from the table, and step 3 tests each one:
 
 1. `istio-injection` wins over `istio.io/rev`. Even `istio-injection=disabled` blocks the revision webhook, because that webhook demands that the label is absent.
-2. A pod label `sidecar.istio.io/inject=false` stops the webhook from firing at all. The API server never even calls istiod.
+2. A pod label `sidecar.istio.io/inject=false` stops the webhook from firing at all, so the API server never even calls istiod.
 3. A pod in an unlabelled namespace still gets a sidecar if the pod itself asks with `sidecar.istio.io/inject=true`.
 
-The same key also exists as an annotation, `sidecar.istio.io/inject: "false"`. Webhook selectors only read labels, so the annotation works one level later. The API server calls istiod, and istiod reads the annotation and declines. The result looks the same, but tools that only read the selectors get it wrong, as step 3 shows.
+The same key also exists as an annotation, `sidecar.istio.io/inject: "false"`, but webhook selectors read only labels, so the annotation works one level later: the API server calls istiod, and istiod reads the annotation and declines. The result looks the same, but tools that read only the selectors get it wrong, as step 3 shows.
 
-None of this touches running pods. A webhook runs once, when the API server creates the pod. That's why labelling a namespace changes nothing until you restart its pods.
+None of this touches running pods, because a webhook runs once, when the API server creates the pod, which is why labelling a namespace changes nothing until you restart its pods.
 
 ## Concept: iptables hands every connection to Envoy
 
-The app in a sidecar pod has no idea Envoy exists. It opens a connection to `httpbin:8000`, and the connection ends up in Envoy anyway. A few NAT rules in the pod's own network namespace do the trick. NAT here means rewriting a connection's destination address or port as it passes through the kernel.
+The app in a sidecar pod has no idea Envoy exists, yet a connection it opens to `httpbin:8000` ends up in Envoy anyway. A few NAT rules in the pod's own network namespace do the trick, where NAT means rewriting a connection's destination address or port as it passes through the kernel.
 
-The `istio-init` container writes those rules before any other container starts. Then it exits. Its arguments say exactly what to write:
+The `istio-init` container writes those rules before any other container starts and then exits, and its arguments say exactly what to write:
 
 | Flag | Value in the lab | Meaning |
 |---|---|---|
@@ -58,50 +56,50 @@ The `istio-init` container writes those rules before any other container starts.
 
 ![The iptables chains that send outbound traffic to Envoy on 15001 and inbound traffic to Envoy on 15006](../docs/diagrams/chapters/30-traffic-capture.svg)
 
-The diagram follows both directions through the chains. An outgoing connection takes four steps:
+An outgoing connection takes four steps through the chains:
 
 1. The app's connection enters the `OUTPUT` chain, which jumps to `ISTIO_OUTPUT`.
 2. `ISTIO_OUTPUT` sees a connection from a user other than 1337, so it jumps to `ISTIO_REDIRECT`.
 3. `ISTIO_REDIRECT` rewrites the destination port to 15001, where Envoy listens.
 4. Envoy opens its own connection to the real destination. That connection comes from user 1337, so `ISTIO_OUTPUT` returns it untouched, and it leaves the pod.
 
-Step 4 is the trick that prevents an endless loop. Without the exception for user 1337, Envoy's own connection would land back in Envoy. Incoming traffic works the same way in steps 5 to 8. `PREROUTING` jumps to `ISTIO_INBOUND`, which skips a few ports and sends everything else to Envoy on 15006. Envoy then calls the app over localhost from the address `127.0.0.6`, a special source that the rules also leave alone.
+Step 4 prevents an endless loop, because without the exception for user 1337, Envoy's own connection would land back in Envoy. Incoming traffic works the same way in steps 5 to 8: `PREROUTING` jumps to `ISTIO_INBOUND`, which skips a few ports and sends everything else to Envoy on 15006, and Envoy then calls the app over localhost from the address `127.0.0.6`, a special source that the rules also leave alone.
 
-This setup has a cost. Writing NAT rules needs the Linux capabilities `NET_ADMIN` and `NET_RAW`, so every app pod carries a privileged init container. Istio's CNI plugin removes that cost. The CNI plugin runs on each node and writes the same rules from outside the pod, while the pod's sandbox starts. The pod then gets a small `istio-validation` init container that only checks the rules and needs no extra capabilities. The lab's sidecars still use `istio-init`, because the lab installs istiod with Helm and leaves its `pilot.cni.enabled` value off. Module 32 shows the other case.
+This setup has a cost, because writing NAT rules needs the Linux capabilities `NET_ADMIN` and `NET_RAW`, so every app pod carries a privileged init container. Istio's CNI plugin removes that cost by writing the same rules from outside the pod on each node while the pod's sandbox starts, so the pod gets only a small `istio-validation` init container that checks the rules and needs no extra capabilities. The lab's sidecars still use `istio-init`, because the lab installs istiod with Helm and leaves its `pilot.cni.enabled` value off, and module 32 shows the other case.
 
 ## Concept: every proxy hears about every Service
 
-By default, istiod sends each sidecar the config for every Service in the mesh. That's the safe choice, because istiod doesn't know which Services an app will call. The client sidecar in this module never calls Kiali, Grafana or the shop. It still holds a cluster, a route and endpoints for each one.
+By default istiod sends each sidecar the config for every Service in the mesh, which is the safe choice, because istiod doesn't know which Services an app will call. So the client sidecar in this module, which never calls Kiali, Grafana or the shop, still holds a cluster, a route and endpoints for each one.
 
-On a lab with 36 Services, that waste stays small. In a cluster with 5,000 Services and 2,000 sidecars, it hurts in three ways:
+On a lab with 36 Services that waste stays small, but in a cluster with 5,000 Services and 2,000 sidecars it hurts in three ways:
 
 1. Every sidecar holds megabytes of config it never uses, so each one needs more memory.
 2. Every change to any Service triggers a push to all 2,000 sidecars.
 3. istiod spends its CPU building config nobody reads.
 
-The Sidecar resource fixes this. The Sidecar resource tells istiod which hosts a group of sidecars may reach, so istiod sends them only that part of the mesh. A Sidecar named `default` with no `workloadSelector` covers the whole namespace. Its `egress.hosts` field lists patterns in the form `namespace/host`. `./*` means every Service in the same namespace, and `istio-system/*` keeps the control plane reachable.
+The Sidecar resource fixes this by telling istiod which hosts a group of sidecars may reach, so istiod sends them only that part of the mesh. A Sidecar named `default` with no `workloadSelector` covers the whole namespace, and its `egress.hosts` field lists patterns in the form `namespace/host`, where `./*` means every Service in the same namespace and `istio-system/*` keeps the control plane reachable.
 
 ![A Sidecar resource cuts the client proxy from 62 clusters to 16](../docs/diagrams/chapters/30-sidecar-scope.svg)
 
-The same resource sets an outbound policy. With `outboundTrafficPolicy.mode: REGISTRY_ONLY`, the proxy refuses any destination it doesn't know. The default, `ALLOW_ANY`, passes unknown destinations through untouched. Envoy names those two destinations `BlackHoleCluster` and `PassthroughCluster`. You meet both in step 7.
+The same resource sets an outbound policy. With `outboundTrafficPolicy.mode: REGISTRY_ONLY` the proxy refuses any destination it doesn't know, while the default, `ALLOW_ANY`, passes unknown destinations through untouched, and Envoy names those two destinations `BlackHoleCluster` and `PassthroughCluster`. You meet both in step 7.
 
 ## The bigger picture: from sidecar sprawl to scoped config
 
-Large sidecar meshes ran into the config problem early. Teams at Airbnb, eBay and others reported sidecars that each held hundreds of megabytes and istiod pushes that took minutes. The fix became a standard piece of advice: put a default Sidecar resource in every namespace, and widen it only where an app really calls out.
+Large sidecar meshes ran into the config problem early, with teams at Airbnb, eBay and others reporting sidecars that each held hundreds of megabytes and istiod pushes that took minutes. The fix became a standard piece of advice: put a default Sidecar resource in every namespace, and widen it only where an app really calls out.
 
-That advice has a weak spot. Someone has to keep the host lists current. When an app starts calling a new Service and nobody updates its Sidecar, the call quietly falls back to `PassthroughCluster`. The call loses mTLS, routing rules and metrics without any error. Step 6 shows that failure.
+That advice has a weak spot, because someone has to keep the host lists current. When an app starts calling a new Service and nobody updates its Sidecar, the call quietly falls back to `PassthroughCluster` and loses mTLS, routing rules and metrics without any error, as step 6 shows.
 
-Ambient mode attacks the same problem from another side. ztunnel holds only the workloads of its own node and a compact address list. A waypoint holds config only for the Services that use it. So nobody writes Sidecar resources in ambient mode, and Istio has no ambient equivalent of the resource. Recent Istio versions also added a discovery selector setting in istiod's mesh config, so istiod ignores whole namespaces it never needs. Both point the same way: the control plane should send each proxy as little as possible.
+Ambient mode attacks the same problem from another side, because ztunnel holds only the workloads of its own node and a compact address list, while a waypoint holds config only for the Services that use it. So nobody writes Sidecar resources in ambient mode, and Istio has no ambient equivalent of the resource. Recent Istio versions also added a discovery selector setting in istiod's mesh config, so istiod ignores whole namespaces it never needs, and both point the same way: the control plane should send each proxy as little as possible.
 
 ## Why this way
 
-**Why does the injector use a webhook rather than a controller that patches pods later?** A running pod keeps the containers it started with. Kubernetes doesn't let anyone add a container to a running pod. So the only moment to add the sidecar is before the API server stores the pod.
+**Why does the injector use a webhook rather than a controller that patches pods later?** A running pod keeps the containers it started with, and Kubernetes doesn't let anyone add a container to a running pod, so the only moment to add the sidecar is before the API server stores the pod.
 
-**Why REDIRECT and not routing tricks?** REDIRECT keeps the original destination address in the kernel's connection table. Envoy reads it back with the `SO_ORIGINAL_DST` socket option, so it learns where the app wanted to go. That's how one listener on 15001 serves every destination.
+**Why REDIRECT and not routing tricks?** REDIRECT keeps the original destination address in the kernel's connection table, and Envoy reads it back with the `SO_ORIGINAL_DST` socket option, so it learns where the app wanted to go, which is how one listener on 15001 serves every destination.
 
-**Why a user ID to skip Envoy's own traffic?** The kernel knows which user owns each socket, and checking it costs nothing. Envoy runs as user 1337 and the app never does, so the user ID marks Envoy's traffic without any change to the app.
+**Why a user ID to skip Envoy's own traffic?** The kernel knows which user owns each socket, and checking it costs nothing, so because Envoy runs as user 1337 and the app never does, the user ID marks Envoy's traffic without any change to the app.
 
-**Why set proxy resources with annotations, not on the Deployment?** The `istio-proxy` container doesn't exist in your Deployment. The injector creates it, so it also chooses its resources. The annotations are your way to pass a value to the injector.
+**Why set proxy resources with annotations, not on the Deployment?** The `istio-proxy` container doesn't exist in your Deployment, because the injector creates it and so also chooses its resources, and the annotations are your way to pass a value to the injector.
 
 ## Do it
 
@@ -124,9 +122,7 @@ object.sidecar-injector.istio.io
   pod: [{"key":"sidecar.istio.io/inject","operator":"In","values":["true"]},{"key":"istio.io/rev","operator":"DoesNotExist"}]
 ```
 
-**What you should see.** Four webhooks, each with a namespace selector and a pod selector.
-
-The four match the table in the first concept section. All four point at the same istiod Service. They differ only in who they catch.
+**What you should see.** Four webhooks, each with a namespace selector and a pod selector, matching the table in the first concept section. All four point at the same istiod Service and differ only in who they catch.
 
 ### 2. Label a namespace, then restart its pods
 
@@ -155,11 +151,9 @@ WEBHOOK                 REVISION  INJECTED      REASON
 istio-sidecar-injector  default   ✔             Namespace label istio-injection=enabled matches
 ```
 
-**What you should see.** The pods show `1/1` both before and after the label.
+**What you should see.** The pods show `1/1` both before and after the label, while `check-inject` says the next pod will get a sidecar, and why.
 
-`check-inject` says the next pod will get a sidecar, and why.
-
-The label only affects pods created from now on. Restart the Deployments:
+The label affects only pods created from now on, so restart the Deployments:
 
 ```console
 $ kubectl -n course-proxy rollout restart deploy
@@ -178,11 +172,11 @@ $ kubectl -n course-proxy get pod -l app=client -o jsonpath='{.items[0].metadata
 {"initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["workload-socket","credential-socket","workload-certs","istio-envoy","istio-data","istio-podinfo","istio-token","istiod-ca-cert"],"imagePullSecrets":null,"revision":"default"}
 ```
 
-**What you should see.** New pods with `2/2`. The annotation `sidecar.istio.io/status` is the injector's receipt. It lists what it added: `"initContainers":["istio-init"],"containers":["istio-proxy"]`, eight volumes, and `"revision":"default"`.
+**What you should see.** New pods with `2/2`. The annotation `sidecar.istio.io/status` is the injector's receipt, listing what it added: `"initContainers":["istio-init"],"containers":["istio-proxy"]`, eight volumes, and `"revision":"default"`.
 
 ### 3. Test each injection rule
 
-Each pod below tests one row of the webhook table. Run them in order, because the namespace labels change in between:
+Each pod below tests one row of the webhook table, so run them in order, because the namespace labels change in between:
 
 ```console
 $ kubectl -n course-proxy run opt-out-label --image=curlimages/curl:8.11.1 \
@@ -259,7 +253,7 @@ pod "no-label" deleted
 pod "opt-in" deleted
 ```
 
-**What you should see.** The label case shows `✘` with `Pod has sidecar.istio.io/inject=false label, preventing injection`. The annotation case shows `✔` with `Namespace label istio-injection=enabled matches`, although that pod has no sidecar. `check-inject` reads only the webhook selectors, and the annotation lives one level deeper, inside istiod. Prefer the label: the API server then skips the webhook call entirely, and tools report the truth.
+**What you should see.** The label case shows `✘` with `Pod has sidecar.istio.io/inject=false label, preventing injection`, while the annotation case shows `✔` with `Namespace label istio-injection=enabled matches`, although that pod has no sidecar, because `check-inject` reads only the webhook selectors and the annotation lives one level deeper, inside istiod. Prefer the label, because the API server then skips the webhook call entirely, and tools report the truth.
 
 ### 4. Read the iptables rules inside the pod
 
@@ -297,11 +291,9 @@ $ docker exec $NODE nsenter -t $PID -n iptables-legacy-save -t nat | grep -E '^-
 -A ISTIO_REDIRECT -p tcp -j REDIRECT --to-ports 15001
 ```
 
-The middle lines find the app container's process ID, the same way module 29 did. `nsenter -n` then runs iptables inside that process's network namespace.
+The middle lines find the app container's process ID, the same way module 29 did, and `nsenter -n` then runs iptables inside that process's network namespace.
 
-**What you should see.** First the arguments from the concept table.
-
-Then a surprise. `iptables-save` shows an empty NAT table and a warning: `iptables-legacy tables present, use iptables-legacy-save to see them`. Linux has two iptables back ends, the older legacy one and the newer nftables one. `istio-init` in Istio 1.24 picked legacy, while the node's own tools default to nftables. So the rules exist, but in the other back end. `iptables-legacy-save` shows them, as the last command above prints.
+**What you should see.** First the arguments from the concept table, and then a surprise: `iptables-save` shows an empty NAT table and a warning, `iptables-legacy tables present, use iptables-legacy-save to see them`. Linux has two iptables back ends, the older legacy one and the newer nftables one, and `istio-init` in Istio 1.24 picked legacy while the node's own tools default to nftables, so the rules exist in the other back end, which `iptables-legacy-save` shows, as the last command above prints.
 
 Read it in the diagram's order:
 
@@ -313,7 +305,7 @@ Read it in the diagram's order:
 
 ### 5. Let one port skip the sidecar
 
-Some traffic shouldn't pass through Envoy. A database driver with its own TLS is a common example. The annotation `traffic.sidecar.istio.io/excludeOutboundPorts` tells `istio-init` to leave those ports alone. First check what httpbin sees today, then add the annotation:
+Some traffic shouldn't pass through Envoy, such as a database driver with its own TLS, and the annotation `traffic.sidecar.istio.io/excludeOutboundPorts` tells `istio-init` to leave those ports alone. First check what httpbin sees today, then add the annotation:
 
 ```console
 $ kubectl -n course-proxy exec deploy/client -c curl -- curl -s http://httpbin:8000/headers | grep -oE '"(X-Forwarded-Client-Cert|X-Envoy-Attempt-Count)"'
@@ -343,9 +335,9 @@ $ kubectl -n course-proxy exec deploy/client -c curl -- curl -s http://httpbin:8
 "Traceparent"
 ```
 
-**What you should see.** Before the patch, httpbin sees `X-Envoy-Attempt-Count` and `X-Forwarded-Client-Cert`, the headers the client's Envoy adds. After the patch, the new pod's `istio-init` carries one extra pair of arguments, `"-o","8000"`. The same request now arrives with only `Traceparent`.
+**What you should see.** Before the patch, httpbin sees `X-Envoy-Attempt-Count` and `X-Forwarded-Client-Cert`, the headers the client's Envoy adds. After the patch, the new pod's `istio-init` carries one extra pair of arguments, `"-o","8000"`, and the same request arrives with only `Traceparent`.
 
-The connection skipped the client's Envoy, so no mTLS and no client identity reached httpbin. The request still passed httpbin's own Envoy on the way in, which added the trace header. httpbin accepts plain text because its mTLS mode is PERMISSIVE. Under STRICT, this call would fail.
+The connection skipped the client's Envoy, so no mTLS and no client identity reached httpbin, while the request still passed httpbin's own Envoy on the way in, which added the trace header. httpbin accepts plain text because its mTLS mode is PERMISSIVE, so under STRICT this call would fail.
 
 Undo the patch:
 
@@ -377,11 +369,9 @@ $ kubectl -n course-proxy exec deploy/client -c istio-proxy -- pilot-agent reque
  "allocated": "11477520",
 ```
 
-`pilot-agent request` asks Envoy's admin port from inside the pod. `config_dump` is Envoy's whole running config, and `memory` reports its heap.
+`pilot-agent request` asks Envoy's admin port from inside the pod, where `config_dump` is Envoy's whole running config and `memory` reports its heap.
 
-**What you should see.** The counts above, from this run.
-
-That's 61 clusters and 718 KB of config for a client that calls one Service. An earlier run counted 62 clusters and 725 KB. Now apply the Sidecar resource and count again:
+**What you should see.** The counts above, from this run: 61 clusters and 718 KB of config for a client that calls one Service, while an earlier run counted 62 clusters and 725 KB. Now apply the Sidecar resource and count again:
 
 ```console
 $ cat platform-engineering/manifests/30-sidecar-scope.yaml
@@ -424,11 +414,9 @@ kiali.istio-system.svc.cluster.local       9090      -          outbound      ED
 kiali.istio-system.svc.cluster.local       20001     -          outbound      EDS
 ```
 
-**What you should see.** Within seconds, and without a restart, the counts drop to the ones above.
+**What you should see.** Within seconds, and without a restart, the counts drop to the ones above. The outbound clusters shrink to httpbin, istiod and Kiali, which also lives in `istio-system`, and the config dump drops by about a third rather than more, because the inbound listener on 15006 and Envoy's bootstrap stay the same size whatever the Sidecar says.
 
-The outbound clusters shrink to httpbin, istiod and Kiali, which also lives in `istio-system`. The config dump drops by about a third, not more, because the inbound listener on 15006 and Envoy's bootstrap stay the same size whatever the Sidecar says.
-
-Envoy rarely hands memory back, so the heap only shows the saving in a fresh pod. Restart the client, wait a minute, and measure again:
+Envoy rarely hands memory back, so the heap shows the saving only in a fresh pod. Restart the client, wait a minute, and measure again:
 
 ```console
 $ kubectl -n course-proxy rollout restart deploy/client
@@ -441,7 +429,7 @@ $ kubectl -n course-proxy exec deploy/client -c istio-proxy -- pilot-agent reque
  "allocated": "6983624",
 ```
 
-**What you should see.** `"allocated": "6983624"` in this run and `"7107016"` in an earlier one, so about 7 MB against 11.5 to 11.8 MB before. That's about 40% less Envoy heap on a small lab. `kubectl top` showed the whole `istio-proxy` container at 29 MiB with the Sidecar and 35 MiB without.
+**What you should see.** `"allocated": "6983624"` in this run and `"7107016"` in an earlier one, so about 7 MB against 11.5 to 11.8 MB before, which is about 40% less Envoy heap on a small lab. `kubectl top` showed the whole `istio-proxy` container at 29 MiB with the Sidecar and 35 MiB without.
 
 Now the catch. Call a Service outside the list:
 
@@ -454,7 +442,7 @@ frontend 000
 command terminated with exit code 52
 ```
 
-**What you should see.** `headlamp 200`, then `frontend 000` with `command terminated with exit code 52`, an empty reply. Both calls left through `PassthroughCluster`, as plain TCP with no mTLS. Headlamp sits outside the mesh and doesn't care. The frontend lives in the ambient `shop` namespace, where a STRICT PeerAuthentication refuses plain text. Before the Sidecar, the client's Envoy knew the frontend and spoke mTLS to it. Now it knows nothing about it and passes the bytes through blind.
+**What you should see.** `headlamp 200`, then `frontend 000` with `command terminated with exit code 52`, an empty reply. Both calls left through `PassthroughCluster`, as plain TCP with no mTLS. Headlamp sits outside the mesh and doesn't care, but the frontend lives in the ambient `shop` namespace, where a STRICT PeerAuthentication refuses plain text. Before the Sidecar, the client's Envoy knew the frontend and spoke mTLS to it, while now it knows nothing about it and passes the bytes through blind.
 
 ### 7. Block unknown destinations
 
@@ -485,7 +473,7 @@ $ kubectl -n course-proxy exec deploy/client -c curl -- curl -s -o /dev/null -w 
 httpbin 200
 ```
 
-**What you should see.** `headlamp 000` with `command terminated with exit code 56`, a reset connection, and `httpbin 200`. The unknown destination now goes to `BlackHoleCluster`, which drops it. Port 80 on Headlamp isn't a port Envoy knows as HTTP for this pod, so Envoy treats the call as TCP and resets it instead of answering with an HTTP error. Module 32 sets the same policy mesh-wide, in istiod's config.
+**What you should see.** `headlamp 000` with `command terminated with exit code 56`, a reset connection, and `httpbin 200`, because the unknown destination now goes to `BlackHoleCluster`, which drops it. Port 80 on Headlamp isn't a port Envoy knows as HTTP for this pod, so Envoy treats the call as TCP and resets it instead of answering with an HTTP error. Module 32 sets the same policy mesh-wide, in istiod's config.
 
 ### 8. Set the sidecar's own resources
 
@@ -516,11 +504,9 @@ $ kubectl -n course-proxy get pod -l app=httpbin -o jsonpath='{.items[0].spec.co
 {"limits":{"cpu":"200m","memory":"128Mi"},"requests":{"cpu":"50m","memory":"64Mi"}}
 ```
 
-**What you should see.** The lab's default first.
+**What you should see.** The lab's default first, then, once the old pod is gone, the new pod's values in the last line.
 
-Then, once the old pod is gone, the new pod's values appear in the last line.
-
-The default request of 128 MiB is about four times what the proxy really uses here. On a node with 50 sidecar pods, those requests reserve over 6 GiB that the scheduler never hands to anyone else. The limit matters too. If you set the memory limit below what the proxy needs for its config, the kernel kills Envoy, and the pod drops every connection. Step 6's numbers tell you where that floor sits.
+The default request of 128 MiB is about four times what the proxy really uses here, so on a node with 50 sidecar pods those requests reserve over 6 GiB that the scheduler never hands to anyone else. The limit matters too, because if you set the memory limit below what the proxy needs for its config, the kernel kills Envoy and the pod drops every connection, and step 6's numbers tell you where that floor sits.
 
 ### 9. Compare with ambient on the same node
 
@@ -542,7 +528,7 @@ $ kubectl -n course-ambient rollout status deploy/httpbin
 deployment "httpbin" successfully rolled out
 ```
 
-Then measure latency. The function below sends 300 requests from each client over one kept-alive connection, and prints the median (p50) and the 95th percentile (p95):
+Then measure latency. The function below sends 300 requests from each client over one kept-alive connection and prints the median (p50) and the 95th percentile (p95):
 
 ```console
 $ latency() {
@@ -564,9 +550,9 @@ $ kubectl label namespace course-ambient istio.io/dataplane-mode=ambient
 namespace/course-ambient labeled
 ```
 
-The middle lines take `course-ambient` out of the mesh for one measurement, so you get a baseline without any proxy. In ambient mode, that takes a label and no restart.
+The middle lines take `course-ambient` out of the mesh for one measurement, so you get a baseline without any proxy, which in ambient mode takes a label and no restart.
 
-**What you should see.** The test runs for this module gave these ranges. The transcript above is one of those runs.
+**What you should see.** The test runs for this module gave these ranges, and the transcript above is one of those runs:
 
 | Path | p50 | p95 |
 |---|---|---|
@@ -574,7 +560,7 @@ The middle lines take `course-ambient` out of the mesh for one measurement, so y
 | ambient, ztunnel only | 0.07 to 0.12 ms | 0.13 to 0.30 ms |
 | no mesh | 0.05 to 0.09 ms | 0.19 to 0.30 ms |
 
-On a kept-alive connection, ambient adds almost nothing, because ztunnel only moves bytes through a tunnel it already opened. Two Envoys add about 0.2 ms, because each one parses and rebuilds every HTTP request. The absolute numbers stay tiny on one node. The difference grows with request size, with CPU limits, and with L7 features like retries. Ambient with a waypoint adds one Envoy back, so it lands between the two.
+On a kept-alive connection ambient adds almost nothing, because ztunnel only moves bytes through a tunnel it already opened, while two Envoys add about 0.2 ms, because each one parses and rebuilds every HTTP request. The absolute numbers stay tiny on one node, but the difference grows with request size, with CPU limits, and with L7 features like retries. Ambient with a waypoint adds one Envoy back, so it lands between the two.
 
 Now the memory:
 
@@ -595,7 +581,7 @@ $ kubectl top pod -n istio-system | grep ztunnel
 ztunnel-htqw5            5m           22Mi
 ```
 
-**What you should see.** In the test run, each `istio-proxy` used 27 to 38 MiB, depending on the Sidecar resource and the time since start. The ambient pods had no proxy at all: `curl` used 0 to 2 MiB and `httpbin` 3 to 7 MiB. ztunnel used 17 to 22 MiB for every ambient pod on the node together. So the sidecar cost grows with every pod, while ztunnel's cost grows with every node.
+**What you should see.** In the test run each `istio-proxy` used 27 to 38 MiB, depending on the Sidecar resource and the time since start, while the ambient pods had no proxy at all: `curl` used 0 to 2 MiB and `httpbin` 3 to 7 MiB, and ztunnel used 17 to 22 MiB for every ambient pod on the node together. So the sidecar cost grows with every pod, while ztunnel's cost grows with every node.
 
 ## Investigate
 
@@ -607,10 +593,10 @@ ztunnel-htqw5            5m           22Mi
 <details>
 <summary>Answers</summary>
 
-1. `rev.namespace.sidecar-injector` would have fired for `istio.io/rev=default`. Its namespace selector also demands `istio-injection` DoesNotExist, and the namespace has that label, so the webhook skips the pod. `namespace.sidecar-injector` doesn't match either, because it wants the value `enabled`. Step 3's `disabled-wins` pod showed the same thing.
-2. Outbound listeners for other namespaces' Services. Envoy builds them in two shapes. An HTTP port gets one shared listener on `0.0.0.0`, such as `0.0.0.0 3000` for the shop's frontend and `0.0.0.0 80` for Headlamp. A TCP port gets one listener per Service IP, such as `10.43.100.21 6379` for the shop's Redis and `10.43.0.10 53` for kube-dns. With the Sidecar, only the ports of httpbin and the `istio-system` Services remain (8000, 9090, 15010, 15012, 15014, 20001 and 443), plus the fixed ones: 15001, 15006, 15008, 15021 and 15090.
-3. `traffic.sidecar.istio.io/excludeInboundPorts: "8080"` on httpbin's pod template. Incoming connections to 8080 then skip `ISTIO_IN_REDIRECT` and reach the app directly. httpbin's Envoy would log nothing for them, record no metrics with `reporter="destination"`, and enforce no AuthorizationPolicy or STRICT mTLS on that port. The client's sidecar still sends mTLS, which the app doesn't understand, so the call breaks. In the test run, every call got `503` with `TLS_error ... WRONG_VERSION_NUMBER`. That's why inbound exclusions suit only ports that never carry mesh traffic, such as a metrics port scraped from outside.
-4. First, a default Sidecar resource per namespace with `./*` and `istio-system/*`, widened per app as needed. It cuts config for every proxy at once, and step 6 measured 40% less heap. Second, lower requests with `sidecar.istio.io/proxyMemory` and `proxyCPU`, based on measured use plus headroom, which frees scheduler capacity. Third, move namespaces that need only mTLS and L4 policy to ambient, where the per-pod cost drops to zero. Watch for `PassthroughCluster` in access logs after the first change, because a missing host fails quietly.
+1. `rev.namespace.sidecar-injector` would have fired for `istio.io/rev=default`, but its namespace selector also demands `istio-injection` DoesNotExist, and the namespace has that label, so the webhook skips the pod. `namespace.sidecar-injector` doesn't match either, because it wants the value `enabled`, as step 3's `disabled-wins` pod showed.
+2. Outbound listeners for other namespaces' Services, which Envoy builds in two shapes. An HTTP port gets one shared listener on `0.0.0.0`, such as `0.0.0.0 3000` for the shop's frontend and `0.0.0.0 80` for Headlamp, while a TCP port gets one listener per Service IP, such as `10.43.100.21 6379` for the shop's Redis and `10.43.0.10 53` for kube-dns. With the Sidecar, only the ports of httpbin and the `istio-system` Services remain (8000, 9090, 15010, 15012, 15014, 20001 and 443), plus the fixed ones: 15001, 15006, 15008, 15021 and 15090.
+3. `traffic.sidecar.istio.io/excludeInboundPorts: "8080"` on httpbin's pod template, so incoming connections to 8080 skip `ISTIO_IN_REDIRECT` and reach the app directly. httpbin's Envoy would log nothing for them, record no metrics with `reporter="destination"`, and enforce no AuthorizationPolicy or STRICT mTLS on that port. The client's sidecar still sends mTLS, which the app doesn't understand, so the call breaks: in the test run every call got `503` with `TLS_error ... WRONG_VERSION_NUMBER`. That's why inbound exclusions suit only ports that never carry mesh traffic, such as a metrics port scraped from outside.
+4. First, a default Sidecar resource per namespace with `./*` and `istio-system/*`, widened per app as needed, because it cuts config for every proxy at once, and step 6 measured 40% less heap. Second, lower requests with `sidecar.istio.io/proxyMemory` and `proxyCPU`, based on measured use plus headroom, which frees scheduler capacity. Third, move namespaces that need only mTLS and L4 policy to ambient, where the per-pod cost drops to zero. Watch for `PassthroughCluster` in access logs after the first change, because a missing host fails quietly.
 
 </details>
 
