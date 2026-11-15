@@ -1,8 +1,8 @@
 # Kubernetes Platform Engineering
 
-A hands-on course in running a Kubernetes platform, built on this lab. It assumes you know Kubernetes well (CKA or CKAD level). It starts with Istio, the service mesh, because a mesh touches every request. Then it covers the rest of a platform team's work: cluster operations, GitOps, alerting, dashboards, OpenTelemetry, policy as code, profiling, and AI workloads on Kubernetes. Every module explains what a tool does, why it is built that way and not another, and how to see it happening in Kiali, Grafana, Jaeger and Loki.
+A hands-on course in running a Kubernetes platform, built on this lab, for readers who already know Kubernetes well (CKA or CKAD level). It starts with Istio, the service mesh, because a mesh touches every request, and then covers the rest of a platform team's work: cluster operations, GitOps, alerting, dashboards, OpenTelemetry, policy as code, profiling, and AI workloads on Kubernetes. Every module explains what a tool does, why its design took that shape rather than another, and how to watch it work in Kiali, Grafana, Jaeger and Loki.
 
-Each module takes 30 to 60 minutes. Each one lists the modules and tools it needs at the top, and the routes below show which modules build on which. For exam practice with timed tasks, see the [certification tracks](../certs/README.md).
+Each module takes 30 to 60 minutes and lists the modules and tools it needs at the top, while the routes below show which modules build on which. For exam practice with timed tasks, see the [certification tracks](../certs/README.md).
 
 | Module | You learn | Tools you use |
 |---|---|---|
@@ -40,7 +40,7 @@ Each module takes 30 to 60 minutes. Each one lists the modules and tools it need
 | [31. Debugging Envoy with istioctl](31-debugging-envoy.md) | Listener, route, cluster, endpoint; SYNCED and STALE (a frozen Envoy); `analyze` and `x describe` on broken config; causing `NC`, `URX`, `NR`, `UH`, `UF` and `UO` on purpose; runtime log levels; four break-and-fix exercises | `istioctl proxy-config`, access logs |
 | [32. Installing Istio with istioctl](32-installing-istio.md) | On a throwaway k3d cluster: install profiles, an IstioOperator file with meshConfig, components and values, `manifest generate` and `translate`, reconfiguring in place, switching to ambient, uninstalling. Never touches the lab's Istio | `k3d`, `istioctl` 1.24.2 |
 
-**New to Istio? Read [Start here: Istio in one picture](start-here.md) first.** It takes 15 minutes, needs no cluster, and shows every resource the course uses on one diagram. Every term also has a plain explanation in the [glossary](glossary.md). Keep it open in a tab.
+**New to Istio? Read [Start here: Istio in one picture](start-here.md) first.** It takes 15 minutes, needs no cluster, and shows every resource the course uses on one diagram, while the [glossary](glossary.md) gives every term a plain explanation, so keep it open in a tab.
 
 ## Routes through the course
 
