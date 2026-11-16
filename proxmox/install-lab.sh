@@ -15,7 +15,7 @@ set -euo pipefail
 KUBECTL_VERSION=1.31.5
 HELM_VERSION=4.3.1
 K3D_VERSION=5.9.0
-ISTIO_VERSION=1.24.2
+ISTIO_VERSION=1.32.0   # the client; the control plane stays at 1.24.2 (module 31 needs a client this new)
 OLLAMA_VERSION=0.40.13
 OLLAMA_MODELS="qwen2.5:3b nomic-embed-text"
 LAB_REPO_URL="${LAB_REPO_URL:-https://github.com/miekuskamil/k8s_lab_macos}"
