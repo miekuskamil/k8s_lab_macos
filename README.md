@@ -16,6 +16,8 @@ The first run takes about 10 minutes, mostly image downloads. A rebuild with cac
 
 Both platforms are tested. On macOS (OrbStack) and on Ubuntu 24.04 (Docker Engine 29.1 from Ubuntu's packages, curl 8.5), a single `./scripts/provision.sh` from nothing passed every health check. On Ubuntu 24.04 on 13 November 2026, `./platform-engineering/verify.sh` passed 230 of its 232 checks, and the 2 failures, both in module 7, are fixed. The latest full macOS run is below. Other Linux distributions should work if they meet the table above. For Ubuntu install commands and Ollama for the AI modules, see [Running the lab on Linux](docs/linux.md). To run the AI modules on another model or on Claude, see [Choosing the model for the AI modules](docs/ai-models.md).
 
+To run the course on an Ubuntu VM in Proxmox VE with one script, see [The lab on Proxmox](proxmox/README.md#platform-engineering-course).
+
 OrbStack's own Kubernetes can stay switched off. The lab runs its own k3d cluster on the Docker engine. [docs/build-from-scratch.md](docs/build-from-scratch.md#step-1-the-cluster) explains why.
 
 ## Start it
