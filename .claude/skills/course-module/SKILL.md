@@ -69,12 +69,30 @@ Before and after, the target voice:
 
 **Values differ per run.** Quote real output, but never hard-code an IP or pod name in a command: look it up (`SVCIP=$(kubectl ... -o jsonpath=...)`). Say "in the test run" next to measured numbers.
 
-**Diagrams.** Draw every diagram with the kit in `docs/diagrams/bbg.py`, in a script `docs/diagrams/chapters/make-NN.py` that writes `NN-slug.svg` and `.excalidraw`. Copy the patterns in `docs/diagrams/make-life-of-a-request.py`. No mermaid.
+**Diagrams.** Draw every diagram with the kit in `docs/diagrams/bbg.py`, in a script `docs/diagrams/chapters/make-NN.py` that writes `NN-slug.svg` and `.excalidraw`. Copy the patterns in `docs/diagrams/make-life-of-a-request.py` and `docs/diagrams/chapters/make-02.py`. No mermaid.
 
+A course diagram is a structure diagram, not a chain of boxes. First draw where things run, then draw the flow on top of it:
+
+- Structure: nest the frames the reader knows from Kubernetes. `c.frame(..., kind)` draws `host` (your Mac), `cluster`, `node`, `ns` (a namespace), `pod` and `group` (a dashed set), and `c.band()` draws a shared layer such as the kernel or ztunnel. Put containers inside their pod, iptables chains and eBPF programs inside the kernel band, controllers in the control plane and agents on the node.
+- Flow: draw the request or the data on top of that structure with `c.connect(a, b, ...)`, which starts and ends exactly on box edges and runs straight or with right-angle elbows. Use `fa`/`fb` to line two edges up so the arrow runs straight, `via` for a hand-routed path and `mid` for the x or y of a jog.
+- Steps: put `c.step()` circles on the flow where order matters, numbered exactly like the numbered list in the prose next to the image. A second numbered list in the same picture gets its own colour (`c.step(..., col=TEAL, ink=WHITE)`) and a key.
+- Decisions and failures: `c.diamond()` for a decision, `c.mark(ok=False)` where a check refuses something, a red box for the error the caller gets back.
+- Each picture lets the reader point at it and say "the request is here now". If the diagram reads as a left-to-right row of boxes, add the structure it is missing.
+
+Style, which the kit gives you when you use its primitives:
+
+- Light theme on a white page, no frame or shadow around the figure. Pastel fills with one strong accent per kind of thing, thin strokes, rounded corners.
+- Colours mean kinds of things: SLATE apps and clients, BLUE proxies (Envoy, ztunnel, waypoint, gateways), PURPLE control plane, GREEN kernel and networking, ORANGE storage, RED security decisions (PINK for admission and crypto), TEAL node agents and DNS.
 - Box label: 1 to 3 words. Sub-line: at most 4 short words (an address, a port). Arrow label: at most 4 words. Captions: one short sentence or none. Detail belongs in the prose.
-- Circled step numbers only where order matters, and they match the numbered steps in the text.
-- Colours mean kinds of things: SLATE apps, BLUE proxies, PURPLE control plane, GREEN kernel and networking, ORANGE storage, RED or PINK security decisions, TEAL node agents and DNS.
-- Render and look before you embed it. Pad the SVG to a square so Quick Look shows all of it, then open the PNG.
+- Canvas about 1600 wide, text at least 15 px, so it stays readable at page width.
+
+Alignment rules:
+
+- Arrows start and end on an edge, never inside a box or in empty space, and run horizontally or vertically.
+- Labels never sit on a line, a frame label or another label. Flow labels carry a white halo, and a frame's label moves to the right corner (`right=`) when an arrow crosses its left side.
+- Leave at least 40 px between parallel arrows and between boxes, and keep frames free of large empty areas.
+
+Render and look before you embed it. Pad the SVG to a square so Quick Look shows all of it (`qlmanage -t -s 1100 -o <dir> file.svg`), open the PNG, and fix every overlap and misaligned arrow before you commit.
 
 **Define every term.** Add a glossary entry for each new term to `platform-engineering/glossary.md`, under a section for the topic, ending with "Module NN."
 

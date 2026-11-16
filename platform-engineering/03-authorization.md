@@ -25,7 +25,7 @@ Both work side by side, but this lab uses only AuthorizationPolicy.
 
 ![Two guards in front of the backend: the waypoint and the backend's ztunnel](../docs/diagrams/chapters/03-two-guards.svg)
 
-Two guards stand in front of the backend: the waypoint checks HTTP requests, and the backend's ztunnel checks connections. The dotted line shows `course-client` dialling a pod IP and skipping the waypoint. Each policy goes to one of the two guards, and the field you use to attach it picks which one:
+Two guards stand in front of the backend: the waypoint checks HTTP requests, and the backend's ztunnel checks connections. The dashed pink line shows `course-client` dialling a pod IP and skipping the waypoint. Each policy goes to one of the two guards, and the field you use to attach it picks which one:
 
 - A policy with a `selector` names pod labels, so it attaches to the pods and ztunnel enforces it. ztunnel sees only L4 facts: the caller's identity, its namespace and the port.
 - A policy with `targetRefs` names a Service, so it attaches to that Service's waypoint, which understands HTTP and therefore also matches methods and paths.
