@@ -2,25 +2,44 @@
 
 > New to a term here? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
 
-**Before this mock exam:** [mock exam 2](mock-exam-2.md) under time. The [practice cluster](../README.md#the-practice-cluster) and the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium), both freshly reset.
+**Before this mock exam:** [mock exam 2](mock-exam-2.md) under time, and the [practice cluster](../README.md#the-practice-cluster) and the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium), both freshly reset.
 
-This is the hardest of the three. When the clock starts, the API server refuses to start, the scheduler and the controller manager crash, every caller is cluster admin, and Secrets sit encrypted with a key you're asked to retire. Nothing tells you which of those to fix first, except the order in which the layers depend on each other. You get 2 hours for 17 tasks worth 100 points, on the OrbStack cluster and the Lima VM.
+This is the hardest of the three. When the clock starts, the API server refuses to start, the scheduler and the controller manager crash, every caller is cluster admin, and Secrets sit encrypted with a key you're asked to retire. Nothing tells you which of those to fix first, except the order in which the layers depend on each other, so reading that order is part of the test. You get 2 hours for 17 tasks worth 100 points, on the OrbStack cluster and the Lima VM.
 
 ## Rules
 
-1. Start fresh. On your Mac:
+1. Start fresh, with both resets and the setup on your Mac:
 
-   ```bash
-   ./certs/cks/cluster/reset.sh && ./certs/cks/cluster/lima.sh reset
-   MOCK=3 ./certs/cks/mock-exam/setup.sh
+   ```console
+   $ ./certs/cks/cluster/reset.sh && ./certs/cks/cluster/lima.sh reset
+   === wiping cks-w1
+   === wiping cks-cp
+   ...
+   === 1/7 machines
+   ...
+   === 7/7 ingress-nginx 1.15.1 on NodePorts 30080 and 30443
+   ...
+   === ready
+   ...
+   === wiping the cluster on cks-lima
+   ...
+   === 4/4 Cilium 1.20.4
+   ...
+   cluster ready
+   $ MOCK=3 ./certs/cks/mock-exam/setup.sh
+   == setting up task 11: Rotate to a new provider
+   == setting up task 2: One port range, two selectors
+   ...
+   Ready. The clock runs from now: 2 hours. Open certs/cks/mock-exam-3.md.
+   Score yourself at any time with MOCK=3 ./certs/cks/mock-exam/score.sh
    ```
 
-   In the final test run, the OrbStack reset took 3 minutes 7 seconds, the Lima reset 1 minute 54 seconds, and the setup 1 minute 13 seconds. The setup breaks the control plane in its last steps, so it doesn't wait for any pods.
+   In the final test run, the OrbStack reset took 3 minutes 7 seconds, the Lima reset 1 minute 54 seconds, and the setup 1 minute 13 seconds. The setup breaks the control plane in its last steps, so it doesn't wait for any pods to start.
 
 2. The clock starts when `setup.sh` ends, and `score.sh` prints the minutes since then.
-3. Work only on the nodes: `orb -m cks-cp`, `orb -m cks-w1` and `./certs/cks/cluster/lima.sh shell`. Use only the documentation the exam allows.
-4. Don't open the solutions while the clock runs.
-5. Score from your Mac: `MOCK=3 ./certs/cks/mock-exam/score.sh`, or single tasks with `MOCK=3 ./certs/cks/mock-exam/score.sh 1 13`.
+3. Work only on the nodes, through `orb -m cks-cp`, `orb -m cks-w1` and `./certs/cks/cluster/lima.sh shell`, and use only the documentation the exam allows.
+4. Don't open the solutions while the clock runs, because the score only means something when you worked without them.
+5. Score from your Mac with `MOCK=3 ./certs/cks/mock-exam/score.sh`, or score single tasks with `MOCK=3 ./certs/cks/mock-exam/score.sh 1 13`.
 
 ## Tasks
 
@@ -53,12 +72,20 @@ This is the hardest of the three. When the clock starts, the API server refuses 
 <details>
 <summary>Solution</summary>
 
-`kubectl` itself fails at first, because of task 13. Fix that first, then:
+`kubectl` itself fails at first, because of task 13, so fix that task first and then look at the control plane pods:
 
-```bash
-k -n kube-system get pods -l tier=control-plane
-k -n kube-system logs kube-controller-manager-cks-cp | tail -2
-k -n kube-system logs kube-scheduler-cks-cp | tail -2
+```console
+root@cks-cp:~# k -n kube-system get pods -l tier=control-plane
+NAME                             READY   STATUS             RESTARTS      AGE
+etcd-cks-cp                      1/1     Running            10            9m37s
+kube-apiserver-cks-cp            1/1     Running            0             4s
+kube-controller-manager-cks-cp   0/1     CrashLoopBackOff   1 (10s ago)   27s
+kube-scheduler-cks-cp            0/1     CrashLoopBackOff   5 (68s ago)   9m37s
+root@cks-cp:~# k -n kube-system logs kube-controller-manager-cks-cp | tail -2
+I1115 21:06:14.835680       1 leaderelection.go:304] "Failed to renew lease" lock="kube-system/kube-controller-manager" err="context canceled"
+E1115 21:06:14.835729       1 controllermanager.go:413] "leaderelection lost/stopped"
+root@cks-cp:~# k -n kube-system logs kube-scheduler-cks-cp | tail -2
+Error: invalid argument "127.0.0.1:10259" for "--bind-address" flag: failed to parse IP: "127.0.0.1:10259"
 ```
 
 In the test run, the scheduler said:
@@ -73,7 +100,7 @@ and the controller manager, once the API server answered again:
 "Error building controllers" err="error parsing root-ca-file at /etc/kubernetes/pki/ca.pem: open /etc/kubernetes/pki/ca.pem: no such file or directory"
 ```
 
-Somebody added a second `--bind-address` line with a port in it; the last copy of a flag wins, and a bind address takes an IP only. Delete that line from `kube-scheduler.yaml`, and set `--root-ca-file=/etc/kubernetes/pki/ca.crt` in `kube-controller-manager.yaml`. The controller manager first, because without it the Deployment gets no new ReplicaSet pods, and new namespaces get no `default` ServiceAccount either. Then `k -n m3-app scale deploy shop --replicas=4`.
+Somebody added a second `--bind-address` line with a port in it, and since the last copy of a flag wins and a bind address takes an IP only, the scheduler exits. Delete that line from `kube-scheduler.yaml`, and set `--root-ca-file=/etc/kubernetes/pki/ca.crt` in `kube-controller-manager.yaml`. Fix the controller manager first, because without it the Deployment gets no new ReplicaSet pods and new namespaces get no `default` ServiceAccount either. Then run `k -n m3-app scale deploy shop --replicas=4`.
 
 </details>
 
@@ -100,7 +127,7 @@ spec:
     ports: [{protocol: TCP, port: 9100, endPort: 9200}]
 ```
 
-Two traps are checked: `grafana` sits in the right namespace with the wrong label, and a `prometheus` pod sits in a namespace without the label. Both stay out only with the two selectors in one item.
+The check tests two traps: `grafana` sits in the right namespace with the wrong label, and a `prometheus` pod sits in a namespace without the label. Both stay out only when the two selectors share one item.
 
 </details>
 
@@ -150,7 +177,7 @@ spec:
 <details>
 <summary>Solution</summary>
 
-`--profiling=false` in the API server and controller manager manifests, and `--tls-min-version=TLS1.3` in etcd's. Change etcd first and wait for it, then the API server, as [01, task 12](01-cluster-setup.md#task-12-tls-versions-and-ciphers-for-the-api-server-and-etcd) explains. Confirm with `kube-bench run --targets master --check 1.2.15,1.3.2`.
+Set `--profiling=false` in the API server and controller manager manifests, and `--tls-min-version=TLS1.3` in etcd's. Change etcd first and wait for it, then the API server, as [01, task 12](01-cluster-setup.md#task-12-tls-versions-and-ciphers-for-the-api-server-and-etcd) explains, and confirm with `kube-bench run --targets master --check 1.2.15,1.3.2`.
 
 </details>
 
@@ -163,14 +190,17 @@ spec:
 <details>
 <summary>Solution</summary>
 
-```bash
-k -n m3-web create secret tls m3-tls --cert=/root/mock/m3.crt --key=/root/mock/m3.key
-k -n m3-web create ingress sites --class=nginx \
+```console
+root@cks-cp:~# k -n m3-web create secret tls m3-tls --cert=/root/mock/m3.crt --key=/root/mock/m3.key
+secret/m3-tls created
+root@cks-cp:~# k -n m3-web create ingress sites --class=nginx \
   --rule="shop.m3.local/*=shop:80,tls=m3-tls" --rule="blog.m3.local/*=blog:80,tls=m3-tls"
-curl -sk --resolve blog.m3.local:30443:127.0.0.1 https://blog.m3.local:30443/
+ingress.networking.k8s.io/sites created
+root@cks-cp:~# curl -sk --resolve blog.m3.local:30443:127.0.0.1 https://blog.m3.local:30443/
+blog
 ```
 
-One `tls` entry lists both hosts with the same Secret. The certificate's subject alternative names cover both, so the controller serves it for each.
+One `tls` entry lists both hosts with the same Secret, and the certificate's subject alternative names cover both, so the controller serves it for each host.
 
 </details>
 
@@ -183,21 +213,43 @@ One `tls` entry lists both hosts with the same Secret. The certificate's subject
 <details>
 <summary>Solution</summary>
 
-```bash
-k get clusterrole -l rbac.m3/aggregate=true
-k get clusterrole ops-config -o yaml        # configmaps and secrets
+```console
+root@cks-cp:~# k get clusterrole -l rbac.m3/aggregate=true
+NAME         CREATED AT
+ops-config   2026-11-15T21:01:53Z
+ops-pods     2026-11-15T21:01:53Z
+root@cks-cp:~# k get clusterrole ops-config -o yaml        # configmaps and secrets
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+...
+  labels:
+    rbac.m3/aggregate: "true"
+  name: ops-config
+...
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  verbs:
+  - get
+  - list
 ```
 
-Remove `secrets` from `ops-config`, so ConfigMaps stay readable, and add a labelled ClusterRole for Deployments:
+Remove `secrets` from `ops-config`, so that ConfigMaps stay readable, and add a labelled ClusterRole for Deployments:
 
-```bash
-k edit clusterrole ops-config                 # resources: [configmaps]
-k create clusterrole ops-deploys --verb=get,list,watch --resource=deployments.apps $do > d.yaml
-vim d.yaml                                    # labels: {rbac.m3/aggregate: "true"}
-k apply -f d.yaml
+```console
+root@cks-cp:~# k edit clusterrole ops-config                 # resources: [configmaps]
+root@cks-cp:~# k create clusterrole ops-deploys --verb=get,list,watch --resource=deployments.apps $do > d.yaml
+root@cks-cp:~# vim d.yaml                                    # labels: {rbac.m3/aggregate: "true"}
+root@cks-cp:~# k apply -f d.yaml
+clusterrole.rbac.authorization.k8s.io/ops-deploys created
 ```
 
-Deleting `ops-config` would remove the Secrets too, and take ConfigMaps with it, which the check catches. [02, task 5](02-cluster-hardening.md#task-5-aggregated-clusterroles) has the theory.
+The transcript leaves out both editor sessions: the first removes `secrets` from the rules of `ops-config`, the second adds the label to `d.yaml`.
+
+Deleting `ops-config` would remove the Secrets too, but it would take ConfigMaps with it, which the check catches. [02, task 5](02-cluster-hardening.md#task-5-aggregated-clusterroles) has the theory.
 
 </details>
 
@@ -210,15 +262,21 @@ Deleting `ops-config` would remove the Secrets too, and take ConfigMaps with it,
 <details>
 <summary>Solution</summary>
 
-```bash
-k -n m3-ci delete secret --field-selector type=kubernetes.io/service-account-token
-k -n m3-ci patch sa builder -p '{"automountServiceAccountToken": false}'
-k -n m3-ci get pod build -o yaml > build.yaml
-vim build.yaml           # delete the kube-api-access volume and its volumeMount
-k -n m3-ci replace --force -f build.yaml
+```console
+root@cks-cp:~# k -n m3-ci delete secret --field-selector type=kubernetes.io/service-account-token
+secret "builder-token" deleted from m3-ci namespace
+root@cks-cp:~# k -n m3-ci patch sa builder -p '{"automountServiceAccountToken": false}'
+serviceaccount/builder patched
+root@cks-cp:~# k -n m3-ci get pod build -o yaml > build.yaml
+root@cks-cp:~# vim build.yaml           # delete the kube-api-access volume and its volumeMount
+root@cks-cp:~# k -n m3-ci replace --force -f build.yaml
+pod "build" deleted from m3-ci namespace
+pod/build replaced
 ```
 
-A running pod keeps its token, so it needs recreating. The exported YAML spells out the `kube-api-access-...` volume the API server added. Left in, it mounts the token whatever the ServiceAccount says, so delete it and its mount.
+The transcript leaves out the editor session.
+
+A running pod keeps its token, so it needs recreating. The exported YAML spells out the `kube-api-access-...` volume that the API server added, and left in, it mounts the token whatever the ServiceAccount says, so delete the volume and its mount.
 
 </details>
 
@@ -231,7 +289,7 @@ A running pod keeps its token, so it needs recreating. The exported YAML spells 
 <details>
 <summary>Solution</summary>
 
-`--authorization-mode=Node,RBAC`, as in [02, task 12](02-cluster-hardening.md#task-12-an-api-server-that-allows-everything).
+Set `--authorization-mode=Node,RBAC`, as in [02, task 12](02-cluster-hardening.md#task-12-an-api-server-that-allows-everything), so the Node authorizer and RBAC decide again instead of `AlwaysAllow`.
 
 </details>
 
@@ -244,12 +302,19 @@ A running pod keeps its token, so it needs recreating. The exported YAML spells 
 <details>
 <summary>Solution</summary>
 
-```bash
-sshd -T | grep -E '^(permitrootlogin|passwordauthentication|x11forwarding) '
-grep -rnE '^(PermitRootLogin|PasswordAuthentication|X11Forwarding)' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/
+```console
+root@cks-w1:~# sshd -T | grep -E '^(permitrootlogin|passwordauthentication|x11forwarding) '
+permitrootlogin yes
+passwordauthentication yes
+x11forwarding yes
+root@cks-w1:~# grep -rnE '^(PermitRootLogin|PasswordAuthentication|X11Forwarding)' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/
+/etc/ssh/sshd_config:99:X11Forwarding yes
+/etc/ssh/sshd_config.d/05-vendor.conf:1:PasswordAuthentication yes
+/etc/ssh/sshd_config.d/05-vendor.conf:2:PermitRootLogin yes
+/etc/ssh/sshd_config.d/05-vendor.conf:3:X11Forwarding yes
 ```
 
-All three come from `/etc/ssh/sshd_config.d/05-vendor.conf`, which sshd reads before the main file. Set each to `no` there, then `sshd -t && systemctl restart ssh`.
+All three values come from `/etc/ssh/sshd_config.d/05-vendor.conf`, which sshd reads before the main file. Set each to `no` there, then run `sshd -t && systemctl restart ssh`.
 
 </details>
 
@@ -262,7 +327,7 @@ All three come from `/etc/ssh/sshd_config.d/05-vendor.conf`, which sshd reads be
 <details>
 <summary>Solution</summary>
 
-`install udf /bin/false`, `blacklist udf`, and the same two lines for `dccp`, in a file such as `/etc/modprobe.d/m3.conf`, then `modprobe -r udf dccp`. [03, task 7](03-system-hardening.md#task-7-keep-a-kernel-module-out) explains both lines.
+Write `install udf /bin/false`, `blacklist udf` and the same two lines for `dccp` into a file such as `/etc/modprobe.d/m3.conf`, then run `modprobe -r udf dccp`. [03, task 7](03-system-hardening.md#task-7-keep-a-kernel-module-out) explains both lines.
 
 </details>
 
@@ -275,7 +340,7 @@ All three come from `/etc/ssh/sshd_config.d/05-vendor.conf`, which sshd reads be
 <details>
 <summary>Solution</summary>
 
-The same four steps as [04, task 5](04-minimize-microservice-vulnerabilities.md#task-5-rotate-the-encryption-key), with a new provider instead of a new key. Put `secretbox` first and keep `aescbc` below it:
+The steps are the four of [04, task 5](04-minimize-microservice-vulnerabilities.md#task-5-rotate-the-encryption-key), with a new provider instead of a new key, so put `secretbox` first and keep `aescbc` below it:
 
 ```yaml
   providers:
@@ -290,7 +355,7 @@ The same four steps as [04, task 5](04-minimize-microservice-vulnerabilities.md#
   - identity: {}
 ```
 
-Restart the API server, run `k get secrets -A -o json | k replace -f -`, delete the `aescbc` block, and restart again. etcdctl then shows `k8s:enc:secretbox:v1:new:` for every Secret.
+Restart the API server, run `k get secrets -A -o json | k replace -f -`, delete the `aescbc` block and restart again. etcdctl then shows `k8s:enc:secretbox:v1:new:` for every Secret.
 
 </details>
 
@@ -303,7 +368,7 @@ Restart the API server, run `k get secrets -A -o json | k replace -f -`, delete 
 <details>
 <summary>Solution</summary>
 
-`scheduling.nodeSelector: {runtime: gvisor}` in the RuntimeClass, as in [04, task 9](04-minimize-microservice-vulnerabilities.md#task-9-a-sandbox-only-on-the-nodes-that-have-it). `k -n m3-sbx exec scan -- dmesg` starts with `Starting gVisor...`.
+Put `scheduling.nodeSelector: {runtime: gvisor}` in the RuntimeClass, as in [04, task 9](04-minimize-microservice-vulnerabilities.md#task-9-a-sandbox-only-on-the-nodes-that-have-it). Afterwards, `k -n m3-sbx exec scan -- dmesg` starts with `Starting gVisor...`.
 
 </details>
 
@@ -316,18 +381,22 @@ Restart the API server, run `k get secrets -A -o json | k replace -f -`, delete 
 <details>
 <summary>Solution</summary>
 
-```bash
-crictl ps -a --name kube-apiserver
-crictl logs <id of the newest exited container>
+```console
+root@cks-cp:~# crictl ps -a --name kube-apiserver
+CONTAINER           IMAGE               CREATED              STATE               NAME                ATTEMPT             POD ID              POD                     NAMESPACE
+ef0e95360c41f       98d6e75e244ec       About a minute ago   Exited              kube-apiserver      4                   a507ff2270144       kube-apiserver-cks-cp   kube-system
+root@cks-cp:~# crictl logs <id of the newest exited container>
+I1115 21:04:10.180684       1 options.go:261] external host was not specified, using 192.168.139.194
+W1115 21:04:10.180739       1 authentication.go:841] AnonymousAuth is not allowed with the AlwaysAllow authorizer. Resetting AnonymousAuth to false. You should use a different authorizer
+I1115 21:04:10.182935       1 server.go:151] Version: v1.37.1
+I1115 21:04:10.182950       1 server.go:153] "Golang settings" GOGC="" GOMAXPROCS="" GOTRACEBACK=""
+E1115 21:04:10.448200       1 options.go:205] The manifest file is empty, ignoring.
+E1115 21:04:10.459263       1 run.go:72] "command failed" err="failed to apply admission: couldn't init admission plugin \"ImagePolicyWebhook\": stat /etc/kubernetes/policy-webhook/kube.yaml: no such file or directory"
 ```
 
-In the test run, the log ended with:
+The transcript ran `crictl logs` with the ID of the newest exited container.
 
-```
-"command failed" err="failed to apply admission: couldn't init admission plugin \"ImagePolicyWebhook\": stat /etc/kubernetes/policy-webhook/kube.yaml: no such file or directory"
-```
-
-`ls /etc/kubernetes/policy-webhook/` shows `kubeconfig.yaml`, so fix `kubeConfigFile` in `/etc/kubernetes/admission/m3.yaml`. The API server still doesn't start, with the same `stat ... no such file or directory`, now for the right file name: the colleague mounted `/etc/kubernetes/admission` into the pod, but not `/etc/kubernetes/policy-webhook`. Add a `volumeMount` and a `hostPath` volume for it, as [05, task 5](05-supply-chain-security.md#task-5-allow-only-approved-registries) shows. Do this task first: until the API server runs, no other task on `cks-cp` works.
+The last log line names the file the API server misses. `ls /etc/kubernetes/policy-webhook/` shows `kubeconfig.yaml`, so fix `kubeConfigFile` in `/etc/kubernetes/admission/m3.yaml`. The API server still doesn't start, with the same `stat ... no such file or directory`, now for the right file name, because the colleague mounted `/etc/kubernetes/admission` into the pod but not `/etc/kubernetes/policy-webhook`. Add a `volumeMount` and a `hostPath` volume for it, as [05, task 5](05-supply-chain-security.md#task-5-allow-only-approved-registries) shows. Do this task first, because until the API server runs, no other task on `cks-cp` works.
 
 </details>
 
@@ -340,20 +409,31 @@ In the test run, the log ended with:
 <details>
 <summary>Solution</summary>
 
-```bash
-k -n m3-prod get deploy -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[0].image
-for img in redis:6.0.5 nginx:1.27-alpine registry.k8s.io/pause:3.10 busybox:1.36; do
+```console
+root@cks-cp:~# k -n m3-prod get deploy -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[0].image
+NAME      IMAGE
+front     nginx:1.27-alpine
+idle      registry.k8s.io/pause:3.10
+session   redis:6.0.5
+tools     busybox:1.36
+root@cks-cp:~# for img in redis:6.0.5 nginx:1.27-alpine registry.k8s.io/pause:3.10 busybox:1.36; do
   echo "$img $(trivy image --quiet --severity CRITICAL $img | grep -m1 Total)"
 done
+redis:6.0.5 Total: 17 (CRITICAL: 17)
+nginx:1.27-alpine Total: 3 (CRITICAL: 3)
+registry.k8s.io/pause:3.10 
+busybox:1.36 
 ```
 
-In the test run, trivy found 22 CRITICAL findings in `redis:6.0.5` and 3 in `nginx:1.27-alpine`, and none in the other two. So delete `session` and `front`:
+In an earlier test run, trivy found 22 CRITICAL findings in `redis:6.0.5` and 3 in `nginx:1.27-alpine`, and none in the other two, while the transcript's newer database counted 17 for redis. Either way, delete `session` and `front`:
 
-```bash
-k -n m3-prod delete deploy session front
+```console
+root@cks-cp:~# k -n m3-prod delete deploy session front
+deployment.apps "session" deleted from m3-prod namespace
+deployment.apps "front" deleted from m3-prod namespace
 ```
 
-The check runs trivy itself and compares, so it still agrees with you after the database changes. A fairly new image such as `nginx:1.27-alpine` has findings too; the task asks about CRITICAL ones, not about age.
+The check runs trivy itself and compares, so it still agrees with you after the database changes. A fairly new image such as `nginx:1.27-alpine` has findings too, because the task asks about CRITICAL findings, not about age.
 
 </details>
 
@@ -375,19 +455,25 @@ The check runs trivy itself and compares, so it still agrees with you after the 
     priority: replace
 ```
 
-```bash
-journalctl -u falco-modern-bpf --since -2min | grep 'Alert Grep private keys' | grep -o 'k8s_pod_name=[^ ]*' | tail -1
+```console
+root@cks-w1:~# journalctl -u falco-modern-bpf --since -2min | grep 'Alert Grep private keys' | grep -o 'k8s_pod_name=[^ ]*' | tail -1
+k8s_pod_name=indexer-7d5f9f7b4d-zgcnl
 ```
 
-The pod's `app` label names the Deployment `indexer`:
+The pod's `app` label names the Deployment `indexer`, which you scale to zero:
 
-```bash
-k -n m3-run get pod <pod> --show-labels
-echo indexer > /root/mock/key-hunter.txt
-k -n m3-run scale deploy indexer --replicas=0
+```console
+root@cks-cp:~# k -n m3-run get pod <pod> --show-labels
+NAME                       READY   STATUS    RESTARTS   AGE   LABELS
+indexer-7d5f9f7b4d-zgcnl   1/1     Running   0          16m   app=indexer,pod-template-hash=7d5f9f7b4d
+root@cks-cp:~# echo indexer > /root/mock/key-hunter.txt
+root@cks-cp:~# k -n m3-run scale deploy indexer --replicas=0
+deployment.apps/indexer scaled
 ```
 
-`indexer` runs `grep -rs "BEGIN RSA PRIVATE" /etc` in a loop, which matches the rule's macro `private_key_or_password`. The alert line starts with the new priority, `Alert`, once the override has loaded.
+The transcript ran the first command with the pod name that the alert printed in place of `<pod>`.
+
+`indexer` runs `grep -rs "BEGIN RSA PRIVATE" /etc` in a loop, which matches the rule's macro `private_key_or_password`, and once the override has loaded, the alert line starts with the new priority, `Alert`.
 
 </details>
 
@@ -421,7 +507,7 @@ rules:
 - level: None
 ```
 
-Deployments live in the API group `apps`, not in the core group `""`. With `group: ""`, the rule never matches a Deployment. The flags and the two volumes follow [06, task 1](06-monitoring-logging-runtime-security.md#task-1-turn-on-audit-logging).
+Deployments live in the API group `apps`, not in the core group `""`, so with `group: ""` the rule never matches a Deployment. The flags and the two volumes follow [06, task 1](06-monitoring-logging-runtime-security.md#task-1-turn-on-audit-logging).
 
 </details>
 
@@ -434,8 +520,8 @@ Deployments live in the API group `apps`, not in the core group `""`. With `grou
 <details>
 <summary>Solution</summary>
 
-```bash
-cp /root/mock/no-mkdir.json /var/lib/kubelet/seccomp/m3.json          # on cks-w1
+```console
+root@cks-w1:~# mkdir -p /var/lib/kubelet/seccomp && cp /root/mock/no-mkdir.json /var/lib/kubelet/seccomp/m3.json          # on cks-w1
 ```
 
 ```yaml
@@ -455,7 +541,7 @@ spec:
   volumes: [{name: data, emptyDir: {}}]
 ```
 
-`k -n m3-sec exec locked -- mkdir /data/d` fails with `Operation not permitted`, while `echo ok > /data/f` works. The read-only root alone would allow both in `/data`; the seccomp profile makes the difference.
+A fresh kubeadm node has no `/var/lib/kubelet/seccomp` folder until somebody creates it, which is why the command starts with `mkdir -p`. Afterwards, `k -n m3-sec exec locked -- mkdir /data/d` fails with `Operation not permitted`, while `echo ok > /data/f` works. The read-only root alone would allow both in `/data`, so the seccomp profile makes the difference.
 
 </details>
 
@@ -463,6 +549,6 @@ spec:
 
 `score.sh` runs two to five checks per task, splits the task's points evenly over them, rounded down, and gives points only when a task's first check passes.
 
-In the final test run, on clusters fresh from both resets and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` with `TIME: 3 minutes since setup, 117 minutes left.` After `MOCK=3 ./certs/cks/mock-exam/solve.sh`, which applies every solution above in its order (13, 8, 1, 11, 4, 16, then the rest) in 7 minutes 47 seconds, it was `TOTAL: 100 of 100 points (100%).` The solve order is the lesson: the API server first, then the authorizer that keeps restarting it, then the scheduler and controller manager, and only then everything that needs a working cluster.
+In the final test run, on clusters fresh from both resets and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` with `TIME: 3 minutes since setup, 117 minutes left.` After `MOCK=3 ./certs/cks/mock-exam/solve.sh`, which applies every solution above in its order (13, 8, 1, 11, 4, 16, then the rest) in 7 minutes 47 seconds, it was `TOTAL: 100 of 100 points (100%).` The solve order is the lesson, because each layer needs the one below it: the API server first, then the authorizer that keeps restarting it, then the scheduler and controller manager, and only then everything that needs a working cluster.
 
-Three things broke the first test runs of this mock, and each became part of the text. Under `AlwaysAllow`, the API server's health probes get `401`, so the kubelet kills it every few minutes. Without a controller manager, a new namespace gets no `default` ServiceAccount, so no pod starts in it. And a check that asks "is it gone?" passes on a dead API server, so every such check here also asks the API server something that must succeed.
+Three things broke the first test runs of this mock, and each became part of the text. Under `AlwaysAllow`, the API server's health probes get `401`, so the kubelet kills it every few minutes. Without a controller manager, a new namespace gets no `default` ServiceAccount, so no pod starts in it. A check that asks "is it gone?" also passes on a dead API server, so every such check here also asks the API server something that must succeed.

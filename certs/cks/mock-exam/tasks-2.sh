@@ -219,14 +219,14 @@ m6_web() { as_m2 docs get deployment.apps/web && as_m2 docs patch deployment.app
 m6_not_api() { ! as_m2 docs patch deployment.apps/api; }
 score_m6() {
   check_cp "/root/mock/exec-sa.txt names docs" "grep -qx docs /root/mock/exec-sa.txt"
-  check "docs may no longer exec into pods anywhere" bash -c "! orb -m $CKS_CP -u root kubectl auth can-i create pods/exec -A --as=system:serviceaccount:m2-team:docs"
+  check "docs may no longer exec into pods anywhere" bash -c "! orb -m $CKS_CP -u root kubectl auth can-i create pods --subresource=exec -A --as=system:serviceaccount:m2-team:docs"
   check "docs may get and patch Deployment web" m6_web
   check "docs may not patch Deployment api" m6_not_api
   check "ci keeps its rights" as_m2 ci list pods
 }
 solve_m6() {
   oncp <<'EOF'
-for sa in ci docs ops; do echo "$sa $(kubectl auth can-i create pods/exec -A --as=system:serviceaccount:m2-team:$sa)"; done
+for sa in ci docs ops; do echo "$sa $(kubectl auth can-i create pods --subresource=exec -A --as=system:serviceaccount:m2-team:$sa)"; done
 echo docs > /root/mock/exec-sa.txt
 kubectl delete clusterrolebinding debug-helper
 kubectl -n m2-team create role restart-web --verb=get,patch --resource=deployments.apps --resource-name=web

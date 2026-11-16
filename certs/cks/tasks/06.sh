@@ -253,6 +253,7 @@ setup_6_6() {
     solve_6_1
   fi
   oncp <<'EOF'
+mkdir -p /root/cks && rm -f /root/cks/culprit.txt
 kubectl create ns team-x --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 for i in $(seq 1 30); do kubectl -n team-x get sa default >/dev/null 2>&1 && break; sleep 1; done
 for sa in ci-bot docs-bot; do kubectl -n team-x create sa $sa 2>/dev/null; done
@@ -318,7 +319,8 @@ falco_sees() {  # falco_sees "<command in falco-test/target>" "<regex in the jou
     since="$(w1_sh 'date "+%Y-%m-%d %H:%M:%S"')"
     k -n falco-test exec target -- sh -c "$1" >/dev/null 2>&1
     sleep 2
-    w1_sh "journalctl -u falco-modern-bpf --since '$since' --no-pager | grep -qE '$2'" && return 0
+    # grep -v journalctl: a rule that logs shells would log this very command line, pattern included
+    w1_sh "journalctl -u falco-modern-bpf --since '$since' --no-pager | grep -v journalctl | grep -qE '$2'" && return 0
   done
   return 1
 }
@@ -356,18 +358,23 @@ EOF
 # ---- Task 8: change what a default Falco rule does ----------------------------------------------
 setup_6_8() {
   setup_6_7 >/dev/null
-  w1_sh 'rm -f /etc/falco/rules.d/cks-override.yaml; dpkg -V falco | grep falco_rules.yaml || echo "  /etc/falco/falco_rules.yaml matches the package"'
+  # Removing an override makes Falco reload. Wait for it, or the check still sees the old rules.
+  w1_sh 'f=/etc/falco/rules.d/cks-override.yaml
+    if [ -f $f ]; then since="$(date "+%Y-%m-%d %H:%M:%S")"; rm -f $f
+      for i in $(seq 1 15); do journalctl -u falco-modern-bpf --since "$since" --no-pager | grep -v journalctl | grep -q "Loading rules" && break; sleep 2; done; sleep 3; fi
+    dpkg -V falco | grep falco_rules.yaml || echo "  /etc/falco/falco_rules.yaml matches the package"'
 }
 # A shell with a terminal needs a TTY: script(1) gives kubectl one.
 tty_shell() { cp_sh "script -qec \"kubectl -n falco-test exec -it target -- sh -c 'echo $1'\" /dev/null"; }
-falco_tty_alert_since() { w1_sh "journalctl -u falco-modern-bpf --since '$1' --no-pager | grep -q 'shell was spawned in a container with an attached terminal.*k8s_ns_name=falco-test'"; }
+falco_tty_alert_since() { w1_sh "journalctl -u falco-modern-bpf --since '$1' --no-pager | grep -v journalctl | grep -q 'shell was spawned in a container with an attached terminal.*k8s_ns_name=falco-test'"; }
+falco_no_tty_alert_since() { ! falco_tty_alert_since "$1"; }
 check_6_8() {
   check_w1 "/etc/falco/falco_rules.yaml is unchanged" "! dpkg -V falco | grep -q falco_rules.yaml"
   check "reading /etc/shadow in falco-test/target raises a Critical alert" \
     falco_sees "cat /etc/shadow" "Critical Sensitive file opened for reading by non-trusted program.*k8s_ns_name=falco-test"
   local since; since="$(w1_sh 'date "+%Y-%m-%d %H:%M:%S"')"
   tty_shell "tty$RANDOM" >/dev/null 2>&1; sleep 4
-  check "a shell with a terminal in falco-test/target raises no alert" bash -c "! falco_tty_alert_since '$since'"
+  check "a shell with a terminal in falco-test/target raises no alert" falco_no_tty_alert_since "$since"
 }
 solve_6_8() {
   onw1 <<'EOF'

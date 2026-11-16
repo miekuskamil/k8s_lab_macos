@@ -193,7 +193,7 @@ check_2_5() {
   check "prom lists endpoints in every namespace" as_prom list endpoints -A
   check "prom watches services in every namespace" as_prom watch services -A
   check "prom still lists pods" as_prom list pods -A
-  check "prom may no longer exec into pods" bash -c "! orb -m $CKS_CP -u root kubectl auth can-i create pods/exec -A --as=system:serviceaccount:monitoring:prom"
+  check "prom may no longer exec into pods" bash -c "! orb -m $CKS_CP -u root kubectl auth can-i create pods --subresource=exec -A --as=system:serviceaccount:monitoring:prom"
   check_cp "monitoring-reader still aggregates, with no rules of its own written by hand" \
     "kubectl get clusterrole monitoring-reader -o jsonpath='{.aggregationRule.clusterRoleSelectors[0].matchLabels}' | grep -q aggregate-to-monitoring"
 }
