@@ -32,6 +32,8 @@ for m in cks-w1 cks-cp; do
   on "$m" '
     kubeadm reset -f >/dev/null 2>&1 || true
     rm -rf /etc/cni/net.d/* /var/lib/etcd /var/lib/kubelet/* /etc/kubeadm /root/.kube /var/log/kubernetes
+    # kubeadm reset leaves folders it did not create, so the folders the tasks add go too.
+    rm -rf /etc/kubernetes/admission /etc/kubernetes/enc /etc/kubernetes/audit /etc/kubernetes/auth
     H=$(getent passwd '"$CKS_NODE_USER"' | cut -d: -f6); rm -rf "$H/.kube"
     iptables-save | grep -v -E "KUBE|cali" | iptables-restore 2>/dev/null || true
     ip link delete tunl0 2>/dev/null || true
