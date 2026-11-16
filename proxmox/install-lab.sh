@@ -39,7 +39,7 @@ die() { printf 'fail  %s\n' "$*" >&2; exit 1; }
 . /etc/os-release
 [ "$ID" = ubuntu ] || die "this script expects Ubuntu, found $PRETTY_NAME"
 [ "$VERSION_ID" = 24.04 ] || printf 'warn  tested on Ubuntu 24.04, this is %s\n' "$VERSION_ID"
-sudo -v || die "your user needs sudo rights"
+sudo -n true 2>/dev/null || sudo -v || die "your user needs sudo rights"
 ARCH="$(dpkg --print-architecture)"
 case "$ARCH" in amd64|arm64) ;; *) die "no lab tools for architecture $ARCH" ;; esac
 start=$(date +%s)
