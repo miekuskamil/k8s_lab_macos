@@ -268,7 +268,7 @@ check_5_8() {
   local want
   want="$(w1_sh "crictl inspecti -o json docker.io/library/nginx:1.27-alpine | python3 -c 'import json,sys; print(json.load(sys.stdin)[\"status\"][\"repoDigests\"][0].split(\"@\")[1])'")"
   check "the digest is the one nginx:1.27-alpine had on the node" \
-    bash -c "[ -n \"\$1\" ] && orb -m $CKS_CP -u root kubectl -n pinned get deploy web -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -qF \"\$1\"" _ "$want"
+    bash -c "[ -n \"\$1\" ] && k -n pinned get deploy web -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -qF \"\$1\"" _ "$want"
   check_cp "the Deployment has a ready pod" "kubectl -n pinned rollout status deploy web --timeout=90s"
 }
 solve_5_8() {
@@ -302,7 +302,7 @@ critical_images() {
 check_5_9() {
   local want; want="$(critical_images)"
   check "/root/cks/critical-images.txt lists exactly the images with CRITICAL findings" \
-    bash -c "[ -n \"\$1\" ] && [ \"\$1\" = \"\$(orb -m $CKS_CP -u root cat /root/cks/critical-images.txt 2>/dev/null | sort)\" ]" _ "$want"
+    bash -c "[ -n \"\$1\" ] && [ \"\$1\" = \"\$(cp_sh cat /root/cks/critical-images.txt 2>/dev/null | sort)\" ]" _ "$want"
   check_cp "the Deployments running those images are scaled to 0" \
     "for d in prod-a/web prod-b/cache; do r=\$(kubectl -n \${d%/*} get deploy \${d#*/} -o jsonpath='{.spec.replicas}'); [ \"\$r\" = 0 ] || exit 1; done"
   check_cp "the Deployments with clean images keep their replica" \
@@ -341,7 +341,7 @@ risky_sboms() {
 check_5_10() {
   local want; want="$(risky_sboms)"
   check "/root/cks/risky-sboms.txt names exactly the SBOMs with CRITICAL findings" \
-    bash -c "[ -n \"\$1\" ] && [ \"\$1\" = \"\$(orb -m $CKS_CP -u root cat /root/cks/risky-sboms.txt 2>/dev/null | sort)\" ]" _ "$want"
+    bash -c "[ -n \"\$1\" ] && [ \"\$1\" = \"\$(cp_sh cat /root/cks/risky-sboms.txt 2>/dev/null | sort)\" ]" _ "$want"
 }
 solve_5_10() {
   oncp <<'EOF'

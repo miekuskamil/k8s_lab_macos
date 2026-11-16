@@ -183,7 +183,7 @@ setup_1_5() {
   oncp <<'EOF'
 mkdir -p /opt/cks/bin && cd /opt/cks/bin
 for b in kubectl kube-proxy; do
-  [ -f "$b" ] || curl -fsSL -o "$b" "https://dl.k8s.io/release/v1.37.1/bin/linux/arm64/$b"
+  [ -f "$b" ] || curl -fsSL -o "$b" "https://dl.k8s.io/release/v1.37.1/bin/linux/$(dpkg --print-architecture)/$b"
 done
 chmod 755 kubectl kube-proxy
 # Someone "patched" kube-proxy: one extra byte changes the checksum.
@@ -194,13 +194,13 @@ EOF
 check_1_5() {
   check "the tampered kube-proxy is gone" cp_sh 'test ! -e /opt/cks/bin/kube-proxy'
   check "kubectl stays, and matches the official v1.37.1 sha512" \
-    cp_sh 'cd /opt/cks/bin && echo "$(curl -fsSL https://dl.k8s.io/release/v1.37.1/bin/linux/arm64/kubectl.sha512) kubectl" | sha512sum -c'
+    cp_sh 'cd /opt/cks/bin && echo "$(curl -fsSL https://dl.k8s.io/release/v1.37.1/bin/linux/$(dpkg --print-architecture)/kubectl.sha512) kubectl" | sha512sum -c'
 }
 solve_1_5() {
   oncp <<'EOF'
 cd /opt/cks/bin
 for b in kubectl kube-proxy; do
-  echo "$(curl -fsSL https://dl.k8s.io/release/v1.37.1/bin/linux/arm64/$b.sha512) $b" | sha512sum -c || rm -f "$b"
+  echo "$(curl -fsSL https://dl.k8s.io/release/v1.37.1/bin/linux/$(dpkg --print-architecture)/$b.sha512) $b" | sha512sum -c || rm -f "$b"
 done
 EOF
 }

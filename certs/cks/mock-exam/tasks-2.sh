@@ -36,6 +36,7 @@ eventually_long() {
 }
 mk_ns() { cp_sh "for n in $*; do kubectl create ns \$n --dry-run=client -o yaml | kubectl apply -f - >/dev/null; done; for n in $*; do for i in \$(seq 1 30); do kubectl -n \$n get sa default >/dev/null 2>&1 && break; sleep 1; done; done"; }
 mk_ns_lima() { lima_sh "for n in $*; do kubectl create ns \$n --dry-run=client -o yaml | kubectl apply -f - >/dev/null; done; for n in $*; do for i in \$(seq 1 30); do kubectl -n \$n get sa default >/dev/null 2>&1 && break; sleep 1; done; done"; }
+mk_ns_kern() { kern_sh "for n in $*; do kubectl create ns \$n --dry-run=client -o yaml | kubectl apply -f - >/dev/null; done; for n in $*; do for i in \$(seq 1 30); do kubectl -n \$n get sa default >/dev/null 2>&1 && break; sleep 1; done; done"; }
 
 # ---- 1. The API server is down (8) -----------------------------------------------------------------
 setup_m1() {
@@ -219,7 +220,7 @@ m6_web() { as_m2 docs get deployment.apps/web && as_m2 docs patch deployment.app
 m6_not_api() { ! as_m2 docs patch deployment.apps/api; }
 score_m6() {
   check_cp "/root/mock/exec-sa.txt names docs" "grep -qx docs /root/mock/exec-sa.txt"
-  check "docs may no longer exec into pods anywhere" bash -c "! orb -m $CKS_CP -u root kubectl auth can-i create pods --subresource=exec -A --as=system:serviceaccount:m2-team:docs"
+  check "docs may no longer exec into pods anywhere" bash -c "! k auth can-i create pods --subresource=exec -A --as=system:serviceaccount:m2-team:docs"
   check "docs may get and patch Deployment web" m6_web
   check "docs may not patch Deployment api" m6_not_api
   check "ci keeps its rights" as_m2 ci list pods
@@ -287,10 +288,10 @@ score_m8() {
 }
 solve_m8() { w1_sh 'systemctl disable --now node-exporter-lite; rm -f /etc/systemd/system/node-exporter-lite.service /opt/.cache/nel; systemctl daemon-reload'; }
 
-# ---- 9. AppArmor for the web Deployment (7, Lima) ---------------------------------------------------------------
+# ---- 9. AppArmor for the web Deployment (7, Lima, or cks-w1 on VMs) ---------------------------------------------------------------
 setup_m9() {
-  mk_ns_lima m2-aa
-  onlima <<'EOF'
+  mk_ns_kern m2-aa
+  onkern <<'EOF'
 mkdir -p /root/mock
 cat > /root/mock/m2-profile <<'PROFILE'
 #include <tunables/global>
@@ -310,14 +311,14 @@ kubectl -n m2-aa create deploy web --image=nginx:1.27-alpine 2>/dev/null
 EOF
 }
 score_m9() {
-  check_lima "Deployment web asks for the Localhost profile m2-readonly-html" \
+  check_kern "Deployment web asks for the Localhost profile m2-readonly-html" \
     "kubectl -n m2-aa get deploy web -o jsonpath='{.spec.template.spec.containers[0].securityContext.appArmorProfile.type}/{.spec.template.spec.containers[0].securityContext.appArmorProfile.localhostProfile}{.spec.template.spec.securityContext.appArmorProfile.type}/{.spec.template.spec.securityContext.appArmorProfile.localhostProfile}' | grep -q 'Localhost/m2-readonly-html'"
-  check_lima "the profile is loaded in enforce mode" "aa-status 2>/dev/null | sed -n '/profiles are in enforce mode/,/profiles are in complain mode/p' | grep -qx '   m2-readonly-html'"
-  check_lima "web runs, and a write to /etc/nginx fails" \
+  check_kern "the profile is loaded in enforce mode" "aa-status 2>/dev/null | sed -n '/profiles are in enforce mode/,/profiles are in complain mode/p' | grep -qx '   m2-readonly-html'"
+  check_kern "web runs, and a write to /etc/nginx fails" \
     "kubectl -n m2-aa rollout status deploy web --timeout=60s && kubectl -n m2-aa exec deploy/web -- sh -c 'echo x >> /etc/nginx/nginx.conf' 2>&1 | grep -q 'Permission denied'"
 }
 solve_m9() {
-  onlima <<'EOF'
+  onkern <<'EOF'
 cp /root/mock/m2-profile /etc/apparmor.d/m2-readonly-html
 apparmor_parser -r /etc/apparmor.d/m2-readonly-html
 kubectl -n m2-aa patch deploy web --type=json -p='[{"op":"add","path":"/spec/template/spec/containers/0/securityContext","value":{"appArmorProfile":{"type":"Localhost","localhostProfile":"m2-readonly-html"}}}]'
@@ -452,7 +453,7 @@ score_m14() {
   local want
   want="$(w1_sh "crictl inspecti -o json docker.io/library/busybox:1.36 | python3 -c 'import json,sys; print(json.load(sys.stdin)[\"status\"][\"repoDigests\"][0].split(\"@\")[1])'")"
   check "Deployment worker names busybox:1.36 by its digest" \
-    bash -c "[ -n \"\$1\" ] && orb -m $CKS_CP -u root kubectl -n m2-pin get deploy worker -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -qE \"busybox(:1.36)?@\$1\"" _ "$want"
+    bash -c "[ -n \"\$1\" ] && k -n m2-pin get deploy worker -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -qE \"busybox(:1.36)?@\$1\"" _ "$want"
   check_cp "worker has a ready pod" "kubectl -n m2-pin rollout status deploy worker --timeout=90s"
 }
 solve_m14() {
