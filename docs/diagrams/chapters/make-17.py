@@ -10,35 +10,41 @@ OUT = Path(__file__).resolve().parent
 
 
 def ask():
-    c = Canvas(1840, 870)
-    c.title("One Question to the", "Assistant")
+    c = Canvas(1600, 900)
+    c.title("One question to the", "assistant")
     c.subtitle("The assistant fetches recent orders, then asks the model. The waypoint checks both calls.")
-    top, low = 290, 630
-    c.node(60, top, 300, 110, SLATE, "You", "laptop", "curl")
-    c.node(520, top, 320, 110, BLUE, "Ingress gateway", "shield")
-    c.node(1000, top, 320, 110, SLATE, "assistant", "cube")
-    c.node(520, low, 320, 110, SLATE, "backend", "cube")
-    c.node(1000, low, 320, 110, PURPLE, "Waypoint", "shield")
-    c.node(1480, low, 300, 110, SLATE, "Ollama", "laptop", "on your Mac")
 
-    c.arrow([(360, top + 55), (520, top + 55)], "POST\n/api/ask", n=1, at=(440, top + 55), pos="below")
-    c.arrow([(840, top + 55), (1000, top + 55)], "route\n/api/ask", n=2, at=(920, top + 55), pos="below")
-    # assistant to waypoint carries two calls
-    c.arrow([(1200, top + 116), (1200, low)])
-    c.step(1200, top + 175, 3)
-    c.text(1230, top + 182, "GET /api/orders", 18, INK, True)
-    c.step(1200, top + 265, 6)
-    c.text(1230, top + 260, "POST /api/chat", 18, INK, True)
-    c.text(1230, top + 283, "orders + question", 18, INK, True)
-    c.arrow([(1000, low + 55), (840, low + 55)], "allowed for\nsa/assistant?", n=4, at=(920, low + 55), pos="below")
-    c.arrow([(1320, low + 55), (1480, low + 55)], "allowed?\nthen forward", n=7, at=(1400, low + 55), pos="below")
-    c.arrow([(780, low), (780, 500), (1060, 500), (1060, top + 116)], "10 orders\n5 ms",
-            n=5, at=(900, 500), pos="above")
-    c.arrow([(1630, low), (1630, top + 55), (1320, top + 55)], "answer\n1 to 10 s",
-            n=8, at=(1630, 480), pos="left")
-    c.arrow([(1160, top), (1160, 200), (210, 200), (210, top)], "answer, tokens, seconds, trace_id",
-            n=9, at=(700, 200), pos="below")
-    c.note(60, 830, ["Replies 5, 8 and 9 return through the same proxies."], 17)
+    c.frame(40, 150, 300, 710, "Your Mac", "host")
+    you = c.node(70, 220, 240, 110, SLATE, "curl", "terminal", "POST /api/ask")
+    oll = c.node(70, 690, 240, 110, PINK, "Ollama", "sparkle", "qwen2.5:3b")
+
+    c.frame(400, 150, 1160, 710, "Cluster", "cluster")
+    c.frame(430, 190, 340, 190, "namespace shop-ingress", "ns")
+    gw = c.node(460, 230, 280, 110, BLUE, "gateway", "shield", "routes /api/ask")
+    c.frame(430, 420, 1100, 410, "namespace shop", "ns")
+    asst = c.frame(460, 470, 260, 160, "assistant pod", "pod")
+    c.box(485, 520, 210, 80, SLATE, "app", "builds the prompt")
+    wp = c.frame(880, 470, 300, 240, "waypoint pod", "plain", col=BLUE, icon="shield")
+    c.box(905, 525, 250, 150, BLUE, "Envoy", "checks both calls\nfor sa/assistant")
+    be = c.frame(1330, 470, 180, 160, "backend pod", "pod")
+    c.box(1350, 520, 140, 80, SLATE, "app")
+
+    c.connect(you, gw, "", n=1, sa="right", sb="left", at=(370, 285))
+    c.connect(gw, asst, "", n=2, sa="bottom", sb="top", fa=0.5, fb=(600 - 460) / 260, at=(600, 400))
+    c.connect(asst, wp, "", n=3, sa="right", sb="left", fa=(510 - 470) / 160, fb=(510 - 470) / 240, at=(800, 510))
+    c.connect(wp, be, "GET orders", sa="right", sb="left", fa=(510 - 470) / 240, fb=(510 - 470) / 160,
+              pos="above", at=(1255, 510))
+    c.text(1255, 548, "about 5 ms", 16, SOFT, False, "middle")
+    c.connect(asst, wp, "", n=4, sa="right", sb="left", fa=(590 - 470) / 160, fb=(590 - 470) / 240, at=(800, 590))
+    c.line([(1030, 710), (1030, 740), (310, 740)], LINE, AW, head=True)
+    c.text(660, 730, "POST /api/chat: orders + question", 17, INK, True, "middle", halo=True)
+    c.line([(310, 780), (590, 780), (590, 630)], PINK, AW, dashed=True, head=True)
+    c.step(450, 780, 5)
+    c.text(476, 810, "answer, 1 to 10 s", 17, DEEP[PINK], True, halo=True)
+    c.line([(460, 560), (190, 560), (190, 330)], SLATE, AW, dashed=True, head=True)
+    c.step(190, 445, 6)
+    c.text(214, 440, "answer, tokens,", 16, SOFT, True, halo=True)
+    c.text(214, 462, "seconds, trace_id", 16, SOFT, True, halo=True)
     c.save(OUT, "17-assistant-flow")
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw "Istio in one picture" in ByteByteGo style (see bbg.py): the lab's request
+"""Draw "Istio in one picture" with the kit in bbg.py: the lab's request
 path, with every Istio resource placed under the proxy that enforces it.
 
 The circled numbers match "Follow one request" in platform-engineering/start-here.md.
@@ -20,101 +20,82 @@ OUT = Path(__file__).resolve().parent
 TRAFFIC, SECURITY, OBSERVE = TEAL, RED, GREEN
 
 
-def resource(c, x, y, w, col, name, lines, module):
-    h = 46 + 22 * len(lines)
-    c.rect(x, y, w, h, col, "#2a2b33", rx=12, sw=2.5)
-    c.rect(x, y + 12, 6, h - 24, col, col, rx=3, sw=1)
-    c.text(x + 22, y + 32, name, 20, INK, True)
-    c.text(x + w - 14, y + 31, module, 15, DIM, True, "end")
-    for i, t in enumerate(lines):
-        c.text(x + 22, y + 58 + i * 22, t, 16, SOFT)
-    return y + h + 16
+def card(c, x, y, w, col, name, line, module):
+    c.rect(x, y, w, 64, col, WHITE, 10, 1.6)
+    c.rect(x, y + 10, 5, 44, col, col, 2, 0)
+    c.text(x + 18, y + 27, name, 17, INK, True)
+    c.text(x + 18, y + 51, line, 15, SOFT)
+    if module:
+        c.text(x + w - 12, y + 27, module, 13, DIM, True, "end")
+    return y + 74
 
 
 def column(c, x, y, w, title, items):
-    top = y
-    y += 30
-    for col, name, lines, module in items:
-        y = resource(c, x + 20, y, w - 40, col, name, lines, module)
-    c.group(x, top, w, y - top + 14, title)
+    c.text(x, y, title, 17, SOFT, True)
+    y += 14
+    for col, name, line, module in items:
+        y = card(c, x, y, w, col, name, line, module)
+    return y
 
 
 def picture():
-    c = Canvas(1960, 1280)
+    c = Canvas(1600, 1300)
     c.title("Istio in", "one picture")
-    c.subtitle("Each resource you write acts at one proxy.")
+    c.subtitle("Each resource you write acts at one proxy. istiod turns them into proxy config.")
 
-    # control plane on top
-    c.node(560, 175, 470, 110, PURPLE, "istiod", "gear", "config and certificates")
-    c.node(60, 175, 300, 110, SLATE, "Browser", "laptop", "or curl, outside")
-    c.node(1500, 175, 400, 110, SLATE, "httpbin.org", "globe", "outside the cluster")
+    c.frame(40, 150, 260, 170, "Your Mac", "host")
+    br = c.box(65, 205, 210, 90, SLATE, "Browser", "or curl")
+    c.frame(1300, 150, 260, 170, "Internet", "plain", icon="globe")
+    web = c.box(1325, 205, 210, 90, SLATE, "httpbin.org")
 
-    # request path
-    y = 420
-    c.node(60, y, 300, 120, BLUE, "Ingress\ngateway", "shield", "Envoy · north-south")
-    c.node(450, y, 260, 120, SLATE, "frontend", "cube", "your pod")
-    c.node(800, y, 300, 120, BLUE, "Waypoint", "shield", "Envoy · reads HTTP")
-    c.group(1190, y - 20, 470, 160, "backend")
-    c.node(1210, y, 205, 120, SLATE, "v1", "cube", "2 pods")
-    c.node(1435, y, 205, 120, SLATE, "v2", "cube", "1 pod")
-    c.node(1740, y, 185, 120, SLATE, "redis", None, "only the backend")
-    c.step(60, y, 2)
-    c.step(800, y, 5)
+    c.frame(40, 360, 1520, 910, "Cluster", "cluster")
+    c.frame(960, 390, 300, 120, "namespace istio-system", "ns")
+    ist = c.box(980, 440, 260, 56, PURPLE, "istiod", size=18)
 
-    c.arrow([(210, 285), (210, 420)], "HTTP", n=1, at=(210, 352), dashed=False)
-    c.arrow([(1070, 420), (1070, 335), (1700, 335), (1700, 285)], "egress", n=7, at=(1400, 335), pos="above",
-            col=SOFT)
-    c.arrow([(1660, 480), (1740, 480)], "")
+    c.frame(70, 540, 1460, 400, "Node", "node")
+    c.frame(95, 590, 250, 200, "shop-ingress", "ns")
+    gw = c.box(115, 650, 210, 110, BLUE, "ingress\ngateway", "Envoy")
+    c.frame(370, 590, 1135, 200, "namespace shop", "ns", right="your pods and the waypoint")
+    fe = c.box(390, 650, 190, 110, SLATE, "frontend", "your pod")
+    wp = c.box(620, 650, 230, 110, BLUE, "waypoint", "Envoy, reads HTTP")
+    v1 = c.box(890, 650, 180, 110, SLATE, "backend v1", "2 pods")
+    v2 = c.box(1090, 650, 180, 110, SLATE, "backend v2", "1 pod")
+    rd = c.box(1310, 650, 175, 110, ORANGE, "redis", "only the backend")
+    zt = c.band(95, 820, 1410, 100, BLUE, "ztunnel", "per node, HBONE :15008", "tunnel", lx=1220, ly=870)
 
-    # xDS from istiod to every proxy
-    c.line([(600, 285), (600, 330), (330, 330), (330, 420)], PURPLE, 2.5, True, head=True)
-    c.line([(900, 285), (900, 420)], PURPLE, 2.5, True, head=True)
-    c.line([(775, 285), (775, 640)], PURPLE, 2.5, True, head=True)
-    c.text(765, 400, "xDS", 17, "#b794f6", True, "end")
+    def hop(xa, xb, y, n=None, label=""):
+        c.line([(xa, 760), (xa, y), (xb, y), (xb, 760)], BLUE, 4, head=True)
+        if n:
+            c.step((xa + xb) / 2, y, n)
 
-    # ztunnel: every hop between pods
-    zy = 640
-    c.node(60, zy, 1840, 100, BLUE, "ztunnel", "tunnel",
-           "one per node · HBONE :15008 · L4 only")
-    hops = [(300, zy, "down", 3, "HBONE"), (520, zy, "up", None, ""),
-            (640, zy, "down", 4, "to backend"), (870, zy, "up", None, ""),
-            (1040, zy, "down", 6, "HBONE"), (1310, zy, "up", None, "90%"), (1540, zy, "up", None, "10%")]
-    for x, _, way, n, label in hops:
-        if way == "down":
-            c.arrow([(x, 540), (x, zy)], label, n=n, at=(x, 590), pos="right", dashed=False)
-        else:
-            c.arrow([(x, zy), (x, 540)], label, at=(x, 590), pos="right", dashed=False)
+    hop(270, 440, 845, 3)
+    hop(530, 680, 845, 4)
+    hop(800, 960, 845, 6)
+    hop(800, 1180, 870)
+    c.connect(br, gw, "HTTP :8080", n=1, sa="bottom", sb="top", fa=0.5, fb=(170 - 115) / 210, pos="right",
+              at=(170, 470))
+    c.step(gw.x, gw.y, 2)
+    c.step(wp.x, wp.y, 5)
+    c.connect(wp, web, "egress", n=7, sa="top", sb="left", fa=0.7, fb=0.5, pos="above", at=(1000, 250))
+    c.connect(ist, Box(70, 540, 1460, 400), "xDS, certificates", sa="bottom", sb="top", fb=(1110 - 70) / 1460, dashed=True, col=PURPLE,
+              pos="right")
 
-    # resources, grouped by the proxy that enforces them
-    ry = 800
-    column(c, 40, ry, 450, "2 · At the ingress gateway", [
-        (TRAFFIC, "Gateway", ["ports 8080, 8443, TLS"], "M11"),
-        (TRAFFIC, "HTTPRoute", ["path / to frontend"], ""),
-        (SECURITY, "RequestAuthentication", ["checks user JWT"], "M13"),
-        (SECURITY, "AuthorizationPolicy", ["token for /api/*"], "M13")])
-    column(c, 510, ry, 470, "5 · At the waypoint", [
-        (SECURITY, "AuthorizationPolicy L7", ["WHETHER: only sa/frontend"], "M3"),
-        (TRAFFIC, "HTTPRoute / VirtualService", ["WHERE: 90/10 split"], "M4 M5"),
-        (TRAFFIC, "DestinationRule", ["HOW: pool, ejection, TLS"], "M5 M12")])
-    column(c, 1000, ry, 440, "3 · 6 · At ztunnel", [
-        (SECURITY, "PeerAuthentication", ["STRICT: mTLS only"], "M2"),
-        (SECURITY, "AuthorizationPolicy L4", ["only the waypoint"], "M3")])
-    column(c, 1460, ry, 460, "7 · Leaving the mesh", [
-        (TRAFFIC, "ServiceEntry", ["names httpbin.org"], "M12")])
-    column(c, 1460, ry + 180, 460, "Every proxy", [
-        (OBSERVE, "Telemetry", ["traces, logs, metrics"], "M6")])
-
-    # legend
-    lx, ly = 1010, 1090
-    c.text(lx, ly, "Colours", 19, INK, True)
-    items = [(SLATE, "your pod"), (BLUE, "proxy"), (PURPLE, "control plane"),
-             (TRAFFIC, "traffic resource"), (SECURITY, "security resource"), (OBSERVE, "observability")]
-    for i, (col, label) in enumerate(items):
-        x = lx + (i % 2) * 210
-        yy = ly + 32 + (i // 2) * 38
-        c.rect(x, yy - 16, 22, 22, col, col, rx=5, sw=1)
-        c.text(x + 32, yy + 1, label, 16, SOFT)
-    c.text(lx, ly + 150, "M11 = course module 11", 16, DIM, True)
+    y = 990
+    column(c, 70, y, 300, "2  at the ingress gateway", [
+        (TRAFFIC, "Gateway", "ports 8080, 8443, TLS", "M11"),
+        (TRAFFIC, "HTTPRoute", "path / to frontend", ""),
+        (SECURITY, "RequestAuthentication", "checks the user's JWT", "M13")])
+    column(c, 400, y, 340, "5  at the waypoint", [
+        (SECURITY, "AuthorizationPolicy L7", "whether: only sa/frontend", "M3"),
+        (TRAFFIC, "HTTPRoute, VirtualService", "where: 90/10 split", "M4"),
+        (TRAFFIC, "DestinationRule", "how: pool, ejection, TLS", "M5")])
+    column(c, 770, y, 330, "3, 4, 6  at ztunnel", [
+        (SECURITY, "PeerAuthentication", "STRICT: mTLS only", "M2"),
+        (SECURITY, "AuthorizationPolicy L4", "only the waypoint", "M3")])
+    column(c, 1130, y, 400, "7  leaving the mesh, and every proxy", [
+        (TRAFFIC, "ServiceEntry", "names httpbin.org", "M12"),
+        (OBSERVE, "Telemetry", "traces, logs, metrics", "M6")])
+    c.legend(770, 1220, [(BLUE, "mTLS hop through ztunnel"), (PURPLE, "config", True)])
     c.save(OUT, "istio-resources")
 
 

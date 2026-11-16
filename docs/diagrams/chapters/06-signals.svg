@@ -1,105 +1,101 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1760" height="940" viewBox="0 0 1760 940" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
-<rect width="1760" height="940" fill="#1e1f24"/>
-<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
-<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
-<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">Three signals,</text>
-<rect x="354.1" y="26.0" width="229.4" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<text x="368.1" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">four tools</text>
-<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">Left to right: the parts that produce data, the stores that keep it, and the two tools you look at.</text>
-<rect x="40.0" y="190.0" width="520.0" height="710.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
-<text x="300.0" y="178.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">Who produces the data</text>
-<rect x="70.0" y="226.0" width="460.0" height="104.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="70.0" y="220.0" width="460.0" height="104.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="70.0" y="322.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<polygon points="110.0,252.0 128.0,259.0 125.0,280.0 110.0,293.0 95.0,280.0 92.0,259.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
-<polyline points="102.0,272.0 108.0,279.0 119.0,266.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="148.0" y="264.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">gateway Envoy</text>
-<text x="148.0" y="290.0" font-size="16" fill="#ffffffcc" text-anchor="start">L7 metrics · spans</text>
-<rect x="70.0" y="360.0" width="460.0" height="104.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="70.0" y="354.0" width="460.0" height="104.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="70.0" y="456.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<polygon points="110.0,386.0 128.0,393.0 125.0,414.0 110.0,427.0 95.0,414.0 92.0,393.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
-<polyline points="102.0,406.0 108.0,413.0 119.0,400.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="148.0" y="398.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">waypoint Envoy</text>
-<text x="148.0" y="424.0" font-size="16" fill="#ffffffcc" text-anchor="start">L7 metrics · spans</text>
-<rect x="70.0" y="494.0" width="460.0" height="104.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="70.0" y="488.0" width="460.0" height="104.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="70.0" y="590.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<ellipse cx="98.0" cy="540.0" rx="7" ry="16" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
-<polyline points="98.0,524.0 124.0,524.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="98.0,556.0 124.0,556.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<ellipse cx="124.0" cy="540.0" rx="7" ry="16" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<text x="148.0" y="532.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">ztunnel</text>
-<text x="148.0" y="558.0" font-size="16" fill="#ffffffcc" text-anchor="start">L4 metrics</text>
-<rect x="70.0" y="628.0" width="460.0" height="104.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="70.0" y="622.0" width="460.0" height="104.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="70.0" y="724.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<polygon points="110.0,654.0 128.0,664.0 110.0,674.0 92.0,664.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
-<polygon points="92.0,664.0 110.0,674.0 110.0,695.0 92.0,685.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
-<polygon points="128.0,664.0 110.0,674.0 110.0,695.0 128.0,685.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
-<text x="148.0" y="666.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">backend app</text>
-<text x="148.0" y="692.0" font-size="16" fill="#ffffffcc" text-anchor="start">OpenTelemetry SDK: metrics · spans</text>
-<rect x="70.0" y="762.0" width="460.0" height="104.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="70.0" y="756.0" width="460.0" height="104.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="70.0" y="858.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<polygon points="96.0,788.0 116.0,788.0 126.0,798.0 126.0,828.0 96.0,828.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
-<polyline points="103.0,806.0 119.0,806.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="103.0,814.0 119.0,814.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="103.0,822.0 114.0,822.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="148.0" y="800.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">every container</text>
-<text x="148.0" y="826.0" font-size="16" fill="#ffffffcc" text-anchor="start">stdout logs</text>
-<rect x="720.0" y="190.0" width="440.0" height="710.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
-<text x="940.0" y="178.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">Where it lives</text>
-<rect x="760.0" y="246.0" width="360.0" height="120.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
-<rect x="760.0" y="240.0" width="360.0" height="120.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
-<rect x="760.0" y="358.0" width="360.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<rect x="784.0" y="286.0" width="32.0" height="30.0" rx="2" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="800.0" cy="286.0" rx="16" ry="6" fill="#1e1f24" stroke="#f5f5f7" stroke-width="2.2"/>
-<polyline points="784.0,301.0 816.0,301.0" fill="none" stroke="#f5f5f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="838.0" y="292.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Prometheus</text>
-<text x="838.0" y="320.0" font-size="16" fill="#ffffffcc" text-anchor="start">metrics</text>
-<rect x="760.0" y="486.0" width="360.0" height="120.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
-<rect x="760.0" y="480.0" width="360.0" height="120.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
-<rect x="760.0" y="598.0" width="360.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<rect x="784.0" y="526.0" width="32.0" height="30.0" rx="2" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="800.0" cy="526.0" rx="16" ry="6" fill="#1e1f24" stroke="#f5f5f7" stroke-width="2.2"/>
-<polyline points="784.0,541.0 816.0,541.0" fill="none" stroke="#f5f5f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="838.0" y="532.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Jaeger</text>
-<text x="838.0" y="560.0" font-size="16" fill="#ffffffcc" text-anchor="start">traces</text>
-<rect x="760.0" y="766.0" width="360.0" height="120.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
-<rect x="760.0" y="760.0" width="360.0" height="120.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
-<rect x="760.0" y="878.0" width="360.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<rect x="784.0" y="806.0" width="32.0" height="30.0" rx="2" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="800.0" cy="806.0" rx="16" ry="6" fill="#1e1f24" stroke="#f5f5f7" stroke-width="2.2"/>
-<polyline points="784.0,821.0 816.0,821.0" fill="none" stroke="#f5f5f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="838.0" y="812.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Loki</text>
-<text x="838.0" y="840.0" font-size="16" fill="#ffffffcc" text-anchor="start">logs</text>
-<polyline points="560.0,300.0 760.0,300.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<text x="660.0" y="288.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">metrics</text>
-<polyline points="560.0,540.0 760.0,540.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<text x="660.0" y="528.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">spans</text>
-<polyline points="530.0,810.0 760.0,810.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<text x="645.0" y="775.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">Alloy reads</text>
-<text x="645.0" y="798.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">via the API</text>
-<rect x="1320.0" y="190.0" width="400.0" height="710.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
-<text x="1520.0" y="178.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">Where you look</text>
-<rect x="1360.0" y="366.0" width="320.0" height="120.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
-<rect x="1360.0" y="360.0" width="320.0" height="120.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
-<rect x="1360.0" y="478.0" width="320.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<ellipse cx="1400.0" cy="420.0" rx="20" ry="11" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
-<ellipse cx="1400.0" cy="420.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<text x="1438.0" y="412.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Kiali</text>
-<text x="1438.0" y="440.0" font-size="16" fill="#ffffffcc" text-anchor="start">mesh map</text>
-<rect x="1360.0" y="626.0" width="320.0" height="120.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
-<rect x="1360.0" y="620.0" width="320.0" height="120.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
-<rect x="1360.0" y="738.0" width="320.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<ellipse cx="1400.0" cy="680.0" rx="20" ry="11" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
-<ellipse cx="1400.0" cy="680.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<text x="1438.0" y="672.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Grafana</text>
-<text x="1438.0" y="700.0" font-size="16" fill="#ffffffcc" text-anchor="start">graphs over time</text>
-<polyline points="1120.0,260.0 1705.0,260.0 1705.0,680.0 1680.0,680.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<polyline points="1120.0,320.0 1190.0,320.0 1190.0,400.0 1360.0,400.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<polyline points="1120.0,510.0 1190.0,510.0 1190.0,450.0 1360.0,450.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<polyline points="1120.0,570.0 1260.0,570.0 1260.0,660.0 1360.0,660.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<polyline points="1120.0,820.0 1260.0,820.0 1260.0,710.0 1360.0,710.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="920" viewBox="0 0 1600 920" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="920" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Three signals, <tspan fill="#7c3aed">four tools</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Left to right: the parts that produce data, the stores that keep it, and the two tools you look at.</text>
+<rect x="40.0" y="150.0" width="560.0" height="730.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<rect x="58.0" y="165.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="61.5" cy="167.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="67.0,167.5 72.5,167.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="58.0" y="171.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="61.5" cy="174.0" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="67.0,174.0 72.5,174.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="58.0" y="178.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="61.5" cy="180.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="67.0,180.5 72.5,180.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Node: who produces the data</text>
+<rect x="80.0" y="210.0" width="480.0" height="96.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="320.0" y="250.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">gateway pod</text>
+<text x="320.0" y="272.7" font-size="17.0" fill="#475569" text-anchor="middle">Envoy: L7 metrics, spans</text>
+<rect x="80.0" y="330.0" width="480.0" height="96.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="320.0" y="370.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">waypoint pod</text>
+<text x="320.0" y="392.7" font-size="17.0" fill="#475569" text-anchor="middle">Envoy: L7 metrics, spans</text>
+<rect x="80.0" y="450.0" width="480.0" height="96.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="320.0" y="490.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">backend pod</text>
+<text x="320.0" y="512.7" font-size="17.0" fill="#475569" text-anchor="middle">OTel SDK: metrics, spans</text>
+<rect x="80.0" y="580.0" width="480.0" height="110.0" rx="14.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<ellipse cx="105.5" cy="635.0" rx="4.1" ry="9.5" fill="none" stroke="#2563eb" stroke-width="1.63"/>
+<polyline points="105.5,625.4 120.4,625.4" fill="none" stroke="#2563eb" stroke-width="1.63" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="105.5,644.5 120.4,644.5" fill="none" stroke="#2563eb" stroke-width="1.63" stroke-linecap="round" stroke-linejoin="round"/>
+<ellipse cx="120.4" cy="635.0" rx="4.1" ry="9.5" fill="#2563eb" stroke="#2563eb" stroke-width="0.68"/>
+<text x="140.0" y="632.0" font-size="20.0" fill="#1e40af" font-weight="700" text-anchor="start">ztunnel</text>
+<text x="140.0" y="656.0" font-size="17.0" fill="#475569" text-anchor="start">L4 metrics: bytes, connections</text>
+<rect x="80.0" y="730.0" width="480.0" height="110.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="320.0" y="777.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">every container</text>
+<text x="320.0" y="799.7" font-size="17.0" fill="#475569" text-anchor="middle">stdout logs</text>
+<rect x="660.0" y="150.0" width="440.0" height="730.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="678.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace observability</text>
+<rect x="700.0" y="210.0" width="360.0" height="110.0" rx="14.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<rect x="716.0" y="243.0" width="44.0" height="44.0" rx="10.0" fill="#ea580c" stroke="none"/>
+<ellipse cx="738.0" cy="257.3" rx="9.6" ry="3.8" fill="none" stroke="#ffffff" stroke-width="1.54"/>
+<polyline points="728.4,257.3 728.4,272.7" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="747.6,257.3 747.6,272.7" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="728.4,272.7 730.3,275.2 738.0,276.5 745.7,275.2 747.6,272.7" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="728.4,265.0 730.3,267.6 738.0,268.8 745.7,267.6 747.6,265.0" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="774.0" y="258.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Prometheus</text>
+<text x="774.0" y="284.0" font-size="17.0" fill="#475569" text-anchor="start">metrics</text>
+<rect x="700.0" y="400.0" width="360.0" height="110.0" rx="14.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<rect x="716.0" y="433.0" width="44.0" height="44.0" rx="10.0" fill="#ea580c" stroke="none"/>
+<ellipse cx="738.0" cy="447.3" rx="9.6" ry="3.8" fill="none" stroke="#ffffff" stroke-width="1.54"/>
+<polyline points="728.4,447.3 728.4,462.7" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="747.6,447.3 747.6,462.7" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="728.4,462.7 730.3,465.2 738.0,466.5 745.7,465.2 747.6,462.7" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="728.4,455.0 730.3,457.6 738.0,458.8 745.7,457.6 747.6,455.0" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="774.0" y="448.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Jaeger</text>
+<text x="774.0" y="474.0" font-size="17.0" fill="#475569" text-anchor="start">traces</text>
+<rect x="700.0" y="590.0" width="360.0" height="70.0" rx="10.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<text x="880.0" y="617.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">Alloy</text>
+<text x="880.0" y="639.7" font-size="17.0" fill="#475569" text-anchor="middle">reads logs via the API</text>
+<rect x="700.0" y="740.0" width="360.0" height="110.0" rx="14.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<rect x="716.0" y="773.0" width="44.0" height="44.0" rx="10.0" fill="#ea580c" stroke="none"/>
+<ellipse cx="738.0" cy="787.3" rx="9.6" ry="3.8" fill="none" stroke="#ffffff" stroke-width="1.54"/>
+<polyline points="728.4,787.3 728.4,802.7" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="747.6,787.3 747.6,802.7" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="728.4,802.7 730.3,805.2 738.0,806.5 745.7,805.2 747.6,802.7" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="728.4,795.0 730.3,797.6 738.0,798.8 745.7,797.6 747.6,795.0" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="774.0" y="788.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Loki</text>
+<text x="774.0" y="814.0" font-size="17.0" fill="#475569" text-anchor="start">logs</text>
+<polyline points="880.0,660.0 880.0,730.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="880.0,740.0 874.2,728.5 885.8,728.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="600.0,265.0 690.5,265.0" fill="none" stroke="#ea580c" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="700.0,265.0 688.5,270.8 688.5,259.2" fill="#ea580c" stroke="#ea580c" stroke-width="1" stroke-linejoin="round"/>
+<text x="650.0" y="255.0" font-size="18.0" fill="#9a3412" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">metrics</text>
+<polyline points="600.0,455.0 690.5,455.0" fill="none" stroke="#ea580c" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="700.0,455.0 688.5,460.8 688.5,449.2" fill="#ea580c" stroke="#ea580c" stroke-width="1" stroke-linejoin="round"/>
+<text x="650.0" y="445.0" font-size="18.0" fill="#9a3412" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">spans</text>
+<polyline points="600.0,625.0 690.5,625.0" fill="none" stroke="#ea580c" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="700.0,625.0 688.5,630.8 688.5,619.2" fill="#ea580c" stroke="#ea580c" stroke-width="1" stroke-linejoin="round"/>
+<text x="650.0" y="615.0" font-size="18.0" fill="#9a3412" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">logs</text>
+<rect x="1160.0" y="210.0" width="380.0" height="110.0" rx="14.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<rect x="1176.0" y="243.0" width="44.0" height="44.0" rx="10.0" fill="#0891b2" stroke="none"/>
+<polyline points="1185.8,265.0 1191.6,259.2 1198.0,257.3 1204.4,259.2 1210.2,265.0 1204.4,270.8 1198.0,272.7 1191.6,270.8 1185.8,265.0" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<ellipse cx="1198.0" cy="265.0" rx="3.8" ry="3.8" fill="#ffffff" stroke="#ffffff" stroke-width="0.64"/>
+<text x="1234.0" y="258.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Kiali</text>
+<text x="1234.0" y="284.0" font-size="17.0" fill="#475569" text-anchor="start">mesh map</text>
+<rect x="1160.0" y="420.0" width="380.0" height="220.0" rx="14.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<rect x="1176.0" y="508.0" width="44.0" height="44.0" rx="10.0" fill="#0891b2" stroke="none"/>
+<polyline points="1187.1,519.1 1187.1,540.9 1209.5,540.9" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1190.3,535.8 1195.4,530.0 1199.9,533.2 1207.6,523.0" fill="none" stroke="#ffffff" stroke-width="1.66" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1234.0" y="512.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Grafana</text>
+<text x="1234.0" y="537.9" font-size="17.0" fill="#475569" text-anchor="start">graphs over time,</text>
+<text x="1234.0" y="560.0" font-size="17.0" fill="#475569" text-anchor="start">traces and logs</text>
+<polyline points="1060.0,265.0 1150.5,265.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="1160.0,265.0 1148.5,270.8 1148.5,259.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="1110.0" y="255.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">reads</text>
+<polyline points="1060.0,303.5 1120.0,303.5 1120.0,439.8 1150.5,439.8" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="1160.0,439.8 1148.5,445.6 1148.5,434.0" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="1060.0,477.0 1150.5,477.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="1160.0,477.0 1148.5,482.8 1148.5,471.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="1060.0,795.0 1350.0,795.0 1350.0,649.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="1350.0,640.0 1355.8,651.5 1344.2,651.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
 </svg>

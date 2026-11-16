@@ -1,40 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1380" height="900" viewBox="0 0 1380 900" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
-<rect width="1380" height="900" fill="#1e1f24"/>
-<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
-<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
-<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">Reading a</text>
-<rect x="253.4" y="26.0" width="249.5" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<text x="267.4" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">flame graph</text>
-<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">This module&#x27;s real result. Each bar is a function. Its width is its total share of samples.</text>
-<rect x="60.0" y="196.0" width="1260.0" height="90.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="60.0" y="190.0" width="1260.0" height="90.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="60.0" y="278.0" width="1260.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<text x="82.0" y="227.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">total</text>
-<text x="82.0" y="253.0" font-size="16" fill="#ffffffcc" text-anchor="start">100%</text>
-<polyline points="120.0,286.0 120.0,322.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<rect x="60.0" y="331.0" width="1258.7" height="90.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<rect x="60.0" y="325.0" width="1258.7" height="90.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<rect x="60.0" y="413.0" width="1258.7" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<text x="82.0" y="362.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">main.beginStressTest.func1</text>
-<text x="82.0" y="388.0" font-size="16" fill="#ffffffcc" text-anchor="start">99.9%  ·  podinfo&#x27;s own code</text>
-<polyline points="120.0,421.0 120.0,457.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<rect x="60.0" y="466.0" width="1154.2" height="90.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="60.0" y="460.0" width="1154.2" height="90.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="60.0" y="548.0" width="1154.2" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<text x="82.0" y="497.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">runtime.selectnbrecv</text>
-<text x="82.0" y="523.0" font-size="16" fill="#ffffffcc" text-anchor="start">91.6%  ·  non-blocking channel read</text>
-<polyline points="120.0,556.0 120.0,592.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<rect x="60.0" y="601.0" width="797.6" height="90.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="60.0" y="595.0" width="797.6" height="90.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="60.0" y="683.0" width="797.6" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<text x="82.0" y="632.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">runtime.chanrecv</text>
-<text x="82.0" y="658.0" font-size="16" fill="#ffffffcc" text-anchor="start">63.3%  ·  called by selectnbrecv</text>
-<polyline points="120.0,691.0 120.0,727.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<rect x="60.0" y="736.0" width="317.5" height="90.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="60.0" y="730.0" width="317.5" height="90.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="60.0" y="818.0" width="317.5" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<text x="82.0" y="767.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">runtime.empty</text>
-<text x="82.0" y="793.0" font-size="16" fill="#ffffffcc" text-anchor="start">25.2%</text>
-<text x="397.5" y="782.0" font-size="17" fill="#c9cbd3" font-weight="700" text-anchor="start">called by chanrecv</text>
-<text x="60.0" y="885.0" font-size="17" fill="#c9cbd3" text-anchor="start">Each function sits under its caller. A child is never wider than its parent.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="860" viewBox="0 0 1600 860" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="860" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Reading a <tspan fill="#7c3aed">flame graph</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">This module&#x27;s real result. Each bar is a function, its width is its total share of samples.</text>
+<rect x="80.0" y="200.0" width="1380.0" height="86.0" rx="8.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="100.0" y="238.0" font-size="20.0" fill="#0f172a" font-weight="700" font-family="'SF Mono', Menlo, Consolas, monospace" text-anchor="start">total</text>
+<text x="100.0" y="266.0" font-size="17.0" fill="#475569" text-anchor="start">total 100%</text>
+<rect x="80.0" y="298.0" width="1378.6" height="86.0" rx="8.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="100.0" y="336.0" font-size="20.0" fill="#0f172a" font-weight="700" font-family="'SF Mono', Menlo, Consolas, monospace" text-anchor="start">main.beginStressTest.func1</text>
+<text x="100.0" y="364.0" font-size="17.0" fill="#475569" text-anchor="start">total 99.9%, podinfo&#x27;s own code</text>
+<rect x="80.0" y="396.0" width="1264.1" height="86.0" rx="8.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="100.0" y="434.0" font-size="20.0" fill="#0f172a" font-weight="700" font-family="'SF Mono', Menlo, Consolas, monospace" text-anchor="start">runtime.selectnbrecv</text>
+<text x="100.0" y="462.0" font-size="17.0" fill="#475569" text-anchor="start">total 91.6%, non-blocking channel read</text>
+<rect x="80.0" y="494.0" width="873.5" height="86.0" rx="8.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="100.0" y="532.0" font-size="20.0" fill="#0f172a" font-weight="700" font-family="'SF Mono', Menlo, Consolas, monospace" text-anchor="start">runtime.chanrecv</text>
+<text x="100.0" y="560.0" font-size="17.0" fill="#475569" text-anchor="start">total 63.3%</text>
+<rect x="80.0" y="592.0" width="347.8" height="86.0" rx="8.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="100.0" y="630.0" font-size="20.0" fill="#0f172a" font-weight="700" font-family="'SF Mono', Menlo, Consolas, monospace" text-anchor="start">runtime.empty</text>
+<text x="100.0" y="658.0" font-size="17.0" fill="#475569" text-anchor="start">total 25.2%</text>
+<polyline points="80.0,720.0 1460.0,720.0" fill="none" stroke="#94a3b8" stroke-width="2.00" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="80.0,712.0 80.0,728.0" fill="none" stroke="#94a3b8" stroke-width="2.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="80.0" y="752.0" font-size="16.0" fill="#475569" text-anchor="middle">0%</text>
+<polyline points="425.0,712.0 425.0,728.0" fill="none" stroke="#94a3b8" stroke-width="2.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="425.0" y="752.0" font-size="16.0" fill="#475569" text-anchor="middle">25%</text>
+<polyline points="770.0,712.0 770.0,728.0" fill="none" stroke="#94a3b8" stroke-width="2.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="770.0" y="752.0" font-size="16.0" fill="#475569" text-anchor="middle">50%</text>
+<polyline points="1115.0,712.0 1115.0,728.0" fill="none" stroke="#94a3b8" stroke-width="2.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1115.0" y="752.0" font-size="16.0" fill="#475569" text-anchor="middle">75%</text>
+<polyline points="1460.0,712.0 1460.0,728.0" fill="none" stroke="#94a3b8" stroke-width="2.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1460.0" y="752.0" font-size="16.0" fill="#475569" text-anchor="middle">100%</text>
+<text x="80.0" y="800.0" font-size="17.0" fill="#475569" text-anchor="start">Root at the top. Each function sits under its caller, and a child is never wider than its parent.</text>
 </svg>

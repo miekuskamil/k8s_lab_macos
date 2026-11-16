@@ -61,7 +61,7 @@ The frontend and Redis have no waypoint, so their traffic stays on the cheaper l
 | Pod to the ztunnel on its own node | No | Stays inside the node |
 | Prometheus to pods | Yes | `observability/kube-prometheus-stack-prometheus` |
 
-The hop between a pod and ztunnel is plaintext, but it never leaves the pod. In ambient's in-pod mode, istio-cni places ztunnel's listening socket inside each pod's own network namespace, so the app's plain HTTP turns into HBONE mTLS before it touches any network. Every hop between pods, frontend to waypoint to backend, is mTLS. The diagram draws ztunnel as one box per node for readability; the labels "(in pod)" mark the hops that happen inside a pod.
+The hop between a pod and ztunnel is plaintext, but it never leaves the pod. In ambient's in-pod mode, istio-cni places ztunnel's listening socket inside each pod's own network namespace, so the app's plain HTTP turns into HBONE mTLS before it touches any network. Every hop between pods, frontend to waypoint to backend, is mTLS. The diagram draws ztunnel as one band under the pods for readability, although ztunnel listens inside each pod, so every blue hop starts and ends inside a pod.
 
 ## How Git changes reach the cluster
 

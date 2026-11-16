@@ -28,7 +28,7 @@ One `kubectl apply` or ArgoCD sync passes Kyverno in four steps:
 
 An **admission webhook** is a call the API server makes to another program before it stores an object, and Kyverno registers itself as one and answers in milliseconds, much like a security check at an airport gate that every object passes before it boards.
 
-Two more Kyverno parts, drawn with dotted lines, work outside of requests:
+Two more Kyverno parts, drawn at the bottom of the diagram, work outside of requests:
 
 - The background controller scans objects that already run and creates generated objects.
 - The reports controller writes the results into PolicyReports.

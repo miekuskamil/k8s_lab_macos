@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagrams for course module 4 (traffic routing) in ByteByteGo style (see ../bbg.py).
+"""Draw the diagrams for course module 4 (traffic routing) with the kit in ../bbg.py.
 
   04-who-decides   kube-proxy spreads by pod count; the waypoint follows HTTPRoute weights
 
@@ -15,27 +15,33 @@ OUT = Path(__file__).resolve().parent
 
 
 def who_decides():
-    c = Canvas(1760, 820)
+    c = Canvas(1600, 860)
     c.title("Who decides where", "a request goes")
     c.subtitle("Without a mesh, each version's share follows its pod count. With a waypoint, a weight in the HTTPRoute decides.")
 
-    c.group(40, 190, 800, 590, "Plain Kubernetes")
-    c.node(280, 230, 320, 100, SLATE, "client", "cube")
-    c.node(200, 410, 480, 110, GREEN, "Service backend", "gear", "random pod")
-    c.arrow([(440, 330), (440, 410)], "")
-    for i, (label, col) in enumerate([("v1 pod", SOFT), ("v1 pod", SOFT), ("v2 pod", TEAL)]):
-        x = 75 + i * 250
-        c.outline(x, 630, 230, 96, col, label, "cube")
-        c.arrow([(440, 520), (x + 115, 630)], "")
+    # plain Kubernetes: the kernel picks a pod at random
+    c.frame(40, 150, 740, 670, "Plain Kubernetes", "node")
+    cl = c.box(280, 210, 260, 76, SLATE, "client")
+    svc = c.band(80, 370, 660, 100, GREEN, "Service backend", "iptables picks a random pod", "gear")
+    c.connect(cl, svc)
+    for i, v in enumerate(["v1", "v1", "v2"]):
+        x = 80 + i * 230
+        p = c.frame(x, 600, 200, 170, "pod", "pod")
+        c.box(x + 25, 650, 150, 80, SLATE if v == "v1" else TEAL, "backend", v)
+        c.connect(svc, p, "33%", sa="bottom", sb="top", fa=(x + 100 - 80) / 660, pos="right")
 
-    c.group(920, 190, 800, 590, "With a waypoint")
-    c.node(1160, 230, 320, 100, SLATE, "client", "cube")
-    c.node(1080, 410, 480, 110, PURPLE, "Waypoint", "shield", "HTTPRoute: weights, paths, headers")
-    c.arrow([(1320, 330), (1320, 410)], "")
-    c.outline(960, 630, 340, 96, SOFT, "Service\nbackend-v1", "gear")
-    c.outline(1340, 630, 340, 96, TEAL, "Service\nbackend-v2", "gear")
-    c.arrow([(1230, 520), (1130, 630)], "90%", at=(1160, 590), pos="left")
-    c.arrow([(1410, 520), (1510, 630)], "10%", at=(1480, 590), pos="right")
+    # with a waypoint: a weight in the HTTPRoute
+    c.frame(820, 150, 740, 670, "With a waypoint", "node")
+    cl2 = c.box(1060, 210, 260, 76, SLATE, "client")
+    wp = c.node(860, 350, 660, 140, BLUE, "Waypoint", "shield", "HTTPRoute: 90 to v1, 10 to v2")
+    c.connect(cl2, wp)
+    s1 = c.frame(860, 580, 440, 210, "Service backend-v1", "ns")
+    for i in range(2):
+        c.box(885 + i * 205, 640, 185, 110, SLATE, "pod", "v1")
+    s2 = c.frame(1330, 580, 190, 210, "backend-v2", "ns")
+    c.box(1352, 640, 146, 110, TEAL, "pod", "v2")
+    c.connect(wp, s1, "90%", sa="bottom", sb="top", fa=(1080 - 860) / 660, fb=0.5, pos="right")
+    c.connect(wp, s2, "10%", sa="bottom", sb="top", fa=(1425 - 860) / 660, fb=0.5, pos="right")
     c.save(OUT, "04-who-decides")
 
 

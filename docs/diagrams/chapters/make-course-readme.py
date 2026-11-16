@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the course map for platform-engineering/README.md in ByteByteGo style (see ../bbg.py).
+"""Draw the course map for platform-engineering/README.md with the kit in ../bbg.py.
 
   readme-course-routes   module 0, then the Istio, operations and platform tracks
 
@@ -15,32 +15,54 @@ OUT = Path(__file__).resolve().parent
 
 
 def routes():
-    c = Canvas(1780, 940)
-    c.title("Routes through", "the Course")
-    c.subtitle("Every track starts after module 0. The Istio track runs from the core modules to AI.")
+    c = Canvas(1600, 900)
+    c.title("Routes through", "the course")
+    c.subtitle("Every route starts at module 0. Each line is a route, each stop a module.")
 
-    c.node(60, 190, 320, 110, SLATE, "Start here", "doc", "Istio in one picture")
-    c.node(60, 420, 320, 110, TEAL, "0 Setup", "laptop", "cluster and tools")
-    c.arrow([(220, 300), (220, 420)], "")
+    start = c.node(40, 400, 230, 100, SLATE, "Start here", "doc", "Istio in one picture")
+    x0, y0 = 340, 450
+    c.line([(270, y0), (x0 - 26, y0)], LINE, 3)
 
-    c.node(520, 190, 340, 110, BLUE, "Istio core", "shield", "modules 1 to 8")
-    c.node(980, 190, 360, 110, BLUE, "Istio advanced", "shield", "11 to 16, 30 to 32")
-    c.node(1460, 190, 280, 110, PURPLE, "AI", "cube", "modules 17 to 19")
-    c.arrow([(860, 245), (980, 245)], "")
-    c.arrow([(1340, 245), (1460, 245)], "")
-    c.note(980, 335, ["edge TLS, egress, JWT,", "upgrades, Istio API,", "sidecars, Envoy, istioctl"], 17)
-    c.note(1460, 335, ["LLMs, model serving,", "agents"], 17)
+    def stop(x, y, n, col, r=24):
+        c.ellipse(x, y, r, r, col, WHITE, 3)
+        c.text(x, y + 6.5, str(n), 18 if len(str(n)) < 3 else 15, deep(col), True, "middle")
 
-    c.outline(520, 420, 340, 100, DIM, "Reference\n9 and 10", "doc")
-    c.arrow([(690, 300), (690, 420)], "read any time", at=(700, 360), pos="right", col=SOFT)
-    c.note(520, 555, ["9 command reference,", "10 eBPF and Cilium"], 17)
+    def lane(y, col, stops, label, sub, xs=420, gap=62, dashed=False):
+        c.line([(x0 + 40, y), (xs + (len(stops) - 1) * gap, y)], col, 5, dashed)
+        for i, n in enumerate(stops):
+            stop(xs + i * gap, y, n, col)
+        end = xs + (len(stops) - 1) * gap + 50
+        c.text(end, y - 2, label, 19, deep(col), True)
+        c.text(end, y + 22, sub, 16, SOFT)
+        return xs + (len(stops) - 1) * gap
 
-    c.node(520, 620, 340, 110, GREEN, "k3s operations", "server", "modules 20 and 21")
-    c.node(520, 780, 340, 110, ORANGE, "Platform tools", "gear", "modules 22 to 28")
-    c.note(900, 815, ["ArgoCD, Prometheus, Grafana,", "OpenTelemetry, Kyverno, Pyroscope"], 17)
+    c.line([(x0 + 30, y0), (x0 + 40, y0)], SLATE, 5)
+    c.line([(x0 + 40, 200), (x0 + 40, 780)], SLATE, 5)
+    stop(x0, y0, 0, SLATE, 30)
+    ist = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 30, 31]
+    lane(200, BLUE, ist, "Istio", "", gap=56)
+    # module 32 branches off after 14, the AI route after the core
+    x14 = 420 + ist.index(14) * 56
+    c.line([(x14, 200), (x14, 290), (x14 + 60, 290)], BLUE, 4, True)
+    stop(x14 + 84, 290, 32, BLUE)
+    c.text(x14 + 120, 296, "throwaway cluster", 16, SOFT)
+    x8 = 420 + ist.index(8) * 56
+    c.line([(x8, 200), (x8, 360), (x8 + 40, 360)], PINK, 5)
+    for i, n in enumerate([17, 18, 19]):
+        stop(x8 + 64 + i * 62, 360, n, PINK)
+    c.text(x8 + 64 + 2 * 62 + 50, 358, "AI on Kubernetes", 19, DEEP[PINK], True)
+    c.text(x8 + 64 + 2 * 62 + 50, 382, "needs modules 3 to 6 and 12", 16, SOFT)
 
-    for y in (245, 675, 835):
-        c.arrow([(380, 475), (450, 475), (450, y), (520, y)], "")
+    lane(560, GREEN, [20, 21], "Kubernetes operations", "only module 0 needed")
+    lane(670, ORANGE, [22, 23, 24, 25, 26, 28], "Platform tools", "GitOps, alerts, dashboards, OTel, policy, profiling")
+    lane(780, PINK, [27], "AI without Istio", "RAG, needs Ollama")
+
+    ref = c.frame(1180, 420, 380, 120, "Reference, read any time", "plain")
+    stop(1220, 490, 9, SLATE)
+    c.text(1256, 496, "commands", 17, SOFT)
+    stop(1390, 490, 10, SLATE)
+    c.text(1426, 496, "eBPF, Cilium", 17, SOFT)
+    c.text(420, 150, "29 ties the core together after 7", 16, SOFT)
     c.save(OUT, "readme-course-routes")
 
 

@@ -1,173 +1,109 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1180" viewBox="0 0 1800 1180" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
-<rect width="1800" height="1180" fill="#1e1f24"/>
-<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
-<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
-<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">Scenario B:</text>
-<rect x="293.7" y="26.0" width="350.2" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<text x="307.7" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">Through the Mesh</text>
-<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">curl localhost:8080/api/orders on your Mac. Every hop inside the cluster is an mTLS tunnel with two checked identities.</text>
-<rect x="60.0" y="176.0" width="300.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="60.0" y="170.0" width="300.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="60.0" y="268.0" width="300.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<rect x="85.0" y="204.0" width="30.0" height="22.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
-<rect x="79.0" y="230.0" width="42.0" height="6.0" rx="3" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
-<text x="138.0" y="212.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Your Mac</text>
-<text x="138.0" y="240.0" font-size="16" fill="#ffffffcc" text-anchor="start">curl :8080</text>
-<rect x="560.0" y="176.0" width="320.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="560.0" y="170.0" width="320.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="560.0" y="268.0" width="320.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<rect x="581.0" y="200.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="588.0" cy="205.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<rect x="581.0" y="214.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="588.0" cy="219.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<rect x="581.0" y="228.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="588.0" cy="233.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<text x="638.0" y="212.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">k3d serverlb</text>
-<text x="638.0" y="240.0" font-size="16" fill="#ffffffcc" text-anchor="start">nginx, TCP only</text>
-<rect x="1080.0" y="176.0" width="360.0" height="100.0" rx="16" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
-<rect x="1080.0" y="170.0" width="360.0" height="100.0" rx="16" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
-<rect x="1080.0" y="268.0" width="360.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<ellipse cx="1120.0" cy="220.0" rx="16" ry="16" fill="none" stroke="#f5f5f7" stroke-width="3"/>
-<ellipse cx="1120.0" cy="220.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<polyline points="1120.0,199.0 1120.0,206.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="1120.0,234.0 1120.0,241.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="1099.0,220.0 1106.0,220.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="1134.0,220.0 1141.0,220.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="1158.0" y="212.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Node kernel</text>
-<text x="1158.0" y="240.0" font-size="16" fill="#ffffffcc" text-anchor="start">DNAT + SNAT</text>
-<polyline points="360.0,220.0 560.0,220.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<ellipse cx="460.0" cy="220.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="460.0" y="227.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
-<text x="460.0" y="263.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">Docker</text>
-<text x="460.0" y="286.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">port 8080</text>
-<polyline points="880.0,220.0 1080.0,220.0" fill="none" stroke="#c9cbd3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<text x="980.0" y="193.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="middle">to node :8080</text>
-<rect x="1080.0" y="386.0" width="360.0" height="110.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="1080.0" y="380.0" width="360.0" height="110.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="1080.0" y="488.0" width="360.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<polygon points="1120.0,415.0 1138.0,422.0 1135.0,443.0 1120.0,456.0 1105.0,443.0 1102.0,422.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
-<polyline points="1112.0,435.0 1118.0,442.0 1129.0,429.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="1158.0" y="427.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Gateway</text>
-<text x="1158.0" y="455.0" font-size="16" fill="#ffffffcc" text-anchor="start">Envoy · shop-ingress</text>
-<polyline points="1260.0,270.0 1260.0,380.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<ellipse cx="1260.0" cy="325.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="1260.0" y="332.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
-<text x="1287.0" y="319.5" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="start">kube-proxy:</text>
-<text x="1287.0" y="342.5" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="start">to 10.42.0.88</text>
-<rect x="60.0" y="360.0" width="900.0" height="170.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
-<text x="510.0" y="348.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">frontend pod</text>
-<rect x="85.0" y="400.0" width="260.0" height="96.0" rx="12" fill="#2a2b33" stroke="#1677ff" stroke-width="2.5"/>
-<ellipse cx="107.0" cy="448.0" rx="7" ry="16" fill="none" stroke="#1677ff" stroke-width="2.5"/>
-<polyline points="107.0,432.0 133.0,432.0" fill="none" stroke="#1677ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="107.0,464.0 133.0,464.0" fill="none" stroke="#1677ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<ellipse cx="133.0" cy="448.0" rx="7" ry="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<text x="151.0" y="440.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">ztunnel</text>
-<text x="151.0" y="464.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">:15001 out</text>
-<rect x="370.0" y="400.0" width="260.0" height="96.0" rx="12" fill="#2a2b33" stroke="#475069" stroke-width="2.5"/>
-<polygon points="404.0,428.0 422.0,438.0 404.0,448.0 386.0,438.0" fill="none" stroke="#475069" stroke-width="2.5" stroke-linejoin="round"/>
-<polygon points="386.0,438.0 404.0,448.0 404.0,469.0 386.0,459.0" fill="none" stroke="#475069" stroke-width="2.5" stroke-linejoin="round"/>
-<polygon points="422.0,438.0 404.0,448.0 404.0,469.0 422.0,459.0" fill="none" stroke="#475069" stroke-width="2.5" stroke-linejoin="round"/>
-<text x="436.0" y="440.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">frontend</text>
-<text x="436.0" y="464.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">app :3000</text>
-<rect x="655.0" y="400.0" width="280.0" height="96.0" rx="12" fill="#2a2b33" stroke="#1677ff" stroke-width="2.5"/>
-<ellipse cx="677.0" cy="448.0" rx="7" ry="16" fill="none" stroke="#1677ff" stroke-width="2.5"/>
-<polyline points="677.0,432.0 703.0,432.0" fill="none" stroke="#1677ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="677.0,464.0 703.0,464.0" fill="none" stroke="#1677ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<ellipse cx="703.0" cy="448.0" rx="7" ry="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<text x="721.0" y="440.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">ztunnel</text>
-<text x="721.0" y="464.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">:15008 in</text>
-<polyline points="1080.0,435.0 935.0,435.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<ellipse cx="1008.0" cy="435.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="1008.0" y="442.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
-<text x="1008.0" y="406.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">HBONE</text>
-<polyline points="655.0,448.0 630.0,448.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
-<polyline points="370.0,448.0 345.0,448.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
-<rect x="60.0" y="646.0" width="380.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<rect x="60.0" y="640.0" width="380.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<rect x="60.0" y="748.0" width="380.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<polygon points="100.0,675.0 118.0,682.0 115.0,703.0 100.0,716.0 85.0,703.0 82.0,682.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
-<polyline points="92.0,695.0 98.0,702.0 109.0,689.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="138.0" y="687.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Waypoint</text>
-<text x="138.0" y="715.0" font-size="16" fill="#ffffffcc" text-anchor="start">L7 policy · routing</text>
-<polyline points="215.0,496.0 215.0,640.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<ellipse cx="215.0" cy="568.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="215.0" y="575.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">4</text>
-<text x="242.0" y="562.5" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="start">HBONE to</text>
-<text x="242.0" y="585.5" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="start">the waypoint</text>
-<rect x="560.0" y="620.0" width="860.0" height="170.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
-<text x="990.0" y="608.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">backend-v1 pod</text>
-<rect x="585.0" y="660.0" width="260.0" height="96.0" rx="12" fill="#2a2b33" stroke="#1677ff" stroke-width="2.5"/>
-<ellipse cx="607.0" cy="708.0" rx="7" ry="16" fill="none" stroke="#1677ff" stroke-width="2.5"/>
-<polyline points="607.0,692.0 633.0,692.0" fill="none" stroke="#1677ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="607.0,724.0 633.0,724.0" fill="none" stroke="#1677ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<ellipse cx="633.0" cy="708.0" rx="7" ry="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<text x="651.0" y="700.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">ztunnel</text>
-<text x="651.0" y="724.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">:15008 in</text>
-<rect x="870.0" y="660.0" width="260.0" height="96.0" rx="12" fill="#2a2b33" stroke="#475069" stroke-width="2.5"/>
-<polygon points="904.0,688.0 922.0,698.0 904.0,708.0 886.0,698.0" fill="none" stroke="#475069" stroke-width="2.5" stroke-linejoin="round"/>
-<polygon points="886.0,698.0 904.0,708.0 904.0,729.0 886.0,719.0" fill="none" stroke="#475069" stroke-width="2.5" stroke-linejoin="round"/>
-<polygon points="922.0,698.0 904.0,708.0 904.0,729.0 922.0,719.0" fill="none" stroke="#475069" stroke-width="2.5" stroke-linejoin="round"/>
-<text x="936.0" y="700.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">backend</text>
-<text x="936.0" y="724.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">app :8000</text>
-<rect x="1155.0" y="660.0" width="240.0" height="96.0" rx="12" fill="#2a2b33" stroke="#1677ff" stroke-width="2.5"/>
-<ellipse cx="1177.0" cy="708.0" rx="7" ry="16" fill="none" stroke="#1677ff" stroke-width="2.5"/>
-<polyline points="1177.0,692.0 1203.0,692.0" fill="none" stroke="#1677ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="1177.0,724.0 1203.0,724.0" fill="none" stroke="#1677ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<ellipse cx="1203.0" cy="708.0" rx="7" ry="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<text x="1221.0" y="700.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">ztunnel</text>
-<text x="1221.0" y="724.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">:15001 out</text>
-<polyline points="440.0,708.0 585.0,708.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<ellipse cx="512.0" cy="708.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="512.0" y="715.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">5</text>
-<text x="512.0" y="679.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">Allowed</text>
-<polyline points="845.0,708.0 870.0,708.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
-<polyline points="1130.0,708.0 1155.0,708.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#h)"/>
-<rect x="1500.0" y="656.0" width="260.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="1500.0" y="650.0" width="260.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="1500.0" y="758.0" width="260.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<rect x="1524.0" y="691.0" width="32.0" height="30.0" rx="2" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="1540.0" cy="691.0" rx="16" ry="6" fill="#1e1f24" stroke="#f5f5f7" stroke-width="2.2"/>
-<polyline points="1524.0,706.0 1556.0,706.0" fill="none" stroke="#f5f5f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="1578.0" y="697.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Redis</text>
-<text x="1578.0" y="725.0" font-size="16" fill="#ffffffcc" text-anchor="start">10.42.0.14</text>
-<polyline points="1395.0,708.0 1500.0,708.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<ellipse cx="1448.0" cy="708.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="1448.0" y="715.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">6</text>
-<text x="1448.0" y="760.0" font-size="17" fill="#c9cbd3" font-weight="700" text-anchor="middle">HBONE</text>
-<rect x="60.0" y="886.0" width="380.0" height="100.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<rect x="60.0" y="880.0" width="380.0" height="100.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<rect x="60.0" y="978.0" width="380.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<ellipse cx="100.0" cy="930.0" rx="16" ry="16" fill="none" stroke="#f5f5f7" stroke-width="3"/>
-<ellipse cx="100.0" cy="930.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<polyline points="100.0,909.0 100.0,916.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="100.0,944.0 100.0,951.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="79.0,930.0 86.0,930.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="114.0,930.0 121.0,930.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="138.0" y="922.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">istiod</text>
-<text x="138.0" y="950.0" font-size="16" fill="#ffffffcc" text-anchor="start">config + certificates</text>
-<polyline points="250.0,880.0 250.0,750.0" fill="none" stroke="#c9cbd3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<text x="300.0" y="821.0" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="start">xDS</text>
-<rect x="540.0" y="870.0" width="1220.0" height="250.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
-<text x="1150.0" y="858.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">Identities checked on the way</text>
-<ellipse cx="590.0" cy="920.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="590.0" y="927.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
-<text x="625.0" y="927.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">shop-gateway-istio  →  frontend</text>
-<ellipse cx="590.0" cy="968.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="590.0" y="975.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">4</text>
-<text x="625.0" y="975.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">frontend  →  waypoint</text>
-<ellipse cx="590.0" cy="1016.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="590.0" y="1023.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">5</text>
-<text x="625.0" y="1023.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">waypoint  →  backend</text>
-<ellipse cx="590.0" cy="1064.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="590.0" y="1071.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">6</text>
-<text x="625.0" y="1071.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">backend  →  redis</text>
-<rect x="1250.0" y="915.0" width="480.0" height="150.0" rx="12" fill="#2a2b33" stroke="#0ea47a" stroke-width="2.5"/>
-<ellipse cx="1272.0" cy="990.0" rx="7" ry="16" fill="none" stroke="#0ea47a" stroke-width="2.5"/>
-<polyline points="1272.0,974.0 1298.0,974.0" fill="none" stroke="#0ea47a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="1272.0,1006.0 1298.0,1006.0" fill="none" stroke="#0ea47a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<ellipse cx="1298.0" cy="990.0" rx="7" ry="16" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
-<text x="1316.0" y="982.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">Back through</text>
-<text x="1316.0" y="1006.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">the same tunnels</text>
-<ellipse cx="1250.0" cy="915.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="1250.0" y="922.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">7</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1060" viewBox="0 0 1600 1060" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="1060" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Scenario B: <tspan fill="#7c3aed">through the mesh</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">curl localhost:8080/api/orders on your Mac. Every hop inside the cluster is an mTLS tunnel.</text>
+<rect x="40.0" y="150.0" width="260.0" height="220.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="57.5,181.0 76.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Your Mac</text>
+<rect x="65.0" y="215.0" width="210.0" height="100.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="170.0" y="257.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">curl</text>
+<text x="170.0" y="279.7" font-size="17.0" fill="#475569" text-anchor="middle">:8080</text>
+<rect x="340.0" y="150.0" width="1220.0" height="880.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="358.5" y="167.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="358.5,171.5 375.5,171.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="386.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">OrbStack</text>
+<rect x="380.0" y="200.0" width="300.0" height="110.0" rx="14.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<rect x="396.0" y="233.0" width="44.0" height="44.0" rx="10.0" fill="#475569" stroke="none"/>
+<rect x="406.5" y="243.5" width="23.0" height="6.4" rx="1.9" fill="none" stroke="#ffffff" stroke-width="1.4080000000000001"/>
+<ellipse cx="411.0" cy="246.7" rx="1.0" ry="1.0" fill="#ffffff" stroke="#ffffff" stroke-width="0.64"/>
+<polyline points="418.0,246.7 425.0,246.7" fill="none" stroke="#ffffff" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="406.5" y="251.8" width="23.0" height="6.4" rx="1.9" fill="none" stroke="#ffffff" stroke-width="1.4080000000000001"/>
+<ellipse cx="411.0" cy="255.0" rx="1.0" ry="1.0" fill="#ffffff" stroke="#ffffff" stroke-width="0.64"/>
+<polyline points="418.0,255.0 425.0,255.0" fill="none" stroke="#ffffff" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="406.5" y="260.1" width="23.0" height="6.4" rx="1.9" fill="none" stroke="#ffffff" stroke-width="1.4080000000000001"/>
+<ellipse cx="411.0" cy="263.3" rx="1.0" ry="1.0" fill="#ffffff" stroke="#ffffff" stroke-width="0.64"/>
+<polyline points="418.0,263.3 425.0,263.3" fill="none" stroke="#ffffff" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="454.0" y="248.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">k3d serverlb</text>
+<text x="454.0" y="274.0" font-size="17.0" fill="#475569" text-anchor="start">nginx, TCP only</text>
+<polyline points="275.0,255.0 327.5,255.0 327.5,244.0 370.5,244.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="380.0,244.0 368.5,249.8 368.5,238.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="340.0" cy="240.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="340.0" cy="240.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="340.0" y="246.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<text x="340.0" y="214.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">Docker :8080</text>
+<rect x="370.0" y="350.0" width="1160.0" height="650.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<text x="1512.0" y="380.0" font-size="17.0" fill="#475569" text-anchor="end">node container k3d-k8s-lab-server-0</text>
+<rect x="400.0" y="400.0" width="1100.0" height="80.0" rx="14.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<polygon points="720.7,429.8 745.2,429.8 735.7,440.6 735.7,450.2 730.2,452.9 730.2,440.6" fill="none" stroke="#059669" stroke-width="1.63" stroke-linejoin="round"/>
+<text x="760.0" y="437.0" font-size="20.0" fill="#047857" font-weight="700" text-anchor="start">kernel</text>
+<text x="760.0" y="461.0" font-size="17.0" fill="#475569" text-anchor="start">kube-proxy: DNAT to the gateway pod, SNAT</text>
+<polyline points="530.0,310.0 530.0,390.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="530.0,400.0 524.2,388.5 535.8,388.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<rect x="400.0" y="520.0" width="230.0" height="250.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="418.0" y="550.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">shop-ingress</text>
+<rect x="415.0" y="580.0" width="200.0" height="150.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="515.0" y="636.5" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">gateway</text>
+<text x="515.0" y="658.7" font-size="17.0" fill="#475569" text-anchor="middle">Envoy, opens</text>
+<text x="515.0" y="680.8" font-size="17.0" fill="#475569" text-anchor="middle">HBONE</text>
+<polyline points="590.0,480.0 590.0,570.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="590.0,580.0 584.2,568.5 595.8,568.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="590.0" cy="530.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="590.0" cy="530.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="590.0" y="536.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<rect x="660.0" y="520.0" width="840.0" height="250.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="678.0" y="550.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace shop</text>
+<text x="1482.0" y="550.0" font-size="17.0" fill="#475569" text-anchor="end">ambient</text>
+<rect x="680.0" y="580.0" width="250.0" height="160.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="707.0,595.0 715.5,599.5 715.5,609.0 707.0,613.5 698.5,609.0 698.5,599.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="698.5,599.5 707.0,604.0 715.5,599.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="707.0,604.0 707.0,613.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="726.0" y="610.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">frontend pod</text>
+<rect x="700.0" y="625.0" width="210.0" height="50.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="805.0" y="653.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">app :3000</text>
+<rect x="717.1" y="693.0" width="175.7" height="24.0" rx="12.0" fill="#ffffff" stroke="#2563eb" stroke-width="1.4"/>
+<text x="805.0" y="709.3" font-size="12.0" fill="#1e40af" font-weight="700" font-family="'SF Mono', Menlo, Consolas, monospace" text-anchor="middle">ztunnel :15001 :15008</text>
+<rect x="960.0" y="580.0" width="170.0" height="160.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="1045.0" y="641.5" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">waypoint</text>
+<text x="1045.0" y="663.7" font-size="17.0" fill="#475569" text-anchor="middle">L7 policy,</text>
+<text x="1045.0" y="685.8" font-size="17.0" fill="#475569" text-anchor="middle">routing</text>
+<rect x="1160.0" y="580.0" width="170.0" height="160.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="1187.0,595.0 1195.5,599.5 1195.5,609.0 1187.0,613.5 1178.5,609.0 1178.5,599.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="1178.5,599.5 1187.0,604.0 1195.5,599.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1187.0,604.0 1187.0,613.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1206.0" y="610.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">backend</text>
+<rect x="1175.0" y="625.0" width="140.0" height="60.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1245.0" y="658.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">app :8000</text>
+<rect x="1350.0" y="580.0" width="130.0" height="160.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="1415.0" y="652.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">redis</text>
+<text x="1415.0" y="674.7" font-size="17.0" fill="#475569" text-anchor="middle">:6379</text>
+<rect x="400.0" y="810.0" width="1100.0" height="170.0" rx="14.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<ellipse cx="435.5" cy="935.0" rx="4.1" ry="9.5" fill="none" stroke="#2563eb" stroke-width="1.63"/>
+<polyline points="435.5,925.4 450.4,925.4" fill="none" stroke="#2563eb" stroke-width="1.63" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="435.5,944.5 450.4,944.5" fill="none" stroke="#2563eb" stroke-width="1.63" stroke-linecap="round" stroke-linejoin="round"/>
+<ellipse cx="450.4" cy="935.0" rx="4.1" ry="9.5" fill="#2563eb" stroke="#2563eb" stroke-width="0.68"/>
+<text x="470.0" y="932.0" font-size="20.0" fill="#1e40af" font-weight="700" text-anchor="start">ztunnel</text>
+<text x="470.0" y="956.0" font-size="17.0" fill="#475569" text-anchor="start">one per node, sockets in each pod</text>
+<polyline points="560.0,740.0 560.0,840.0 740.0,840.0 740.0,752.4" fill="none" stroke="#2563eb" stroke-width="4.00" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="740.0,740.0 747.2,754.4 732.8,754.4" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="650.0" cy="840.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="650.0" cy="840.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="650.0" y="846.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<polyline points="870.0,740.0 870.0,840.0 1000.0,840.0 1000.0,752.4" fill="none" stroke="#2563eb" stroke-width="4.00" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1000.0,740.0 1007.2,754.4 992.8,754.4" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="935.0" cy="840.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="935.0" cy="840.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="935.0" y="846.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<polyline points="1090.0,740.0 1090.0,870.0 1220.0,870.0 1220.0,752.4" fill="none" stroke="#2563eb" stroke-width="4.00" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1220.0,740.0 1227.2,754.4 1212.8,754.4" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1155.0" cy="870.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1155.0" cy="870.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1155.0" y="876.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">5</text>
+<polyline points="1290.0,740.0 1290.0,900.0 1400.0,900.0 1400.0,752.4" fill="none" stroke="#2563eb" stroke-width="4.00" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1400.0,740.0 1407.2,754.4 1392.8,754.4" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1345.0" cy="900.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1345.0" cy="900.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1345.0" y="906.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">6</text>
+<text x="1480.0" y="955.0" font-size="15.0" fill="#475569" font-weight="700" text-anchor="end">7  the response returns through the same tunnels</text>
 </svg>

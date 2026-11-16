@@ -10,21 +10,38 @@ OUT = Path(__file__).resolve().parent
 
 
 def cni_chain():
-    c = Canvas(1720, 760)
-    c.title("One Missing File", "Stops the Chain")
+    c = Canvas(1600, 900)
+    c.title("One missing file", "stops the chain")
     c.subtitle("containerd runs the CNI plugins in order. When istio-cni is missing, the cleanup stops halfway.")
-    y = 240
-    c.node(60, y, 400, 110, GREEN, "flannel", "globe", "+ host-local IPAM")
-    c.node(720, y, 320, 110, TEAL, "containerd", "server", "runs the chain")
-    c.node(1300, y, 360, 110, RED, "istio-cni", "lock", "not in plugin directory")
-    c.arrow([(720, y + 30), (460, y + 30)], "ADD: an IP", n=1, at=(590, y + 30), pos="above")
-    c.arrow([(460, y + 80), (720, y + 80)], "10.42.0.x,\nlease file written", n=2, at=(590, y + 80), pos="below")
-    c.arrow([(1040, y + 30), (1300, y + 30)], "ADD: ambient\nredirection fails", n=3, at=(1170, y + 30), pos="above", col=RED)
-    c.arrow([(1040, y + 80), (1300, y + 80)], "DEL cleanup:\nfails again", n=4, at=(1170, y + 80), pos="below", col=RED)
-    c.node(60, 570, 400, 110, ORANGE, "Lease file", "db", "stays behind")
-    c.arrow([(160, y + 116), (160, 570)], "writes", at=(160, 460), pos="right", col=SOFT)
-    c.arrow([(880, y + 116), (880, 625), (460, 625)], "Chain stops: flannel's\nDEL never runs",
-            at=(670, 625), pos="above", col=RED)
+
+    c.frame(40, 150, 1520, 720, "Node", "node")
+    ctd = c.node(620, 200, 360, 110, TEAL, "containerd", "server", "runs the chain")
+
+    c.frame(80, 400, 1440, 170, "", "plain", right="CNI plugin directory, run in order")
+    fl = c.node(130, 450, 400, 90, GREEN, "flannel", "globe", "+ host-local IPAM")
+    c.rect(1070, 450, 400, 90, RED, PASTEL[RED], 14, SW, dashed=True)
+    ic = c.box(1070, 450, 400, 90, RED, "istio-cni", "file missing")
+
+    c.connect(ctd, fl, "", n=1, sa="left", sb="top", fa=0.3, fb=0.4, at=(450, 233))
+    c.text(450, 205, "ADD: IP + lease", 17, INK, True, "middle", halo=True)
+    c.connect(ctd, fl, "", sa="left", sb="top", fa=0.75, fb=0.75, dashed=True, col=DIM)
+    c.step(530, 282, 4)
+    c.text(530, 330, "DEL never runs", 17, SOFT, True, "middle", halo=True)
+    c.connect(ctd, ic, "", n=2, sa="right", sb="top", fa=0.3, fb=0.6, col=RED, at=(1150, 233))
+    c.text(1150, 205, "ADD fails", 17, DEEP[RED], True, "middle", halo=True)
+    c.connect(ctd, ic, "", n=3, sa="right", sb="top", fa=0.75, fb=0.25, col=RED, at=(1070, 282))
+    c.text(1070, 330, "DEL fails too", 17, DEEP[RED], True, "middle", halo=True)
+    c.mark(1310, 425, ok=False, r=12)
+    c.mark(1170, 425, ok=False, r=12)
+
+    pod = c.frame(620, 640, 360, 190, "pod sandbox", "pod")
+    c.box(645, 695, 310, 100, SLATE, "IP 10.42.0.x", "never starts")
+    leases = c.frame(130, 640, 400, 190, "host-local leases", "plain", col=ORANGE, icon="db")
+    for i, (t, hot) in enumerate([("10.42.0.31", False), ("10.42.0.32: stays", True)]):
+        c.box(155, 690 + i * 64, 350, 50, ORANGE if hot else SLATE, t, size=17)
+    c.connect(fl, leases, "writes", pos="right")
+    c.connect(fl, pod, "gives IP", sa="right", sb="top", fa=0.75, fb=0.3, pos="right", at=(728, 600))
+    c.note(1070, 700, ["Every failed try keeps", "one of 254 addresses."], 17)
     c.save(OUT, "21-cni-chain")
 
 

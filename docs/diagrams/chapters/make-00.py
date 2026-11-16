@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Draw the diagrams for course module 0 (setup) in ByteByteGo style (see ../bbg.py).
+"""Draw the diagrams for course module 0 (setup) with the kit in ../bbg.py.
 
-  00-observability-tools   the five tools, the question each one answers, and what they read
+  00-observability-tools   the five tools, the question each one answers, and the data they read
 
 Run from anywhere: python3 docs/diagrams/chapters/make-00.py
 """
@@ -15,28 +15,38 @@ OUT = Path(__file__).resolve().parent
 
 
 def tools():
-    c = Canvas(1560, 900)
+    c = Canvas(1600, 860)
     c.title("Five tools,", "five questions")
-    c.subtitle("Pick the tool by the question you have. Kiali and Grafana read the same Prometheus data.")
+    c.subtitle("Pick the tool by the question you have. Each one reads data the mesh produces inside the cluster.")
 
-    c.node(60, 445, 260, 110, SLATE, "You", "person")
-    rows = [("Kiali", TEAL, "eye", "What talks to what? Encrypted? Config valid?"),
-            ("Grafana", TEAL, "eye", "How much, how fast, how many errors, over time?"),
-            ("Jaeger", ORANGE, "db", "Where did one request spend its time?"),
-            ("Loki, in Grafana", ORANGE, "db", "What did the pods print while it happened?"),
-            ("istioctl", SLATE, "laptop", "What config does this proxy hold now?")]
-    for i, (label, col, icon, sub) in enumerate(rows):
-        y = 180 + i * 140
-        c.node(460, y, 560, 110, col, label, icon, sub, size=22)
-        c.arrow([(320, 500), (460, y + 55)], "")
+    c.frame(40, 150, 300, 670, "Your Mac", "host")
+    browser = c.node(70, 360, 240, 110, SLATE, "Browser", "globe")
+    cli = c.node(70, 670, 240, 110, SLATE, "istioctl", "terminal", "which config now?")
 
-    c.node(1240, 220, 280, 110, ORANGE, "Prometheus", "db", "metrics")
-    c.arrow([(1020, 235), (1240, 260)], "reads", at=(1130, 225), pos="above", col=SOFT)
-    c.arrow([(1020, 365), (1240, 300)], "reads", at=(1130, 360), pos="below", col=SOFT)
-    c.arrow([(1020, 405), (1090, 405), (1090, 555), (1020, 555)], "")
-    c.arrow([(1020, 405), (1090, 405), (1090, 695), (1020, 695)], "")
-    c.text(1110, 570, "Grafana reads", 17, SOFT, True)
-    c.text(1110, 594, "traces and logs", 17, SOFT, True)
+    c.frame(380, 150, 1180, 670, "Cluster", "cluster")
+    kiali = c.node(430, 200, 300, 110, TEAL, "Kiali", "eye", "what talks to what?")
+    graf = c.node(430, 360, 300, 110, TEAL, "Grafana", "chart", "how bad, since when?")
+    jaeg = c.node(430, 520, 300, 110, ORANGE, "Jaeger", "search", "where did time go?")
+    prom = c.node(830, 200, 290, 110, ORANGE, "Prometheus", "db", "metrics")
+    loki = c.node(830, 400, 290, 110, ORANGE, "Loki", "db", "what did pods print?")
+
+    mesh = c.frame(1200, 190, 320, 440, "Mesh", "ns")
+    for i, (lab, col) in enumerate([("frontend", SLATE), ("backend", SLATE), ("ztunnel", BLUE), ("waypoint", BLUE)]):
+        c.box(1230, 240 + i * 92, 260, 66, col, lab)
+    ist = c.node(1200, 670, 320, 110, PURPLE, "istiod", "gear", "pushes config")
+
+    c.connect(mesh, prom, "metrics", sa="left", sb="right", fa=(255 - 190) / 440, pos="above", col=ORANGE)
+    c.connect(mesh, loki, "logs", sa="left", sb="right", fa=(455 - 190) / 440, pos="above", col=ORANGE)
+    c.connect(mesh, jaeg, "traces", sa="left", sb="right", fa=(590 - 190) / 440, fb=70 / 110, pos="above", col=ORANGE,
+              at=(1000, 590))
+    c.connect(prom, kiali, "reads", sa="left", sb="right", pos="above", dashed=True)
+    c.connect(prom, graf, "", sa="left", sb="right", fa=0.8, fb=0.25, mid=780, dashed=True)
+    c.connect(loki, graf, "", sa="left", sb="right", fa=0.3, fb=0.75, dashed=True)
+    c.connect(jaeg, graf, "", sa="top", sb="bottom", fa=0.3, fb=0.3, dashed=True)
+    c.connect(ist, mesh, "config", sa="top", sb="bottom", dashed=True, col=PURPLE)
+    for t in (kiali, graf, jaeg):
+        c.connect(browser, t, sa="right", sb="left", fa=0.5 + (t.cy - graf.cy) / 400, mid=375)
+    c.connect(cli, ist, "asks istiod and the proxies", sa="right", sb="left", pos="above", at=(760, 725))
     c.save(OUT, "00-observability-tools")
 
 
