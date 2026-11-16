@@ -9,6 +9,7 @@
 # Settings come from the environment:
 #   PE_LAB_HOST=ubuntu@192.168.1.231   the VM
 #   PE_LAB_KEY=~/.ssh/cks_proxmox      the private key; set it empty to use your SSH config
+#   PE_LAB_PORT_OFFSET=0               added to every port on the Mac side of "ui"
 set -euo pipefail
 
 HOST="${PE_LAB_HOST:-ubuntu@192.168.1.231}"
@@ -51,22 +52,25 @@ install() {
 ui() {
   # One SSH session forwards every port from the Mac to the same port on the VM and
   # runs port-forward.sh there, so http://localhost:3000 on the Mac reaches Grafana in the VM.
-  local fwd=()
+  # PE_LAB_PORT_OFFSET=10000 moves the Mac side to 18080, 13000 and so on, next to a running local lab.
+  local off="${PE_LAB_PORT_OFFSET:-0}" fwd=()
   for p in $PORTS; do
-    if lsof -nP -iTCP:"$p" -sTCP:LISTEN >/dev/null 2>&1; then
-      echo "port $p is busy on this Mac (a local lab?). Stop it first: k3d cluster stop k8s-lab" >&2
+    if lsof -nP -iTCP:"$((p + off))" -sTCP:LISTEN >/dev/null 2>&1; then
+      echo "port $((p + off)) is busy on this Mac (a local lab?). Stop it with 'k3d cluster stop k8s-lab' or set PE_LAB_PORT_OFFSET=10000" >&2
       exit 1
     fi
-    fwd+=(-L "$p:localhost:$p")
+    fwd+=(-L "$((p + off)):localhost:$p")
   done
-  echo "The shop: http://localhost:8080   Grafana: http://localhost:3000   ArgoCD: http://localhost:8081"
-  echo "Kiali: http://localhost:20001   Headlamp: http://localhost:4466   Jaeger: http://localhost:16686"
-  "${SSH[@]}" -t -o ExitOnForwardFailure=yes "${fwd[@]}" "$HOST" k8s_lab_macos/scripts/port-forward.sh
+  echo "The shop: http://localhost:$((8080 + off))   Grafana: http://localhost:$((3000 + off))   ArgoCD: http://localhost:$((8081 + off))"
+  echo "Kiali: http://localhost:$((20001 + off))   Headlamp: http://localhost:$((4466 + off))   Jaeger: http://localhost:$((16686 + off))"
+  # A dropped connection leaves the VM's kubectl port-forwards behind, so clear them first.
+  "${SSH[@]}" -t -o ExitOnForwardFailure=yes "${fwd[@]}" "$HOST" \
+    'pkill -f "kubectl --context k3d-k8s-lab -n [a-z-]* port-forward svc/" ; k8s_lab_macos/scripts/port-forward.sh'
 }
 
 case "${1:-}" in
   install) shift; install "$@" ;;
   ui) ui ;;
   ssh) shift; "${SSH[@]}" "$HOST" "$@" ;;
-  *) sed -n '2,11p' "$0"; exit 1 ;;
+  *) sed -n '2,12p' "$0"; exit 1 ;;
 esac
