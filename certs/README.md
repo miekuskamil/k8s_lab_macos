@@ -76,3 +76,44 @@ In the test run, `create` took 2 minutes 5 seconds from nothing, and `reset` too
 Lima shows your Mac home folder inside the VM at the same path, read-only. The node has `kubectl` with the `k` alias, `crictl`, `apparmor_parser`, `aa-status` and the `cilium` command line tool.
 
 The domain files mark each task that runs here with **Host:** `cks-lima`.
+
+## The practice cluster on your own VMs (Proxmox or any SSH-reachable Ubuntu)
+
+The same two-node cluster also runs on two virtual machines that you reach over SSH, for example on a Proxmox server at home. The scripts then send every node command through `ssh` and `sudo` instead of `orb`, so the tasks, the checks and the mock exams stay the same. A VM brings a kernel of its own, and that kernel has AppArmor, so the AppArmor and kernel module tasks move from the Lima VM to `cks-w1`.
+
+### What you need
+
+You need two VMs with Ubuntu 24.04 on amd64 or arm64. Give `cks-cp` 2 CPUs, 3 GB of memory and 30 GB of disk, and give `cks-w1` 2 CPUs, 2.5 GB and 30 GB. Both VMs need internet access, and one user that logs in with an SSH key and runs `sudo` without a password. Their network must stay clear of the pod network `10.244.0.0/16` and the service network `10.96.0.0/12`. The pod network avoids Calico's default `192.168.0.0/16` on purpose, because that range overlaps most home networks.
+
+On Proxmox, `proxmox/create-vms.sh` builds both VMs from the Ubuntu cloud image. You run it as root on the Proxmox host, and it creates VM 221 `cks-cp` at 192.168.1.221 and VM 222 `cks-w1` at 192.168.1.222, with the user `ubuntu` and your public key. Any other hypervisor or cloud works the same way once the two VMs answer on SSH. The VMs need no particular hostname, because `create.sh` renames them to `cks-cp` and `cks-w1`, the node names that kubeadm and the tasks expect.
+
+### Settings and commands
+
+Five environment variables tell the scripts where the VMs are. Every script reads them, `task.sh` and the mock exam scripts included, so export them once in your shell:
+
+```bash
+export CKS_PLATFORM=vms                  # without it, the scripts use OrbStack
+export CKS_CP_HOST=192.168.1.221         # the address of cks-cp (this is the default)
+export CKS_W1_HOST=192.168.1.222         # the address of cks-w1 (this is the default)
+export CKS_SSH_USER=ubuntu               # the login user on both VMs (the default)
+export CKS_SSH_KEY=~/.ssh/cks_proxmox    # the private key for that user (the default)
+
+./certs/cks/cluster/create.sh            # builds the cluster on both VMs; safe to run again
+ssh -i ~/.ssh/cks_proxmox ubuntu@192.168.1.221   # a shell on cks-cp; "sudo -i" for root
+./certs/cks/cluster/reset.sh             # back to a fresh cluster at 1.37.1
+./certs/cks/cluster/destroy.sh --yes     # wipes the cluster with kubeadm reset and keeps both VMs
+```
+
+`destroy.sh` never deletes a VM here, because the VMs belong to you and to your hypervisor. It runs `kubeadm reset` and undoes the task changes, and `create.sh` builds the cluster again on the same VMs. A sixth variable, `CKS_SSH_OPTS`, passes extra options to `ssh`, such as a separate known hosts file.
+
+### What the test run measured
+
+The test ran on a Proxmox host with an Intel i7-12700T and 15 GB of memory, so the nodes ran on amd64. On two new VMs, `create.sh` built the cluster in 3 minutes 26 seconds, after it had waited for cloud-init to finish the first-boot package upgrade. A rebuild after `destroy.sh` took 2 minutes 28 seconds, and `reset.sh` took between 2 minutes 35 seconds and 4 minutes 33 seconds. With the cluster idle, `cks-cp` used 1.0 GB of memory and `cks-w1` 0.6 GB, page cache left out. The host kept 2.8 GB free through every task and mock exam, next to another VM of 7 GB, and never swapped.
+
+All 65 tasks and the three mock exams passed in this setup. Two things differed from OrbStack, and neither changed a task. The node scripts pick the downloads for the VM's CPU, amd64 here and arm64 on a Mac. And the first boot stalled, because the VMs reached Ubuntu's package mirrors over HTTPS only and plain HTTP downloads hung. If `apt` hangs on your VMs, change `http://` to `https://` in `/etc/apt/sources.list.d/ubuntu.sources`.
+
+### Where the kernel tasks run
+
+On a VM, the AppArmor tasks (06 task 5, 06 task 12 and mock exam 2 task 9) and the kernel module tasks (03 task 7 and mock exam 3 task 10) run on `cks-w1`. Their text says `cks-lima`, so read it as `cks-w1`: load the profile or write the modprobe rule on `cks-w1`, and run `kubectl` on `cks-cp`. The pods land on `cks-w1` anyway, because the control plane keeps its taint, and AppArmor confines a container only on the node that loaded the profile.
+
+The Cilium tasks stay on the Lima VM: 01 tasks 9, 10 and 11, 04 task 10, and task 3 of mock exams 2 and 3. Cilium replaces the cluster's network plugin, so it needs a cluster of its own, and a third VM for it needs another 3 GB that the test host lacked while `cks-cp` and `cks-w1` ran. So keep `cks-lima` on your Mac for those six tasks. Without it, they stop with a message, and every other task still works.
