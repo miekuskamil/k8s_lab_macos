@@ -2,21 +2,21 @@
 
 > New to a term here? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
 
-**Before the mock exam:** all six domain files, or the confidence to skip them. The [practice cluster](../README.md#the-practice-cluster), freshly reset. This is the first of three mock exams; [mock exam 2](mock-exam-2.md) and [mock exam 3](mock-exam-3.md) get harder.
+**Before the mock exam:** all six domain files, or the confidence to skip them, and the [practice cluster](../README.md#the-practice-cluster), freshly reset. This is the first of three mock exams, and [mock exam 2](mock-exam-2.md) and [mock exam 3](mock-exam-3.md) get harder.
 
-The real exam gives you 2 hours for 15 to 20 tasks on several clusters. This mock gives you 2 hours for 17 tasks on one cluster, worth 100 points in total. The weights follow the curriculum's domains roughly. A script checks the cluster's state and gives partial credit, the way the exam does.
+The real exam gives you 2 hours for 15 to 20 tasks on several clusters, and this mock gives you 2 hours for 17 tasks on one cluster, worth 100 points in total. The weights roughly follow the curriculum's domains, and a script checks the cluster's state and gives partial credit, the way the exam does.
 
 ## Rules
 
-1. Start fresh: `./certs/cks/cluster/reset.sh`, then `./certs/cks/mock-exam/setup.sh`. In the test run, the setup took 8 seconds, because the node already had the images. On new machines, the first run also downloads them.
-2. The clock starts when `setup.sh` ends: it writes the start time, and `score.sh` prints the minutes since then and flags a run over 120 minutes.
-3. Work only on the nodes: `orb -m cks-cp` and `orb -m cks-w1`. Use only the documentation the exam allows: kubernetes.io, and the docs of Falco, bom, etcd, ingress-nginx, Cilium and Istio.
-4. Don't open the solutions while the timer runs.
-5. When time is up, score from your Mac: `./certs/cks/mock-exam/score.sh`. Single tasks score with `./certs/cks/mock-exam/score.sh 4 9`.
+1. Start fresh with `./certs/cks/cluster/reset.sh`, then `./certs/cks/mock-exam/setup.sh`. In the test run, the setup took 8 seconds, because the node already had the images, while on new machines the first run also downloads them.
+2. The clock starts when `setup.sh` ends, because it writes the start time, and `score.sh` prints the minutes since then and flags a run over 120 minutes.
+3. Work only on the nodes, through `orb -m cks-cp` and `orb -m cks-w1`, and use only the documentation the exam allows: kubernetes.io, and the docs of Falco, bom, etcd, ingress-nginx, Cilium and Istio.
+4. Don't open the solutions while the timer runs, because the score only means something when you worked without them.
+5. When time is up, score from your Mac with `./certs/cks/mock-exam/score.sh`, or score single tasks with `./certs/cks/mock-exam/score.sh 4 9`.
 
-**Do task 1 first.** `kubeadm upgrade apply` rewrites every static pod manifest from the cluster's stored configuration, so it wipes any API server flag you added before it. The real exam avoids this by giving the upgrade its own cluster. This mock shares one cluster, so the order matters, and noticing that is part of the test.
+**Do task 1 first.** `kubeadm upgrade apply` rewrites every static pod manifest from the cluster's stored configuration, so it wipes any API server flag you added before it. The real exam avoids this by giving the upgrade its own cluster, but this mock shares one cluster, so the order matters, and noticing that is part of the test.
 
-Each task names the host. Run `kubectl` on `cks-cp`.
+Each task names the host it runs on, and `kubectl` always runs on `cks-cp`.
 
 ## Tasks
 
@@ -79,7 +79,7 @@ root@cks-cp:~# k uncordon cks-cp
 node/cks-cp uncordoned
 ```
 
-The worker stays at 1.37.1. A kubelet older than the API server is within the skew rule. [02, task 4](02-cluster-hardening.md#task-4-upgrade-the-cluster-with-kubeadm) explains the steps.
+The worker stays at 1.37.1, which is fine, because a kubelet older than the API server is within the skew rule. [02, task 4](02-cluster-hardening.md#task-4-upgrade-the-cluster-with-kubeadm) explains the steps.
 
 </details>
 
@@ -110,7 +110,7 @@ spec:
     - {protocol: TCP, port: 80}
 ```
 
-A `podSelector` alone in `from` matches pods in the policy's own namespace only. So the `outsider` pod in `m-other`, also labelled `app=backend`, stays out.
+A `podSelector` alone in `from` matches pods in the policy's own namespace only, so the `outsider` pod in `m-other`, which is also labelled `app=backend`, stays out.
 
 </details>
 
@@ -156,7 +156,7 @@ root@cks-cp:~# kube-bench run --targets master --check 1.4.1,1.1.12
 
 The transcript leaves out the editor session, which adds the flag. The practice node already has an `etcd` user, so `useradd` says so, and the `chown` works anyway.
 
-etcd keeps running, because its container runs as root and the owner change doesn't stop root from reading the files.
+etcd keeps running, because its container runs as root, and the owner change doesn't stop root from reading the files.
 
 </details>
 
@@ -227,7 +227,7 @@ command terminated with exit code 1
 
 The transcript leaves out the editor session, and it waited for the new pod to be Ready before the last command.
 
-In `metrics.yaml`, add `automountServiceAccountToken: false` under `spec`, and delete two more things: the `kube-api-access-...` entry under `volumes`, and its entry under the container's `volumeMounts`. The export spells out the token volume that the API server added when it created the pod. A spelled-out volume mounts whatever the field says. The test run proved it: with only the field changed, the new pod still listed `ca.crt`, `namespace` and `token`, and the task scored 2 of 4 points. With the volume gone too, the `ls` fails with `No such file or directory`.
+In `metrics.yaml`, add `automountServiceAccountToken: false` under `spec`, and delete two more things: the `kube-api-access-...` entry under `volumes`, and its entry under the container's `volumeMounts`. The export spells out the token volume that the API server added when it created the pod, and a spelled-out volume still mounts, whatever `automountServiceAccountToken` says. The test run proved it: with only the field changed, the new pod still listed `ca.crt`, `namespace` and `token`, and the task scored 2 of 4 points, while with the volume gone too, the `ls` failed with `No such file or directory`.
 
 </details>
 
@@ -329,7 +329,7 @@ The transcript leaves out the editor session, which makes the change the YAML be
 <details>
 <summary>Solution</summary>
 
-The same steps as [04, task 2](04-minimize-microservice-vulnerabilities.md#task-2-encrypt-secrets-at-rest), with a different provider:
+The steps are the same as in [04, task 2](04-minimize-microservice-vulnerabilities.md#task-2-encrypt-secrets-at-rest), with a different provider in the file:
 
 ```yaml
 apiVersion: apiserver.config.k8s.io/v1
@@ -344,7 +344,7 @@ resources:
   - identity: {}
 ```
 
-Add `--encryption-provider-config=/etc/kubernetes/enc/mock.yaml` with a mount for `/etc/kubernetes/enc`, wait for the API server, then `k get secrets -A -o json | k replace -f -`. etcd then shows the prefix `k8s:enc:secretbox:v1:mock:`.
+Add `--encryption-provider-config=/etc/kubernetes/enc/mock.yaml` with a mount for `/etc/kubernetes/enc`, wait for the API server, then run `k get secrets -A -o json | k replace -f -` so every Secret gets encrypted. etcd then shows the prefix `k8s:enc:secretbox:v1:mock:`.
 
 </details>
 
@@ -372,7 +372,7 @@ spec:
   - {name: c, image: busybox:1.36, command: [sleep, 1d]}
 ```
 
-`k -n m-sandbox exec untrusted -- dmesg | head -1` prints `Starting gVisor...`.
+`k -n m-sandbox exec untrusted -- dmesg | head -1` prints `Starting gVisor...`, which proves the pod runs in the sandbox.
 
 </details>
 
@@ -412,7 +412,7 @@ pod "session-store" deleted from m-scan namespace
 <details>
 <summary>Solution</summary>
 
-The same steps as [05, task 5](05-supply-chain-security.md#task-5-allow-only-approved-registries), with the file name `mock-admission.yaml`. Remember both mounts: `/etc/kubernetes/admission` and `/etc/kubernetes/policy-webhook`. Then:
+The steps are the same as in [05, task 5](05-supply-chain-security.md#task-5-allow-only-approved-registries), with the file name `mock-admission.yaml`. Remember both mounts, `/etc/kubernetes/admission` and `/etc/kubernetes/policy-webhook`, because a missing one keeps the API server down. Then test an image the policy must refuse:
 
 ```console
 root@cks-cp:~# k run t --image=quay.io/evil/miner:1 --dry-run=server     # refused
@@ -485,14 +485,14 @@ The flags and the two mounts follow [06, task 1](06-monitoring-logging-runtime-s
 <details>
 <summary>Solution</summary>
 
-On `cks-w1`:
+Start on `cks-w1`, where Falco runs, and filter its alerts by the file and the namespace:
 
 ```console
 root@cks-w1:~# journalctl -u falco-modern-bpf --since -10min | grep 'file=/etc/shadow' | grep 'k8s_ns_name=m-runtime' | tail -1
 Nov 15 20:38:21 cks-w1 falco[83315]: 20:38:21.937670546: Warning Sensitive file opened for reading by non-trusted program | file=/etc/shadow gparent=containerd-shim ggparent=<NA> gggparent=<NA> evt_type=openat user=root user_uid=0 user_loginuid=-1 process=cat proc_exepath=/bin/cat parent=sh command=cat /etc/shadow terminal=0 container_id=6698b5affca2 container_name=busybox container_image_repository=docker.io/library/busybox container_image_tag=1.36 k8s_pod_name=reporter-6b5d764586-xdrzz k8s_ns_name=m-runtime
 ```
 
-The alert is Falco's default rule `Sensitive file opened for reading by non-trusted program`. It names the pod in `k8s_pod_name=`. On `cks-cp`, find its Deployment and act:
+The alert comes from Falco's default rule `Sensitive file opened for reading by non-trusted program`, and it names the pod in `k8s_pod_name=`. On `cks-cp`, follow the pod to its Deployment and act on that, because scaling a ReplicaSet's pod away only brings a new one:
 
 ```console
 root@cks-cp:~# k -n m-runtime get pod <pod> -o jsonpath='{.metadata.ownerReferences[0].name}'   # the ReplicaSet: reporter-<hash>
@@ -525,12 +525,12 @@ The transcript ran the first command with the name of the reporter pod from the 
             type: RuntimeDefault
 ```
 
-`sleep` writes nothing, so it needs no `emptyDir`.
+`sleep` writes nothing, so the container needs no `emptyDir` to survive the read-only root.
 
 </details>
 
 ## Scoring
 
-`score.sh` runs between two and six checks per task and splits the task's points evenly over them, rounded down. It prints each check, the points per task, and the total.
+`score.sh` runs between two and six checks per task and splits the task's points evenly over them, rounded down, then prints each check, the points per task and the total.
 
-In the test run, on a cluster fresh from `reset.sh` and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` After `./certs/cks/mock-exam/solve.sh`, which applies every solution above in order in 5 minutes 57 seconds in the final run, it was `TOTAL: 100 of 100 points (100%).` A task scores only when its first check, the main change, passes. Without that rule, an untouched cluster scored 18, because checks such as "the scheduler still runs" pass by themselves.
+In the test run, on a cluster fresh from `reset.sh` and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` After `./certs/cks/mock-exam/solve.sh`, which applies every solution above in order and took 5 minutes 57 seconds in the final run, it was `TOTAL: 100 of 100 points (100%).` A task scores only when its first check, the main change, passes, because without that rule an untouched cluster scored 18, since checks such as "the scheduler still runs" pass by themselves.
