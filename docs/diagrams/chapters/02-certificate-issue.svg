@@ -2,7 +2,7 @@
 <rect width="1600" height="800" fill="#ffffff"/>
 <rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
 <text x="62.0" y="66.0" font-size="34.0" fill="#0f172a" font-weight="700" text-anchor="start">How a pod gets</text>
-<text x="331.7" y="66.0" font-size="34.0" fill="#7c3aed" font-weight="700" text-anchor="start">its identity</text>
+<text x="305.3" y="66.0" font-size="34.0" fill="#7c3aed" font-weight="700" text-anchor="start">its identity</text>
 <text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">ztunnel asks istiod for a certificate on the pod&#x27;s behalf. istiod checks the claim with the API server first.</text>
 <rect x="40.0" y="140.0" width="1520.0" height="620.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
 <ellipse cx="67.0" cy="164.0" rx="9.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.20"/>

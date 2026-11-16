@@ -322,18 +322,21 @@ class Canvas:
             self.text(x + w - 18, y + 30, right, size - 1, st["col"], False, "end")
         return Box(x, y, w, h)
 
-    def band(self, x, y, w, h, col, label, sub="", icon=None, size=20):
-        """A wide strip, for a kernel, a network or a shared layer under the boxes."""
+    def band(self, x, y, w, h, col, label, sub="", icon=None, size=20, lx=None, ly=None):
+        """A wide strip, for a kernel, a network or a shared layer under the boxes.
+        lx / ly move the label (default: left, centred)."""
         self.rect(x, y, w, h, col, pastel(col), 14, SW)
-        tx = x + 20
+        bx = x if lx is None else lx
+        my = y + h / 2 if ly is None else ly
+        tx = bx + 20
         if icon:
-            self.icon(icon, x + 18, y + h / 2 - 15, col, s=0.68)
-            tx = x + 60
+            self.icon(icon, bx + 18, my - 15, col, s=0.68)
+            tx = bx + 60
         if sub:
-            self.text(tx, y + h / 2 - 3, label, size, deep(col), True)
-            self.text(tx, y + h / 2 + 21, sub, size - 3, SOFT)
+            self.text(tx, my - 3, label, size, deep(col), True)
+            self.text(tx, my + 21, sub, size - 3, SOFT)
         else:
-            self.text(tx, y + h / 2 + size * 0.36, label, size, deep(col), True)
+            self.text(tx, my + size * 0.36, label, size, deep(col), True)
         return Box(x, y, w, h)
 
     # ---- titles ---------------------------------------------------------------------
@@ -341,7 +344,7 @@ class Canvas:
         self.rect(40, 34, 6, 40, PURPLE, PURPLE, rx=3, sw=0)
         self.text(62, 66, text, 34, INK, True)
         if highlight:
-            x = 62 + text_width(text + " ", 34, True)
+            x = 62 + text_width(text, 34, True) * 0.9 + 12
             self.text(x, 66, highlight, 34, PURPLE, True)
 
     def subtitle(self, text):

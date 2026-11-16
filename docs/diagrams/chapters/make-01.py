@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Draw the diagrams for course module 1 (what a mesh adds) in ByteByteGo style (see ../bbg.py).
+"""Draw the diagrams for course module 1 (what a mesh adds) with the kit in ../bbg.py.
 
-  01-sidecar-vs-ambient    a proxy in every pod against shared ztunnels and an optional waypoint
+  01-sidecar-vs-ambient    a proxy in every pod against a shared ztunnel per node and an optional waypoint
   01-ztunnel-choice        the three ways ztunnel sends the frontend's connection
 
 Run from anywhere: python3 docs/diagrams/chapters/make-01.py
@@ -16,55 +16,63 @@ OUT = Path(__file__).resolve().parent
 
 
 def modes():
-    c = Canvas(1860, 800)
+    c = Canvas(1600, 1010)
     c.title("Two ways to put a", "proxy in the path")
-    c.subtitle("Sidecar mode puts Envoy in every pod. Ambient mode shares a ztunnel per node and adds a waypoint for L7.")
+    c.subtitle("Sidecar mode puts Envoy in every pod. Ambient mode shares one ztunnel per node and adds a waypoint for L7.")
 
-    c.group(40, 190, 1780, 230, "Sidecar mode: a proxy in every pod")
-    c.group(80, 240, 700, 150, "pod frontend")
-    c.outline(110, 265, 300, 100, SOFT, "app", "cube")
-    c.outline(450, 265, 300, 100, BLUE, "Envoy", "shield")
-    c.arrow([(410, 315), (450, 315)], "")
-    c.group(1080, 240, 700, 150, "pod backend")
-    c.outline(1110, 265, 300, 100, BLUE, "Envoy", "shield")
-    c.outline(1450, 265, 300, 100, SOFT, "app", "cube")
-    c.arrow([(1410, 315), (1450, 315)], "")
-    c.arrow([(750, 315), (1110, 315)], "mTLS,\nHTTP aware", at=(930, 315), pos="above")
+    # sidecar mode: two containers per pod
+    c.frame(40, 150, 1520, 300, "Sidecar mode: a proxy in every pod", "node")
+    c.frame(80, 210, 600, 200, "frontend pod", "pod")
+    a1 = c.box(110, 270, 230, 100, SLATE, "app")
+    e1 = c.box(420, 270, 230, 100, BLUE, "Envoy", "L4 + L7")
+    c.frame(920, 210, 600, 200, "backend pod", "pod")
+    e2 = c.box(950, 270, 230, 100, BLUE, "Envoy", "L4 + L7")
+    a2 = c.box(1260, 270, 230, 100, SLATE, "app")
+    c.connect(a1, e1)
+    c.connect(e1, e2, "mTLS, HTTP aware", pos="above")
+    c.connect(e2, a2)
 
-    c.group(40, 500, 1780, 260, "Ambient mode: shared proxies")
-    c.node(70, 560, 300, 120, SLATE, "frontend", "cube", "pod, app only")
-    c.node(450, 560, 300, 120, BLUE, "ztunnel", "tunnel", "one per node, L4")
-    c.node(830, 560, 330, 120, PURPLE, "Waypoint", "shield", "Envoy, L7")
-    c.node(1240, 560, 260, 120, BLUE, "ztunnel", "tunnel", "L4")
-    c.node(1560, 560, 240, 120, SLATE, "backend", "cube", "app only")
-    c.arrow([(370, 620), (450, 620)], "")
-    c.arrow([(750, 620), (830, 620)], "HBONE\nmTLS", at=(790, 620), pos="below")
-    c.arrow([(1160, 620), (1240, 620)], "HBONE\nmTLS", at=(1200, 620), pos="below")
-    c.arrow([(1500, 620), (1560, 620)], "")
-    c.note(830, 720, ["Only if you need L7."], 17)
+    # ambient mode: app-only pods above a shared ztunnel
+    c.frame(40, 490, 1520, 480, "Ambient mode: shared proxies", "node")
+    f = c.frame(80, 550, 330, 170, "frontend pod", "pod")
+    c.box(110, 606, 270, 80, SLATE, "app only")
+    w = c.frame(635, 550, 330, 170, "waypoint pod", "pod")
+    c.box(665, 606, 270, 80, BLUE, "Envoy", "L7, only if needed")
+    b = c.frame(1190, 550, 330, 170, "backend pod", "pod")
+    c.box(1220, 606, 270, 80, SLATE, "app only")
+    zt = c.band(80, 790, 1440, 150, BLUE, "ztunnel", "one per node, L4 and mTLS", "tunnel", lx=860, ly=838)
+
+    y = 900
+    c.line([(245, 720), (245, y), (760, y), (760, 720)], SLATE, AW, head=True)
+    c.line([(840, 720), (840, y), (1355, y), (1355, 720)], SLATE, AW, head=True)
+    c.chip(500, y, "HBONE", BLUE, anchor="middle")
+    c.chip(1100, y, "HBONE", BLUE, anchor="middle")
     c.save(OUT, "01-sidecar-vs-ambient")
 
 
 def choice():
-    c = Canvas(1240, 1090)
+    c = Canvas(1500, 1000)
     c.title("Where ztunnel", "sends it")
     c.subtitle("frontend dials backend:8000. ztunnel checks the table from istiod and picks one of three paths.")
 
-    c.node(60, 180, 400, 110, SLATE, "frontend", "cube", "opens backend:8000")
-    c.node(60, 380, 400, 110, BLUE, "ztunnel :15001", "tunnel", "inside the pod")
-    c.arrow([(260, 290), (260, 380)], "Caught in the pod", n=1, at=(260, 335))
+    c.frame(40, 150, 440, 470, "frontend pod", "pod", right="network namespace")
+    app = c.box(80, 210, 360, 100, SLATE, "app", "dials backend:8000")
+    sock = c.node(80, 450, 360, 120, BLUE, "ztunnel", "tunnel", "socket :15001\ninside the pod")
+    c.connect(app, sock, "caught", n=1)
+    ist = c.node(80, 820, 360, 120, PURPLE, "istiod", "gear", "sends the table")
+    c.connect(ist, sock, "address table", dashed=True, col=PURPLE)
 
-    c.outline(60, 580, 400, 100, TEAL, "Destination\nin the mesh?", "dns")
-    c.arrow([(260, 490), (260, 580)], "Look up", n=2, at=(260, 535))
-    c.node(760, 575, 400, 110, SLATE, "Plain TCP", "globe", "as without a mesh")
-    c.arrow([(460, 630), (760, 630)], "No", at=(610, 630), pos="above")
+    d1 = c.diamond(760, 510, 250, 150, TEAL, "In the\nmesh?")
+    c.connect(sock, d1, "look up", n=2, sa="right", sb="left", at=(560, 510))
+    plain = c.node(1080, 200, 380, 120, SLATE, "Plain TCP", "globe", "as without a mesh")
+    c.connect(d1, plain, "no", sa="top", sb="left", pos="right", at=(760, 330))
 
-    c.outline(60, 780, 400, 100, TEAL, "Service has\nuse-waypoint?", "dns")
-    c.arrow([(260, 680), (260, 780)], "Yes", at=(270, 730), pos="right", col=SOFT)
-    c.node(760, 775, 400, 110, PURPLE, "Waypoint", "shield", "HBONE, L7 rules")
-    c.arrow([(460, 830), (760, 830)], "Yes, backend", at=(610, 830), pos="above")
-    c.node(760, 940, 400, 110, BLUE, "Destination pod", "tunnel", "HBONE to :15008")
-    c.arrow([(260, 880), (260, 995), (760, 995)], "No, redis", at=(610, 995), pos="above")
+    d2 = c.diamond(760, 790, 250, 150, TEAL, "use-\nwaypoint?")
+    c.connect(d1, d2, "yes", sa="bottom", sb="top", pos="right")
+    wp = c.node(1080, 450, 380, 120, BLUE, "Waypoint", "shield", "HBONE, L7 rules")
+    c.connect(d2, wp, "yes: backend", sa="right", sb="bottom", pos="right", at=(1270, 660))
+    dst = c.node(1080, 820, 380, 120, BLUE, "Destination pod", "tunnel", "HBONE to :15008")
+    c.connect(d2, dst, "no: redis", sa="bottom", sb="left", at=(900, 880), pos="above")
     c.save(OUT, "01-ztunnel-choice")
 
 
