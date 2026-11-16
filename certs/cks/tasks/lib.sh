@@ -37,7 +37,8 @@ need_lima() {
 # temporary file that the script deletes when it ends.
 if [ "$CKS_PLATFORM" = vms ]; then
   _cks_admin_prelude() {
-    [ -n "${_CKS_ADMIN_CONF:-}" ] || _CKS_ADMIN_CONF="$(cp_sh 'cat /etc/kubernetes/admin.conf')"
+    # ssh reads stdin, which holds the caller's script here, so it gets /dev/null instead.
+    [ -n "${_CKS_ADMIN_CONF:-}" ] || _CKS_ADMIN_CONF="$(cp_sh 'cat /etc/kubernetes/admin.conf' </dev/null)"
     echo 'KUBECONFIG="$(mktemp)"; export KUBECONFIG; trap '"'"'rm -f "$KUBECONFIG"'"'"' EXIT'
     echo "cat > \"\$KUBECONFIG\" <<'CKS_ADMIN_CONF'"
     printf '%s\n' "$_CKS_ADMIN_CONF"

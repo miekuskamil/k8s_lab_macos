@@ -12,7 +12,7 @@ for f in "$HERE"/tasks/0*.sh; do . "$f"; done
 action="${1:-}"; id="${2:-}"
 case "$action" in
   list)
-    declare -F | awk '{print $3}' | grep '^check_' | sed 's/^check_//; s/_/./' | sort -t. -k1,1n -k2,2n
+    declare -F | awk '{print $3}' | grep '^check_[0-9]' | sed 's/^check_//; s/_/./' | sort -t. -k1,1n -k2,2n
     exit 0 ;;
   setup|check|solve) ;;
   *) sed -n '2,6p' "$0"; exit 1 ;;
