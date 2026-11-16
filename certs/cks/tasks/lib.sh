@@ -1,19 +1,23 @@
-# Helpers for the CKS task scripts. Sourced by task.sh and mock-exam/*.sh; runs on the Mac
-# (bash 3.2 is fine). Everything on the cluster goes through "orb -m <node> -u root".
+# Helpers for the CKS task scripts. Sourced by task.sh and mock-exam/*.sh; runs on your machine
+# (bash 3.2 is fine). Everything on the cluster goes through cluster/platform.sh: "orb -m <node>
+# -u root" on OrbStack, ssh and sudo with CKS_PLATFORM=vms.
 
-CKS_CP="${CKS_CP:-cks-cp}"
-CKS_W1="${CKS_W1:-cks-w1}"
 CKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+. "$CKS_DIR/cluster/platform.sh"
 
 # Run a script from stdin as root on a node: oncp <<'EOF' ... EOF
-oncp() { orb -m "$CKS_CP" -u root bash -s "$@"; }
-onw1() { orb -m "$CKS_W1" -u root bash -s "$@"; }
+oncp() { node_script "$CKS_CP" "$@"; }
+onw1() { node_script "$CKS_W1" "$@"; }
 # Run one command line on a node and print its output.
-cp_sh() { orb -m "$CKS_CP" -u root bash -c "$*"; }
-w1_sh() { orb -m "$CKS_W1" -u root bash -c "$*"; }
-k() { orb -m "$CKS_CP" -u root kubectl "$@"; }
+cp_sh() { node_sh "$CKS_CP" "$*"; }
+w1_sh() { node_sh "$CKS_W1" "$*"; }
+k() { node_kubectl "$@"; }
+# Some checks run in "bash -c", so that shell needs the helpers and the settings too.
+export CKS_PLATFORM CKS_CP CKS_W1 CKS_CP_HOST CKS_W1_HOST CKS_SSH_USER CKS_SSH_KEY CKS_SSH_OPTS
+export -f _cks_quote _cks_ssh node_sh node_script node_kubectl cp_sh w1_sh k
 
-# The Lima VM (cluster/lima.sh) runs the AppArmor and Cilium tasks on a kernel of its own.
+# The Lima VM (cluster/lima.sh) runs the Cilium tasks on a kernel of its own, and under
+# OrbStack the AppArmor and kernel module tasks as well.
 CKS_LIMA="${CKS_LIMA:-cks-lima}"
 onlima() { limactl shell --workdir / "$CKS_LIMA" sudo bash -s "$@"; }
 lima_sh() { limactl shell --workdir / "$CKS_LIMA" sudo bash -c "$*"; }
@@ -25,6 +29,30 @@ need_lima() {
     return 1
   fi
 }
+
+# The AppArmor and kernel module tasks need a kernel that belongs to one machine. OrbStack's
+# shared kernel has no AppArmor, so there they run on the Lima VM. A real VM has a kernel of its
+# own, so with CKS_PLATFORM=vms they run on cks-w1, where the pods land. The scripts these
+# helpers run call kubectl on the node, so on cks-w1 they get the admin kubeconfig in a
+# temporary file that the script deletes when it ends.
+if [ "$CKS_PLATFORM" = vms ]; then
+  _cks_admin_prelude() {
+    # ssh reads stdin, which holds the caller's script here, so it gets /dev/null instead.
+    [ -n "${_CKS_ADMIN_CONF:-}" ] || _CKS_ADMIN_CONF="$(cp_sh 'cat /etc/kubernetes/admin.conf' </dev/null)"
+    echo 'KUBECONFIG="$(mktemp)"; export KUBECONFIG; trap '"'"'rm -f "$KUBECONFIG"'"'"' EXIT'
+    echo "cat > \"\$KUBECONFIG\" <<'CKS_ADMIN_CONF'"
+    printf '%s\n' "$_CKS_ADMIN_CONF"
+    echo 'CKS_ADMIN_CONF'
+  }
+  onkern() { { _cks_admin_prelude; cat; } | onw1 "$@"; }
+  kern_sh() { { _cks_admin_prelude; printf '%s\n' "$*"; } | onw1; }
+  need_kernel() { :; }
+else
+  onkern() { onlima "$@"; }
+  kern_sh() { lima_sh "$@"; }
+  need_kernel() { need_lima; }
+fi
+check_kern() { local what="$1"; shift; check "$what" kern_sh "$*"; }
 
 PASSES=0
 FAILS=0

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs as root inside one OrbStack machine or the Lima VM. Installs containerd, runc,
+# Runs as root inside one OrbStack machine, one VM or the Lima VM. Installs containerd, runc,
 # the CNI plugins, and kubeadm, kubelet and kubectl at one pinned version.
 # create.sh copies it in and runs it on every node.
 set -euo pipefail
@@ -9,7 +9,7 @@ CONTAINERD_VERSION="${CONTAINERD_VERSION:-2.2.10}"
 RUNC_VERSION="${RUNC_VERSION:-1.5.2}"
 CNI_VERSION="${CNI_VERSION:-1.9.1}"
 K8S_MINOR="${K8S_VERSION%.*}"
-ARCH=arm64
+ARCH="$(dpkg --print-architecture)"   # arm64 on a Mac, amd64 on most VMs
 export DEBIAN_FRONTEND=noninteractive
 
 echo "--- packages"
@@ -19,7 +19,7 @@ apt-get install -y -qq curl gpg bzip2 ca-certificates apt-transport-https jq vim
 
 echo "--- kernel settings"
 # OrbStack's kernel has br_netfilter and overlay built in, and modprobe fails there.
-# The Lima VM (lima.sh) has a normal Ubuntu kernel that loads them as modules.
+# The Lima VM (lima.sh) and other VMs have a normal Ubuntu kernel that loads them as modules.
 printf 'overlay\nbr_netfilter\n' > /etc/modules-load.d/k8s.conf
 modprobe overlay 2>/dev/null || true
 modprobe br_netfilter 2>/dev/null || true

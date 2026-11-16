@@ -130,9 +130,9 @@ score_m5() {
   check_cp "ClusterRoleBinding deployer-admin is gone" "! kubectl get clusterrolebinding deployer-admin"
   check "deployer creates Deployments in m-ops" as_deployer create deployments.apps -n m-ops
   check "deployer patches Deployments in m-ops" as_deployer patch deployments.apps -n m-ops
-  check "deployer does not delete Deployments in m-ops" bash -c "! orb -m $CKS_CP -u root kubectl auth can-i delete deployments.apps -n m-ops --as=system:serviceaccount:m-ops:deployer"
-  check "deployer does not create Deployments in default" bash -c "! orb -m $CKS_CP -u root kubectl auth can-i create deployments.apps -n default --as=system:serviceaccount:m-ops:deployer"
-  check "deployer does not read Secrets in m-ops" bash -c "! orb -m $CKS_CP -u root kubectl auth can-i get secrets -n m-ops --as=system:serviceaccount:m-ops:deployer"
+  check "deployer does not delete Deployments in m-ops" bash -c "! k auth can-i delete deployments.apps -n m-ops --as=system:serviceaccount:m-ops:deployer"
+  check "deployer does not create Deployments in default" bash -c "! k auth can-i create deployments.apps -n default --as=system:serviceaccount:m-ops:deployer"
+  check "deployer does not read Secrets in m-ops" bash -c "! k auth can-i get secrets -n m-ops --as=system:serviceaccount:m-ops:deployer"
 }
 solve_m5() {
   oncp <<'EOF'

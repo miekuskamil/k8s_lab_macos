@@ -188,10 +188,10 @@ kubectl -n seccomp exec locked -- sh -c 'touch /tmp/f && chmod 600 /tmp/f'
 EOF
 }
 
-# ---- Task 5: an AppArmor profile (Lima) ----------------------------------------------------
+# ---- Task 5: an AppArmor profile (Lima, or cks-w1 on VMs) ----------------------------------------------------
 setup_6_5() {
-  need_lima || return 1
-  onlima <<'EOF'
+  need_kernel || return 1
+  onkern <<'EOF'
 mkdir -p /root/cks
 cat > /root/cks/cks-deny-write <<'PROFILE'
 #include <tunables/global>
@@ -210,19 +210,19 @@ kubectl -n apparmor delete pod writer --ignore-not-found --now >/dev/null
 EOF
 }
 check_6_5() {
-  check_lima "the profile in /root/cks/cks-deny-write parses and still denies every write" \
+  check_kern "the profile in /root/cks/cks-deny-write parses and still denies every write" \
     "apparmor_parser -Q /root/cks/cks-deny-write && grep -Eq '^\s*deny /\*\* w,' /root/cks/cks-deny-write"
-  check_lima "profile cks-deny-write is loaded in enforce mode" \
+  check_kern "profile cks-deny-write is loaded in enforce mode" \
     "aa-status 2>/dev/null | sed -n '/profiles are in enforce mode/,/profiles are in complain mode/p' | grep -qx '   cks-deny-write'"
-  check_lima "pod writer asks for the Localhost profile cks-deny-write" \
+  check_kern "pod writer asks for the Localhost profile cks-deny-write" \
     "kubectl -n apparmor get pod writer -o jsonpath='{.spec.containers[0].securityContext.appArmorProfile.type}/{.spec.containers[0].securityContext.appArmorProfile.localhostProfile}' | grep -qx Localhost/cks-deny-write"
-  check_lima "pod writer runs, confined by the profile" \
+  check_kern "pod writer runs, confined by the profile" \
     "kubectl -n apparmor wait pod writer --for=condition=Ready --timeout=60s && kubectl -n apparmor exec writer -- cat /proc/1/attr/current | grep -qx 'cks-deny-write (enforce)'"
-  check_lima "the write to /tmp/x was denied" "kubectl -n apparmor logs writer | grep -q 'Permission denied'"
+  check_kern "the write to /tmp/x was denied" "kubectl -n apparmor logs writer | grep -q 'Permission denied'"
 }
 solve_6_5() {
-  need_lima || return 1
-  onlima <<'EOF'
+  need_kernel || return 1
+  onkern <<'EOF'
 sed -i 's/^  file$/  file,/' /root/cks/cks-deny-write
 cp /root/cks/cks-deny-write /etc/apparmor.d/cks-deny-write
 apparmor_parser -r /etc/apparmor.d/cks-deny-write
@@ -414,10 +414,12 @@ check_6_9() {
 }
 solve_6_9() {
   local line pod rule
-  line="$(w1_sh "for i in \$(seq 1 30); do l=\$(journalctl -u falco-modern-bpf --since '-5min' --no-pager | grep 'k8s_ns_name=shop-runtime' | tail -1); [ -n \"\$l\" ] && echo \"\$l\" && break; sleep 2; done")"
+  # Rules from earlier tasks, such as the shell rule of task 7, also fire in shop-runtime,
+  # so the search keeps only the private key finding.
+  line="$(w1_sh "for i in \$(seq 1 30); do l=\$(journalctl -u falco-modern-bpf --since '-5min' --no-pager | grep 'k8s_ns_name=shop-runtime' | grep -i 'private keys' | tail -1); [ -n \"\$l\" ] && echo \"\$l\" && break; sleep 2; done")"
   echo "  $line" | cut -c1-200
   pod="$(echo "$line" | grep -o 'k8s_pod_name=[^ ]*' | cut -d= -f2)"
-  rule="$(w1_sh "journalctl -u falco-modern-bpf --since '-5min' --no-pager -o cat | grep -m1 'k8s_pod_name=$pod'" | sed 's/^[0-9:.]* [A-Za-z]* //' | cut -d'(' -f1 | sed 's/ *$//')"
+  rule="$(w1_sh "journalctl -u falco-modern-bpf --since '-5min' --no-pager -o cat | grep 'k8s_pod_name=$pod' | grep -i -m1 'private keys'" | sed 's/^[0-9:.]* [A-Za-z]* //' | cut -d'|' -f1 | sed 's/ *$//')"
   echo "  output text: $rule"
   oncp <<EOF
 d=\$(kubectl -n shop-runtime get pod $pod -o jsonpath='{.metadata.labels.app}')
@@ -560,10 +562,10 @@ YAML"
   restart_apiserver
 }
 
-# ---- Task 12: AppArmor for a Deployment (Lima) ----------------------------------------------------
+# ---- Task 12: AppArmor for a Deployment (Lima, or cks-w1 on VMs) ----------------------------------------------------
 setup_6_12() {
-  need_lima || return 1
-  onlima <<'EOF'
+  need_kernel || return 1
+  onkern <<'EOF'
 cat > /etc/apparmor.d/cks-nginx <<'PROFILE'
 #include <tunables/global>
 
@@ -601,17 +603,17 @@ kubectl -n aa-web get events --field-selector reason=Failed -o jsonpath='{range 
 EOF
 }
 check_6_12() {
-  check_lima "profile cks-nginx is loaded in enforce mode" \
+  check_kern "profile cks-nginx is loaded in enforce mode" \
     "aa-status 2>/dev/null | sed -n '/profiles are in enforce mode/,/profiles are in complain mode/p' | grep -qx '   cks-nginx'"
-  check_lima "Deployment web has a ready pod" "kubectl -n aa-web rollout status deploy web --timeout=90s"
-  check_lima "a write below /usr/share/nginx/html fails with Permission denied" \
+  check_kern "Deployment web has a ready pod" "kubectl -n aa-web rollout status deploy web --timeout=90s"
+  check_kern "a write below /usr/share/nginx/html fails with Permission denied" \
     "kubectl -n aa-web exec deploy/web -- sh -c 'echo x > /usr/share/nginx/html/index.html' 2>&1 | grep -q 'Permission denied'"
-  check_lima "a write to /tmp still works, and nginx serves" \
+  check_kern "a write to /tmp still works, and nginx serves" \
     "kubectl -n aa-web exec deploy/web -- sh -c 'echo ok > /tmp/x' && kubectl -n aa-web exec deploy/web -- wget -qO- -T 3 http://127.0.0.1 | grep -q nginx"
 }
 solve_6_12() {
-  need_lima || return 1
-  onlima <<'EOF'
+  need_kernel || return 1
+  onkern <<'EOF'
 apparmor_parser -r /etc/apparmor.d/cks-nginx
 aa-status | grep cks-nginx
 kubectl -n aa-web rollout restart deploy web

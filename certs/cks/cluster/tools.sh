@@ -12,29 +12,30 @@ KUBESEC_VERSION="${KUBESEC_VERSION:-2.15.0}"
 BOM_VERSION="${BOM_VERSION:-0.8.0}"
 GVISOR_RELEASE="${GVISOR_RELEASE:-20261026}"
 FALCO_VERSION="${FALCO_VERSION:-0.45.1}"
+ARCH="$(dpkg --print-architecture)"   # arm64 or amd64; some projects name it differently
 export DEBIAN_FRONTEND=noninteractive
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 
 if [ "$ROLE" = cp ]; then
   echo "--- etcdctl $ETCD_VERSION"
-  curl -fsSL "https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-arm64.tar.gz" \
+  curl -fsSL "https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-${ARCH}.tar.gz" \
     | tar -xz -C "$tmp"
-  install -m 755 "$tmp/etcd-v${ETCD_VERSION}-linux-arm64/etcdctl" "$tmp/etcd-v${ETCD_VERSION}-linux-arm64/etcdutl" /usr/local/bin/
+  install -m 755 "$tmp/etcd-v${ETCD_VERSION}-linux-${ARCH}/etcdctl" "$tmp/etcd-v${ETCD_VERSION}-linux-${ARCH}/etcdutl" /usr/local/bin/
 
   echo "--- trivy $TRIVY_VERSION"
-  curl -fsSL -o "$tmp/trivy.deb" "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-ARM64.deb"
+  curl -fsSL -o "$tmp/trivy.deb" "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-$([ "$ARCH" = arm64 ] && echo ARM64 || echo 64bit).deb"
   dpkg -i "$tmp/trivy.deb" >/dev/null
 
   echo "--- kube-bench $KUBE_BENCH_VERSION"
-  curl -fsSL -o "$tmp/kb.deb" "https://github.com/aquasecurity/kube-bench/releases/download/v${KUBE_BENCH_VERSION}/kube-bench_${KUBE_BENCH_VERSION}_linux_arm64.deb"
+  curl -fsSL -o "$tmp/kb.deb" "https://github.com/aquasecurity/kube-bench/releases/download/v${KUBE_BENCH_VERSION}/kube-bench_${KUBE_BENCH_VERSION}_linux_${ARCH}.deb"
   dpkg -i "$tmp/kb.deb" >/dev/null
 
   echo "--- kubesec $KUBESEC_VERSION"
-  curl -fsSL "https://github.com/controlplaneio/kubesec/releases/download/v${KUBESEC_VERSION}/kubesec_linux_arm64.tar.gz" | tar -xz -C "$tmp"
+  curl -fsSL "https://github.com/controlplaneio/kubesec/releases/download/v${KUBESEC_VERSION}/kubesec_linux_${ARCH}.tar.gz" | tar -xz -C "$tmp"
   install -m 755 "$tmp/kubesec" /usr/local/bin/
 
   echo "--- bom $BOM_VERSION (SBOM generator, its docs are allowed in the exam)"
-  curl -fsSL -o /usr/local/bin/bom "https://github.com/kubernetes-sigs/bom/releases/download/v${BOM_VERSION}/bom-arm64-linux"
+  curl -fsSL -o /usr/local/bin/bom "https://github.com/kubernetes-sigs/bom/releases/download/v${BOM_VERSION}/bom-${ARCH}-linux"
   chmod 755 /usr/local/bin/bom
 
   echo "--- image policy webhook back end (for 05-supply-chain-security)"
@@ -46,7 +47,7 @@ fi
 if [ "$ROLE" = w1 ]; then
   echo "--- gVisor release $GVISOR_RELEASE"
   # The tarball holds runsc, the containerd shim, and a gvisor-bin/ folder runsc looks for next to itself.
-  curl -fsSL "https://storage.googleapis.com/gvisor/releases/release/${GVISOR_RELEASE}/aarch64/gvisor.tar.bz2" \
+  curl -fsSL "https://storage.googleapis.com/gvisor/releases/release/${GVISOR_RELEASE}/$(uname -m)/gvisor.tar.bz2" \
     | tar -xj -C /usr/local/bin runsc containerd-shim-runsc-v1 gvisor-bin
   # Tell containerd about a second runtime handler called runsc.
   if ! grep -q "runtimes.runsc\]" /etc/containerd/config.toml; then

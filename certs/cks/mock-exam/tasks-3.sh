@@ -212,7 +212,7 @@ m3_no_secrets() { k get --raw=/readyz >/dev/null 2>&1 && ! as_m3v get secrets -A
 score_m6() {
   check "viewer may no longer read Secrets" m3_no_secrets
   check "viewer lists Deployments in every namespace" as_m3v list deployments.apps -A
-  check "viewer still lists pods and ConfigMaps" bash -c "orb -m $CKS_CP -u root kubectl auth can-i list pods -A --as=system:serviceaccount:m3-ops:viewer && orb -m $CKS_CP -u root kubectl auth can-i list configmaps -A --as=system:serviceaccount:m3-ops:viewer"
+  check "viewer still lists pods and ConfigMaps" bash -c "k auth can-i list pods -A --as=system:serviceaccount:m3-ops:viewer && k auth can-i list configmaps -A --as=system:serviceaccount:m3-ops:viewer"
   check_cp "ops-view still aggregates" "kubectl get clusterrole ops-view -o jsonpath='{.aggregationRule.clusterRoleSelectors[0].matchLabels}' | grep -q rbac.m3"
 }
 solve_m6() {
@@ -295,14 +295,14 @@ score_m9() {
 }
 solve_m9() { w1_sh "sed -i 's/ yes\$/ no/' /etc/ssh/sshd_config.d/05-vendor.conf && sshd -t && systemctl restart ssh"; }
 
-# ---- 10. Kernel modules nobody needs (4, Lima) ----------------------------------------------------------------------
-setup_m10() { lima_sh 'rm -f /etc/modprobe.d/m3*.conf; modprobe udf; modprobe dccp; true'; }
+# ---- 10. Kernel modules nobody needs (4, Lima, or cks-w1 on VMs) ----------------------------------------------------------------------
+setup_m10() { kern_sh 'rm -f /etc/modprobe.d/m3*.conf; modprobe udf; modprobe dccp; true'; }
 score_m10() {
-  check_lima "udf and dccp are not loaded" "! lsmod | grep -qE '^(udf|dccp) '"
-  check_lima "modprobe refuses both, from a file in /etc/modprobe.d" \
+  check_kern "udf and dccp are not loaded" "! lsmod | grep -qE '^(udf|dccp) '"
+  check_kern "modprobe refuses both, from a file in /etc/modprobe.d" \
     "modprobe -n -v udf 2>&1 | grep -q 'install /bin/false' && modprobe -n -v dccp 2>&1 | grep -q 'install /bin/false'"
 }
-solve_m10() { lima_sh "printf 'install udf /bin/false\nblacklist udf\ninstall dccp /bin/false\nblacklist dccp\n' > /etc/modprobe.d/m3.conf; modprobe -r udf dccp"; }
+solve_m10() { kern_sh "printf 'install udf /bin/false\nblacklist udf\ninstall dccp /bin/false\nblacklist dccp\n' > /etc/modprobe.d/m3.conf; modprobe -r udf dccp"; }
 
 # ---- 11. Rotate to a new provider (8) --------------------------------------------------------------------------------
 setup_m11() {

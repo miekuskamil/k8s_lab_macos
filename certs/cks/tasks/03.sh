@@ -63,9 +63,9 @@ check_3_3() {
     "grep -- '--enable-admission-plugins=' /etc/kubernetes/manifests/kube-apiserver.yaml | grep -q NodeRestriction"
   check_cp "the API server no longer enables AlwaysAdmit" \
     "! grep -- '--enable-admission-plugins=' /etc/kubernetes/manifests/kube-apiserver.yaml | grep -q AlwaysAdmit"
-  check "cks-w1's kubelet may not label node cks-cp (the Node authorizer already blocks this)" bash -c "! orb -m $CKS_W1 -u root kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node cks-cp cks-test=1 --overwrite"
+  check "cks-w1's kubelet may not label node cks-cp (the Node authorizer already blocks this)" bash -c "! w1_sh kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node cks-cp cks-test=1 --overwrite"
   check "cks-w1's kubelet may not set a node-restriction label on itself" \
-    bash -c "! orb -m $CKS_W1 -u root kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node cks-w1 node-restriction.kubernetes.io/cks=1 --overwrite"
+    bash -c "! w1_sh kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node cks-w1 node-restriction.kubernetes.io/cks=1 --overwrite"
   k label node cks-cp cks-test- >/dev/null 2>&1
   k label node cks-w1 node-restriction.kubernetes.io/cks- >/dev/null 2>&1
 }
@@ -171,24 +171,24 @@ chown root:root /etc/kubernetes/kubelet.conf
 EOF
 }
 
-# ---- Task 7: keep a kernel module out (Lima) -----------------------------------------------
+# ---- Task 7: keep a kernel module out (Lima, or cks-w1 on VMs) -----------------------------------------------
 setup_3_7() {
-  need_lima || return 1
-  onlima <<'EOF'
+  need_kernel || return 1
+  onkern <<'EOF'
 rm -f /etc/modprobe.d/cks-*.conf
 modprobe tipc 2>/dev/null; modprobe dccp 2>/dev/null
 lsmod | grep -E '^(tipc|dccp) ' || echo "  neither module loads on this kernel"
 EOF
 }
 check_3_7() {
-  check_lima "tipc is not loaded" "! lsmod | grep -q '^tipc '"
-  check_lima "modprobe refuses to load tipc" "modprobe -n -v tipc 2>&1 | grep -q 'install /bin/false'"
-  check_lima "dccp is not loaded, and modprobe refuses it" "! lsmod | grep -q '^dccp ' && modprobe -n -v dccp 2>&1 | grep -q 'install /bin/false'"
-  check_lima "the rule lives in a file under /etc/modprobe.d" "grep -rqsE '^install +tipc +/bin/false' /etc/modprobe.d/"
+  check_kern "tipc is not loaded" "! lsmod | grep -q '^tipc '"
+  check_kern "modprobe refuses to load tipc" "modprobe -n -v tipc 2>&1 | grep -q 'install /bin/false'"
+  check_kern "dccp is not loaded, and modprobe refuses it" "! lsmod | grep -q '^dccp ' && modprobe -n -v dccp 2>&1 | grep -q 'install /bin/false'"
+  check_kern "the rule lives in a file under /etc/modprobe.d" "grep -rqsE '^install +tipc +/bin/false' /etc/modprobe.d/"
 }
 solve_3_7() {
-  need_lima || return 1
-  onlima <<'EOF'
+  need_kernel || return 1
+  onkern <<'EOF'
 printf 'install tipc /bin/false\nblacklist tipc\ninstall dccp /bin/false\nblacklist dccp\n' > /etc/modprobe.d/cks-blacklist.conf
 modprobe -r tipc 2>/dev/null; modprobe -r dccp 2>/dev/null
 lsmod | grep -E '^(tipc|dccp) ' || echo "neither module loaded"

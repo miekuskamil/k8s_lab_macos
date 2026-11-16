@@ -73,7 +73,7 @@ kubeadm init --config /etc/kubeadm/config.yaml >/var/log/kubeadm-init.log 2>&1 |
   say "4/4 Cilium $CILIUM_VERSION"
   on "set -e
 if ! cilium version --client 2>/dev/null | grep -q 'v$CILIUM_CLI_VERSION'; then
-  curl -fsSL https://github.com/cilium/cilium-cli/releases/download/v$CILIUM_CLI_VERSION/cilium-linux-arm64.tar.gz | tar -xz -C /usr/local/bin cilium
+  curl -fsSL https://github.com/cilium/cilium-cli/releases/download/v$CILIUM_CLI_VERSION/cilium-linux-\$(dpkg --print-architecture).tar.gz | tar -xz -C /usr/local/bin cilium
 fi
 if ! kubectl -n kube-system get ds cilium >/dev/null 2>&1; then
   cilium install --version $CILIUM_VERSION --set ipam.mode=kubernetes >/dev/null

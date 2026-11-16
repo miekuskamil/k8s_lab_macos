@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Builds the CKS practice cluster on two OrbStack machines:
+# Builds the CKS practice cluster on two nodes, OrbStack machines by default:
 #   cks-cp  control plane (kubeadm, etcd, Calico), plus etcdctl, trivy, kube-bench, kubesec
 #   cks-w1  worker, plus gVisor (runsc) and Falco
 # Safe to run again: every step skips what is already done.
 # Usage: ./certs/cks/cluster/create.sh
+#        CKS_PLATFORM=vms ./certs/cks/cluster/create.sh   on two Ubuntu 24.04 VMs over SSH (see platform.sh)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -12,13 +13,25 @@ CALICO_VERSION="${CALICO_VERSION:-3.32.3}"
 INGRESS_NGINX_VERSION="${INGRESS_NGINX_VERSION:-1.15.1}"
 CP=cks-cp
 W1=cks-w1
+. "$HERE/platform.sh"
 
 say() { printf '\n=== %s\n' "$*"; }
-on() { local m="$1"; shift; orb -m "$m" -u root bash -c "$*"; }
+on() { local m="$1"; shift; node_sh "$m" "$*"; }
 
 say "1/7 machines"
 for m in "$CP" "$W1"; do
-  if orb list | awk '{print $1}' | grep -qx "$m"; then
+  if [ "$CKS_PLATFORM" = vms ]; then
+    # The VMs exist already. Each needs SSH, passwordless sudo and the node's name as hostname,
+    # because kubeadm names a node after its host and the tasks expect cks-cp and cks-w1.
+    on "$m" true </dev/null || { echo "no SSH to $m as $CKS_SSH_USER with passwordless sudo: $(node_shell_hint "$m")"; exit 1; }
+    on "$m" "command -v cloud-init >/dev/null && cloud-init status --wait >/dev/null 2>&1
+      if [ \"\$(hostname)\" != $m ]; then
+        hostnamectl set-hostname $m
+        grep -q ' $m\$' /etc/hosts || echo '127.0.1.1 $m' >> /etc/hosts
+        mkdir -p /etc/cloud/cloud.cfg.d && echo 'preserve_hostname: true' > /etc/cloud/cloud.cfg.d/99-cks-hostname.cfg
+      fi
+      echo \"$m is up: \$(. /etc/os-release; echo \$PRETTY_NAME), \$(dpkg --print-architecture), kernel \$(uname -r)\""
+  elif orb list | awk '{print $1}' | grep -qx "$m"; then
     orb start "$m" >/dev/null 2>&1 || true
     echo "$m exists"
   else
@@ -32,12 +45,17 @@ for m in "$CP" "$W1"; do
   if on "$m" "test -f /etc/kubernetes/kubelet.conf"; then
     echo "$m is already a cluster node, skipping"
   else
-    orb -m "$m" -u root env K8S_VERSION="$K8S_VERSION" bash "$HERE/node-prep.sh"
+    K8S_VERSION="$K8S_VERSION" node_file "$m" node-prep.sh
   fi
 done
 
 say "3/7 kubeadm init on $CP"
-CP_IP="$(on "$CP" "ip -4 -o addr show eth0 | awk '{print \$4}' | cut -d/ -f1")"
+if [ "$CKS_PLATFORM" = vms ]; then
+  # The address the node uses to reach the outside, whatever its network card is called.
+  CP_IP="$(on "$CP" "ip -4 -o route get 1.1.1.1 | sed 's/.* src \([0-9.]*\).*/\1/'")"
+else
+  CP_IP="$(on "$CP" "ip -4 -o addr show eth0 | awk '{print \$4}' | cut -d/ -f1")"
+fi
 if on "$CP" "test -f /etc/kubernetes/admin.conf"; then
   echo "already initialised"
 else
@@ -46,7 +64,7 @@ else
 fi
 # kubectl works for root and for the default user, like on an exam node.
 on "$CP" 'mkdir -p /root/.kube && cp /etc/kubernetes/admin.conf /root/.kube/config
-  H=$(getent passwd 501 | cut -d: -f6); mkdir -p "$H/.kube" && cp /etc/kubernetes/admin.conf "$H/.kube/config" && chown -R 501:501 "$H/.kube"
+  H=$(getent passwd '"$CKS_NODE_USER"' | cut -d: -f6); mkdir -p "$H/.kube" && cp /etc/kubernetes/admin.conf "$H/.kube/config" && chown -R '"$CKS_NODE_USER:$CKS_NODE_USER"' "$H/.kube"
   grep -q "alias k=kubectl" /etc/bash.bashrc || printf "alias k=kubectl\nsource <(kubectl completion bash)\ncomplete -o default -F __start_kubectl k\nexport do=\"--dry-run=client -o yaml\"\n" >> /etc/bash.bashrc'
 
 say "4/7 Calico $CALICO_VERSION (enforces NetworkPolicy)"
@@ -64,8 +82,8 @@ fi
 on "$CP" "kubectl wait node --all --for=condition=Ready --timeout=300s >/dev/null && kubectl -n kube-system rollout status ds/calico-node --timeout=300s >/dev/null"
 
 say "6/7 security tools"
-orb -m "$CP" -u root bash "$HERE/tools.sh" cp
-orb -m "$W1" -u root bash "$HERE/tools.sh" w1
+node_file "$CP" tools.sh cp
+node_file "$W1" tools.sh w1
 
 say "7/7 ingress-nginx $INGRESS_NGINX_VERSION on NodePorts 30080 and 30443"
 # The project was retired in March 2026, but the Ingress API it serves is the same one the exam asks about.
@@ -81,6 +99,6 @@ on "$CP" "kubectl get nodes -o wide"
 cat <<EOF
 
 Work on the control plane the way the exam does, from a shell on the node:
-  orb -m $CP          # then: kubectl get nodes
-  orb -m $W1          # for node tasks on the worker (sudo -i for root)
+  $(node_shell_hint $CP)          # then: kubectl get nodes
+  $(node_shell_hint $W1)          # for node tasks on the worker (sudo -i for root)
 EOF

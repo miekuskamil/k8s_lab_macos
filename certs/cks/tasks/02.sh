@@ -193,7 +193,7 @@ check_2_5() {
   check "prom lists endpoints in every namespace" as_prom list endpoints -A
   check "prom watches services in every namespace" as_prom watch services -A
   check "prom still lists pods" as_prom list pods -A
-  check "prom may no longer exec into pods" bash -c "! orb -m $CKS_CP -u root kubectl auth can-i create pods --subresource=exec -A --as=system:serviceaccount:monitoring:prom"
+  check "prom may no longer exec into pods" bash -c "! k auth can-i create pods --subresource=exec -A --as=system:serviceaccount:monitoring:prom"
   check_cp "monitoring-reader still aggregates, with no rules of its own written by hand" \
     "kubectl get clusterrole monitoring-reader -o jsonpath='{.aggregationRule.clusterRoleSelectors[0].matchLabels}' | grep -q aggregate-to-monitoring"
 }
@@ -237,7 +237,7 @@ EOF
 check_2_6() {
   check_cp "/root/cks/secret-reader.txt names cleaner" "grep -qx cleaner /root/cks/secret-reader.txt"
   check "cleaner may no longer read Secrets in kube-system" \
-    bash -c "! orb -m $CKS_CP -u root kubectl auth can-i get secrets -n kube-system --as=system:serviceaccount:apps:cleaner"
+    bash -c "! k auth can-i get secrets -n kube-system --as=system:serviceaccount:apps:cleaner"
   check_cp "ServiceAccount cleaner still exists" "kubectl -n apps get sa cleaner"
   check "deployer keeps its rights" k auth can-i create deployments.apps -n apps --as=system:serviceaccount:apps:deployer
   check_cp "/root/cks/viewer-perms.txt holds viewer's can-i list" \
@@ -459,7 +459,7 @@ check_2_12() {
   check_cp "an anonymous request for kube-system Secrets gets 403" \
     "curl -sk -o /dev/null -w '%{http_code}' https://\$(hostname -I | cut -d' ' -f1):6443/api/v1/namespaces/kube-system/secrets | grep -qx 403"
   check "the default ServiceAccount may not list Secrets" \
-    bash -c "! orb -m $CKS_CP -u root kubectl auth can-i list secrets -A --as=system:serviceaccount:default:default"
+    bash -c "! k auth can-i list secrets -A --as=system:serviceaccount:default:default"
   check_cp "the nodes stay Ready" "kubectl wait node --all --for=condition=Ready --timeout=60s"
 }
 solve_2_12() {
