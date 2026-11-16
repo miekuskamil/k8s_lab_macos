@@ -28,15 +28,16 @@ install() {
     # A Git bundle carries the current branch with its history, so the VM gets a real
     # checkout of work that is not on GitHub yet. Its origin still points at GitHub.
     local bundle; bundle="$(mktemp -d)/lab.bundle"
-    git -C "$HERE/.." bundle create "$bundle" HEAD 2>/dev/null
+    local branch; branch="$(git -C "$HERE/.." rev-parse --abbrev-ref HEAD)"
+    git -C "$HERE/.." bundle create "$bundle" "$branch" 2>/dev/null
     "${SSH[@]}" "$HOST" 'cat > /tmp/lab.bundle' < "$bundle"
     rm -rf "$(dirname "$bundle")"
     "${SSH[@]}" "$HOST" 'set -e
-      command -v git >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq git >/dev/null; }
+      command -v git >/dev/null || { sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git >/dev/null; }
       if [ -d ~/k8s_lab_macos/.git ]; then
-        git -C ~/k8s_lab_macos pull -q --ff-only /tmp/lab.bundle HEAD
+        git -C ~/k8s_lab_macos pull -q --ff-only /tmp/lab.bundle '"$branch"'
       else
-        git clone -q /tmp/lab.bundle ~/k8s_lab_macos
+        git clone -q -b '"$branch"' /tmp/lab.bundle ~/k8s_lab_macos
         git -C ~/k8s_lab_macos remote set-url origin https://github.com/miekuskamil/k8s_lab_macos
       fi
       rm /tmp/lab.bundle'
