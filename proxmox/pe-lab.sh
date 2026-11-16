@@ -10,9 +10,12 @@
 #   PE_LAB_HOST=ubuntu@192.168.1.231   the VM
 #   PE_LAB_KEY=~/.ssh/cks_proxmox      the private key; set it empty to use your SSH config
 #   PE_LAB_PORT_OFFSET=0               added to every port on the Mac side of "ui"
+#   LAB_APT_MIRROR=https://gb.archive.ubuntu.com/ubuntu   passed to install-lab.sh; set it empty for the image's default
 set -euo pipefail
 
 HOST="${PE_LAB_HOST:-ubuntu@192.168.1.231}"
+# Plain-HTTP apt downloads hang on the author's Proxmox network, while HTTPS works.
+MIRROR="${LAB_APT_MIRROR-https://gb.archive.ubuntu.com/ubuntu}"
 KEY="${PE_LAB_KEY-$HOME/.ssh/cks_proxmox}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SSH=(ssh -o StrictHostKeyChecking=accept-new)
@@ -42,10 +45,10 @@ install() {
         git -C ~/k8s_lab_macos remote set-url origin https://github.com/miekuskamil/k8s_lab_macos
       fi
       rm /tmp/lab.bundle'
-    "${SSH[@]}" "$HOST" k8s_lab_macos/proxmox/install-lab.sh ${args[@]+"${args[@]}"}
+    "${SSH[@]}" "$HOST" env LAB_APT_MIRROR="$MIRROR" k8s_lab_macos/proxmox/install-lab.sh ${args[@]+"${args[@]}"}
   else
     "${SSH[@]}" "$HOST" 'cat > ~/install-lab.sh && chmod +x ~/install-lab.sh' < "$HERE/install-lab.sh"
-    "${SSH[@]}" "$HOST" ./install-lab.sh ${args[@]+"${args[@]}"}
+    "${SSH[@]}" "$HOST" env LAB_APT_MIRROR="$MIRROR" ./install-lab.sh ${args[@]+"${args[@]}"}
   fi
 }
 
@@ -72,5 +75,5 @@ case "${1:-}" in
   install) shift; install "$@" ;;
   ui) ui ;;
   ssh) shift; "${SSH[@]}" "$HOST" "$@" ;;
-  *) sed -n '2,12p' "$0"; exit 1 ;;
+  *) sed -n '2,13p' "$0"; exit 1 ;;
 esac

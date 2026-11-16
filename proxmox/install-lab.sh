@@ -10,6 +10,8 @@
 # The steps follow docs/linux.md. Settings come from the environment:
 #   LAB_DIR=~/k8s_lab_macos   where the repository lives (ignored when the script runs from a checkout)
 #   LAB_REPO_URL=https://github.com/miekuskamil/k8s_lab_macos
+#   LAB_APT_MIRROR=https://gb.archive.ubuntu.com/ubuntu   the apt mirror to use; set it where
+#                             plain-HTTP apt downloads hang, as on the author's Proxmox network
 set -euo pipefail
 
 KUBECTL_VERSION=1.31.5
@@ -27,7 +29,7 @@ for arg in "$@"; do
   case "$arg" in
     --with-ollama) with_ollama=1 ;;
     --no-provision) provision=0 ;;
-    *) sed -n '2,13p' "$0"; exit 1 ;;
+    *) sed -n '2,15p' "$0"; exit 1 ;;
   esac
 done
 
@@ -53,6 +55,13 @@ check() { echo "$2  $TMP/$1" | sha256sum -c --quiet - || die "checksum mismatch 
 
 packages() {
   say "Ubuntu packages: Docker Engine, git, curl, python3"
+  # On a fresh cloud image, cloud-init's first-boot upgrade holds the apt lock for a while.
+  if command -v cloud-init >/dev/null; then cloud-init status --wait >/dev/null 2>&1 || true; fi
+  local sources=/etc/apt/sources.list.d/ubuntu.sources
+  if [ -n "${LAB_APT_MIRROR:-}" ] && [ -f "$sources" ] && grep -qE '^URIs: http://' "$sources"; then
+    sudo sed -i -E "s#^URIs: http://[a-z.]*ubuntu\.com/ubuntu(-ports)?/?\$#URIs: $LAB_APT_MIRROR#" "$sources"
+    ok "apt uses $LAB_APT_MIRROR"
+  fi
   local need=()
   for p in docker.io git curl python3 ca-certificates; do
     dpkg -s "$p" >/dev/null 2>&1 || need+=("$p")
