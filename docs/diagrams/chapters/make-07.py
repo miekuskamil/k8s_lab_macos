@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagrams for platform-engineering/07-sidecar-mode.md in ByteByteGo style (see ../bbg.py).
+"""Draw the diagrams for platform-engineering/07-sidecar-mode.md with the kit in ../bbg.py.
 
   07-two-modes         ambient and sidecar namespaces side by side, one istiod
   07-injection         how a one-container Deployment ends up with three containers
@@ -17,95 +17,95 @@ OUT = Path(__file__).resolve().parent
 
 
 def two_modes():
-    c = Canvas(1700, 860)
+    c = Canvas(1600, 900)
     c.title("Two data planes,", "one istiod")
     c.subtitle("Each namespace picks ambient or sidecars with a label. The same istiod configures both.")
 
-    c.node(650, 170, 400, 100, PURPLE, "istiod", "gear", "one control plane, one CA")
+    c.frame(40, 150, 1520, 720, "Cluster", "cluster")
+    c.frame(560, 180, 480, 150, "namespace istio-system", "ns")
+    ist = c.node(590, 225, 420, 86, PURPLE, "istiod", "gear", "one control plane, one CA")
 
-    c.group(40, 400, 360, 320, "")
-    c.text(220, 750, "namespace shop: ambient", 19, SOFT, True, "middle")
-    c.outline(70, 440, 300, 96, BLUE, "waypoint", "shield")
-    c.outline(70, 590, 300, 96, SLATE, "frontend\n1 container", "cube")
+    c.frame(70, 380, 1460, 460, "Node", "node")
+    amb = c.frame(100, 430, 560, 270, "namespace shop", "ns")
+    c.chip(640, 445, "dataplane-mode: ambient", BLUE, anchor="end", size=15)
+    c.frame(130, 490, 240, 180, "frontend pod", "pod")
+    fe = c.box(155, 545, 190, 90, SLATE, "app", "1 container")
+    c.frame(400, 490, 240, 180, "waypoint pod", "pod")
+    c.box(425, 545, 190, 90, BLUE, "Envoy", "L7 for backend")
+    zt = c.band(100, 730, 560, 80, BLUE, "ztunnel", "", "tunnel", size=19)
+    c.text(640, 776, "one per node", 17, SOFT, False, "end")
+    c.connect(fe, zt, "", sa="bottom", sb="top", fb=(250 - 100) / 560)
 
-    c.node(560, 440, 300, 96, BLUE, "ztunnel", "tunnel")
+    sc = c.frame(700, 430, 800, 380, "namespace course-sidecar", "ns")
+    c.chip(1480, 445, "istio-injection: enabled", BLUE, anchor="end", size=15)
+    c.frame(730, 490, 340, 290, "client pod", "pod")
+    c.box(760, 545, 280, 80, SLATE, "curl")
+    p1 = c.box(760, 665, 280, 86, BLUE, "istio-proxy", "Envoy")
+    c.frame(1130, 490, 340, 290, "httpbin pod", "pod")
+    c.box(1160, 545, 280, 80, SLATE, "httpbin")
+    p2 = c.box(1160, 665, 280, 86, BLUE, "istio-proxy", "Envoy")
+    c.connect(p1, p2, "mTLS", pos="above")
 
-    c.group(1000, 400, 660, 320, "")
-    c.text(1330, 750, "namespace course-sidecar: sidecars", 19, SOFT, True, "middle")
-    c.group(1030, 450, 290, 250, "")
-    c.text(1175, 690, "pod client", 17, SOFT, True, "middle")
-    c.outline(1050, 470, 250, 86, BLUE, "istio-proxy", "shield")
-    c.outline(1050, 585, 250, 86, SLATE, "curl", "cube")
-    c.line([(1175, 556), (1175, 585)], LINE, 2.5)
-    c.group(1350, 450, 290, 250, "")
-    c.text(1495, 690, "pod httpbin", 17, SOFT, True, "middle")
-    c.outline(1370, 470, 250, 86, BLUE, "istio-proxy", "shield")
-    c.outline(1370, 585, 250, 86, SLATE, "httpbin", "cube")
-    c.line([(1495, 556), (1495, 585)], LINE, 2.5)
-
-    # config from istiod
-    c.arrow([(670, 270), (300, 440)], "xDS", at=(470, 345), pos="left", col=SOFT)
-    c.arrow([(740, 270), (710, 440)], "xDS config,\ncertificates", at=(725, 355), pos="right", col=SOFT)
-    c.arrow([(980, 270), (1150, 470)], "xDS", at=(1035, 335), pos="left", col=SOFT)
-    c.arrow([(1040, 250), (1480, 470)], "xDS", at=(1280, 360), pos="right", col=SOFT)
-
-    # traffic
-    c.arrow([(1300, 512), (1370, 512)], "", dashed=False)
-    c.text(1335, 500, "mTLS", 17, INK, True, "middle")
-    c.arrow([(1050, 512), (860, 512)], "mTLS\n(HBONE)", at=(940, 512), pos="below", dashed=False)
-
-    c.note(40, 825, ["Ambient: no proxy in the app pod. Sidecar: an Envoy in every pod."], 17)
+    c.connect(ist, amb, "xDS, certificates", sa="bottom", sb="top", fa=0.2, fb=(674 - 100) / 560, dashed=True,
+              col=PURPLE, pos="left", at=(674, 380))
+    c.connect(ist, sc, "xDS, certificates", sa="bottom", sb="top", fa=0.8, fb=(926 - 700) / 800, dashed=True,
+              col=PURPLE, pos="right", at=(926, 380))
     c.save(OUT, "07-two-modes")
 
 
 def injection():
-    c = Canvas(1640, 920)
+    c = Canvas(1600, 980)
     c.title("How a pod gets its", "sidecar")
     c.subtitle("A mutating admission webhook in istiod edits each new pod before the API server stores it.")
 
-    c.node(60, 190, 280, 110, SLATE, "You", "person", "Deployment, 1 container")
-    c.node(560, 190, 360, 110, PURPLE, "Kubernetes API", "server", "API server")
-    c.node(1180, 190, 400, 110, PURPLE, "istiod injector", "gear", "mutating webhook")
+    you = c.node(40, 200, 260, 110, SLATE, "You", "person", "Deployment,\n1 container")
+    c.frame(370, 150, 1190, 220, "Control plane", "group")
+    api = c.node(410, 210, 340, 120, PURPLE, "API server", "server", "stores the pod")
+    inj = c.node(1180, 210, 340, 120, PURPLE, "istiod injector", "gear", "mutating webhook")
+    c.connect(you, api, "create", n=1, sa="right", sb="left", fa=0.5, fb=(255 - 210) / 120, at=(335, 255), pos="above")
+    c.connect(api, inj, "AdmissionReview", n=2, sa="right", sb="left", fa=0.3, fb=0.3, at=(965, 246))
+    c.connect(inj, api, "patch: add 2 containers", n=3, sa="left", sb="right", fa=0.72, fb=0.72, at=(965, 296),
+              pos="below", col=PURPLE)
 
-    c.arrow([(340, 245), (560, 245)], "Create\nDeployment", n=1, at=(450, 245), pos="below")
-    c.arrow([(920, 220), (1180, 220)], "AdmissionReview,\neach new pod", n=2, at=(1050, 220), pos="above")
-    c.arrow([(1180, 275), (920, 275)], "Patch: add istio-init\nand istio-proxy", n=3, at=(1050, 275), pos="below")
-
-    c.node(560, 470, 360, 100, TEAL, "kubelet", "server", "runs the pod")
-    c.arrow([(740, 300), (740, 470)], "Run pod,\n3 containers", at=(740, 395), pos="right", col=SOFT)
-
-    c.group(60, 690, 1520, 160, "")
-    c.text(820, 885, "Pod: 3 containers", 19, SOFT, True, "middle")
-    c.outline(100, 725, 420, 96, GREEN, "istio-init\nNET_ADMIN, NET_RAW", "gear")
-    c.outline(600, 725, 380, 96, SLATE, "app", "cube")
-    c.outline(1060, 725, 480, 96, BLUE, "istio-proxy", "shield")
-
-    c.arrow([(600, 570), (310, 725)], "Set iptables\nrules, exit", n=4, at=(455, 648), pos="above")
-    c.arrow([(790, 570), (790, 725)], "", dashed=True)
-    c.arrow([(880, 570), (1300, 725)], "Start app and\nistio-proxy", n=5, at=(1090, 648), pos="above")
+    c.frame(370, 420, 1190, 530, "Node", "node")
+    kub = c.node(410, 470, 340, 110, TEAL, "kubelet", "server", "runs the pod")
+    c.connect(api, kub, "pod spec", sa="bottom", sb="top", dashed=True, pos="right")
+    pod = c.frame(410, 650, 1110, 260, "pod: 3 containers", "pod")
+    init = c.box(440, 730, 320, 140, GREEN, "istio-init", "NET_ADMIN, NET_RAW\nsets iptables, exits")
+    app = c.box(810, 730, 300, 140, SLATE, "app")
+    prx = c.box(1160, 730, 330, 140, BLUE, "istio-proxy", "Envoy")
+    c.connect(kub, init, "first", n=4, sa="bottom", sb="top", fa=0.5, fb=0.5, pos="right", at=(580, 615))
+    c.connect(kub, app, "", sa="right", sb="top", fa=0.35)
+    c.connect(kub, prx, "then app and proxy", n=5, sa="right", sb="top", fa=0.75, at=(1150, 552), pos="below")
     c.save(OUT, "07-injection")
 
 
 def two_proxies():
-    c = Canvas(1800, 760)
+    c = Canvas(1600, 860)
     c.title("Two proxies on", "every request")
     c.subtitle("iptables rules inside each pod hand the app's connections to Envoy. The app never notices.")
 
-    c.group(40, 180, 800, 520, "pod client")
-    c.node(80, 230, 260, 110, SLATE, "curl", "cube", "the app")
-    c.node(500, 230, 300, 110, BLUE, "istio-proxy", "shield", "outbound :15001")
-    c.arrow([(340, 285), (500, 285)], "iptables\nport 15001", at=(420, 285), pos="below")
+    c.frame(40, 150, 720, 680, "client pod", "pod", right="its own netns")
+    curl = c.box(80, 210, 220, 90, SLATE, "curl", "the app")
+    p1 = c.frame(400, 200, 320, 380, "istio-proxy", "plain", col=BLUE, icon="shield", right=":15001")
     for i, t in enumerate(["Routing", "Retries", "Faults", "Starts mTLS"]):
-        c.outline(500, 390 + i * 74, 300, 58, BLUE, t, size=18)
+        c.box(425, 255 + i * 76, 270, 58, BLUE, t, size=18)
+    b1 = c.band(80, 650, 640, 120, GREEN, "iptables", "OUTPUT: to :15001", "filter", lx=150, ly=684)
 
-    c.group(960, 180, 800, 520, "pod httpbin")
-    c.node(1000, 230, 300, 110, BLUE, "istio-proxy", "shield", "inbound :15006")
-    c.node(1460, 230, 260, 110, SLATE, "httpbin", "cube", "the app")
-    c.arrow([(1300, 285), (1460, 285)], "localhost", at=(1380, 285), pos="below")
-    for i, t in enumerate(["Ends mTLS", "Checks policy", "Adds XFCC header"]):
-        c.outline(1000, 390 + i * 74, 300, 58, BLUE, t, size=18)
+    c.frame(840, 150, 720, 680, "httpbin pod", "pod", right="its own netns")
+    p2 = c.frame(880, 200, 320, 380, "istio-proxy", "plain", col=BLUE, icon="shield", right=":15006")
+    for i, t in enumerate(["Ends mTLS", "Checks policy", "Adds XFCC"]):
+        c.box(905, 255 + i * 76, 270, 58, BLUE, t, size=18)
+    app = c.box(1300, 210, 220, 90, SLATE, "httpbin", "the app")
+    c.band(880, 650, 640, 120, GREEN, "iptables", "PREROUTING: to :15006", "filter", lx=1170, ly=684)
 
-    c.arrow([(800, 285), (1000, 285)], "mTLS", at=(900, 285), pos="above", dashed=False)
+    c.line([(130, 300), (130, 740), (560, 740), (560, 580)], SLATE, AW, head=True)
+    c.chip(450, 740, "redirect", GREEN, anchor="middle", mono=False)
+    c.line([(720, 250), (800, 250), (800, 740), (1040, 740), (1040, 580)], GREEN, 3, head=True)
+    c.chip(800, 470, "mTLS", GREEN, anchor="middle", solid=True, mono=False)
+    c.chip(960, 740, "redirect", GREEN, anchor="middle", mono=False)
+    c.connect(p2, app, "localhost", sa="right", sb="left", fa=(255 - 200) / 380, pos="above")
+    c.note(80, 806, "Envoy runs as uid 1337, so its own traffic skips the rules.", 17)
     c.save(OUT, "07-two-proxies")
 
 

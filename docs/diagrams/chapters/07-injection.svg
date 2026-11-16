@@ -1,98 +1,115 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1640" height="920" viewBox="0 0 1640 920" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
-<rect width="1640" height="920" fill="#1e1f24"/>
-<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
-<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
-<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">How a pod gets its</text>
-<rect x="434.7" y="26.0" width="169.0" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<text x="448.7" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">sidecar</text>
-<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">A mutating admission webhook in istiod edits each new pod before the API server stores it.</text>
-<rect x="60.0" y="196.0" width="280.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="60.0" y="190.0" width="280.0" height="110.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="60.0" y="298.0" width="280.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<ellipse cx="100.0" cy="235.0" rx="10" ry="10" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
-<rect x="84.0" y="248.0" width="32.0" height="19.0" rx="10" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
-<text x="138.0" y="237.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">You</text>
-<text x="138.0" y="265.0" font-size="16" fill="#ffffffcc" text-anchor="start">Deployment, 1 container</text>
-<rect x="560.0" y="196.0" width="360.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<rect x="560.0" y="190.0" width="360.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<rect x="560.0" y="298.0" width="360.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<rect x="581.0" y="225.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="588.0" cy="230.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<rect x="581.0" y="239.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="588.0" cy="244.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<rect x="581.0" y="253.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="588.0" cy="258.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<text x="638.0" y="237.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">Kubernetes API</text>
-<text x="638.0" y="265.0" font-size="16" fill="#ffffffcc" text-anchor="start">API server</text>
-<rect x="1180.0" y="196.0" width="400.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<rect x="1180.0" y="190.0" width="400.0" height="110.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<rect x="1180.0" y="298.0" width="400.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<ellipse cx="1220.0" cy="245.0" rx="16" ry="16" fill="none" stroke="#f5f5f7" stroke-width="3"/>
-<ellipse cx="1220.0" cy="245.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<polyline points="1220.0,224.0 1220.0,231.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="1220.0,259.0 1220.0,266.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="1199.0,245.0 1206.0,245.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="1234.0,245.0 1241.0,245.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="1258.0" y="237.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">istiod injector</text>
-<text x="1258.0" y="265.0" font-size="16" fill="#ffffffcc" text-anchor="start">mutating webhook</text>
-<polyline points="340.0,245.0 560.0,245.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<ellipse cx="450.0" cy="245.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="450.0" y="252.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
-<text x="450.0" y="288.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">Create</text>
-<text x="450.0" y="311.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">Deployment</text>
-<polyline points="920.0,220.0 1180.0,220.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<ellipse cx="1050.0" cy="220.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="1050.0" y="227.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
-<text x="1050.0" y="168.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">AdmissionReview,</text>
-<text x="1050.0" y="191.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">each new pod</text>
-<polyline points="1180.0,275.0 920.0,275.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<ellipse cx="1050.0" cy="275.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="1050.0" y="282.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
-<text x="1050.0" y="318.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">Patch: add istio-init</text>
-<text x="1050.0" y="341.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">and istio-proxy</text>
-<rect x="560.0" y="476.0" width="360.0" height="100.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
-<rect x="560.0" y="470.0" width="360.0" height="100.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
-<rect x="560.0" y="568.0" width="360.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<rect x="581.0" y="500.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="588.0" cy="505.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<rect x="581.0" y="514.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="588.0" cy="519.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<rect x="581.0" y="528.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="588.0" cy="533.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<text x="638.0" y="512.0" font-size="24" fill="#f5f5f7" font-weight="700" text-anchor="start">kubelet</text>
-<text x="638.0" y="540.0" font-size="16" fill="#ffffffcc" text-anchor="start">runs the pod</text>
-<polyline points="740.0,300.0 740.0,470.0" fill="none" stroke="#c9cbd3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<text x="750.0" y="389.5" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="start">Run pod,</text>
-<text x="750.0" y="412.5" font-size="18" fill="#c9cbd3" font-weight="700" text-anchor="start">3 containers</text>
-<rect x="60.0" y="690.0" width="1520.0" height="160.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
-<text x="820.0" y="885.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">Pod: 3 containers</text>
-<rect x="100.0" y="725.0" width="420.0" height="96.0" rx="12" fill="#2a2b33" stroke="#0ea47a" stroke-width="2.5"/>
-<ellipse cx="134.0" cy="773.0" rx="16" ry="16" fill="none" stroke="#0ea47a" stroke-width="3"/>
-<ellipse cx="134.0" cy="773.0" rx="6" ry="6" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
-<polyline points="134.0,752.0 134.0,759.0" fill="none" stroke="#0ea47a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="134.0,787.0 134.0,794.0" fill="none" stroke="#0ea47a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="113.0,773.0 120.0,773.0" fill="none" stroke="#0ea47a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="148.0,773.0 155.0,773.0" fill="none" stroke="#0ea47a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="166.0" y="765.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">istio-init</text>
-<text x="166.0" y="789.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">NET_ADMIN, NET_RAW</text>
-<rect x="600.0" y="725.0" width="380.0" height="96.0" rx="12" fill="#2a2b33" stroke="#475069" stroke-width="2.5"/>
-<polygon points="634.0,753.0 652.0,763.0 634.0,773.0 616.0,763.0" fill="none" stroke="#475069" stroke-width="2.5" stroke-linejoin="round"/>
-<polygon points="616.0,763.0 634.0,773.0 634.0,794.0 616.0,784.0" fill="none" stroke="#475069" stroke-width="2.5" stroke-linejoin="round"/>
-<polygon points="652.0,763.0 634.0,773.0 634.0,794.0 652.0,784.0" fill="none" stroke="#475069" stroke-width="2.5" stroke-linejoin="round"/>
-<text x="666.0" y="777.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">app</text>
-<rect x="1060.0" y="725.0" width="480.0" height="96.0" rx="12" fill="#2a2b33" stroke="#1677ff" stroke-width="2.5"/>
-<polygon points="1094.0,753.0 1112.0,760.0 1109.0,781.0 1094.0,794.0 1079.0,781.0 1076.0,760.0" fill="none" stroke="#1677ff" stroke-width="2.5" stroke-linejoin="round"/>
-<polyline points="1086.0,773.0 1092.0,780.0 1103.0,767.0" fill="none" stroke="#1677ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="1126.0" y="777.0" font-size="19" fill="#f5f5f7" font-weight="700" text-anchor="start">istio-proxy</text>
-<polyline points="600.0,570.0 310.0,725.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<ellipse cx="455.0" cy="648.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="455.0" y="655.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">4</text>
-<text x="455.0" y="596.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">Set iptables</text>
-<text x="455.0" y="619.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">rules, exit</text>
-<polyline points="790.0,570.0 790.0,725.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<polyline points="880.0,570.0 1300.0,725.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<ellipse cx="1090.0" cy="648.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="1090.0" y="655.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">5</text>
-<text x="1090.0" y="596.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">Start app and</text>
-<text x="1090.0" y="619.0" font-size="18" fill="#f5f5f7" font-weight="700" text-anchor="middle">istio-proxy</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="980" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">How a pod gets its <tspan fill="#7c3aed">sidecar</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">A mutating admission webhook in istiod edits each new pod before the API server stores it.</text>
+<rect x="40.0" y="200.0" width="260.0" height="110.0" rx="14.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<rect x="56.0" y="233.0" width="44.0" height="44.0" rx="10.0" fill="#475569" stroke="none"/>
+<ellipse cx="78.0" cy="249.2" rx="5.1" ry="5.1" fill="none" stroke="#ffffff" stroke-width="1.54"/>
+<polyline points="68.4,266.5 68.4,262.7 71.6,258.2 84.4,258.2 87.6,262.7 87.6,266.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="114.0" y="237.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">You</text>
+<text x="114.0" y="262.9" font-size="17.0" fill="#475569" text-anchor="start">Deployment,</text>
+<text x="114.0" y="285.0" font-size="17.0" fill="#475569" text-anchor="start">1 container</text>
+<rect x="370.0" y="150.0" width="1190.0" height="220.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="388.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Control plane</text>
+<rect x="410.0" y="210.0" width="340.0" height="120.0" rx="14.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<rect x="426.0" y="248.0" width="44.0" height="44.0" rx="10.0" fill="#7c3aed" stroke="none"/>
+<rect x="436.5" y="258.5" width="23.0" height="6.4" rx="1.9" fill="none" stroke="#ffffff" stroke-width="1.4080000000000001"/>
+<ellipse cx="441.0" cy="261.7" rx="1.0" ry="1.0" fill="#ffffff" stroke="#ffffff" stroke-width="0.64"/>
+<polyline points="448.0,261.7 455.0,261.7" fill="none" stroke="#ffffff" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="436.5" y="266.8" width="23.0" height="6.4" rx="1.9" fill="none" stroke="#ffffff" stroke-width="1.4080000000000001"/>
+<ellipse cx="441.0" cy="270.0" rx="1.0" ry="1.0" fill="#ffffff" stroke="#ffffff" stroke-width="0.64"/>
+<polyline points="448.0,270.0 455.0,270.0" fill="none" stroke="#ffffff" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="436.5" y="275.1" width="23.0" height="6.4" rx="1.9" fill="none" stroke="#ffffff" stroke-width="1.4080000000000001"/>
+<ellipse cx="441.0" cy="278.3" rx="1.0" ry="1.0" fill="#ffffff" stroke="#ffffff" stroke-width="0.64"/>
+<polyline points="448.0,278.3 455.0,278.3" fill="none" stroke="#ffffff" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="484.0" y="263.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">API server</text>
+<text x="484.0" y="289.0" font-size="17.0" fill="#475569" text-anchor="start">stores the pod</text>
+<rect x="1180.0" y="210.0" width="340.0" height="120.0" rx="14.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<rect x="1196.0" y="248.0" width="44.0" height="44.0" rx="10.0" fill="#7c3aed" stroke="none"/>
+<polyline points="1218.0,257.8 1218.0,262.3" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1218.0,277.7 1218.0,282.2" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1205.8,270.0 1210.3,270.0" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1225.7,270.0 1230.2,270.0" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1209.4,261.4 1212.6,264.6" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1223.4,275.4 1226.6,278.6" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1226.6,261.4 1223.4,264.6" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1209.4,278.6 1212.6,275.4" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<ellipse cx="1218.0" cy="270.0" rx="7.7" ry="7.7" fill="#7c3aed" stroke="#ffffff" stroke-width="1.54"/>
+<ellipse cx="1218.0" cy="270.0" rx="2.9" ry="2.9" fill="none" stroke="#ffffff" stroke-width="1.54"/>
+<text x="1254.0" y="263.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">istiod injector</text>
+<text x="1254.0" y="289.0" font-size="17.0" fill="#475569" text-anchor="start">mutating webhook</text>
+<polyline points="300.0,255.0 400.5,255.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="410.0,255.0 398.5,260.8 398.5,249.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="335.0" cy="255.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="335.0" cy="255.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="335.0" y="261.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<text x="335.0" y="229.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">create</text>
+<polyline points="750.0,246.0 1170.5,246.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1180.0,246.0 1168.5,251.8 1168.5,240.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="965.0" cy="246.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="965.0" cy="246.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="965.0" y="252.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<text x="965.0" y="220.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">AdmissionReview</text>
+<polyline points="1180.0,296.4 759.5,296.4" fill="none" stroke="#7c3aed" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="750.0,296.4 761.5,290.6 761.5,302.2" fill="#7c3aed" stroke="#7c3aed" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="965.0" cy="296.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="965.0" cy="296.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="965.0" y="302.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<text x="965.0" y="334.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">patch: add 2 containers</text>
+<rect x="370.0" y="420.0" width="1190.0" height="530.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<rect x="388.0" y="435.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="391.5" cy="437.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="397.0,437.5 402.5,437.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="388.0" y="441.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="391.5" cy="444.0" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="397.0,444.0 402.5,444.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="388.0" y="448.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="391.5" cy="450.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="397.0,450.5 402.5,450.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="416.0" y="450.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Node</text>
+<rect x="410.0" y="470.0" width="340.0" height="110.0" rx="14.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<rect x="426.0" y="503.0" width="44.0" height="44.0" rx="10.0" fill="#0891b2" stroke="none"/>
+<rect x="436.5" y="513.5" width="23.0" height="6.4" rx="1.9" fill="none" stroke="#ffffff" stroke-width="1.4080000000000001"/>
+<ellipse cx="441.0" cy="516.7" rx="1.0" ry="1.0" fill="#ffffff" stroke="#ffffff" stroke-width="0.64"/>
+<polyline points="448.0,516.7 455.0,516.7" fill="none" stroke="#ffffff" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="436.5" y="521.8" width="23.0" height="6.4" rx="1.9" fill="none" stroke="#ffffff" stroke-width="1.4080000000000001"/>
+<ellipse cx="441.0" cy="525.0" rx="1.0" ry="1.0" fill="#ffffff" stroke="#ffffff" stroke-width="0.64"/>
+<polyline points="448.0,525.0 455.0,525.0" fill="none" stroke="#ffffff" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="436.5" y="530.1" width="23.0" height="6.4" rx="1.9" fill="none" stroke="#ffffff" stroke-width="1.4080000000000001"/>
+<ellipse cx="441.0" cy="533.3" rx="1.0" ry="1.0" fill="#ffffff" stroke="#ffffff" stroke-width="0.64"/>
+<polyline points="448.0,533.3 455.0,533.3" fill="none" stroke="#ffffff" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="484.0" y="518.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">kubelet</text>
+<text x="484.0" y="544.0" font-size="17.0" fill="#475569" text-anchor="start">runs the pod</text>
+<polyline points="580.0,330.0 580.0,460.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="580.0,470.0 574.2,458.5 585.8,458.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="590.0" y="406.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">pod spec</text>
+<rect x="410.0" y="650.0" width="1110.0" height="260.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="437.0,665.0 445.5,669.5 445.5,679.0 437.0,683.5 428.5,679.0 428.5,669.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="428.5,669.5 437.0,674.0 445.5,669.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="437.0,674.0 437.0,683.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="456.0" y="680.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">pod: 3 containers</text>
+<rect x="440.0" y="730.0" width="320.0" height="140.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="600.0" y="781.5" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">istio-init</text>
+<text x="600.0" y="803.7" font-size="17.0" fill="#475569" text-anchor="middle">NET_ADMIN, NET_RAW</text>
+<text x="600.0" y="825.8" font-size="17.0" fill="#475569" text-anchor="middle">sets iptables, exits</text>
+<rect x="810.0" y="730.0" width="300.0" height="140.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="960.0" y="803.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">app</text>
+<rect x="1160.0" y="730.0" width="330.0" height="140.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="1325.0" y="792.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">istio-proxy</text>
+<text x="1325.0" y="814.7" font-size="17.0" fill="#475569" text-anchor="middle">Envoy</text>
+<polyline points="580.0,580.0 580.0,655.0 600.0,655.0 600.0,720.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="600.0,730.0 594.2,718.5 605.8,718.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="580.0" cy="615.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="580.0" cy="615.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="580.0" y="621.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<text x="606.0" y="621.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">first</text>
+<polyline points="750.0,508.5 960.0,508.5 960.0,720.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="960.0,730.0 954.2,718.5 965.8,718.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="750.0,552.5 1325.0,552.5 1325.0,720.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1325.0,730.0 1319.2,718.5 1330.8,718.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1150.0" cy="552.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1150.0" cy="552.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1150.0" y="558.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">5</text>
+<text x="1150.0" y="590.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">then app and proxy</text>
 </svg>
