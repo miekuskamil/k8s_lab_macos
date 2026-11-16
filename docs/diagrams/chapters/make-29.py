@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagram in platform-engineering/29-life-of-a-request.md in ByteByteGo style (see ../bbg.py).
+"""Draw the diagram in platform-engineering/29-life-of-a-request.md with the kit in ../bbg.py.
 
   29-many-workers   one Deployment, many workers that each watch the API server and write back
 
@@ -15,34 +15,35 @@ OUT = Path(__file__).resolve().parent
 
 
 def many_workers():
-    c = Canvas(1760, 1120)
+    c = Canvas(1600, 1000)
     c.title("One object,", "many workers")
-    c.subtitle("Each worker watches the API server, acts, and writes back.")
+    c.subtitle("Each worker watches the API server for its kind of object, acts, and writes the result back.")
 
-    c.node(60, 250, 300, 110, SLATE, "kubectl", "laptop", "apply a Deployment")
-    c.node(500, 200, 420, 690, RED, "API server", "lock", "authn · authz · admission")
-    c.arrow([(360, 305), (500, 305)], "POST", n=1, at=(430, 305), pos="below", dashed=False)
+    c.frame(40, 200, 280, 170, "Your Mac", "host")
+    kc = c.node(60, 250, 240, 100, SLATE, "kubectl", "terminal", "apply a Deployment")
+    kine = c.node(40, 820, 280, 110, ORANGE, "kine + SQLite", "db", "stores every object")
 
-    c.node(500, 980, 420, 100, ORANGE, "kine + SQLite", "db", "stores every object")
-    c.arrow([(710, 890), (710, 980)], "Store", n=2, at=(710, 935), dashed=False)
+    api = c.node(380, 200, 260, 730, PURPLE, "API server", "server", "the notice\nboard")
+    c.connect(kc, api, "POST", sa="right", sb="left", fb=(300 - 200) / 730, pos="above")
+    c.connect(api, kine, "store", sa="left", sb="right", fa=(875 - 200) / 730, pos="above")
 
-    c.group(1180, 170, 560, 900, "Watchers")
-    workers = [(3, "Deployment\ncontroller", PURPLE, "gear", "Deployment ADDED", "create ReplicaSet"),
-               (4, "ReplicaSet\ncontroller", PURPLE, "gear", "ReplicaSet ADDED", "create Pod, no node"),
-               (5, "Scheduler", GREEN, "gear", "Pod without a node", "bind Pod to a node"),
-               (6, "kubelet", TEAL, "server", "Pod on my node", "status: Ready")]
-    for i, (n, label, col, icon, heard, wrote) in enumerate(workers):
-        y = 210 + i * 210
-        sub = "sandbox, containers, probes" if label == "kubelet" else None
-        c.node(1220, y, 480, 120, col, label, icon, sub)
-        c.step(1220, y, n)
-        c.arrow([(920, y + 30), (1220, y + 30)], heard, at=(1070, y + 30), pos="above", col=SOFT)
-        c.arrow([(1220, y + 90), (920, y + 90)], wrote, at=(1070, y + 90), pos="below", dashed=False)
-
-    c.line([(60, 470), (100, 470)], SOFT, 2.5, True)
-    c.text(115, 476, "watch", 17, SOFT)
-    c.line([(60, 510), (100, 510)], LINE, 2.5)
-    c.text(115, 516, "write back", 17, SOFT)
+    c.frame(880, 150, 680, 620, "control plane: k3s server", "group")
+    c.frame(880, 800, 680, 170, "Node", "node")
+    workers = [(1, "Deployment controller", PURPLE, "gear", "Deployment", "ReplicaSet", 200),
+               (2, "ReplicaSet controller", PURPLE, "gear", "ReplicaSet", "Pod, no node", 340),
+               (3, "Scheduler", GREEN, "filter", "Pod, no node", "Pod bound", 480),
+               (7, "EndpointSlice controller", PURPLE, "gear", "Pod Ready", "EndpointSlice", 620),
+               ("4-6", "kubelet", TEAL, "server", "Pod on my node", "status: Ready", 840)]
+    for n, label, col, icon, heard, wrote, y in workers:
+        w = c.node(920, y, 600, 100, col, label, icon)
+        if isinstance(n, int):
+            c.step(w.x, w.y, n)
+        else:
+            c.chip(w.x + 6, w.b, "4 to 6", STEP, anchor="middle", solid=True, mono=False, size=15)
+        c.line([(640, y + 32), (920, y + 32)], DIM, AW, dashed=True, head=True)
+        c.text(780, y + 22, f"watch: {heard}", 16, SOFT, True, "middle", halo=True)
+        c.line([(920, y + 68), (640, y + 68)], LINE, AW, head=True)
+        c.text(780, y + 96, f"write: {wrote}", 16, INK, True, "middle", halo=True)
     c.save(OUT, "29-many-workers")
 
 
