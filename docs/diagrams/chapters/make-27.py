@@ -20,9 +20,6 @@ OUT = Path(__file__).resolve().parent
 ING = TEAL
 
 
-ING = TEAL
-
-
 def ingest_and_ask():
     c = Canvas(1600, 880)
     c.title("Ingest once,", "ask many times")
