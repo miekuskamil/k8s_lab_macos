@@ -414,10 +414,12 @@ check_6_9() {
 }
 solve_6_9() {
   local line pod rule
-  line="$(w1_sh "for i in \$(seq 1 30); do l=\$(journalctl -u falco-modern-bpf --since '-5min' --no-pager | grep 'k8s_ns_name=shop-runtime' | tail -1); [ -n \"\$l\" ] && echo \"\$l\" && break; sleep 2; done")"
+  # Rules from earlier tasks, such as the shell rule of task 7, also fire in shop-runtime,
+  # so the search keeps only the private key finding.
+  line="$(w1_sh "for i in \$(seq 1 30); do l=\$(journalctl -u falco-modern-bpf --since '-5min' --no-pager | grep 'k8s_ns_name=shop-runtime' | grep -i 'private keys' | tail -1); [ -n \"\$l\" ] && echo \"\$l\" && break; sleep 2; done")"
   echo "  $line" | cut -c1-200
   pod="$(echo "$line" | grep -o 'k8s_pod_name=[^ ]*' | cut -d= -f2)"
-  rule="$(w1_sh "journalctl -u falco-modern-bpf --since '-5min' --no-pager -o cat | grep -m1 'k8s_pod_name=$pod'" | sed 's/^[0-9:.]* [A-Za-z]* //' | cut -d'(' -f1 | sed 's/ *$//')"
+  rule="$(w1_sh "journalctl -u falco-modern-bpf --since '-5min' --no-pager -o cat | grep 'k8s_pod_name=$pod' | grep -i -m1 'private keys'" | sed 's/^[0-9:.]* [A-Za-z]* //' | cut -d'|' -f1 | sed 's/ *$//')"
   echo "  output text: $rule"
   oncp <<EOF
 d=\$(kubectl -n shop-runtime get pod $pod -o jsonpath='{.metadata.labels.app}')
