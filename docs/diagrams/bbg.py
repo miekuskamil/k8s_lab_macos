@@ -342,10 +342,7 @@ class Canvas:
     # ---- titles ---------------------------------------------------------------------
     def title(self, text, highlight=""):
         self.rect(40, 34, 6, 40, PURPLE, PURPLE, rx=3, sw=0)
-        self.text(62, 66, text, 34, INK, True)
-        if highlight:
-            x = 62 + text_width(text, 34, True) * 0.9 + 12
-            self.text(x, 66, highlight, 34, PURPLE, True)
+        self.items.append(("title", 62, 66, text, highlight))
 
     def subtitle(self, text):
         self.text(62, 104, text, 20, SOFT)
@@ -615,6 +612,10 @@ class Canvas:
                 _, pts, s, f, sw = it
                 p = " ".join(f"{a:.1f},{b:.1f}" for a, b in pts)
                 o.append(f'<polygon points="{p}" fill="{f}" stroke="{s}" stroke-width="{sw:.2f}" stroke-linejoin="round"/>')
+            elif k == "title":
+                _, x, y, t, hl = it
+                o.append(f'<text x="{x}" y="{y}" font-size="34" font-weight="700" fill="{INK}">{escape(t)}'
+                         + (f' <tspan fill="{PURPLE}">{escape(hl)}</tspan>' if hl else "") + '</text>')
             elif k == "text":
                 _, x, y, t, size, c, b, anchor, halo, mono = it
                 wgt = ' font-weight="700"' if b else ""
@@ -676,6 +677,15 @@ class Canvas:
                 e.update({"points": [[a, b] for a, b in zip(xs, ys)], "lastCommittedPoint": None,
                           "startBinding": None, "endBinding": None})
                 els.append(e)
+            elif k == "title":
+                _, x, y, t, hl = it
+                for tt, xx, cc in ((t, x, INK), (hl, x + text_width(t + " ", 34, True), PURPLE)):
+                    if tt:
+                        e = base("text", xx, y - 34, text_width(tt, 34, True), 42, cc, "transparent", 1)
+                        e.update({"text": tt, "originalText": tt, "fontSize": 34, "fontFamily": 2, "textAlign": "left",
+                                  "verticalAlign": "top", "baseline": 34, "containerId": None, "lineHeight": 1.25,
+                                  "autoResize": True})
+                        els.append(e)
             elif k == "text":
                 _, x, y, t, size, c, b, anchor, halo, mono = it
                 w = text_width(t, size, b)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagrams for course module 5 (resilience) in ByteByteGo style (see ../bbg.py).
+"""Draw the diagrams for course module 5 (resilience) with the kit in ../bbg.py.
 
   05-timeout-and-breaker   a 1 s route timeout, then the circuit breaker turning away request 11
 
@@ -18,33 +18,50 @@ OUT = Path(__file__).resolve().parent
 
 
 def timeout_and_breaker():
-    c = Canvas(1700, 960)
+    c = Canvas(1600, 1000)
     c.title("Two ways to", "fail fast")
     c.subtitle("Top: the waypoint stops waiting after 1 second. Bottom: a full pool turns request 11 away at once.")
 
     # timeout
-    c.group(40, 180, 1620, 290, "Timeout: 1 second budget")
-    c.node(80, 230, 320, 130, SLATE, "caller", "laptop", "frontend")
-    c.node(690, 230, 320, 130, PURPLE, "Waypoint", "shield", "timeout 1 s")
-    c.node(1300, 230, 320, 130, SLATE, "backend", "server", "works for 3 s")
-    c.arrow([(400, 270), (690, 270)], "GET /api/slow?ms=3000", n=1, at=(545, 270), pos="above")
-    c.arrow([(1010, 270), (1300, 270)], "Forward", n=2, at=(1155, 270), pos="above")
-    c.arrow([(690, 325), (400, 325)], "After 1 s:\n504", n=3, at=(545, 325), pos="below", col=RED)
-    c.note(1300, 400, ["Still working.", "Its answer is thrown away."], 17)
+    c.frame(40, 150, 1520, 380, "Timeout: a 1 second budget", "group")
+    c.frame(80, 210, 300, 150, "frontend pod", "pod")
+    fe = c.box(105, 260, 250, 74, SLATE, "caller")
+    c.frame(620, 200, 360, 170, "waypoint pod", "pod")
+    wp = c.box(645, 250, 310, 92, BLUE, "Envoy", "route timeout 1 s")
+    c.frame(1220, 210, 300, 150, "backend pod", "pod")
+    be = c.box(1245, 260, 250, 74, SLATE, "app", "works for 3 s")
+    c.connect(fe, wp, "GET /api/slow", n=1, sa="right", sb="left", fa=0.25, fb=(278.5 - 250) / 92, at=(500, 278.5))
+    c.connect(wp, be, "forward", n=2, sa="right", sb="left", fa=(278.5 - 250) / 92, fb=0.25, at=(1100, 278.5))
+    c.connect(wp, fe, "504 after 1 s", n=3, sa="left", sb="right", fa=(315.5 - 250) / 92, fb=0.75, at=(500, 315.5),
+              pos="below", col=RED)
+    # a time line under the waypoint and the backend
+    y = 460
+    c.line([(700, y), (1500, y)], DIM, 2, head=True)
+    for t, x in (("0 s", 700), ("1 s", 900), ("2 s", 1100), ("3 s", 1300)):
+        c.line([(x, y - 8), (x, y + 8)], DIM, 2)
+        c.text(x, y + 32, t, 16, SOFT, False, "middle")
+    c.ellipse(900, y, 9, 9, RED, RED, 0)
+    c.text(900, y - 18, "504 sent", 17, DEEP[RED], True, "middle")
+    c.ellipse(1300, y, 9, 9, SLATE, WHITE, 2)
+    c.text(1300, y - 18, "answer thrown away", 17, SOFT, True, "middle")
 
     # circuit breaker
-    c.group(40, 540, 1620, 380, "Circuit breaker: pool of 5 connections + 5 queued")
-    c.node(80, 620, 320, 130, SLATE, "caller", "laptop", "request 11")
-    c.group(560, 600, 640, 290, "Waypoint pool, full")
-    c.outline(590, 630, 270, 110, ORANGE, "5 waiting", "db")
-    c.outline(900, 630, 270, 110, GREEN, "5 running", "server")
-    c.arrow([(860, 685), (900, 685)], "")
-    c.outline(590, 770, 580, 90, RED, "503 UO: upstream overflow", "shield")
-    c.node(1380, 620, 260, 130, SLATE, "backend", "server", "busy with 5")
-    c.arrow([(1170, 685), (1380, 685)], "5 connections", at=(1290, 685), pos="below", col=SOFT)
-    c.arrow([(400, 670), (590, 670)], "Request 11", n=4, at=(480, 670), pos="above")
-    c.arrow([(590, 815), (240, 815), (240, 750)], "503 at once", n=5, at=(415, 815), pos="below", col=RED)
-    c.note(1380, 800, ["Never sees", "request 11."], 17)
+    c.frame(40, 570, 1520, 400, "Circuit breaker: 5 connections + 5 queued", "group")
+    c.frame(80, 680, 300, 150, "frontend pod", "pod")
+    fe2 = c.box(105, 730, 250, 74, SLATE, "caller", "request 11")
+    pool = c.frame(540, 630, 640, 300, "waypoint pod: connection pool", "pod")
+    c.text(575, 715, "running", 17, SOFT, True)
+    c.text(575, 815, "queued", 17, SOFT, True)
+    for i in range(5):
+        c.rect(680 + i * 96, 685, 76, 50, GREEN, PASTEL[GREEN], 8, SW)
+        c.rect(680 + i * 96, 785, 76, 50, ORANGE, PASTEL[ORANGE], 8, SW)
+    c.text(860, 900, "full: 5 running, 5 waiting", 17, SOFT, False, "middle")
+    c.frame(1260, 640, 260, 150, "backend pod", "pod")
+    c.box(1285, 690, 210, 74, SLATE, "app", "busy with 5")
+    c.line([(1180, 710), (1260, 710)], LINE, AW, head=True)
+    c.connect(fe2, pool, "request 11", n=4, sa="right", sb="left", fa=0.3, fb=(752 - 630) / 300, at=(460, 752))
+    c.connect(pool, fe2, "503 UO at once", n=5, sa="left", sb="right", fa=(796 - 630) / 300, fb=0.85, at=(460, 796),
+              pos="below", col=RED)
     c.save(OUT, "05-timeout-and-breaker")
 
 

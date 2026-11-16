@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagrams for course module 6 (observability) in ByteByteGo style (see ../bbg.py).
+"""Draw the diagrams for course module 6 (observability) with the kit in ../bbg.py.
 
   06-signals   who produces metrics, traces and logs, where each lives, and where you look
 
@@ -15,35 +15,36 @@ OUT = Path(__file__).resolve().parent
 
 
 def signals():
-    c = Canvas(1760, 940)
+    c = Canvas(1600, 920)
     c.title("Three signals,", "four tools")
     c.subtitle("Left to right: the parts that produce data, the stores that keep it, and the two tools you look at.")
 
-    c.group(40, 190, 520, 710, "Who produces the data")
-    src = [("gateway Envoy", BLUE, "shield", "L7 metrics · spans"),
-           ("waypoint Envoy", BLUE, "shield", "L7 metrics · spans"),
-           ("ztunnel", BLUE, "tunnel", "L4 metrics"),
-           ("backend app", SLATE, "cube", "OpenTelemetry SDK: metrics · spans"),
-           ("every container", SLATE, "doc", "stdout logs")]
-    for i, (label, col, icon, sub) in enumerate(src):
-        c.node(70, 220 + i * 134, 460, 104, col, label, icon, sub, size=22)
+    node = c.frame(40, 150, 560, 730, "Node: who produces the data", "node")
+    src = [("gateway pod", BLUE, "Envoy: L7 metrics, spans"),
+           ("waypoint pod", BLUE, "Envoy: L7 metrics, spans"),
+           ("backend pod", SLATE, "OTel SDK: metrics, spans")]
+    for i, (label, col, sub) in enumerate(src):
+        c.box(80, 210 + i * 120, 480, 96, col, label, sub)
+    c.band(80, 580, 480, 110, BLUE, "ztunnel", "L4 metrics: bytes, connections", "tunnel")
+    c.box(80, 730, 480, 110, SLATE, "every container", "stdout logs")
 
-    c.group(720, 190, 440, 710, "Where it lives")
-    c.node(760, 240, 360, 120, ORANGE, "Prometheus", "db", "metrics")
-    c.node(760, 480, 360, 120, ORANGE, "Jaeger", "db", "traces")
-    c.node(760, 760, 360, 120, ORANGE, "Loki", "db", "logs")
-    c.arrow([(560, 300), (760, 300)], "metrics", at=(660, 300), pos="above")
-    c.arrow([(560, 540), (760, 540)], "spans", at=(660, 540), pos="above")
-    c.arrow([(530, 810), (760, 810)], "Alloy reads\nvia the API", at=(645, 810), pos="above")
+    c.frame(660, 150, 440, 730, "namespace observability", "ns")
+    prom = c.node(700, 210, 360, 110, ORANGE, "Prometheus", "db", "metrics")
+    jae = c.node(700, 400, 360, 110, ORANGE, "Jaeger", "db", "traces")
+    alloy = c.box(700, 590, 360, 70, TEAL, "Alloy", "reads logs via the API")
+    loki = c.node(700, 740, 360, 110, ORANGE, "Loki", "db", "logs")
+    c.connect(alloy, loki)
 
-    c.group(1320, 190, 400, 710, "Where you look")
-    c.node(1360, 360, 320, 120, TEAL, "Kiali", "eye", "mesh map")
-    c.node(1360, 620, 320, 120, TEAL, "Grafana", "eye", "graphs over time")
-    c.arrow([(1120, 260), (1705, 260), (1705, 680), (1680, 680)], "")
-    c.arrow([(1120, 320), (1190, 320), (1190, 400), (1360, 400)], "")
-    c.arrow([(1120, 510), (1190, 510), (1190, 450), (1360, 450)], "")
-    c.arrow([(1120, 570), (1260, 570), (1260, 660), (1360, 660)], "")
-    c.arrow([(1120, 820), (1260, 820), (1260, 710), (1360, 710)], "")
+    c.connect(node, prom, "metrics", sa="right", sb="left", fa=(265 - 150) / 730, pos="above", col=ORANGE)
+    c.connect(node, jae, "spans", sa="right", sb="left", fa=(455 - 150) / 730, pos="above", col=ORANGE)
+    c.connect(node, alloy, "logs", sa="right", sb="left", fa=(625 - 150) / 730, pos="above", col=ORANGE)
+
+    kiali = c.node(1160, 210, 380, 110, TEAL, "Kiali", "eye", "mesh map")
+    graf = c.node(1160, 420, 380, 220, TEAL, "Grafana", "chart", "graphs over time,\ntraces and logs")
+    c.connect(prom, kiali, "reads", pos="above", dashed=True)
+    c.connect(prom, graf, "", sa="right", sb="left", fa=0.85, fb=0.09, mid=1120, dashed=True)
+    c.connect(jae, graf, "", sa="right", sb="left", fa=0.7, fb=(477 - 420) / 220, dashed=True)
+    c.connect(loki, graf, "", sa="right", sb="bottom", dashed=True)
     c.save(OUT, "06-signals")
 
 
