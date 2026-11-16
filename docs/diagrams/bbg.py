@@ -441,10 +441,11 @@ class Canvas:
         return Box(x, y, w, h)
 
     # ---- flow ------------------------------------------------------------------------
-    def step(self, cx, cy, n, r=16):
+    def step(self, cx, cy, n, r=16, col=STEP, ink=STEP_INK):
+        """A numbered step circle. col/ink give a second series its own colour."""
         self.ellipse(cx, cy, r + 3, r + 3, WHITE, WHITE, 0)
-        self.ellipse(cx, cy, r, r, STEP, STEP, 0)
-        self.text(cx, cy + 6.5, str(n), 18, STEP_INK, True, "middle")
+        self.ellipse(cx, cy, r, r, col, col, 0)
+        self.text(cx, cy + 6.5, str(n), 18, ink, True, "middle")
 
     def _flow_label(self, cx, cy, label, pos, r, colr, size=18):
         lines = label.split("\n")
