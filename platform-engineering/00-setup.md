@@ -70,7 +70,7 @@ control plane version: 1.24.2
 data plane version: 1.24.2 (3 proxies)
 ```
 
-### On Linux and WSL (Ubuntu 24.04)
+### On Linux (Ubuntu 24.04)
 
 Homebrew runs only on macOS, so on Linux you download the release that matches the control plane instead:
 
@@ -81,7 +81,7 @@ sudo install istioctl /usr/local/bin/ && rm istioctl
 istioctl version
 ```
 
-Your client then reports 1.24.2, the same as the control plane. [Running the lab on Linux and WSL2](../docs/linux-and-wsl.md) covers the rest of the setup, WSL2 memory and the few commands that differ.
+Your client then reports 1.24.2, the same as the control plane. [Running the lab on Linux](../docs/linux.md) covers the rest of the setup and the few commands that differ.
 
 **What you should see.** The `istioctl version` lines from the macOS transcript above. A client newer than the control plane works fine, and every command in this course ran with client 1.32 against control plane 1.24. If a command fails with an unknown field error, install the matching client from the releases page.
 

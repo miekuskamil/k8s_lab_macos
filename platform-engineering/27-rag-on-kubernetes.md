@@ -27,9 +27,9 @@ Time: about 45 minutes. The module adds about 200 MB to the cluster. The two mod
 
   The module uses a 3-billion-parameter chat model on purpose, because it fits next to the lab on a 24 GB Mac. Bigger models answer better, but step 6 shows why that matters less than you'd think.
 
-### On Linux and WSL (Ubuntu 24.04)
+### On Linux (Ubuntu 24.04)
 
-Pods reach Ollama under the name `host.docker.internal`, which plain Docker Engine on Linux doesn't answer. If you already did the Ollama setup for module 17 in [Running the lab on Linux and WSL2](../docs/linux-and-wsl.md#the-ai-modules-17-18-19-and-27), you need nothing more, and otherwise do those two steps first.
+Pods reach Ollama under the name `host.docker.internal`, which plain Docker Engine on Linux doesn't answer. If you already did the Ollama setup for module 17 in [Running the lab on Linux](../docs/linux.md#the-ai-modules-17-18-19-and-27), you need nothing more, and otherwise do those two steps first.
 
 ## Concept: two phases
 
@@ -447,7 +447,7 @@ $ ask "What is the capital of Denmark?"
             "n": 3,
             "score": 0.519,
             "file": "17-llm-in-the-mesh.md",
-            "heading": "On Linux and WSL (Ubuntu 24.04)"
+            "heading": "On Linux (Ubuntu 24.04)"
 ...
     "input_tokens": 1355,
     "output_tokens": 6,

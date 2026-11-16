@@ -24,9 +24,9 @@ Time: about 50 minutes. This is the first of three AI modules. While the model a
 - Another Ollama model, or Claude through the Anthropic API, also works. [Choosing the model for the AI modules](../docs/ai-models.md) shows how to switch.
 - macOS with OrbStack or Docker Desktop, which both let containers reach your machine under the name `host.docker.internal`.
 
-### On Linux and WSL (Ubuntu 24.04)
+### On Linux (Ubuntu 24.04)
 
-Plain Docker Engine on Linux doesn't answer the name `host.docker.internal`, and Ollama on Linux listens only on `127.0.0.1` by default, so the pods never reach the model. Two steps fix both: make Ollama listen on every interface, and add the name to the cluster's DNS. [Running the lab on Linux and WSL2](../docs/linux-and-wsl.md#the-ai-modules-17-18-19-and-27) has the commands and a check. With Docker Desktop on WSL2 the name already works, so you need only Ollama for Windows.
+Plain Docker Engine on Linux doesn't answer the name `host.docker.internal`, and Ollama on Linux listens only on `127.0.0.1` by default, so the pods never reach the model. Two steps fix both: make Ollama listen on every interface, and add the name to the cluster's DNS. [Running the lab on Linux](../docs/linux.md#the-ai-modules-17-18-19-and-27) has the commands and a check.
 
 ## Concept: what the assistant does
 

@@ -12,7 +12,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 M="$ROOT/platform-engineering/manifests"
 K=(kubectl --context "${KUBE_CONTEXT:-k3d-k8s-lab}")
 I=(istioctl --context "${KUBE_CONTEXT:-k3d-k8s-lab}")
-# Where the AI modules find Ollama. On WSL with Ollama for Windows, or any other
+# Where the AI modules find Ollama. When it runs on another
 # machine, set LAB_OLLAMA_URL, for example http://$(hostname).local:11434.
 OLLAMA="${LAB_OLLAMA_URL:-http://localhost:11434}"
 BASE="${BASE_URL:-http://localhost:8080}"
