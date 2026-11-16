@@ -89,11 +89,13 @@ The forwards keep the UIs off your home network. Kiali and Headlamp have no logi
 
 Everything else in the course runs in a shell on the VM: `./proxmox/pe-lab.sh ssh`, then `cd k8s_lab_macos`.
 
-### What was measured
+### Test results
 
 The first test ran on 16 November 2026 in a stand-in for pe-lab: a fresh OrbStack machine on a Mac with Ubuntu 24.04, 4 CPUs and a 10 GB memory limit, on arm64 instead of the VM's amd64, which the installer handles by picking each tool's arm64 build. From an empty machine, `pe-lab.sh install` finished in 216 seconds, 198 of them in `provision.sh`, and every health check passed. A second run with `--with-ollama` skipped every finished step, pulled the two models, and a pod reached Ollama at `host.docker.internal` 148 seconds later.
 
 `./platform-engineering/verify.sh` then passed 286 of its 292 checks in 44 minutes. All 6 failures sit in module 31, because that module uses `istioctl proxy-status -o json` and the analyzer code `IST0173`, which arrived in istioctl releases newer than the 1.24.2 that matches the lab's control plane. On the Mac, Homebrew installs the newest istioctl, so module 31 passes there.
+
+With Ollama installed, `verify.sh 17` passed 6 of 10 checks: the mesh policies and the ServiceEntry all worked, but the 4 checks that wait for a model answer failed, because Ollama took more than 4 minutes to load `qwen2.5:3b` next to the running lab in the stand-in, while the Mac itself ran short of memory. The AI modules therefore still need a run on pe-lab itself, which gives Ollama 4 dedicated cores.
 
 ## Memory
 
