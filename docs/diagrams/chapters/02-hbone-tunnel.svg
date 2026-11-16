@@ -1,8 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="780" viewBox="0 0 1600 780" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
 <rect width="1600" height="780" fill="#ffffff"/>
 <rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
-<text x="62.0" y="66.0" font-size="34.0" fill="#0f172a" font-weight="700" text-anchor="start">HBONE: one</text>
-<text x="247.0" y="66.0" font-size="34.0" fill="#7c3aed" font-weight="700" text-anchor="start">mTLS tunnel</text>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">HBONE: one <tspan fill="#7c3aed">mTLS tunnel</tspan></text>
 <text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">The apps speak plain HTTP. ztunnel encrypts it before it leaves the node and decrypts it on the other side.</text>
 <rect x="40.0" y="140.0" width="470.0" height="600.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
 <rect x="58.0" y="155.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>

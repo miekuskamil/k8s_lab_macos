@@ -1,8 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="920" viewBox="0 0 1600 920" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
 <rect width="1600" height="920" fill="#ffffff"/>
 <rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
-<text x="62.0" y="66.0" font-size="34.0" fill="#0f172a" font-weight="700" text-anchor="start">Three signals,</text>
-<text x="282.0" y="66.0" font-size="34.0" fill="#7c3aed" font-weight="700" text-anchor="start">four tools</text>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Three signals, <tspan fill="#7c3aed">four tools</tspan></text>
 <text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Left to right: the parts that produce data, the stores that keep it, and the two tools you look at.</text>
 <rect x="40.0" y="150.0" width="560.0" height="730.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
 <rect x="58.0" y="165.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>

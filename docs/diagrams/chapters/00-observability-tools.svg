@@ -1,8 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="860" viewBox="0 0 1600 860" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
 <rect width="1600" height="860" fill="#ffffff"/>
 <rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
-<text x="62.0" y="66.0" font-size="34.0" fill="#0f172a" font-weight="700" text-anchor="start">Five tools,</text>
-<text x="230.0" y="66.0" font-size="34.0" fill="#7c3aed" font-weight="700" text-anchor="start">five questions</text>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Five tools, <tspan fill="#7c3aed">five questions</tspan></text>
 <text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Pick the tool by the question you have. Each one reads data the mesh produces inside the cluster.</text>
 <rect x="40.0" y="150.0" width="300.0" height="670.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
 <rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>

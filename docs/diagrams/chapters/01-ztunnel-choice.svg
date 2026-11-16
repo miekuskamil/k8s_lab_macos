@@ -1,8 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1000" viewBox="0 0 1500 1000" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
 <rect width="1500" height="1000" fill="#ffffff"/>
 <rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
-<text x="62.0" y="66.0" font-size="34.0" fill="#0f172a" font-weight="700" text-anchor="start">Where ztunnel</text>
-<text x="282.6" y="66.0" font-size="34.0" fill="#7c3aed" font-weight="700" text-anchor="start">sends it</text>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Where ztunnel <tspan fill="#7c3aed">sends it</tspan></text>
 <text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">frontend dials backend:8000. ztunnel checks the table from istiod and picks one of three paths.</text>
 <rect x="40.0" y="150.0" width="440.0" height="470.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
 <polygon points="67.0,165.0 75.5,169.5 75.5,179.0 67.0,183.5 58.5,179.0 58.5,169.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
