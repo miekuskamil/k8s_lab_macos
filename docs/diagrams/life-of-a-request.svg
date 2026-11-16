@@ -1,182 +1,110 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1060" viewBox="0 0 1800 1060" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
-<rect width="1800" height="1060" fill="#1e1f24"/>
-<defs><marker id="h" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,5 L0,10 z" fill="#d0d3dc"/></marker></defs>
-<rect x="28.0" y="30.0" width="8.0" height="46.0" rx="2" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
-<text x="52.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">The Life of a</text>
-<rect x="334.0" y="26.0" width="169.0" height="54.0" rx="10" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<text x="348.0" y="68.0" font-size="38" fill="#f5f5f7" font-weight="700" text-anchor="start">Request</text>
-<text x="52.0" y="108.0" font-size="19" fill="#c9cbd3" text-anchor="start">Part 1 builds the pod. Scenario A and B send a request to it: once without a mesh, once through it.</text>
-<rect x="40.0" y="170.0" width="540.0" height="850.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
-<text x="310.0" y="158.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">1 · A pod comes to life</text>
-<rect x="80.0" y="221.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="80.0" y="215.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="80.0" y="313.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<rect x="105.0" y="249.0" width="30.0" height="22.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
-<rect x="99.0" y="275.0" width="42.0" height="6.0" rx="3" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
-<text x="158.0" y="257.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">kubectl</text>
-<text x="158.0" y="283.0" font-size="16" fill="#ffffffcc" text-anchor="start">sends the Deployment</text>
-<ellipse cx="80.0" cy="215.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="80.0" y="222.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
-<polyline points="310.0,315.0 310.0,373.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<rect x="80.0" y="379.0" width="460.0" height="100.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
-<rect x="80.0" y="373.0" width="460.0" height="100.0" rx="16" fill="#e5484d" stroke="#e5484d" stroke-width="1"/>
-<rect x="80.0" y="471.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<rect x="106.0" y="421.0" width="28.0" height="22.0" rx="4" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
-<rect x="111.0" y="405.0" width="18.0" height="24.0" rx="9" fill="none" stroke="#f5f5f7" stroke-width="3"/>
-<ellipse cx="120.0" cy="432.0" rx="3" ry="3" fill="#1e1f24" stroke="#1e1f24" stroke-width="1"/>
-<text x="158.0" y="415.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">API server</text>
-<text x="158.0" y="441.0" font-size="16" fill="#ffffffcc" text-anchor="start">who? allowed? valid?</text>
-<ellipse cx="80.0" cy="373.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="80.0" y="380.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
-<polyline points="310.0,473.0 310.0,531.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<rect x="80.0" y="537.0" width="460.0" height="100.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
-<rect x="80.0" y="531.0" width="460.0" height="100.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
-<rect x="80.0" y="629.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<rect x="104.0" y="567.0" width="32.0" height="30.0" rx="2" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="120.0" cy="567.0" rx="16" ry="6" fill="#1e1f24" stroke="#f5f5f7" stroke-width="2.2"/>
-<polyline points="104.0,582.0 136.0,582.0" fill="none" stroke="#f5f5f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="158.0" y="573.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">kine + SQLite</text>
-<text x="158.0" y="599.0" font-size="16" fill="#ffffffcc" text-anchor="start">stores the object</text>
-<ellipse cx="80.0" cy="531.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="80.0" y="538.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
-<polyline points="310.0,631.0 310.0,689.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<rect x="80.0" y="695.0" width="460.0" height="100.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<rect x="80.0" y="689.0" width="460.0" height="100.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<rect x="80.0" y="787.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<ellipse cx="120.0" cy="739.0" rx="16" ry="16" fill="none" stroke="#f5f5f7" stroke-width="3"/>
-<ellipse cx="120.0" cy="739.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<polyline points="120.0,718.0 120.0,725.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="120.0,753.0 120.0,760.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="99.0,739.0 106.0,739.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="134.0,739.0 141.0,739.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="158.0" y="731.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">Controllers</text>
-<text x="158.0" y="757.0" font-size="16" fill="#ffffffcc" text-anchor="start">ReplicaSet, then Pod</text>
-<ellipse cx="80.0" cy="689.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="80.0" y="696.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">4</text>
-<polyline points="310.0,789.0 310.0,847.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<rect x="80.0" y="853.0" width="460.0" height="100.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
-<rect x="80.0" y="847.0" width="460.0" height="100.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
-<rect x="80.0" y="945.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<rect x="101.0" y="877.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="108.0" cy="882.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<rect x="101.0" y="891.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="108.0" cy="896.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<rect x="101.0" y="905.0" width="38.0" height="11.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="108.0" cy="910.5" rx="2" ry="2" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<text x="158.0" y="889.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">Scheduler + kubelet</text>
-<text x="158.0" y="915.0" font-size="16" fill="#ffffffcc" text-anchor="start">node, sandbox, IP, start</text>
-<ellipse cx="80.0" cy="847.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="80.0" y="854.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">5</text>
-<rect x="630.0" y="170.0" width="540.0" height="850.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
-<text x="900.0" y="158.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">A · No mesh</text>
-<rect x="670.0" y="221.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="670.0" y="215.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="670.0" y="313.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<polygon points="710.0,245.0 728.0,255.0 710.0,265.0 692.0,255.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
-<polygon points="692.0,255.0 710.0,265.0 710.0,286.0 692.0,276.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
-<polygon points="728.0,255.0 710.0,265.0 710.0,286.0 728.0,276.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
-<text x="748.0" y="257.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">client pod</text>
-<text x="748.0" y="283.0" font-size="16" fill="#ffffffcc" text-anchor="start">curl http://hello</text>
-<ellipse cx="670.0" cy="215.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="670.0" y="222.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
-<polyline points="900.0,315.0 900.0,373.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<rect x="670.0" y="379.0" width="460.0" height="100.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
-<rect x="670.0" y="373.0" width="460.0" height="100.0" rx="16" fill="#0e9fb3" stroke="#0e9fb3" stroke-width="1"/>
-<rect x="670.0" y="471.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<ellipse cx="710.0" cy="423.0" rx="19" ry="19" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
-<text x="710.0" y="430.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="middle">?</text>
-<text x="748.0" y="415.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">CoreDNS</text>
-<text x="748.0" y="441.0" font-size="16" fill="#ffffffcc" text-anchor="start">name to ClusterIP</text>
-<ellipse cx="670.0" cy="373.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="670.0" y="380.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
-<polyline points="900.0,473.0 900.0,531.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<rect x="670.0" y="537.0" width="460.0" height="100.0" rx="16" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
-<rect x="670.0" y="531.0" width="460.0" height="100.0" rx="16" fill="#0ea47a" stroke="#0ea47a" stroke-width="1"/>
-<rect x="670.0" y="629.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<ellipse cx="710.0" cy="581.0" rx="16" ry="16" fill="none" stroke="#f5f5f7" stroke-width="3"/>
-<ellipse cx="710.0" cy="581.0" rx="6" ry="6" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<polyline points="710.0,560.0 710.0,567.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="710.0,595.0 710.0,602.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="689.0,581.0 696.0,581.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="724.0,581.0 731.0,581.0" fill="none" stroke="#f5f5f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="748.0" y="573.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">Kernel iptables</text>
-<text x="748.0" y="599.0" font-size="16" fill="#ffffffcc" text-anchor="start">DNAT to the pod</text>
-<ellipse cx="670.0" cy="531.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="670.0" y="538.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
-<polyline points="900.0,631.0 900.0,689.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<rect x="670.0" y="695.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="670.0" y="689.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="670.0" y="787.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<polygon points="710.0,719.0 728.0,729.0 710.0,739.0 692.0,729.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
-<polygon points="692.0,729.0 710.0,739.0 710.0,760.0 692.0,750.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
-<polygon points="728.0,729.0 710.0,739.0 710.0,760.0 728.0,750.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
-<text x="748.0" y="731.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">hello pod</text>
-<text x="748.0" y="757.0" font-size="16" fill="#ffffffcc" text-anchor="start">plain TCP, no identity</text>
-<ellipse cx="670.0" cy="689.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="670.0" y="696.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">4</text>
-<polyline points="900.0,789.0 900.0,847.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<rect x="670.0" y="853.0" width="460.0" height="100.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
-<rect x="670.0" y="847.0" width="460.0" height="100.0" rx="16" fill="#ea7a17" stroke="#ea7a17" stroke-width="1"/>
-<rect x="670.0" y="945.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<rect x="694.0" y="883.0" width="32.0" height="30.0" rx="2" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="710.0" cy="883.0" rx="16" ry="6" fill="#1e1f24" stroke="#f5f5f7" stroke-width="2.2"/>
-<polyline points="694.0,898.0 726.0,898.0" fill="none" stroke="#f5f5f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="748.0" y="889.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">conntrack</text>
-<text x="748.0" y="915.0" font-size="16" fill="#ffffffcc" text-anchor="start">restores the reply</text>
-<ellipse cx="670.0" cy="847.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="670.0" y="854.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">5</text>
-<rect x="1220.0" y="170.0" width="540.0" height="850.0" rx="18" fill="#00000000" stroke="#8b8f9c" stroke-width="2.5" stroke-dasharray="9 7"/>
-<text x="1490.0" y="158.0" font-size="19" fill="#c9cbd3" font-weight="700" text-anchor="middle">B · Ambient mesh</text>
-<rect x="1260.0" y="221.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="1260.0" y="215.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="1260.0" y="313.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<rect x="1285.0" y="249.0" width="30.0" height="22.0" rx="3" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
-<rect x="1279.0" y="275.0" width="42.0" height="6.0" rx="3" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="2.5"/>
-<text x="1338.0" y="257.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">Your Mac</text>
-<text x="1338.0" y="283.0" font-size="16" fill="#ffffffcc" text-anchor="start">curl :8080</text>
-<ellipse cx="1260.0" cy="215.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="1260.0" y="222.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">1</text>
-<polyline points="1490.0,315.0 1490.0,373.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<rect x="1260.0" y="379.0" width="460.0" height="100.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="1260.0" y="373.0" width="460.0" height="100.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="1260.0" y="471.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<polygon points="1300.0,403.0 1318.0,410.0 1315.0,431.0 1300.0,444.0 1285.0,431.0 1282.0,410.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
-<polyline points="1292.0,423.0 1298.0,430.0 1309.0,417.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="1338.0" y="415.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">Gateway</text>
-<text x="1338.0" y="441.0" font-size="16" fill="#ffffffcc" text-anchor="start">Envoy, opens HBONE</text>
-<ellipse cx="1260.0" cy="373.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="1260.0" y="380.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">2</text>
-<polyline points="1490.0,473.0 1490.0,531.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<rect x="1260.0" y="537.0" width="460.0" height="100.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="1260.0" y="531.0" width="460.0" height="100.0" rx="16" fill="#1677ff" stroke="#1677ff" stroke-width="1"/>
-<rect x="1260.0" y="629.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<ellipse cx="1288.0" cy="581.0" rx="7" ry="16" fill="none" stroke="#f5f5f7" stroke-width="2.5"/>
-<polyline points="1288.0,565.0 1314.0,565.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="1288.0,597.0 1314.0,597.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<ellipse cx="1314.0" cy="581.0" rx="7" ry="16" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="1"/>
-<text x="1338.0" y="573.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">ztunnel</text>
-<text x="1338.0" y="599.0" font-size="16" fill="#ffffffcc" text-anchor="start">mTLS in every pod</text>
-<ellipse cx="1260.0" cy="531.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="1260.0" y="538.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">3</text>
-<polyline points="1490.0,631.0 1490.0,689.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<rect x="1260.0" y="695.0" width="460.0" height="100.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<rect x="1260.0" y="689.0" width="460.0" height="100.0" rx="16" fill="#7c3aed" stroke="#7c3aed" stroke-width="1"/>
-<rect x="1260.0" y="787.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<polygon points="1300.0,719.0 1318.0,726.0 1315.0,747.0 1300.0,760.0 1285.0,747.0 1282.0,726.0" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
-<polyline points="1292.0,739.0 1298.0,746.0 1309.0,733.0" fill="none" stroke="#f5f5f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="1338.0" y="731.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">Waypoint</text>
-<text x="1338.0" y="757.0" font-size="16" fill="#ffffffcc" text-anchor="start">L7 policy, routing</text>
-<ellipse cx="1260.0" cy="689.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="1260.0" y="696.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">4</text>
-<polyline points="1490.0,789.0 1490.0,847.0" fill="none" stroke="#d0d3dc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7" marker-end="url(#h)"/>
-<rect x="1260.0" y="853.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="1260.0" y="847.0" width="460.0" height="100.0" rx="16" fill="#475069" stroke="#475069" stroke-width="1"/>
-<rect x="1260.0" y="945.0" width="460.0" height="8.0" rx="4" fill="#00000033" stroke="#00000033" stroke-width="0"/>
-<rect x="1284.0" y="883.0" width="32.0" height="30.0" rx="2" fill="none" stroke="#f5f5f7" stroke-width="2.2"/>
-<ellipse cx="1300.0" cy="883.0" rx="16" ry="6" fill="#1e1f24" stroke="#f5f5f7" stroke-width="2.2"/>
-<polyline points="1284.0,898.0 1316.0,898.0" fill="none" stroke="#f5f5f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="1338.0" y="889.0" font-size="22" fill="#f5f5f7" font-weight="700" text-anchor="start">backend → Redis</text>
-<text x="1338.0" y="915.0" font-size="16" fill="#ffffffcc" text-anchor="start">identity at every hop</text>
-<ellipse cx="1260.0" cy="847.0" rx="17" ry="17" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"/>
-<text x="1260.0" y="854.0" font-size="19" fill="#1e1f24" font-weight="700" text-anchor="middle">5</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="1100" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">The life of a <tspan fill="#7c3aed">request</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Part 1 builds the pod. Scenarios A and B send a request to it: once without a mesh, once through it.</text>
+<rect x="40.0" y="150.0" width="260.0" height="900.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="57.5,181.0 76.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Your Mac</text>
+<rect x="65.0" y="220.0" width="210.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="170.0" y="257.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">kubectl</text>
+<text x="170.0" y="279.7" font-size="17.0" fill="#475569" text-anchor="middle">apply</text>
+<rect x="65.0" y="840.0" width="210.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="170.0" y="877.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">curl</text>
+<text x="170.0" y="899.7" font-size="17.0" fill="#475569" text-anchor="middle">localhost:8080</text>
+<rect x="340.0" y="150.0" width="1220.0" height="900.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<ellipse cx="367.0" cy="174.0" rx="9.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.20"/>
+<ellipse cx="367.0" cy="174.0" rx="4.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.00"/>
+<polyline points="358.0,174.0 376.0,174.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="386.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Cluster</text>
+<rect x="370.0" y="190.0" width="1160.0" height="210.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="388.0" y="220.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">control plane</text>
+<rect x="400.0" y="250.0" width="260.0" height="110.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="530.0" y="297.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">API server</text>
+<text x="530.0" y="319.7" font-size="17.0" fill="#475569" text-anchor="middle">who? allowed? valid?</text>
+<rect x="700.0" y="250.0" width="230.0" height="110.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="815.0" y="297.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">kine + SQLite</text>
+<text x="815.0" y="319.7" font-size="17.0" fill="#475569" text-anchor="middle">stores it</text>
+<rect x="970.0" y="250.0" width="250.0" height="110.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="1095.0" y="297.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">controllers</text>
+<text x="1095.0" y="319.7" font-size="17.0" fill="#475569" text-anchor="middle">ReplicaSet, Pod</text>
+<rect x="1260.0" y="250.0" width="240.0" height="110.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="1380.0" y="297.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">scheduler</text>
+<text x="1380.0" y="319.7" font-size="17.0" fill="#475569" text-anchor="middle">picks the node</text>
+<rect x="370.0" y="440.0" width="1160.0" height="580.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<rect x="388.0" y="455.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="391.5" cy="457.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="397.0,457.5 402.5,457.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="388.0" y="461.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="391.5" cy="464.0" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="397.0,464.0 402.5,464.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="388.0" y="468.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="391.5" cy="470.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="397.0,470.5 402.5,470.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="416.0" y="470.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Node</text>
+<rect x="400.0" y="500.0" width="260.0" height="100.0" rx="10.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<text x="530.0" y="542.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">kubelet</text>
+<text x="530.0" y="564.7" font-size="17.0" fill="#475569" text-anchor="middle">sandbox, IP, start</text>
+<rect x="700.0" y="480.0" width="800.0" height="150.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="718.0" y="510.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace course-life</text>
+<rect x="720.0" y="530.0" width="180.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="810.0" y="573.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">client pod</text>
+<rect x="930.0" y="530.0" width="180.0" height="80.0" rx="10.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<text x="1020.0" y="573.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">CoreDNS</text>
+<rect x="1140.0" y="530.0" width="180.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1230.0" y="573.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">hello pod</text>
+<rect x="400.0" y="660.0" width="1100.0" height="170.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="418.0" y="690.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespaces shop-ingress and shop</text>
+<rect x="420.0" y="715.0" width="190.0" height="90.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="515.0" y="763.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">gateway</text>
+<rect x="640.0" y="715.0" width="190.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="735.0" y="763.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">frontend</text>
+<rect x="860.0" y="715.0" width="190.0" height="90.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="955.0" y="763.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">waypoint</text>
+<rect x="1080.0" y="715.0" width="190.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1175.0" y="763.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">backend</text>
+<rect x="1300.0" y="715.0" width="180.0" height="90.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="1390.0" y="763.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">redis</text>
+<rect x="400.0" y="860.0" width="540.0" height="130.0" rx="14.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<polygon points="420.7,914.8 445.2,914.8 435.7,925.6 435.7,935.2 430.2,937.9 430.2,925.6" fill="none" stroke="#059669" stroke-width="1.63" stroke-linejoin="round"/>
+<text x="460.0" y="922.0" font-size="20.0" fill="#047857" font-weight="700" text-anchor="start">kernel</text>
+<text x="460.0" y="946.0" font-size="17.0" fill="#475569" text-anchor="start">iptables, conntrack</text>
+<rect x="960.0" y="860.0" width="540.0" height="130.0" rx="14.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<ellipse cx="985.5" cy="925.0" rx="4.1" ry="9.5" fill="none" stroke="#2563eb" stroke-width="1.63"/>
+<polyline points="985.5,915.4 1000.4,915.4" fill="none" stroke="#2563eb" stroke-width="1.63" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="985.5,934.5 1000.4,934.5" fill="none" stroke="#2563eb" stroke-width="1.63" stroke-linecap="round" stroke-linejoin="round"/>
+<ellipse cx="1000.4" cy="925.0" rx="4.1" ry="9.5" fill="#2563eb" stroke="#2563eb" stroke-width="0.68"/>
+<text x="1020.0" y="922.0" font-size="20.0" fill="#1e40af" font-weight="700" text-anchor="start">ztunnel</text>
+<text x="1020.0" y="946.0" font-size="17.0" fill="#475569" text-anchor="start">mTLS between pods</text>
+<polyline points="275.0,265.0 390.5,265.0" fill="none" stroke="#7c3aed" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="400.0,265.0 388.5,270.8 388.5,259.2" fill="#7c3aed" stroke="#7c3aed" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="530.0,360.0 530.0,490.5" fill="none" stroke="#7c3aed" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="530.0,500.0 524.2,488.5 535.8,488.5" fill="#7c3aed" stroke="#7c3aed" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="900.0,570.0 920.5,570.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="930.0,570.0 918.5,575.8 918.5,564.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="810.0,610.0 810.0,650.0 1230.0,650.0 1230.0,619.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1230.0,610.0 1235.8,621.5 1224.2,621.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="275.0,885.0 420.0,885.0" fill="none" stroke="#2563eb" stroke-width="3.50" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="420.0,885.0 515.0,885.0 515.0,816.6" fill="none" stroke="#2563eb" stroke-width="3.50" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="515.0,805.0 521.8,818.6 508.2,818.6" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round"/>
+<rect x="1163.2" y="637.5" width="133.5" height="25.0" rx="12.5" fill="#ffffff" stroke="#475569" stroke-width="1.4"/>
+<text x="1230.0" y="654.7" font-size="13.0" fill="#334155" font-weight="700" text-anchor="middle">via iptables DNAT</text>
+<polyline points="610.0,760.0 628.4,760.0" fill="none" stroke="#2563eb" stroke-width="3.50" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="640.0,760.0 626.4,766.8 626.4,753.2" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="830.0,760.0 848.4,760.0" fill="none" stroke="#2563eb" stroke-width="3.50" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="860.0,760.0 846.4,766.8 846.4,753.2" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="1050.0,760.0 1068.4,760.0" fill="none" stroke="#2563eb" stroke-width="3.50" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1080.0,760.0 1066.4,766.8 1066.4,753.2" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="1270.0,760.0 1288.4,760.0" fill="none" stroke="#2563eb" stroke-width="3.50" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1300.0,760.0 1286.4,766.8 1286.4,753.2" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="440.0,1035.0 464.5,1035.0" fill="none" stroke="#7c3aed" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="474.0,1035.0 462.5,1040.8 462.5,1029.2" fill="#7c3aed" stroke="#7c3aed" stroke-width="1" stroke-linejoin="round"/>
+<text x="484.0" y="1040.5" font-size="16.0" fill="#475569" text-anchor="start">Part 1: a pod comes to life</text>
+<polyline points="722.1,1035.0 746.6,1035.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="756.1,1035.0 744.6,1040.8 744.6,1029.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="766.1" y="1040.5" font-size="16.0" fill="#475569" text-anchor="start">A: no mesh</text>
+<polyline points="886.1,1035.0 910.6,1035.0" fill="none" stroke="#2563eb" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="920.1,1035.0 908.6,1040.8 908.6,1029.2" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="930.1" y="1040.5" font-size="16.0" fill="#475569" text-anchor="start">B: ambient mesh</text>
 </svg>
