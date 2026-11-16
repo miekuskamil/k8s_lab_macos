@@ -10,19 +10,36 @@ OUT = Path(__file__).resolve().parent
 
 
 def node_states():
-    c = Canvas(1880, 740)
-    c.title("Cordon, Drain,", "Delete")
+    c = Canvas(1600, 860)
+    c.title("Cordon, drain,", "delete")
     c.subtitle("Take a node out of service in steps. Uncordon brings it back, delete removes it for good.")
-    y = 240
-    c.node(60, y, 360, 120, GREEN, "Ready", "server", "pods schedule here")
-    c.node(620, y, 440, 120, ORANGE, "SchedulingDisabled", "lock", "no new pods")
-    c.node(1260, y, 360, 120, SLATE, "Empty", "server", "except DaemonSets")
-    c.node(1260, 560, 360, 110, RED, "Gone", "server")
-    c.arrow([(420, y + 60), (620, y + 60)], "kubectl\ncordon", n=1, at=(520, y + 60), pos="below")
-    c.arrow([(1060, y + 60), (1260, y + 60)], "kubectl\ndrain", n=2, at=(1160, y + 60), pos="below")
-    c.arrow([(1530, y + 126), (1530, 560)], "remove machine,\ndelete node", n=3, at=(1530, 470), pos="right")
-    c.arrow([(1330, y + 126), (1330, 470), (240, 470), (240, y + 126)], "kubectl uncordon",
-            at=(780, 470), pos="above", col=SOFT)
+
+    c.frame(40, 150, 1520, 680, "Cluster", "cluster")
+    a = c.frame(80, 200, 640, 590, "Node agent-0: leaving", "node")
+    c.chip(690, 215, "SchedulingDisabled", ORANGE, anchor="end", size=15)
+    c.step(470, 215, 1)
+    c.text(100, 280, "app pods", 17, SOFT, True)
+    olds = []
+    for i, lab in enumerate(["frontend", "backend", "redis"]):
+        olds.append(c.box(110 + i * 200, 300, 180, 80, SLATE, lab, "evicted"))
+    c.text(100, 470, "DaemonSet pods stay", 17, SOFT, True)
+    c.box(110, 490, 280, 80, BLUE, "ztunnel")
+    c.box(410, 490, 280, 80, TEAL, "istio-cni")
+    gone = c.outline(110, 640, 580, 110, RED, "remove machine,\nthen delete the Node", "cross")
+    c.step(110, 640, 3)
+
+    b = c.frame(880, 200, 640, 590, "Node server-0", "node")
+    c.text(900, 280, "replacements", 17, SOFT, True)
+    for i, lab in enumerate(["frontend", "backend", "redis"]):
+        c.box(910 + i * 200, 300, 180, 80, GREEN, lab, "new pod")
+    c.box(910, 490, 280, 80, BLUE, "ztunnel")
+    c.box(1210, 490, 280, 80, TEAL, "istio-cni")
+    c.line([(720, 340), (880, 340)], LINE, AW, head=True)
+    c.step(800, 340, 2)
+    c.text(800, 300, "drain", 17, INK, True, "middle", halo=True)
+    c.text(800, 386, "PDB: one", 15, SOFT, True, "middle", halo=True)
+    c.text(800, 406, "at a time", 15, SOFT, True, "middle", halo=True)
+    c.note(910, 680, ["Or kubectl uncordon:", "the node takes new pods again."], 17)
     c.save(OUT, "20-cordon-drain-delete")
 
 
