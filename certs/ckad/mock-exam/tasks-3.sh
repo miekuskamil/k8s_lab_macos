@@ -13,7 +13,7 @@ mock_title() {
     1) echo "Image with a build argument";; 2) echo "Blue-green behind an Ingress";; 3) echo "Helm: values, failure, rollback";;
     4) echo "StatefulSet with its own volumes";; 5) echo "Init, sidecar, probes";; 6) echo "A ClusterRole for custom resources";;
     7) echo "Custom resources by the numbers";; 8) echo "Three tiers, three policies";; 9) echo "Quota and LimitRange together";;
-    10) echo "One volume, two sources";; 11) echo "Debug a copy of a crashing pod";; 12) echo "History you can read";;
+    10) echo "One volume, two sources";; 11) echo "Debug a copy of a crashing pod";; 12) echo "A history to read";;
     13) echo "Two overlays from one base";; 14) echo "A Job that cleans up after itself";;
     15) echo "An Ingress with a default backend";; 16) echo "Port 80 without root";;
   esac
@@ -443,7 +443,7 @@ solve_m11() {
     echo /etc/loader/conf > /opt/ckad/m3/11/missing.txt"
 }
 
-# ---- 12. History you can read (6) ---------------------------------------------------------------------------------
+# ---- 12. A history to read (6) ---------------------------------------------------------------------------------
 setup_m12() {
   ns_new k3-hist
   cp_sh "kubectl -n k3-hist create deploy portal --image=nginx:1.27-alpine --replicas=2 >/dev/null
@@ -587,17 +587,20 @@ EOF
 # ---- 15. An Ingress with a default backend (5) ---------------------------------------------------------------------------
 setup_m15() {
   ns_new k3-edge
-  web_app k3-edge shop shop 8080 1 app=shop
-  web_app k3-edge sorry sorry 8080 1 app=sorry
-  cp_sh 'kubectl -n k3-edge expose deploy shop --port=80 --target-port=8080 >/dev/null; kubectl -n k3-edge expose deploy sorry --port=80 --target-port=8080 >/dev/null'
+  local n
+  for n in shop sorry; do
+    cp_sh "kubectl -n k3-edge create deploy $n --image=busybox:1.36 -- sh -c 'mkdir -p /www/shop && echo $n > /www/index.html && echo $n > /www/shop/index.html && exec httpd -f -p 8080 -h /www' >/dev/null
+      kubectl -n k3-edge expose deploy $n --port=80 --target-port=8080 >/dev/null"
+  done
 }
+E15="curl -s -m 3 -H 'Host: shop.k3.local' http://$W1IP:30080"
 score_m15() {
-  check_cp "Ingress edge sends shop.k3.local to shop" "for i in \$(seq 1 15); do curl -s -m 3 -H 'Host: shop.k3.local' http://$W1IP:30080/ | grep -qx shop && exit 0; sleep 2; done; exit 1"
+  check_cp "Ingress edge sends shop.k3.local/shop/ to Service shop" "for i in \$(seq 1 15); do $E15/shop/ | grep -qx shop && exit 0; sleep 2; done; exit 1"
   check_cp "its default backend is Service sorry" "kubectl -n k3-edge get ingress edge -o jsonpath='{.spec.defaultBackend.service.name}' | grep -qx sorry"
-  check_cp "a request for an unknown path host gets sorry" "curl -s -m 3 -H 'Host: shop.k3.local' http://$W1IP:30080/ | grep -qx shop"
+  check_cp "any other path of shop.k3.local gets sorry" "$E15/ | grep -qx sorry && $E15/checkout/ | grep -q ."
 }
 solve_m15() {
-  cp_sh "kubectl -n k3-edge create ingress edge --class=nginx --default-backend=sorry:80 --rule='shop.k3.local/*=shop:80'"
+  cp_sh "kubectl -n k3-edge create ingress edge --class=nginx --default-backend=sorry:80 --rule='shop.k3.local/shop*=shop:80'"
 }
 
 # ---- 16. Port 80 without root (6) --------------------------------------------------------------------------------------------

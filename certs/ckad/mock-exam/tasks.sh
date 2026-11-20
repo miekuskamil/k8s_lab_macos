@@ -4,14 +4,14 @@
 MOCK_TASKS="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16"
 mock_points() {
   case "$1" in
-    1) echo 7;; 2) echo 6;; 3) echo 5;; 4) echo 6;; 5) echo 6;; 6) echo 6;; 7) echo 6;; 8) echo 6;;
-    9) echo 5;; 10) echo 4;; 11) echo 7;; 12) echo 6;; 13) echo 7;; 14) echo 6;; 15) echo 7;; 16) echo 6;;
+    1) echo 8;; 2) echo 6;; 3) echo 5;; 4) echo 6;; 5) echo 6;; 6) echo 6;; 7) echo 6;; 8) echo 6;;
+    9) echo 5;; 10) echo 4;; 11) echo 8;; 12) echo 6;; 13) echo 8;; 14) echo 6;; 15) echo 8;; 16) echo 6;;
   esac
 }
 mock_title() {
   case "$1" in
     1) echo "Build, push and run an image";; 2) echo "A log sidecar";; 3) echo "A nightly CronJob";;
-    4) echo "Update, then roll back";; 5) echo "A canary at 25%";; 6) echo "A Helm release";;
+    4) echo "Update, then roll back";; 5) echo "A quarter of the traffic";; 6) echo "A Helm release";;
     7) echo "A Kustomize overlay";; 8) echo "Probes for an API";; 9) echo "Why the pod crashes";;
     10) echo "The hungriest pod";; 11) echo "ConfigMap and Secret";; 12) echo "Defaults and requests";;
     13) echo "A ServiceAccount that reads ConfigMaps";; 14) echo "Run as a normal user";;
@@ -19,7 +19,7 @@ mock_title() {
   esac
 }
 
-# ---- 1. Build, push and run an image (7) -------------------------------------------------
+# ---- 1. Build, push and run an image (8) -------------------------------------------------
 setup_m1() {
   ns_new k1-build
   put_file /opt/ckad/m1/1/Dockerfile <<'EOF'
@@ -138,7 +138,7 @@ solve_m4() {
     kubectl -n k1-roll rollout status deploy store --timeout=120s"
 }
 
-# ---- 5. A canary at 25% (6) --------------------------------------------------------------------
+# ---- 5. A quarter of the traffic (6) --------------------------------------------------------------------
 setup_m5() {
   ns_new k1-canary
   echo_deploy k1-canary checkout-v1 v1 3 app=checkout version=v1
@@ -163,14 +163,14 @@ setup_m6() {
   put_file /opt/ckad/m1/6/values.yaml <<'EOF'
 replicaCount: 3
 service:
-  port: 8080
+  type: NodePort
 EOF
 }
 score_m6() {
   check_cp "release catalog in k1-helm runs chart webapp 0.2.0" \
     "helm -n k1-helm list -o json | python3 -c 'import json,sys; r=[x for x in json.load(sys.stdin) if x[\"name\"]==\"catalog\"]; sys.exit(0 if r and r[0][\"status\"]==\"deployed\" and r[0][\"chart\"]==\"webapp-0.2.0\" else 1)'"
   check_cp "it runs 3 ready pods" "kubectl -n k1-helm get deploy catalog-webapp -o jsonpath='{.status.readyReplicas}' | grep -qx 3"
-  check_cp "its Service listens on 8080" "kubectl -n k1-helm get svc catalog-webapp -o jsonpath='{.spec.ports[0].port}' | grep -qx 8080"
+  check_cp "its Service is a NodePort" "kubectl -n k1-helm get svc catalog-webapp -o jsonpath='{.spec.type}' | grep -qx NodePort"
   check_cp "the user values carry image.pullPolicy=Always" "helm -n k1-helm get values catalog -o json | grep -q '\"pullPolicy\":\"Always\"'"
 }
 solve_m6() {
@@ -312,7 +312,7 @@ solve_m10() {
     kubectl -n k1-top top pod --sort-by=memory --no-headers | head -1 | awk '{print \$1}' > /opt/ckad/m1/10/pod.txt; cat /opt/ckad/m1/10/pod.txt"
 }
 
-# ---- 11. ConfigMap and Secret (7) ------------------------------------------------------------------------
+# ---- 11. ConfigMap and Secret (8) ------------------------------------------------------------------------
 setup_m11() { ns_new k1-config; }
 score_m11() {
   check_cp "pod shop prints SHOP_MODE=live from ConfigMap shop-config" \
@@ -373,7 +373,7 @@ EOF
     kubectl -n k1-res rollout status deploy cache --timeout=120s"
 }
 
-# ---- 13. A ServiceAccount that reads ConfigMaps (7) ---------------------------------------------------------
+# ---- 13. A ServiceAccount that reads ConfigMaps (8) ---------------------------------------------------------
 setup_m13() {
   ns_new k1-rbac
   cp_sh 'kubectl -n k1-rbac create deploy config-sync --image=busybox:1.36 -- sleep 1d >/dev/null'
@@ -414,7 +414,7 @@ solve_m14() {
   settled k1-sec worker 1
 }
 
-# ---- 15. Service and Ingress (7) ---------------------------------------------------------------------------
+# ---- 15. Service and Ingress (8) ---------------------------------------------------------------------------
 setup_m15() {
   ns_new k1-web
   web_app k1-web docs docs 8080 2 app=docs

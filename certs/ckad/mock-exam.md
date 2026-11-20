@@ -20,24 +20,24 @@ Task files sit in `/opt/ckad/m1/N` on `cks-cp`, where N is the task's number. Ev
 
 | # | Task | Points | Domain |
 |---|---|---|---|
-| 1 | Build, push and run an image | 7 | 01 |
+| 1 | Build, push and run an image | 8 | 01 |
 | 2 | A log sidecar | 6 | 01 |
 | 3 | A nightly CronJob | 5 | 01 |
 | 4 | Update, then roll back | 6 | 02 |
-| 5 | A canary at 25% | 6 | 02 |
+| 5 | A quarter of the traffic | 6 | 02 |
 | 6 | A Helm release | 6 | 02 |
 | 7 | A Kustomize overlay | 6 | 02 |
 | 8 | Probes for an API | 6 | 03 |
 | 9 | Why the pod crashes | 5 | 03 |
 | 10 | The hungriest pod | 4 | 03 |
-| 11 | ConfigMap and Secret | 7 | 04 |
+| 11 | ConfigMap and Secret | 8 | 04 |
 | 12 | Defaults and requests | 6 | 04 |
-| 13 | A ServiceAccount that reads ConfigMaps | 7 | 04 |
+| 13 | A ServiceAccount that reads ConfigMaps | 8 | 04 |
 | 14 | Run as a normal user | 6 | 04 |
-| 15 | Service and Ingress | 7 | 05 |
+| 15 | Service and Ingress | 8 | 05 |
 | 16 | Only the frontend reaches the API | 6 | 05 |
 
-### Task 1: Build, push and run an image (7 points)
+### Task 1: Build, push and run an image (8 points)
 
 > `/opt/ckad/m1/1` holds a Dockerfile. Build it as `registry.ckad:5000/ticker:1.0`, push it, and also save it to `/opt/ckad/m1/1/ticker.tar`. Then run it as Deployment `ticker` with 2 replicas in namespace `k1-build`.
 
@@ -141,7 +141,7 @@ The undo turns revision 1 into revision 3, which the check looks for.
 
 </details>
 
-### Task 5: A canary at 25% (6 points)
+### Task 5: A quarter of the traffic (6 points)
 
 > In namespace `k1-canary`, Service `checkout` selects `app=checkout` and sends traffic to Deployment `checkout-v1` (3 pods that answer `v1`). Add Deployment `checkout-v2` with labels `app=checkout` and `version=v2`, whose pods answer `v2`, so that it gets about a quarter of the requests.
 
@@ -264,7 +264,7 @@ Each pod writes a file into an emptyDir with `medium: Memory`, and memory-backed
 
 </details>
 
-### Task 11: ConfigMap and Secret (7 points)
+### Task 11: ConfigMap and Secret (8 points)
 
 > In namespace `k1-config`, create ConfigMap `shop-config` with `SHOP_MODE=live` and Secret `shop-api` with `key=abc-123`. Create pod `shop` (image `busybox:1.36`, command `sleep 1d`) that gets `SHOP_MODE` as an environment variable and the Secret as files in `/run/secrets/shop`, not as a variable.
 
@@ -321,7 +321,7 @@ The LimitRange first, because the defaults only reach pods created after it, and
 
 </details>
 
-### Task 13: A ServiceAccount that reads ConfigMaps (7 points)
+### Task 13: A ServiceAccount that reads ConfigMaps (8 points)
 
 > In namespace `k1-rbac`, create a ServiceAccount `config-reader`, a Role `config-reader` that may get, list and watch ConfigMaps, and a RoleBinding `config-reader` that grants it. Make Deployment `config-sync` run as that ServiceAccount.
 
@@ -359,11 +359,11 @@ k auth can-i watch configmaps -n k1-rbac --as=system:serviceaccount:k1-rbac:conf
             drop: ["ALL"]
 ```
 
-`/tmp` in busybox is writable for every user, so no volume is needed here, as long as the root file system stays writable.
+`/tmp` in busybox is writable for every user, so the container needs no volume here, as long as the root file system stays writable.
 
 </details>
 
-### Task 15: Service and Ingress (7 points)
+### Task 15: Service and Ingress (8 points)
 
 > In namespace `k1-web`, expose Deployment `docs`, whose pods listen on 8080, as a ClusterIP Service `docs` on port 80, and create an Ingress `docs` with class `nginx` that sends every path of `docs.k1.local` to it.
 
