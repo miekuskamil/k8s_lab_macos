@@ -8,7 +8,7 @@ This mock aims at the difficulty of the killer.sh simulator, which most candidat
 
 ## Rules
 
-1. Start from a clean cluster with `./certs/ckad/cluster/reset.sh`, then run `MOCK=3 ./certs/ckad/mock-exam/setup.sh`. SETUP_TIME
+1. Start from a clean cluster with `./certs/ckad/cluster/reset.sh`, then run `MOCK=3 ./certs/ckad/mock-exam/setup.sh`. In the test run, the reset took 46 seconds and the setup 57 seconds, most of it for the two Helm releases of task 3.
 2. The clock starts when `setup.sh` ends, and `MOCK=3 ./certs/ckad/mock-exam/score.sh` prints the minutes since then.
 3. Work only on `cks-cp`, and use only kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
 4. Don't open the solutions while the timer runs.
@@ -495,4 +495,6 @@ busybox's `httpd` binds port 80 as user 101 here, but not because of the capabil
 
 ## Scoring
 
-SCORING
+`score.sh` runs two to four checks per task, splits the task's points evenly over them, rounded down, and gives a task points only when its first check, the main change, passes. In the final test run it scored `TOTAL: 0 of 100 points (0%).` after `setup.sh`, and `TOTAL: 100 of 100 points (100%).` after `MOCK=3 ./certs/ckad/mock-exam/solve.sh`, which took 59 seconds.
+
+The first run of this mock scored 84, and the four lost tasks taught more than the ones that passed. Task 1's init container waited for a name that only the nodes resolve, task 9's quota deadlock needed the scale to 0, task 8's first check passed on an untouched cluster, and task 10's check counted the ServiceAccount token, which Kubernetes also mounts as a projected volume. The text above includes each fix.

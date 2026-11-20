@@ -8,7 +8,7 @@ Most tasks in this mock start from something broken: a pod that never schedules,
 
 ## Rules
 
-1. Start from a clean cluster with `./certs/ckad/cluster/reset.sh`, then run `MOCK=2 ./certs/ckad/mock-exam/setup.sh`. SETUP_TIME
+1. Start from a clean cluster with `./certs/ckad/cluster/reset.sh`, then run `MOCK=2 ./certs/ckad/mock-exam/setup.sh`. In the test run, the reset took 45 seconds and the setup 40 seconds, most of it for the Helm release of task 7.
 2. The clock starts when `setup.sh` ends, and `MOCK=2 ./certs/ckad/mock-exam/score.sh` prints the minutes since then.
 3. Work only on `cks-cp`, and use only kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
 4. Don't open the solutions while the timer runs.
@@ -373,4 +373,6 @@ k -n k2-chain create ingress status --class=nginx --rule='status.k2.local/*=stat
 
 ## Scoring
 
-SCORING
+`score.sh` runs two to four checks per task, splits the task's points evenly over them, rounded down, and gives a task points only when its first check, the main fix, passes. It checks the cluster as it is and waits at most 10 seconds for anything, so on an untouched cluster it takes about 4 minutes, and on a solved one under a minute.
+
+In the final test run, the score was `TOTAL: 0 of 100 points (0%).` after `setup.sh`, and `TOTAL: 100 of 100 points (100%).` after `MOCK=2 ./certs/ckad/mock-exam/solve.sh`, which took 2 minutes 52 seconds. An earlier run scored 93, because the reference solution of task 7 used `helm upgrade --wait`, and Helm 4 judged the Deployment by the `ProgressDeadlineExceeded` condition that the broken revision had left on it, so it marked the good upgrade `failed`. The solution above now waits with `kubectl rollout status` instead.
