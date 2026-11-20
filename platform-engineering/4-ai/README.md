@@ -1,6 +1,6 @@
-# Level 4: AI
+# Level 4: AI on Kubernetes
 
-These modules run AI workloads on Kubernetes. Modules 17 to 19 build on the [foundations](../1-foundations/README.md), mainly modules 3 to 6, and on module 12, while module 27 needs only module 0. Modules 17 and 19 need Ollama on your machine or a Claude API key, as [Choosing the model](../../docs/ai-models.md) explains. Module 27 needs Ollama for its search even when Claude writes the answers, and module 18 downloads about 900 MB of models into the cluster.
+These modules run AI workloads on the k3d lab. Modules 17 to 19 build on the [foundations](../1-foundations/README.md), mainly modules 3 to 6, and on module 12, while module 27 needs only module 0. Modules 17 and 19 need Ollama on your machine or a Claude API key, as [Choosing the model](../../docs/ai-models.md) explains. Module 27 needs Ollama for its search even when Claude writes the answers, and module 18 downloads about 900 MB of models into the cluster.
 
 - [Module 17: An LLM as a mesh service](17-llm-in-the-mesh.md)
 - [Module 18: Serving models in the cluster](18-serving-models.md)

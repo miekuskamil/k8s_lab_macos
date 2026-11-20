@@ -1,6 +1,6 @@
 # Glossary
 
-Every resource and term the Kubernetes Platform Engineering course and the certification tracks use, in plain words. Each entry starts with one sentence that says what the thing is for. Then it gives the detail, a small example where that helps, and the module that puts it to work. If a module mentions something and you're not sure what it is, look here first.
+Every resource and term the course uses, in plain words. Each entry starts with one sentence that says what the thing is for. Then it gives the detail, a small example where that helps, and the module that puts it to work. If a module mentions something and you're not sure what it is, look here first.
 
 - [Find the right resource](#find-the-right-resource)
 - [The pieces of Istio](#the-pieces-of-istio)
@@ -15,7 +15,8 @@ Every resource and term the Kubernetes Platform Engineering course and the certi
 - [Around the mesh](#around-the-mesh)
 - [AI on Kubernetes](#ai-on-kubernetes)
 - [Kubernetes operations](#kubernetes-operations)
-- [CKS exam track](#cks-exam-track)
+- [The practice cluster and the security modules](#the-practice-cluster-and-the-security-modules)
+- [Applications on Kubernetes](#applications-on-kubernetes)
 
 ## Find the right resource
 
@@ -611,184 +612,426 @@ Members of `system:masters` skip RBAC. Module 29.
 
 **Probe source 169.254.7.127.** 169.254.7.127 is the link-local source address that ambient mode gives to the kubelet's health checks. istio-cni rewrites the kubelet's probe traffic to come from it. ztunnel lets that traffic through without mTLS, so health checks work under STRICT mode. Module 29.
 
-## CKS exam track
+## The practice cluster and the security modules
 
-These terms come from the [CKS track](../certs/cks/README.md) in `certs/cks/`. Each entry names the domain file that uses it.
+These terms come from the [practice cluster](practice-cluster.md) and the security modules 38 to 44, which run on it. Each entry names the module that uses it.
 
-**kubeadm.** kubeadm is the official tool that turns plain Linux machines into a Kubernetes cluster. `kubeadm init` creates the control plane, `kubeadm join` adds a node, and `kubeadm upgrade` moves the cluster to a newer version. The CKS exam clusters come from kubeadm. [certs/README](../certs/README.md), CKS 02.
+**kubeadm.** kubeadm is the official tool that turns plain Linux machines into a Kubernetes cluster. `kubeadm init` creates the control plane, `kubeadm join` adds a node, and `kubeadm upgrade` moves the cluster to a newer version. The practice cluster comes from kubeadm. [The practice cluster](practice-cluster.md), module 39.
 
-**Static pod.** A static pod is a pod that the kubelet starts from a YAML file in `/etc/kubernetes/manifests`, with no API server involved. kubeadm runs the API server, etcd, the scheduler and the controller manager this way. Edit the file, and the kubelet restarts the pod within seconds. [certs/README](../certs/README.md), CKS 01, 02, 04, 06.
+**Static pod.** A static pod is a pod that the kubelet starts from a YAML file in `/etc/kubernetes/manifests`, with no API server involved. kubeadm runs the API server, etcd, the scheduler and the controller manager this way. Edit the file, and the kubelet restarts the pod within seconds. [The practice cluster](practice-cluster.md), modules 38, 39, 41 and 43.
 
-**OrbStack machine.** An OrbStack machine is a lightweight Linux system that OrbStack runs on a Mac. It feels like a virtual machine, but every machine shares one Linux kernel. The CKS track's two nodes, `cks-cp` and `cks-w1`, are OrbStack machines. [certs/README](../certs/README.md).
+**OrbStack machine.** An OrbStack machine is a lightweight Linux system that OrbStack runs on a Mac. It feels like a virtual machine, but every machine shares one Linux kernel. The practice cluster's two nodes, `cks-cp` and `cks-w1`, are OrbStack machines. [The practice cluster](practice-cluster.md).
 
-**Default-deny policy.** A default-deny policy is a NetworkPolicy that selects every pod in a namespace (`podSelector: {}`) and allows nothing, so you open every path on purpose. Smaller policies then add single paths, because NetworkPolicies only ever add to each other. CKS 01.
+**Default-deny policy.** A default-deny policy is a NetworkPolicy that selects every pod in a namespace (`podSelector: {}`) and allows nothing, so you open every path on purpose. Smaller policies then add single paths, because NetworkPolicies only ever add to each other. Module 38.
 
-**ipBlock.** An ipBlock is the part of a NetworkPolicy rule that matches IP ranges instead of pods, with an optional `except` list of ranges to leave out. CKS 01.
+**ipBlock.** An ipBlock is the part of a NetworkPolicy rule that matches IP ranges instead of pods, with an optional `except` list of ranges to leave out. Module 38.
 
-**Metadata service.** The metadata service is an HTTP endpoint at `169.254.169.254` on cloud virtual machines that hands out the machine's identity and often temporary cloud credentials. Pods reach it by default, so a NetworkPolicy blocks it. CKS 01.
+**Metadata service.** The metadata service is an HTTP endpoint at `169.254.169.254` on cloud virtual machines that hands out the machine's identity and often temporary cloud credentials. Pods reach it by default, so a NetworkPolicy blocks it. Module 38.
 
-**CIS Kubernetes Benchmark.** The CIS Kubernetes Benchmark is a checklist from the Center for Internet Security with about 130 settings for the control plane, etcd and the kubelet, each with a reason and a fix. CKS 01.
+**CIS Kubernetes Benchmark.** The CIS Kubernetes Benchmark is a checklist from the Center for Internet Security with about 130 settings for the control plane, etcd and the kubelet, each with a reason and a fix. Module 38.
 
-**kube-bench.** kube-bench is a tool from Aqua Security that checks a node's running Kubernetes components against the CIS benchmark and prints PASS, FAIL or WARN with a remediation per item. CKS 01.
+**kube-bench.** kube-bench is a tool from Aqua Security that checks a node's running Kubernetes components against the CIS benchmark and prints PASS, FAIL or WARN with a remediation per item. Module 38.
 
-**Ingress and Ingress controller.** An Ingress is a Kubernetes object with HTTP routing rules for traffic entering the cluster: hosts and paths to Services, plus TLS certificates. An Ingress controller, such as ingress-nginx, is the proxy that carries the rules out. Without a matching TLS Secret, ingress-nginx serves a fake certificate instead of failing. CKS 01.
+**Ingress and Ingress controller.** An Ingress is a Kubernetes object with HTTP routing rules for traffic entering the cluster: hosts and paths to Services, plus TLS certificates. An Ingress controller, such as ingress-nginx, is the proxy that carries the rules out. Without a matching TLS Secret, ingress-nginx serves a fake certificate instead of failing. Module 38.
 
-**Checksum (SHA-512).** A checksum is a fingerprint of a file, computed so that changing one byte changes the whole value. Kubernetes publishes a SHA-512 checksum next to every binary on `dl.k8s.io`, and `sha512sum -c` compares a file against it. CKS 01.
+**Checksum (SHA-512).** A checksum is a fingerprint of a file, computed so that changing one byte changes the whole value. Kubernetes publishes a SHA-512 checksum next to every binary on `dl.k8s.io`, and `sha512sum -c` compares a file against it. Module 38.
 
-**RBAC: Role, ClusterRole and bindings.** RBAC (role-based access control) is Kubernetes' permission system. A Role lists allowed verbs on resources in one namespace, a ClusterRole does the same cluster-wide, and a RoleBinding or ClusterRoleBinding hands a role to users, groups or service accounts. Rules only add rights. CKS 02, module 29.
+**RBAC: Role, ClusterRole and bindings.** RBAC (role-based access control) is Kubernetes' permission system. A Role lists allowed verbs on resources in one namespace, a ClusterRole does the same cluster-wide, and a RoleBinding or ClusterRoleBinding hands a role to users, groups or service accounts. Rules only add rights. Module 39, module 29.
 
-**resourceNames.** resourceNames is an RBAC rule field that limits the rule to named objects, such as one Secret. It covers `get`, `update` and `delete` on those objects, never `create`, and not a plain `list`. CKS 02.
+**resourceNames.** resourceNames is an RBAC rule field that limits the rule to named objects, such as one Secret. It covers `get`, `update` and `delete` on those objects, never `create`, and not a plain `list`. Module 39.
 
-**automountServiceAccountToken.** automountServiceAccountToken is a field on a ServiceAccount or a pod spec that, when `false`, stops the kubelet from mounting an API token into the pod. The pod's setting wins over the account's. CKS 02.
+**automountServiceAccountToken.** automountServiceAccountToken is a field on a ServiceAccount or a pod spec that, when `false`, stops the kubelet from mounting an API token into the pod. The pod's setting wins over the account's. Module 39.
 
-**Anonymous request and AuthenticationConfiguration.** An anonymous request is one without credentials, which the API server treats as user `system:anonymous`. An AuthenticationConfiguration file, passed with `--authentication-config`, keeps anonymous access only for named paths such as `/livez`. Turning anonymous access off completely makes kubeadm's own probes fail. CKS 02.
+**Anonymous request and AuthenticationConfiguration.** An anonymous request is one without credentials, which the API server treats as user `system:anonymous`. An AuthenticationConfiguration file, passed with `--authentication-config`, keeps anonymous access only for named paths such as `/livez`. Turning anonymous access off completely makes kubeadm's own probes fail. Module 39.
 
-**Version skew.** Version skew is the allowed difference between component versions in one cluster. The kubelet must never be newer than the API server, so upgrades go control plane first, then the workers. CKS 02.
+**Version skew.** Version skew is the allowed difference between component versions in one cluster. The kubelet must never be newer than the API server, so upgrades go control plane first, then the workers. Module 39.
 
-**NodeRestriction.** NodeRestriction is an admission plugin that limits what a kubelet may change: only its own Node object and the pods bound to it, and no labels with the `node-restriction.kubernetes.io/` prefix. kubeadm turns it on. CKS 03.
+**NodeRestriction.** NodeRestriction is an admission plugin that limits what a kubelet may change: only its own Node object and the pods bound to it, and no labels with the `node-restriction.kubernetes.io/` prefix. kubeadm turns it on. Module 40.
 
-**Attack surface.** The attack surface is everything an attacker might use to get in or move on: listening ports, installed packages, running services and user accounts. Hardening a node means removing what its job doesn't need. CKS 03.
+**Attack surface.** The attack surface is everything an attacker might use to get in or move on: listening ports, installed packages, running services and user accounts. Hardening a node means removing what its job doesn't need. Module 40.
 
-**Pod Security Standards and Pod Security Admission.** The Pod Security Standards are three fixed levels for how much power a pod may ask for: `privileged`, `baseline` and `restricted`. Pod Security Admission is the built-in admission plugin that applies a level per namespace through the labels `pod-security.kubernetes.io/enforce`, `warn` and `audit`. Enforce refuses new pods only, never running ones. CKS 04.
+**Pod Security Standards and Pod Security Admission.** The Pod Security Standards are three fixed levels for how much power a pod may ask for: `privileged`, `baseline` and `restricted`. Pod Security Admission is the built-in admission plugin that applies a level per namespace through the labels `pod-security.kubernetes.io/enforce`, `warn` and `audit`. Enforce refuses new pods only, never running ones. Module 41.
 
-**EncryptionConfiguration.** An EncryptionConfiguration is a file that tells the API server to encrypt chosen resources, usually Secrets, before writing them to etcd. It lists providers such as `aescbc` or `secretbox`; the first one encrypts new writes, and `identity` at the end keeps old plain values readable. The flag is `--encryption-provider-config`. CKS 04.
+**EncryptionConfiguration.** An EncryptionConfiguration is a file that tells the API server to encrypt chosen resources, usually Secrets, before writing them to etcd. It lists providers such as `aescbc` or `secretbox`; the first one encrypts new writes, and `identity` at the end keeps old plain values readable. The flag is `--encryption-provider-config`. Module 41.
 
-**RuntimeClass and gVisor.** A RuntimeClass is a cluster object that names a container runtime handler, so a pod picks it with `runtimeClassName`. gVisor is a sandboxed runtime (`runsc`) that answers a container's system calls with its own user-space kernel, so the host kernel sees far fewer of them. CKS 04.
+**RuntimeClass and gVisor.** A RuntimeClass is a cluster object that names a container runtime handler, so a pod picks it with `runtimeClassName`. gVisor is a sandboxed runtime (`runsc`) that answers a container's system calls with its own user-space kernel, so the host kernel sees far fewer of them. Module 41.
 
-**Pod-to-pod encryption.** Pod-to-pod encryption means traffic between pods crosses the network encrypted. Istio does it with mTLS between proxies and proves the workload; Cilium does it with WireGuard or IPsec between nodes and proves the node. CKS 04, modules 2 and 10.
+**Pod-to-pod encryption.** Pod-to-pod encryption means traffic between pods crosses the network encrypted. Istio does it with mTLS between proxies and proves the workload; Cilium does it with WireGuard or IPsec between nodes and proves the node. Module 41, modules 2 and 10.
 
-**CVE.** A CVE (Common Vulnerabilities and Exposures entry) is a public record of one known security bug, with an ID such as `CVE-2024-6387` and a severity from LOW to CRITICAL. CKS 05.
+**CVE.** A CVE (Common Vulnerabilities and Exposures entry) is a public record of one known security bug, with an ID such as `CVE-2024-6387` and a severity from LOW to CRITICAL. Module 42.
 
-**trivy.** trivy is Aqua Security's scanner that compares the packages inside an image, a file system or an SBOM with a database of CVEs. It also writes SBOMs. CKS 05.
+**trivy.** trivy is Aqua Security's scanner that compares the packages inside an image, a file system or an SBOM with a database of CVEs. It also writes SBOMs. Module 42.
 
-**SBOM, SPDX and CycloneDX.** An SBOM (software bill of materials) is a machine-readable list of every package in an image, with versions and licenses. SPDX, from the Linux Foundation, and CycloneDX, from OWASP, are its two main formats. The Kubernetes tool bom writes SPDX. CKS 05.
+**SBOM, SPDX and CycloneDX.** An SBOM (software bill of materials) is a machine-readable list of every package in an image, with versions and licenses. SPDX, from the Linux Foundation, and CycloneDX, from OWASP, are its two main formats. The Kubernetes tool bom writes SPDX. Module 42.
 
-**kubesec.** kubesec is a static analysis tool that scores a Kubernetes manifest's security settings without running it. Critical findings such as `privileged` or `hostPID` fail the manifest whatever its points. KubeLinter is a similar tool. CKS 05.
+**kubesec.** kubesec is a static analysis tool that scores a Kubernetes manifest's security settings without running it. Critical findings such as `privileged` or `hostPID` fail the manifest whatever its points. KubeLinter is a similar tool. Module 42.
 
-**ImagePolicyWebhook.** ImagePolicyWebhook is a built-in admission plugin that sends every new pod's image names to an outside service as an `ImageReview` and follows its verdict. Its admission configuration names a kubeconfig for the service and `defaultAllow`, the answer when the service is down. CKS 05.
+**ImagePolicyWebhook.** ImagePolicyWebhook is a built-in admission plugin that sends every new pod's image names to an outside service as an `ImageReview` and follows its verdict. Its admission configuration names a kubeconfig for the service and `defaultAllow`, the answer when the service is down. Module 42.
 
-**cosign.** cosign is the Sigstore tool that signs container images and verifies those signatures. Admission policies, such as Kyverno's `verifyImages`, then refuse unsigned images. CKS 05.
+**cosign.** cosign is the Sigstore tool that signs container images and verifies those signatures. Admission policies, such as Kyverno's `verifyImages`, then refuse unsigned images. Module 42.
 
-**Audit log and audit policy.** The audit log is the API server's record of requests: who did what to which object, and when. The audit policy decides what to record, with the first matching rule winning, at one of four levels: `None`, `Metadata`, `Request` or `RequestResponse`. kubeadm leaves auditing off. CKS 06.
+**Audit log and audit policy.** The audit log is the API server's record of requests: who did what to which object, and when. The audit policy decides what to record, with the first matching rule winning, at one of four levels: `None`, `Metadata`, `Request` or `RequestResponse`. kubeadm leaves auditing off. Module 43.
 
-**System call (syscall).** A system call is a request from a program to the kernel, such as opening a file or starting a process. Everything a container does turns into syscalls, so seccomp filters them and Falco watches them. CKS 06.
+**System call (syscall).** A system call is a request from a program to the kernel, such as opening a file or starting a process. Everything a container does turns into syscalls, so seccomp filters them and Falco watches them. Module 43.
 
-**Falco.** Falco is a CNCF runtime security tool that watches system calls through an eBPF probe and raises an alert when one matches a rule. A rule has a condition, an output with `%` fields, and a priority. Falco reports and never blocks. CKS 06.
+**Falco.** Falco is a CNCF runtime security tool that watches system calls through an eBPF probe and raises an alert when one matches a rule. A rule has a condition, an output with `%` fields, and a priority. Falco reports and never blocks. Module 43.
 
-**Immutable container.** An immutable container never changes after it starts, because its root file system is read-only (`readOnlyRootFilesystem: true`). The folders a program must write to get `emptyDir` volumes. CKS 06.
+**Immutable container.** An immutable container never changes after it starts, because its root file system is read-only (`readOnlyRootFilesystem: true`). The folders a program must write to get `emptyDir` volumes. Module 43.
 
-**seccomp.** seccomp is a Linux kernel feature that filters the system calls a process may make. A profile is a JSON file with a default action and per-syscall actions. Kubernetes loads `Localhost` profiles from `/var/lib/kubelet/seccomp/`, and `RuntimeDefault` uses the container runtime's built-in profile. CKS 06.
+**seccomp.** seccomp is a Linux kernel feature that filters the system calls a process may make. A profile is a JSON file with a default action and per-syscall actions. Kubernetes loads `Localhost` profiles from `/var/lib/kubelet/seccomp/`, and `RuntimeDefault` uses the container runtime's built-in profile. Module 43.
 
-**AppArmor.** AppArmor is a Linux security module that limits which files, capabilities and network access a program gets, through a text profile loaded with `apparmor_parser`. A pod asks for a loaded profile with `securityContext.appArmorProfile`. OrbStack's kernel lacks it, so the track's AppArmor tasks run on the Lima VM. CKS 03, 06.
+**AppArmor.** AppArmor is a Linux security module that limits which files, capabilities and network access a program gets, through a text profile loaded with `apparmor_parser`. A pod asks for a loaded profile with `securityContext.appArmorProfile`. OrbStack's kernel lacks it, so the AppArmor tasks run on a VM. Modules 43 and 44.
 
-**Lima VM.** Lima is a macOS tool that runs Linux virtual machines, each with a kernel of its own. The CKS track's third practice machine, `cks-lima`, is a Lima VM with AppArmor and a one-node kubeadm cluster that runs Cilium. [certs/README](../certs/README.md#the-lima-vm-for-apparmor-and-cilium), CKS 01, 03, 04, 06.
+**Lima VM.** Lima is a macOS tool that runs Linux virtual machines, each with a kernel of its own. The third practice machine, `cks-lima`, is a Lima VM with AppArmor and a one-node kubeadm cluster that runs Cilium. [The VM page](kernel-and-host/README.md#the-lima-vm-on-a-mac), module 44.
 
-**CiliumNetworkPolicy.** A CiliumNetworkPolicy is Cilium's own policy resource. It selects pods with `endpointSelector` and adds what a NetworkPolicy lacks: HTTP rules at layer 7, named peer groups called entities, and deny rules that beat every allow. CKS 01.
+**CiliumNetworkPolicy.** A CiliumNetworkPolicy is Cilium's own policy resource. It selects pods with `endpointSelector` and adds what a NetworkPolicy lacks: HTTP rules at layer 7, named peer groups called entities, and deny rules that beat every allow. Modules 38 and 44.
 
-**Entity (Cilium).** An entity is a named group of peers in a CiliumNetworkPolicy, such as `kube-apiserver`, `world` (everything outside the cluster), `host` or `cluster`. Cilium works out the addresses behind each name itself. CKS 01.
+**Entity (Cilium).** An entity is a named group of peers in a CiliumNetworkPolicy, such as `kube-apiserver`, `world` (everything outside the cluster), `host` or `cluster`. Cilium works out the addresses behind each name itself. Module 38.
 
-**endPort.** endPort is a NetworkPolicy port field that, together with a numeric `port`, opens a whole range of ports in one entry. CKS 01.
+**endPort.** endPort is a NetworkPolicy port field that, together with a numeric `port`, opens a whole range of ports in one entry. Module 38.
 
-**Cipher suite.** A cipher suite is the set of algorithms a TLS connection uses for key exchange, encryption and integrity. The API server picks from `--tls-cipher-suites`, and `--tls-min-version` sets the oldest TLS version it accepts. CKS 01.
+**Cipher suite.** A cipher suite is the set of algorithms a TLS connection uses for key exchange, encryption and integrity. The API server picks from `--tls-cipher-suites`, and `--tls-min-version` sets the oldest TLS version it accepts. Module 38.
 
-**Kubelet read-only port.** The read-only port is an old unauthenticated HTTP port of the kubelet, 10255, that hands out pod specs to anybody. `readOnlyPort: 0` in the kubelet config file turns it off. CKS 01.
+**Kubelet read-only port.** The read-only port is an old unauthenticated HTTP port of the kubelet, 10255, that hands out pod specs to anybody. `readOnlyPort: 0` in the kubelet config file turns it off. Module 38.
 
-**Aggregated ClusterRole.** An aggregated ClusterRole collects its rules from every ClusterRole whose labels match its `aggregationRule`. A controller rewrites its rule list, so you extend it by creating a labelled role, and you take a right away by fixing the source role. CKS 02.
+**Aggregated ClusterRole.** An aggregated ClusterRole collects its rules from every ClusterRole whose labels match its `aggregationRule`. A controller rewrites its rule list, so you extend it by creating a labelled role, and you take a right away by fixing the source role. Module 39.
 
-**Bound service account token.** A bound token is a service account token from the TokenRequest API that names an audience and expires. Pods get one through a projected volume, and `kubectl create token` asks for one by hand. CKS 02.
+**Bound service account token.** A bound token is a service account token from the TokenRequest API that names an audience and expires. Pods get one through a projected volume, and `kubectl create token` asks for one by hand. Module 39.
 
-**Projected volume.** A projected volume is a pod volume that the kubelet fills from several sources, such as a fresh service account token, a ConfigMap or the Downward API, and keeps up to date. CKS 02.
+**Projected volume.** A projected volume is a pod volume that the kubelet fills from several sources, such as a fresh service account token, a ConfigMap or the Downward API, and keeps up to date. Module 39.
 
-**Legacy service account token.** A legacy token is a never-expiring service account token stored in a Secret of type `kubernetes.io/service-account-token`. Deleting the Secret invalidates the token. CKS 02.
+**Legacy service account token.** A legacy token is a never-expiring service account token stored in a Secret of type `kubernetes.io/service-account-token`. Deleting the Secret invalidates the token. Module 39.
 
-**Authorization mode.** The authorization mode is the API server's ordered list of authorizers, set with `--authorization-mode`. kubeadm sets `Node,RBAC`; `AlwaysAllow` lets every authenticated caller do anything. CKS 02.
+**Authorization mode.** The authorization mode is the API server's ordered list of authorizers, set with `--authorization-mode`. kubeadm sets `Node,RBAC`; `AlwaysAllow` lets every authenticated caller do anything. Module 39.
 
-**crictl.** crictl is the command line client for a node's container runtime. `crictl ps -a` lists containers, the exited ones too, and `crictl logs` prints a container's output, which is how you debug a static pod while the API server is down. CKS 02.
+**crictl.** crictl is the command line client for a node's container runtime. `crictl ps -a` lists containers, the exited ones too, and `crictl logs` prints a container's output, which is how you debug a static pod while the API server is down. Module 39.
 
-**Kernel module blacklist.** A file under `/etc/modprobe.d/` that keeps the kernel from loading a module: `blacklist` stops loading by alias, and `install <module> /bin/false` makes every load fail. CKS 03.
+**Kernel module blacklist.** A file under `/etc/modprobe.d/` that keeps the kernel from loading a module: `blacklist` stops loading by alias, and `install <module> /bin/false` makes every load fail. Modules 40 and 44.
 
-**Encryption key rotation.** Key rotation replaces the key that encrypts Secrets in etcd: add the new key first in the list, restart the API server, rewrite every Secret, then remove the old key and restart again. CKS 04.
+**Encryption key rotation.** Key rotation replaces the key that encrypts Secrets in etcd: add the new key first in the list, restart the API server, rewrite every Secret, then remove the old key and restart again. Module 41.
 
-**Pod Security exemption.** An exemption switches Pod Security off for named namespaces, users or RuntimeClasses. It lives in the PodSecurity plugin's configuration, next to the cluster-wide defaults for namespaces without labels. CKS 04.
+**Pod Security exemption.** An exemption switches Pod Security off for named namespaces, users or RuntimeClasses. It lives in the PodSecurity plugin's configuration, next to the cluster-wide defaults for namespaces without labels. Module 41.
 
-**WireGuard.** WireGuard is a VPN protocol built into the Linux kernel. Cilium and Calico use it to encrypt pod traffic between nodes. CKS 04.
+**WireGuard.** WireGuard is a VPN protocol built into the Linux kernel. Cilium and Calico use it to encrypt pod traffic between nodes. Modules 41 and 44.
 
-**Image digest.** An image digest is the SHA-256 checksum of an image's manifest, written `image@sha256:...`. Unlike a tag, it always names exactly one build. CKS 05.
+**Image digest.** An image digest is the SHA-256 checksum of an image's manifest, written `image@sha256:...`. Unlike a tag, it always names exactly one build. Module 42.
 
-**Falco list, macro and override.** In a Falco rules file, a list names a set of values, a macro names a piece of condition, and a rule combines them. An `override` block in a later file replaces or extends one field of an existing rule, such as its priority. CKS 06.
+**Falco list, macro and override.** In a Falco rules file, a list names a set of values, a macro names a piece of condition, and a rule combines them. An `override` block in a later file replaces or extends one field of an existing rule, such as its priority. Module 43.
 
-**Audit stage.** An audit stage is the point in a request at which the API server writes an audit event: `RequestReceived`, `ResponseStarted`, `ResponseComplete` or `Panic`. Count `ResponseComplete` lines to count requests. CKS 06.
+**Audit stage.** An audit stage is the point in a request at which the API server writes an audit event: `RequestReceived`, `ResponseStarted`, `ResponseComplete` or `Panic`. Count `ResponseComplete` lines to count requests. Module 43.
 
-**Lateral movement.** Lateral movement is an attacker's step from the first place they broke into to the next one, such as from one pod to the database or to the node. Default-deny NetworkPolicies and least privilege make each step harder. CKS 01.
+**Lateral movement.** Lateral movement is an attacker's step from the first place they broke into to the next one, such as from one pod to the database or to the node. Default-deny NetworkPolicies and least privilege make each step harder. Module 38.
 
-**CNI agent (Felix).** A CNI agent is the per-node program of a CNI plugin that turns NetworkPolicies into packet filter rules in the node's kernel. Calico's agent is called Felix and writes iptables rules or eBPF programs. A CNI without such an agent, such as flannel alone, stores policies and enforces nothing. CKS 01.
+**CNI agent (Felix).** A CNI agent is the per-node program of a CNI plugin that turns NetworkPolicies into packet filter rules in the node's kernel. Calico's agent is called Felix and writes iptables rules or eBPF programs. A CNI without such an agent, such as flannel alone, stores policies and enforces nothing. Module 38.
 
-**Cilium security identity.** A security identity is a number that Cilium gives to every distinct set of pod labels. Its eBPF programs compare identities instead of IP lists, so a policy keeps working when pods move. CKS 01.
+**Cilium security identity.** A security identity is a number that Cilium gives to every distinct set of pod labels. Its eBPF programs compare identities instead of IP lists, so a policy keeps working when pods move. Modules 38 and 44.
 
-**SSRF (server-side request forgery).** SSRF is an attack that tricks a server into fetching a URL the attacker chose. Aimed at the cloud metadata service, it hands the node's cloud credentials to the attacker. CKS 01.
+**SSRF (server-side request forgery).** SSRF is an attack that tricks a server into fetching a URL the attacker chose. Aimed at the cloud metadata service, it hands the node's cloud credentials to the attacker. Module 38.
 
-**Link-local address.** A link-local address, such as `169.254.169.254`, only exists on a machine's own network segment and never crosses a router. Clouds serve their metadata service on one. CKS 01.
+**Link-local address.** A link-local address, such as `169.254.169.254`, only exists on a machine's own network segment and never crosses a router. Clouds serve their metadata service on one. Module 38.
 
-**Profiling endpoint.** A profiling endpoint, `/debug/pprof`, serves memory and thread details of a running Go program. The CIS benchmark asks for `--profiling=false` on the API server, controller manager and scheduler, because production never needs it. CKS 01.
+**Profiling endpoint.** A profiling endpoint, `/debug/pprof`, serves memory and thread details of a running Go program. The CIS benchmark asks for `--profiling=false` on the API server, controller manager and scheduler, because production never needs it. Module 38.
 
-**TLS handshake.** The TLS handshake is the short negotiation at the start of a TLS connection: the client offers versions and cipher suites, the server picks one of each, sends its certificate, and both agree on keys. CKS 01.
+**TLS handshake.** The TLS handshake is the short negotiation at the start of a TLS connection: the client offers versions and cipher suites, the server picks one of each, sends its certificate, and both agree on keys. Module 38.
 
-**Downgrade attack.** A downgrade attack makes two sides of a connection settle on an old protocol version or a weak cipher suite, which the attacker then breaks. A minimum TLS version on the server stops it. CKS 01.
+**Downgrade attack.** A downgrade attack makes two sides of a connection settle on an old protocol version or a weak cipher suite, which the attacker then breaks. A minimum TLS version on the server stops it. Module 38.
 
-**Mutating and validating admission.** These are the two phases of admission control. Mutating admission controllers run first and may change the object, for example to add defaults. Validating admission controllers run after schema validation and only accept or refuse, so they judge the final object that etcd stores. Reads skip admission. CKS 02.
+**Mutating and validating admission.** These are the two phases of admission control. Mutating admission controllers run first and may change the object, for example to add defaults. Validating admission controllers run after schema validation and only accept or refuse, so they judge the final object that etcd stores. Reads skip admission. Module 39.
 
-**Authorizer and SubjectAccessReview.** An authorizer is one entry in the API server's `--authorization-mode` list: `Node`, `RBAC`, `Webhook`, `ABAC`, `AlwaysAllow` or `AlwaysDeny`. Each answers allow, deny or no opinion, and the first opinion wins. A SubjectAccessReview is the question "may this user do this?" sent as an object, which the kubelet and webhook authorizers use. CKS 02.
+**Authorizer and SubjectAccessReview.** An authorizer is one entry in the API server's `--authorization-mode` list: `Node`, `RBAC`, `Webhook`, `ABAC`, `AlwaysAllow` or `AlwaysDeny`. Each answers allow, deny or no opinion, and the first opinion wins. A SubjectAccessReview is the question "may this user do this?" sent as an object, which the kubelet and webhook authorizers use. Module 39.
 
-**escalate, bind and impersonate.** These are the three RBAC verbs that unlock other rights. `escalate` lets a subject write a role with rights it lacks, `bind` lets it bind such a role, and `impersonate` lets it act as another user. Treat each as cluster admin. CKS 02.
+**escalate, bind and impersonate.** These are the three RBAC verbs that unlock other rights. `escalate` lets a subject write a role with rights it lacks, `bind` lets it bind such a role, and `impersonate` lets it act as another user. Treat each as cluster admin. Module 39.
 
-**TokenRequest API and token audience.** The TokenRequest API is the API server endpoint that mints a bound service account token on demand, with an expiry and a binding to one pod. The audience (`aud` claim) names the service that should accept the token, so a token minted for Vault fails against the Kubernetes API. CKS 02.
+**TokenRequest API and token audience.** The TokenRequest API is the API server endpoint that mints a bound service account token on demand, with an expiry and a binding to one pod. The audience (`aud` claim) names the service that should accept the token, so a token minted for Vault fails against the Kubernetes API. Module 39.
 
-**Mirror pod.** A mirror pod is the read-only copy of a static pod that the kubelet creates in the API server, so `kubectl get pods` shows it. Deleting or editing the mirror changes nothing: the manifest file on the node is the truth. CKS 02.
+**Mirror pod.** A mirror pod is the read-only copy of a static pod that the kubelet creates in the API server, so `kubectl get pods` shows it. Deleting or editing the mirror changes nothing: the manifest file on the node is the truth. Module 39.
 
-**OIDC authentication.** OIDC (OpenID Connect) is a login standard that lets the API server trust tokens from a company identity provider. People then log in with their company account, and lose access when the company removes it. CKS 02.
+**OIDC authentication.** OIDC (OpenID Connect) is a login standard that lets the API server trust tokens from a company identity provider. People then log in with their company account, and lose access when the company removes it. Module 39.
 
-**Backdoor.** A backdoor is a hidden way back into a machine that an attacker leaves behind, such as a renamed binary started by a systemd unit. `/proc/<pid>/exe` shows the real file behind a process, whatever it calls itself. CKS 03.
+**Backdoor.** A backdoor is a hidden way back into a machine that an attacker leaves behind, such as a renamed binary started by a systemd unit. `/proc/<pid>/exe` shows the real file behind a process, whatever it calls itself. Module 40.
 
-**Least privilege and defence in depth.** Least privilege means each user, program and credential gets only the rights its job needs. Defence in depth means several independent layers of protection, so one failure doesn't decide the outcome. CKS 03.
+**Least privilege and defence in depth.** Least privilege means each user, program and credential gets only the rights its job needs. Defence in depth means several independent layers of protection, so one failure doesn't decide the outcome. Module 40.
 
-**super-admin.conf and system:masters.** `system:masters` is a group that skips authorization entirely. kubeadm puts it only in `super-admin.conf`, and gives `admin.conf` a group with a normal ClusterRoleBinding instead. Both files stay on the control plane, readable by root only. CKS 03.
+**super-admin.conf and system:masters.** `system:masters` is a group that skips authorization entirely. kubeadm puts it only in `super-admin.conf`, and gives `admin.conf` a group with a normal ClusterRoleBinding instead. Both files stay on the control plane, readable by root only. Module 40.
 
-**Linux capability.** A capability is one slice of root's power, such as `NET_ADMIN` (change network settings), `SYS_ADMIN` (mount and much more) or `NET_BIND_SERVICE` (listen below port 1024). `capabilities.drop: [ALL]` takes every slice away from a container. CKS 04.
+**Linux capability.** A capability is one slice of root's power, such as `NET_ADMIN` (change network settings), `SYS_ADMIN` (mount and much more) or `NET_BIND_SERVICE` (listen below port 1024). `capabilities.drop: [ALL]` takes every slice away from a container. Module 41.
 
-**securityContext and no_new_privs.** The securityContext is the part of a pod or container spec that sets its user, capabilities, privilege escalation, read-only root and seccomp profile. `allowPrivilegeEscalation: false` sets the kernel flag `no_new_privs`, so no child process gains rights, not even through a setuid binary such as `sudo`. CKS 04.
+**securityContext and no_new_privs.** The securityContext is the part of a pod or container spec that sets its user, capabilities, privilege escalation, read-only root and seccomp profile. `allowPrivilegeEscalation: false` sets the kernel flag `no_new_privs`, so no child process gains rights, not even through a setuid binary such as `sudo`. Module 41.
 
-**Namespaces and cgroups (Linux).** Linux namespaces give a process its own view of processes, network, mounts and host name. cgroups limit its CPU and memory. Together they make a container, but every container still shares the node's kernel. CKS 04.
+**Namespaces and cgroups (Linux).** Linux namespaces give a process its own view of processes, network, mounts and host name. cgroups limit its CPU and memory. Together they make a container, but every container still shares the node's kernel. Module 41.
 
-**Envelope encryption (KMS provider).** Envelope encryption encrypts data with a data encryption key (DEK) and encrypts that DEK with a key encryption key (KEK) held in an outside key service. The `kms` provider of an EncryptionConfiguration works this way, so the master key never sits on the control plane node. CKS 04.
+**Envelope encryption (KMS provider).** Envelope encryption encrypts data with a data encryption key (DEK) and encrypts that DEK with a key encryption key (KEK) held in an outside key service. The `kms` provider of an EncryptionConfiguration works this way, so the master key never sits on the control plane node. Module 41.
 
-**Container escape.** A container escape is an attack that breaks out of a container's fences onto the node, usually through a kernel bug, a privileged pod or a `hostPath` mount. CKS 04.
+**Container escape.** A container escape is an attack that breaks out of a container's fences onto the node, usually through a kernel bug, a privileged pod or a `hostPath` mount. Module 41.
 
-**gVisor Sentry and Kata Containers.** The Sentry is gVisor's user-space kernel: it answers a sandboxed container's syscalls itself and calls the host kernel with only a small set. Kata Containers takes the other route and runs each pod in a lightweight virtual machine with its own kernel. CKS 04.
+**gVisor Sentry and Kata Containers.** The Sentry is gVisor's user-space kernel: it answers a sandboxed container's syscalls itself and calls the host kernel with only a small set. Kata Containers takes the other route and runs each pod in a lightweight virtual machine with its own kernel. Module 41.
 
-**Software supply chain.** The software supply chain is everything that touches code on its way from a developer's editor to a running pod: base images, packages, libraries, build systems and registries. CKS 05.
+**Software supply chain.** The software supply chain is everything that touches code on its way from a developer's editor to a running pod: base images, packages, libraries, build systems and registries. Module 42.
 
-**Image layer.** An image layer is one tar archive of files that a Dockerfile instruction added or changed. The runtime stacks the layers into one file system. A file deleted in a later layer still ships in the earlier one. CKS 05.
+**Image layer.** An image layer is one tar archive of files that a Dockerfile instruction added or changed. The runtime stacks the layers into one file system. A file deleted in a later layer still ships in the earlier one. Module 42.
 
-**Distroless image and multi-stage build.** A distroless image holds only an app's runtime and libraries, with no shell, package manager or tools. A multi-stage build compiles in one stage and copies only the finished program into a minimal last stage, so build tools never ship. CKS 05.
+**Distroless image and multi-stage build.** A distroless image holds only an app's runtime and libraries, with no shell, package manager or tools. A multi-stage build compiles in one stage and copies only the finished program into a minimal last stage, so build tools never ship. Module 42.
 
-**Fixable and unfixable vulnerability.** A fixable finding has a newer package version that closes the bug, so a rebuild removes it. An unfixable one has no fix yet. `trivy --ignore-unfixed` hides the second kind. CKS 05.
+**Fixable and unfixable vulnerability.** A fixable finding has a newer package version that closes the bug, so a rebuild removes it. An unfixable one has no fix yet. `trivy --ignore-unfixed` hides the second kind. Module 42.
 
-**Static analysis.** Static analysis checks a file without running it, such as kubesec or KubeLinter on a manifest, or hadolint on a Dockerfile. It runs earliest in the supply chain, where a fix is cheapest. CKS 05.
+**Static analysis.** Static analysis checks a file without running it, such as kubesec or KubeLinter on a manifest, or hadolint on a Dockerfile. It runs earliest in the supply chain, where a fix is cheapest. Module 42.
 
-**Fail closed and fail open.** These describe what a check does when it breaks. Fail closed refuses everything until the check works again. Fail open lets everything through. ImagePolicyWebhook's `defaultAllow: false` fails closed. CKS 05.
+**Fail closed and fail open.** These describe what a check does when it breaks. Fail closed refuses everything until the check works again. Fail open lets everything through. ImagePolicyWebhook's `defaultAllow: false` fails closed. Module 42.
 
-**Keyless signing and transparency log.** Keyless signing with cosign uses a short-lived certificate tied to an identity, such as a CI login, instead of a long-lived key. The signature goes to a public transparency log, an append-only record anybody checks later. CKS 05.
+**Keyless signing and transparency log.** Keyless signing with cosign uses a short-lived certificate tied to an identity, such as a CI login, instead of a long-lived key. The signature goes to a public transparency log, an append-only record anybody checks later. Module 42.
 
-**Provenance and SLSA.** Provenance is a verifiable record of where an artifact came from and how it was built. SLSA (Supply-chain Levels for Software Artifacts) is a framework that grades how trustworthy that record is. CKS 05.
+**Provenance and SLSA.** Provenance is a verifiable record of where an artifact came from and how it was built. SLSA (Supply-chain Levels for Software Artifacts) is a framework that grades how trustworthy that record is. Module 42.
 
-**Prevention and detection.** Prevention blocks an action before it happens, as seccomp and AppArmor do. Detection notices an action and reports it, as Falco and audit logs do. Prevention needs you to know what to forbid; detection tolerates surprises but acts after the fact. CKS 06.
+**Prevention and detection.** Prevention blocks an action before it happens, as seccomp and AppArmor do. Detection notices an action and reports it, as Falco and audit logs do. Prevention needs you to know what to forbid; detection tolerates surprises but acts after the fact. Module 43.
 
-**seccomp action.** A seccomp action is what the kernel does with a matching syscall: `SCMP_ACT_ALLOW` runs it, `SCMP_ACT_ERRNO` fails it with an error, `SCMP_ACT_KILL_PROCESS` kills the process, and `SCMP_ACT_LOG` runs and logs it. Without a profile, a pod runs `Unconfined` unless the kubelet sets `seccompDefault: true`. CKS 06.
+**seccomp action.** A seccomp action is what the kernel does with a matching syscall: `SCMP_ACT_ALLOW` runs it, `SCMP_ACT_ERRNO` fails it with an error, `SCMP_ACT_KILL_PROCESS` kills the process, and `SCMP_ACT_LOG` runs and logs it. Without a profile, a pod runs `Unconfined` unless the kubelet sets `seccompDefault: true`. Module 43.
 
-**AppArmor enforce and complain mode.** In enforce mode, an AppArmor profile blocks what its rules deny and logs it. In complain mode, it blocks nothing and only logs, which teams use to learn what an app does before they enforce. CKS 06.
+**AppArmor enforce and complain mode.** In enforce mode, an AppArmor profile blocks what its rules deny and logs it. In complain mode, it blocks nothing and only logs, which teams use to learn what an app does before they enforce. Module 43.
 
-**Audit level and audit backend.** An audit level (`None`, `Metadata`, `Request`, `RequestResponse`) says how much of a request the API server records. The first policy rule that matches sets it. An audit backend writes the events: the log backend to a file, the webhook backend to an outside service. CKS 06.
+**Audit level and audit backend.** An audit level (`None`, `Metadata`, `Request`, `RequestResponse`) says how much of a request the API server records. The first policy rule that matches sets it. An audit backend writes the events: the log backend to a file, the webhook backend to an outside service. Module 43.
 
-**Falco driver, priority and output.** Falco's driver is the kernel part that collects syscall events: the modern eBPF probe, an older eBPF probe, or a kernel module. A rule's priority ranges from `EMERGENCY` down to `DEBUG`. Outputs send alerts to standard output, a file, syslog, a program or HTTP, and Falcosidekick forwards them further. CKS 06.
+**Falco driver, priority and output.** Falco's driver is the kernel part that collects syscall events: the modern eBPF probe, an older eBPF probe, or a kernel module. A rule's priority ranges from `EMERGENCY` down to `DEBUG`. Outputs send alerts to standard output, a file, syslog, a program or HTTP, and Falcosidekick forwards them further. Module 43.
 
-**Assume breach and SIEM.** Assume breach is the stance of planning as if an attacker is already inside, so you focus on limiting and seeing them. A SIEM (security information and event management system) is the central store where teams collect audit logs and alerts off the nodes. CKS 06.
+**Assume breach and SIEM.** Assume breach is the stance of planning as if an attacker is already inside, so you focus on limiting and seeing them. A SIEM (security information and event management system) is the central store where teams collect audit logs and alerts off the nodes. Module 43.
+
+## Applications on Kubernetes
+
+These terms come from the application modules 33 to 37, grouped by the module that introduces each one. The security terms, such as static pod or Pod Security Standards, sit in [the section above](#the-practice-cluster-and-the-security-modules).
+
+### Images and workloads (module 33)
+
+#### Image
+
+A packed, read-only file system with a program and everything it needs, plus settings such as the command to start and the user to run as. A node fetches an image by name and starts containers from it, so the same image runs the same way on every node.
+
+#### Dockerfile
+
+A text file with build instructions, one per line, such as `FROM`, `COPY`, `RUN` and `CMD`. A build tool like podman or Docker reads it and turns it into an image.
+
+#### Layer
+
+The file system changes of one Dockerfile instruction, saved as one archive. An image is a stack of layers, and images that share a base share its layers, so a registry stores and a node downloads each layer only once.
+
+#### Registry
+
+A server that stores images and hands them out by name, such as Docker Hub or the practice cluster's `registry.ckad:5000`. The host part of an image name says which registry holds it.
+
+#### Tag
+
+The part of an image name after the colon, such as `v1` in `greeter:v1`, which names one version of a repository. A tag is movable, so `latest` today may point at a different image tomorrow.
+
+#### podman
+
+A container tool with the same commands as Docker, such as `podman build`, `podman push` and `podman save`, that needs no background service. The practice cluster runs it on `cks-cp`.
+
+#### Pod template
+
+The pod spec inside a workload object, under `spec.template`, from which its controller creates every pod. Changing the template of a Deployment starts a rollout.
+
+#### Job
+
+A workload that runs pods until a set number of them finish with exit code 0, then stops. It retries failed pods up to its `backoffLimit`.
+
+#### CronJob
+
+A workload that creates a Job on a schedule written in cron syntax, such as `*/30 * * * *` for every half hour.
+
+#### emptyDir
+
+A volume that starts empty when the pod lands on a node and lives exactly as long as the pod. Containers of one pod share files through it.
+
+#### Init container
+
+A container in the pod's `initContainers` list that runs to completion before the app containers start. The kubelet runs init containers one at a time, in order.
+
+#### Native sidecar
+
+An init container with `restartPolicy: Always`. It starts before the app containers, keeps running for the pod's whole life, and stops after them, so it suits log shippers and proxies, also in Jobs. Stable since Kubernetes 1.33.
+
+#### PersistentVolume
+
+A piece of storage that the cluster knows about, such as a disk, a share or a node folder, with a size and access modes. It belongs to the whole cluster, not to a namespace.
+
+#### PersistentVolumeClaim
+
+A namespace's request for storage of a size, an access mode and a StorageClass. The control plane binds it to a matching PersistentVolume, and a pod mounts the claim, never the volume directly.
+
+#### Access mode
+
+How nodes may mount a volume: `ReadWriteOnce` lets one node write, `ReadOnlyMany` lets many nodes read, and `ReadWriteMany` lets many nodes write.
+
+#### StorageClass
+
+A named kind of storage, such as fast or cheap, that a claim asks for. With a provisioner, the cluster creates a matching PersistentVolume on demand; without one, the class name only has to match a volume you created.
+
+#### Toleration
+
+A pod setting that lets the pod run on a node with a matching taint. The control plane node's taint `node-role.kubernetes.io/control-plane:NoSchedule` keeps pods away unless they tolerate it.
+
+### Deployments and packages (module 34)
+
+#### ReplicaSet
+
+The object that keeps a number of identical pods running. A Deployment creates one ReplicaSet per version of its pod template and moves pods between them.
+
+#### Rolling update
+
+A Deployment's default way to change versions: it starts new pods and stops old ones in small steps, set by `maxSurge` and `maxUnavailable`, so some pods serve requests throughout.
+
+#### Blue-green deployment
+
+A release pattern with two complete versions running side by side, where one change to the Service's selector moves all traffic from the old version, blue, to the new one, green.
+
+#### Canary release
+
+A release pattern that sends a small share of the traffic to the new version first. With plain Kubernetes, the share follows the pod counts behind one Service.
+
+#### Helm
+
+A package manager for Kubernetes that installs charts, fills their templates with values, and keeps a numbered history of every installation.
+
+#### Helm chart
+
+A package for Helm: a folder of manifest templates and a `values.yaml` file with defaults.
+
+#### Helm release
+
+One installation of a chart in a namespace, under a name. Every install, upgrade and rollback adds a revision, which Helm stores as a Secret in that namespace.
+
+#### Chart repository
+
+A server that hands out charts, added with `helm repo add`. An OCI registry, the same kind that stores images, also serves charts, addressed as `oci://host/path/chart`.
+
+#### Kustomize base
+
+A folder of plain manifests with a `kustomization.yaml` that lists them, which overlays build on. Kustomize is built into `kubectl`.
+
+#### Kustomize overlay
+
+A folder whose `kustomization.yaml` points at a base and lists changes for one environment, such as a namespace, a name prefix, labels, replica counts, image tags and patches. `kubectl apply -k` applies the result.
+
+### Health and debugging (module 35)
+
+#### Probe
+
+A test the kubelet runs against a container on a schedule: an HTTP request, a TCP connection, a command, or a gRPC health call.
+
+#### Readiness probe
+
+A probe that decides whether a pod gets requests. A failure takes the pod out of its Services' endpoints without restarting anything.
+
+#### Liveness probe
+
+A probe that decides whether a container still works. After `failureThreshold` failures in a row, the kubelet kills the container and starts it again.
+
+#### Startup probe
+
+A probe for slow-starting apps. Until it succeeds once, the kubelet runs no liveness or readiness probe on the container.
+
+#### EndpointSlice
+
+The list of ready pod addresses and ports behind a Service, which the control plane keeps current. kube-proxy and ingress controllers read it to know where to send traffic.
+
+#### Event
+
+A short record that a component writes about an object, such as a failed schedule, an image pull or a probe failure. `kubectl describe` and `kubectl events` show them, and the API server keeps them for one hour.
+
+#### metrics-server
+
+A cluster add-on that collects CPU and memory use from every kubelet and serves it through the API, which `kubectl top` reads.
+
+#### Distroless image
+
+An image with only the app and its libraries, without a shell or tools, which makes it small and leaves an attacker little to use.
+
+#### Ephemeral container
+
+A temporary container that `kubectl debug` adds to a running pod, with an image you choose. With `--target`, it shares the process namespace of one container, so it sees that container's processes.
+
+### Configuration and security (module 36)
+
+#### ConfigMap
+
+An object that holds settings as keys and values, either short strings or whole files, which pods read as environment variables or as files in a volume.
+
+#### Secret
+
+An object like a ConfigMap for passwords, tokens and keys. Its values sit in base64 and are not encrypted unless the cluster turns on encryption at rest.
+
+#### base64
+
+An encoding that writes any bytes as plain letters and digits, so binary data fits into YAML and JSON. Anyone reverses it with `base64 -d`, so it hides nothing.
+
+#### QoS class
+
+The kubelet's ranking of a pod from its requests and limits: `Guaranteed`, `Burstable` or `BestEffort`. When a node runs out of memory, `BestEffort` pods go first and `Guaranteed` pods last.
+
+#### LimitRange
+
+A namespace object that fills in default requests and limits for containers that name none, and refuses containers outside a minimum and maximum.
+
+#### ResourceQuota
+
+A namespace object that caps the totals of a namespace, such as the sum of CPU requests or the number of pods, and refuses new objects past those totals.
+
+#### ServiceAccount
+
+An identity for programs in pods. The kubelet mounts a short-lived token for the pod's ServiceAccount, which the pod sends to the API server to prove who it is.
+
+#### RBAC
+
+Role-based access control: the API server's way to decide what an identity may do, from Roles that list allowed verbs on resources and bindings that grant them.
+
+#### Role
+
+A list of rules, each allowing some verbs on some resources, valid inside one namespace. A ClusterRole is the same for the whole cluster.
+
+#### RoleBinding
+
+The object that gives a Role, or a ClusterRole, to users, groups or ServiceAccounts, inside the RoleBinding's namespace. A ClusterRoleBinding does it for the whole cluster.
+
+#### Admission controller
+
+A step in the API server, after authentication and authorization, that inspects and may change or refuse an object before it gets stored. LimitRange, ResourceQuota and Pod Security Admission all work this way.
+
+#### Pod Security Admission
+
+The built-in admission controller that refuses pods which break a namespace's Pod Security level, `baseline` or `restricted`, set with the label `pod-security.kubernetes.io/enforce`.
+
+#### Security context
+
+The part of a pod or container spec that sets the process's user, group, capabilities, privilege escalation and file system access.
+
+#### CustomResourceDefinition
+
+An object that adds a new resource type to the API server, with a name, a group, versions and a schema, so `kubectl` handles it like a built-in type.
+
+#### Custom resource
+
+An object of a type that a CustomResourceDefinition added, such as a `Backup`. On its own it only stores data.
+
+#### Operator
+
+A controller, running in a pod, that watches custom resources of its type and makes the cluster match them, for example by running a backup for every `Backup` object.
+
+### Networking (module 37)
+
+#### Service
+
+A stable virtual IP address and DNS name in front of a set of pods, picked by label. kube-proxy on every node forwards connections to one of the ready pods.
+
+#### StatefulSet
+
+A workload whose pods get fixed names, `db-0` and `db-1`, a fixed start order, and their own storage. With a headless Service, each pod also gets its own DNS name.
+
+#### Ingress controller
+
+A reverse proxy in the cluster, such as ingress-nginx, that reads Ingress objects and routes HTTP requests to Services by host name and path.
+
+#### Ingress
+
+An object with HTTP routing rules, host and path to Service and port, for the ingress controller whose class it names in `ingressClassName`.
+
+#### NetworkPolicy
+
+A firewall rule for pods: it selects pods by label and lists the peers and ports that may reach them, or that they may reach. The network plugin enforces it.

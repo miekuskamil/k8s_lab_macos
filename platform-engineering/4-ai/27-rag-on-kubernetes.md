@@ -180,7 +180,7 @@ INFO[0003] Successfully imported 1 image(s) into 1 cluster(s)
 
 ```console
 $ kubectl -n course-rag create configmap course-docs \
-    $(printf -- '--from-file=%s ' platform-engineering/*.md platform-engineering/*/[0-9][0-9]-*.md)
+    $(printf -- '--from-file=%s ' platform-engineering/{README,glossary,start-here}.md platform-engineering/*/[0-2][0-9]-*.md platform-engineering/*/3[0-2]-*.md)
 configmap/course-docs created
 
 $ cat platform-engineering/manifests/27-rag-app.yaml
@@ -244,7 +244,7 @@ deployment "rag" successfully rolled out
 $ kubectl -n course-rag port-forward svc/rag 8090:8000 >/dev/null 2>&1 &
 ```
 
-**What you should see.** The modules sit in four level folders below `platform-engineering/`, so the `printf` builds one `--from-file` flag for each course `.md` file, and each file becomes one key in the ConfigMap. The ConfigMap holds 36 files and about 820 KiB. A ConfigMap holds at most 1 MiB, so this course still fits with about 200 KiB to spare, and most of the space goes to the terminal transcripts in the modules. The app leaves one file out on purpose, this module itself, because the manifest sets `EXCLUDE_FILES: 27-rag-on-kubernetes.md`.
+**What you should see.** The modules sit in four level folders below `platform-engineering/`, so the `printf` builds one `--from-file` flag for the README, the glossary, the Istio picture and each lab module from 0 to 32, and each file becomes one key in the ConfigMap. The ConfigMap holds 36 files and about 870 KiB. A ConfigMap holds at most 1 MiB, so the lab modules still fit with about 150 KiB to spare, while modules 33 to 44 with their long transcripts would push it over, so the glob leaves them out, and most of the space goes to the terminal transcripts in the modules. The app leaves one file out on purpose, this module itself, because the manifest sets `EXCLUDE_FILES: 27-rag-on-kubernetes.md`.
 
 This module quotes its own test questions and the answers they got, so if the index held them, a question like "What is the capital of Denmark?" would find step 6's table, and the model would repeat what it read there. The test would leak into the data, like exam answers left inside the textbook, and teams keep evaluation questions out of the index for the same reason.
 
