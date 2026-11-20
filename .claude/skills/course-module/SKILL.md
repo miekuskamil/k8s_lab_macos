@@ -1,6 +1,6 @@
 ---
 name: course-module
-description: Build or extend a module of this repo's course (platform-engineering/NN-*.md) the way every existing module is built - installed step by step on the live lab, every step and answer tested, verify.sh checks, reset.sh cleanup, glossary and README updates. Use when asked to add a course module, a lab, an exercise, or a new tool to the course, or to bring an existing module up to standard.
+description: Build or extend a module of this repo's course (platform-engineering/<level>/NN-*.md) the way every existing module is built - installed step by step on the live lab, every step and answer tested, verify.sh checks, reset.sh cleanup, glossary and README updates. Use when asked to add a course module, a lab, an exercise, or a new tool to the course, or to bring an existing module up to standard.
 ---
 
 # Building a course module
@@ -10,7 +10,7 @@ A module is finished only when a learner follows it on a fresh lab and sees exac
 ## 1. Before writing anything
 
 - **Read two finished modules** as the reference for structure and tone: `platform-engineering/2-intermediate/22-gitops-with-argocd.md` (a tool installed and used) and `platform-engineering/2-intermediate/23-prometheus-and-alerting.md` (concepts plus a measured incident).
-- **Pick the number and the prerequisites.** Modules after 19 must work after `./platform-engineering/reset.sh` with only module 0 behind them. Use their own namespace, `course-<topic>`, and stay out of `shop` unless the module is about the mesh.
+- **Pick the number, the level and the prerequisites.** The modules live in four level folders: `1-foundations/` for the mesh basics every later module builds on, `2-intermediate/` for more Istio and the everyday platform tools, `3-advanced/` for internals, debugging and one-way upgrades, and `4-ai/` for AI workloads. Put the new module in the folder that fits and keep the `NN-` prefix in its file name, because `verify.sh NN` and every "Module NN" reference go by that number. Modules after 19 must work after `./platform-engineering/reset.sh` with only module 0 behind them. Use their own namespace, `course-<topic>`, and stay out of `shop` unless the module is about the mesh.
 - **Pick versions at least two weeks old.** Read release dates from the Helm index (`~/Library/Caches/helm/repository/<repo>-index.yaml`, field `created`). If every release shows the same date, the index was regenerated; pick a release line that's clearly older. Pin the exact chart version everywhere.
 - **Check memory.** The user's Mac has 24 GB and the lab uses about 5 GB. Give every new pod requests and limits, and say in the module how much it adds.
 
@@ -29,7 +29,7 @@ Things that bit earlier modules, check each:
 
 ## 3. Write the module
 
-File `platform-engineering/NN-topic.md`, with these sections in this order:
+File `platform-engineering/<level>/NN-topic.md`, with these sections in this order. The file sits one folder below `platform-engineering/`, so its links start with `../` for the glossary (`../glossary.md`) and `../../` for the repo (`../../docs/diagrams/chapters/NN-slug.svg`), and a link to a module in another level folder goes through its folder (`../2-intermediate/22-gitops-with-argocd.md`).
 
 1. `# Module NN: title`, the glossary pointer line, and **`**Before this module:**`** with the modules to read first and whether Istio is needed.
 2. An opening paragraph: the real-world problem, then what the module does. Then `Time: about N minutes.` and the memory it adds.
@@ -43,8 +43,8 @@ File `platform-engineering/NN-topic.md`, with these sections in this order:
 **Language:** B2 English, written like a conversation. Follow the unslop rules: no em dashes, no "can/cannot/could", no passive voice, dynamic verbs, varied sentence length. Run this before finishing:
 
 ```bash
-grep -nE "\b(can|cannot|can't|could)\b|—|–" platform-engineering/NN-*.md
-grep -nE "\b(is|are|was|were|be|been|being) [a-z]+ed\b" platform-engineering/NN-*.md
+grep -nE "\b(can|cannot|can't|could)\b|—|–" platform-engineering/*/NN-*.md
+grep -nE "\b(is|are|was|were|be|been|being) [a-z]+ed\b" platform-engineering/*/NN-*.md
 ```
 
 **Explain, don't compress, and connect.** The course follows the ByteByteGo newsletter's style: a good engineer explaining to a colleague, as a story that reasons its way forward. A paragraph that names eight components in four correct sentences teaches nothing, and a run of short disconnected sentences teaches nothing either.
@@ -128,9 +128,10 @@ Add a cleanup block to `platform-engineering/reset.sh` above the previous module
 
 ## 7. Finish
 
-1. `platform-engineering/README.md`: a table row, the routes map and the recommended order.
-2. `README.md` and `docs/lab-guide.md` if the module adds a UI, a port or a credential (the password table).
-3. **Never push while a test runs:** a push makes ArgoCD resync `istio-config` and wipes the exercise in progress.
-4. Rebuild and run the full check: `./scripts/teardown.sh --yes && ./scripts/provision.sh && ./platform-engineering/verify.sh`. Record the total in `README.md`.
-5. Commit with a message that says what the module teaches and the test result, ending with the co-author line.
-6. Leave the lab on the baseline: `./platform-engineering/reset.sh`, then `./scripts/port-forward.sh`.
+1. `platform-engineering/README.md`: a row in the table of the module's level, the routes map and the recommended order. Add the module to the list in its level folder's `README.md` too.
+2. Module 27 loads every course `.md` file into one ConfigMap, which holds at most 1 MiB. Check the size after adding a module: `kubectl create configmap x --dry-run=client -o yaml $(printf -- '--from-file=%s ' platform-engineering/*.md platform-engineering/*/[0-9][0-9]-*.md) | wc -c`, and update the numbers in module 27's step 3.
+3. `README.md` and `docs/lab-guide.md` if the module adds a UI, a port or a credential (the password table).
+4. **Never push while a test runs:** a push makes ArgoCD resync `istio-config` and wipes the exercise in progress.
+5. Rebuild and run the full check: `./scripts/teardown.sh --yes && ./scripts/provision.sh && ./platform-engineering/verify.sh`. Record the total in `README.md`.
+6. Commit with a message that says what the module teaches and the test result, ending with the co-author line.
+7. Leave the lab on the baseline: `./platform-engineering/reset.sh`, then `./scripts/port-forward.sh`.
