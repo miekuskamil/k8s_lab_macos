@@ -2,7 +2,7 @@
 
 These are the problems hit while building and running this lab, in the order they appeared. Each entry gives the symptom, the command that exposed the cause, the cause and the fix that is now in the repo. If you change versions or move to another cluster type, expect to meet some of them again.
 
-For the short list of common day-to-day issues, see the [README](../README.md#when-something-goes-wrong).
+For the short list of common day-to-day issues, see the [README](../README.md#troubleshooting).
 
 ## Quick diagnosis commands
 
