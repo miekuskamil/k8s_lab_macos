@@ -72,4 +72,4 @@ The resources stay the same in both modes, and only the proxy that applies them 
 ## Next
 
 - Keep the [glossary](glossary.md) open in a tab. It explains every resource and term in this course, with small examples.
-- Then start with [module 0: setup](00-setup.md).
+- Then start with [module 0: setup](1-foundations/00-setup.md).

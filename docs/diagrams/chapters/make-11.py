@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagrams for platform-engineering/11-edge-tls.md with the kit in ../bbg.py.
+"""Draw the diagrams for platform-engineering/2-intermediate/11-edge-tls.md with the kit in ../bbg.py.
 
   11-two-tls           one request, two TLS sessions, two certificate authorities
   11-trust-chain       the lab root CA signs shop-tls, curl trusts the root

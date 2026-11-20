@@ -4,43 +4,72 @@ A hands-on course in running a Kubernetes platform, built on this lab, for reade
 
 Each module takes 30 to 60 minutes and lists the modules and tools it needs at the top, while the routes below show which modules build on which. For exam practice with timed tasks, see the [certification tracks](../certs/README.md).
 
+**New to Istio? Read [Start here: Istio in one picture](start-here.md) first.** It takes 15 minutes, needs no cluster, and shows every resource the course uses on one diagram, while the [glossary](glossary.md) gives every term a plain explanation, so keep it open in a tab.
+
+## Modules by level
+
+The modules sit in four level folders, from the mesh basics to internals and AI. A module keeps its number in every folder, so the routes and the recommended order below still name modules by number, and a route often moves between folders.
+
+### [1. Foundations](1-foundations/README.md)
+
+The mesh basics that every later module builds on, for anyone new to Istio. You need only the running lab, and module 0 checks it.
+
 | Module | You learn | Tools you use |
 |---|---|---|
-| [0. Setup](00-setup.md) | Check the lab and install `istioctl` | `kubectl`, `istioctl` |
-| [1. What a mesh adds](01-what-a-mesh-adds.md) | What Kubernetes networking leaves out, and the two Istio data plane designs | Kiali, `istioctl` |
-| [2. Identity and mTLS](02-identity-and-mtls.md) | Where workload identity comes from and how the tunnel works | Kiali, ztunnel logs |
-| [3. Authorization](03-authorization.md) | L4 and L7 policy, and why you need both | `curl`, Kiali, ztunnel logs |
-| [4. Traffic routing](04-traffic-routing.md) | Weighted and content-based routing with the Gateway API | Kiali, Grafana |
-| [5. Resilience](05-resilience.md) | Timeouts, faults, circuit breaking, rate limiting | Grafana, Jaeger, access logs |
-| [6. Observability](06-observability.md) | What the mesh measures by itself, and how to follow one request | Grafana, Jaeger, Loki, Kiali |
-| [7. Sidecar mode](07-sidecar-mode.md) | The classic design, side by side with ambient | `istioctl`, Kiali |
-| [8. Incidents](08-incidents.md) | Find and fix four broken setups without being told the cause | everything |
-| [9. Command reference](09-command-reference.md) | Troubleshooting commands for the cluster and for Istio | |
-| [10. eBPF and Cilium](10-ebpf-and-cilium.md) | The other sidecarless design, compared with ambient. Theory, no install. | `docker exec`, `kubectl top` |
-| [11. TLS at the edge](11-edge-tls.md) | HTTPS on the ingress gateway, cert-manager, redirects, renewal without downtime | `curl`, `openssl`, Grafana |
-| [12. Egress](12-egress.md) | ServiceEntry, TLS origination, L7 rules on outbound calls, locking a pod in | `curl`, Kiali, Prometheus |
-| [13. JWT](13-jwt.md) | End-user identity: RequestAuthentication, rules on token claims, 401 versus 403 | `curl`, Prometheus |
-| [14. Upgrading Istio](14-upgrading-istio.md) | Canary upgrade from 1.24 to 1.25: revisions, tags, rollback, measured downtime. One-way: rebuild the lab afterwards | `helm`, `istioctl`, `kubectl` |
-| [15. Outlier detection and retries](15-outlier-detection-and-retries.md) | One bad pod out of three: retries hide it, outlier detection removes it, zone failover in theory | `curl`, `kubectl logs` |
-| [16. The Istio API](16-istio-api.md) | The same ingress and canary with Istio's Gateway, VirtualService and subsets; translating between the two APIs | `helm`, `curl`, `istioctl analyze` |
-| [17. An LLM as a mesh service](17-llm-in-the-mesh.md) | AI: a shop assistant calling your local Ollama; identity, a locked-down model API, token metrics and GenAI traces, LLM timeouts | `curl`, Jaeger, Prometheus |
-| [18. Serving models in the cluster](18-serving-models.md) | AI: two small models on llama.cpp; startup and readiness, why LLM load balancing is hard (measured), routing between models, the Inference Extension | `llm-load.sh`, Prometheus |
-| [19. AI agents and their tools](19-ai-agents.md) | AI: kagent with your Ollama, MCP and A2A, an intruder calling tools directly, mesh policy and RBAC around agents, agents that misreport | `agent-ask.sh`, `kubectl auth can-i` |
-| [20. Nodes, drains and cleanup](20-nodes-and-cleanup.md) | Ops: a second node, drains under traffic, PodDisruptionBudgets that protect and block, Jobs, ReplicaSets and images that pile up | `kubectl drain`, `crictl` |
-| [21. k3s certificates, backups, upgrades](21-k3s-lifecycle.md) | Ops: certificate checks and rotation, a datastore backup and restore, a k3s patch upgrade that breaks the mesh. The upgrade is one-way | `k3s certificate`, system-upgrade-controller |
-| [22. GitOps with ArgoCD](22-gitops-with-argocd.md) | Platform: your own Git server, drift and self-heal, `git revert` rollbacks, hooks and sync waves, an AppProject that fences a team in, the retry trap, ApplicationSets | `git`, ArgoCD |
-| [23. Prometheus and alerting](23-prometheus-and-alerting.md) | Platform: PromQL from `rate()` to percentiles, recording rules, an SLO with a multi-window burn-rate alert, Alertmanager routing, cardinality | Prometheus, Alertmanager |
-| [24. Grafana as code](24-grafana-as-code.md) | Platform: dashboards from ConfigMaps, variables and thresholds, why Grafana refuses edits, Grafana-managed alerts that reach nobody, trace-to-logs links | Grafana, Jaeger, Loki |
-| [25. OpenTelemetry Collector and Tempo](25-opentelemetry-and-tempo.md) | Platform: a Collector between apps and back ends, Kubernetes attributes, fixing service names centrally, span metrics, Tempo and TraceQL | `helm`, Grafana, TraceQL |
-| [26. Kyverno, policy as code](26-kyverno-policy-as-code.md) | Platform: Audit then Enforce, the silent rollout hang, written exceptions, mutation, generated tenant defaults, a CEL policy, PolicyReports | `helm`, `kubectl` |
-| [27. RAG on Kubernetes](27-rag-on-kubernetes.md) | AI: Qdrant, embeddings from your Ollama, ingesting the course, retrieval misses and wrong answers, top-k against tokens. Needs Ollama | `docker`, `k3d`, `curl` |
-| [28. Continuous profiling with Pyroscope](28-continuous-profiling.md) | Platform: annotation opt-in, flame graphs, self against total time, memory allocations, the cost of profiling | `helm`, Grafana |
-| [29. The life of a request](29-life-of-a-request.md) | Internals: kubectl to API server (authentication, RBAC, admission, kine), controllers, scheduler decisions, kubelet, CRI and CNI; then one request without a mesh and one through ambient Istio, hop by hop, with a large diagram | `kubectl -v`, `iptables`, `conntrack`, `istioctl` |
-| [30. Sidecar mode in depth](30-sidecar-in-depth.md) | The four injection webhooks, iptables traffic capture, excluded ports, the Sidecar resource (measured: 62 clusters down to 16), proxy resources, sidecar against ambient in latency and memory | `istioctl`, `iptables`, `kubectl top` |
-| [31. Debugging Envoy with istioctl](31-debugging-envoy.md) | Listener, route, cluster, endpoint; SYNCED and STALE (a frozen Envoy); `analyze` and `x describe` on broken config; causing `NC`, `URX`, `NR`, `UH`, `UF` and `UO` on purpose; runtime log levels; four break-and-fix exercises | `istioctl proxy-config`, access logs |
-| [32. Installing Istio with istioctl](32-installing-istio.md) | On a throwaway k3d cluster: install profiles, an IstioOperator file with meshConfig, components and values, `manifest generate` and `translate`, reconfiguring in place, switching to ambient, uninstalling. Never touches the lab's Istio | `k3d`, `istioctl` 1.24.2 |
+| [0. Setup](1-foundations/00-setup.md) | Check the lab and install `istioctl` | `kubectl`, `istioctl` |
+| [1. What a mesh adds](1-foundations/01-what-a-mesh-adds.md) | What Kubernetes networking leaves out, and the two Istio data plane designs | Kiali, `istioctl` |
+| [2. Identity and mTLS](1-foundations/02-identity-and-mtls.md) | Where workload identity comes from and how the tunnel works | Kiali, ztunnel logs |
+| [3. Authorization](1-foundations/03-authorization.md) | L4 and L7 policy, and why you need both | `curl`, Kiali, ztunnel logs |
+| [4. Traffic routing](1-foundations/04-traffic-routing.md) | Weighted and content-based routing with the Gateway API | Kiali, Grafana |
+| [5. Resilience](1-foundations/05-resilience.md) | Timeouts, faults, circuit breaking, rate limiting | Grafana, Jaeger, access logs |
+| [6. Observability](1-foundations/06-observability.md) | What the mesh measures by itself, and how to follow one request | Grafana, Jaeger, Loki, Kiali |
+| [8. Incidents](1-foundations/08-incidents.md) | Find and fix four broken setups without being told the cause | everything |
+| [9. Command reference](1-foundations/09-command-reference.md) | Troubleshooting commands for the cluster and for Istio | |
+| [29. The life of a request](1-foundations/29-life-of-a-request.md) | Internals: kubectl to API server (authentication, RBAC, admission, kine), controllers, scheduler decisions, kubelet, CRI and CNI; then one request without a mesh and one through ambient Istio, hop by hop, with a large diagram | `kubectl -v`, `iptables`, `conntrack`, `istioctl` |
 
-**New to Istio? Read [Start here: Istio in one picture](start-here.md) first.** It takes 15 minutes, needs no cluster, and shows every resource the course uses on one diagram, while the [glossary](glossary.md) gives every term a plain explanation, so keep it open in a tab.
+### [2. Intermediate](2-intermediate/README.md)
+
+More of Istio and the everyday platform tools, GitOps, alerting, dashboards and policy as code, for readers who finished module 0. The Istio modules here also build on the foundations, and each one lists what it needs at the top.
+
+| Module | You learn | Tools you use |
+|---|---|---|
+| [7. Sidecar mode](2-intermediate/07-sidecar-mode.md) | The classic design, side by side with ambient | `istioctl`, Kiali |
+| [11. TLS at the edge](2-intermediate/11-edge-tls.md) | HTTPS on the ingress gateway, cert-manager, redirects, renewal without downtime | `curl`, `openssl`, Grafana |
+| [12. Egress](2-intermediate/12-egress.md) | ServiceEntry, TLS origination, L7 rules on outbound calls, locking a pod in | `curl`, Kiali, Prometheus |
+| [13. JWT](2-intermediate/13-jwt.md) | End-user identity: RequestAuthentication, rules on token claims, 401 versus 403 | `curl`, Prometheus |
+| [15. Outlier detection and retries](2-intermediate/15-outlier-detection-and-retries.md) | One bad pod out of three: retries hide it, outlier detection removes it, zone failover in theory | `curl`, `kubectl logs` |
+| [16. The Istio API](2-intermediate/16-istio-api.md) | The same ingress and canary with Istio's Gateway, VirtualService and subsets; translating between the two APIs | `helm`, `curl`, `istioctl analyze` |
+| [20. Nodes, drains and cleanup](2-intermediate/20-nodes-and-cleanup.md) | Ops: a second node, drains under traffic, PodDisruptionBudgets that protect and block, Jobs, ReplicaSets and images that pile up | `kubectl drain`, `crictl` |
+| [22. GitOps with ArgoCD](2-intermediate/22-gitops-with-argocd.md) | Platform: your own Git server, drift and self-heal, `git revert` rollbacks, hooks and sync waves, an AppProject that fences a team in, the retry trap, ApplicationSets | `git`, ArgoCD |
+| [23. Prometheus and alerting](2-intermediate/23-prometheus-and-alerting.md) | Platform: PromQL from `rate()` to percentiles, recording rules, an SLO with a multi-window burn-rate alert, Alertmanager routing, cardinality | Prometheus, Alertmanager |
+| [24. Grafana as code](2-intermediate/24-grafana-as-code.md) | Platform: dashboards from ConfigMaps, variables and thresholds, why Grafana refuses edits, Grafana-managed alerts that reach nobody, trace-to-logs links | Grafana, Jaeger, Loki |
+| [26. Kyverno, policy as code](2-intermediate/26-kyverno-policy-as-code.md) | Platform: Audit then Enforce, the silent rollout hang, written exceptions, mutation, generated tenant defaults, a CEL policy, PolicyReports | `helm`, `kubectl` |
+
+### [3. Advanced](3-advanced/README.md)
+
+Internals, Envoy debugging, tracing and profiling pipelines, and the changes that upgrade the lab, for readers at home with the foundations. Modules 14 and 21 upgrade the lab one way, so you rebuild it afterwards, and module 32 runs on its own throwaway cluster.
+
+| Module | You learn | Tools you use |
+|---|---|---|
+| [10. eBPF and Cilium](3-advanced/10-ebpf-and-cilium.md) | The other sidecarless design, compared with ambient. Theory, no install. | `docker exec`, `kubectl top` |
+| [14. Upgrading Istio](3-advanced/14-upgrading-istio.md) | Canary upgrade from 1.24 to 1.25: revisions, tags, rollback, measured downtime. One-way: rebuild the lab afterwards | `helm`, `istioctl`, `kubectl` |
+| [21. k3s certificates, backups, upgrades](3-advanced/21-k3s-lifecycle.md) | Ops: certificate checks and rotation, a datastore backup and restore, a k3s patch upgrade that breaks the mesh. The upgrade is one-way | `k3s certificate`, system-upgrade-controller |
+| [25. OpenTelemetry Collector and Tempo](3-advanced/25-opentelemetry-and-tempo.md) | Platform: a Collector between apps and back ends, Kubernetes attributes, fixing service names centrally, span metrics, Tempo and TraceQL | `helm`, Grafana, TraceQL |
+| [28. Continuous profiling with Pyroscope](3-advanced/28-continuous-profiling.md) | Platform: annotation opt-in, flame graphs, self against total time, memory allocations, the cost of profiling | `helm`, Grafana |
+| [30. Sidecar mode in depth](3-advanced/30-sidecar-in-depth.md) | The four injection webhooks, iptables traffic capture, excluded ports, the Sidecar resource (measured: 62 clusters down to 16), proxy resources, sidecar against ambient in latency and memory | `istioctl`, `iptables`, `kubectl top` |
+| [31. Debugging Envoy with istioctl](3-advanced/31-debugging-envoy.md) | Listener, route, cluster, endpoint; SYNCED and STALE (a frozen Envoy); `analyze` and `x describe` on broken config; causing `NC`, `URX`, `NR`, `UH`, `UF` and `UO` on purpose; runtime log levels; four break-and-fix exercises | `istioctl proxy-config`, access logs |
+| [32. Installing Istio with istioctl](3-advanced/32-installing-istio.md) | On a throwaway k3d cluster: install profiles, an IstioOperator file with meshConfig, components and values, `manifest generate` and `translate`, reconfiguring in place, switching to ambient, uninstalling. Never touches the lab's Istio | `k3d`, `istioctl` 1.24.2 |
+
+### [4. AI](4-ai/README.md)
+
+AI workloads on Kubernetes. Modules 17 to 19 build on the foundations, and module 27 needs only module 0. Modules 17 and 19 need Ollama on your machine or a Claude API key, as [Choosing the model](../docs/ai-models.md) explains. Module 27 needs Ollama for its search even when Claude writes the answers, and module 18 downloads about 900 MB of models into the cluster.
+
+| Module | You learn | Tools you use |
+|---|---|---|
+| [17. An LLM as a mesh service](4-ai/17-llm-in-the-mesh.md) | AI: a shop assistant calling your local Ollama; identity, a locked-down model API, token metrics and GenAI traces, LLM timeouts | `curl`, Jaeger, Prometheus |
+| [18. Serving models in the cluster](4-ai/18-serving-models.md) | AI: two small models on llama.cpp; startup and readiness, why LLM load balancing is hard (measured), routing between models, the Inference Extension | `llm-load.sh`, Prometheus |
+| [19. AI agents and their tools](4-ai/19-ai-agents.md) | AI: kagent with your Ollama, MCP and A2A, an intruder calling tools directly, mesh policy and RBAC around agents, agents that misreport | `agent-ask.sh`, `kubectl auth can-i` |
+| [27. RAG on Kubernetes](4-ai/27-rag-on-kubernetes.md) | AI: Qdrant, embeddings from your Ollama, ingesting the course, retrieval misses and wrong answers, top-k against tokens. Needs Ollama | `docker`, `k3d`, `curl` |
 
 ## Routes through the course
 
@@ -94,6 +123,7 @@ Course files live in this folder:
 
 | Path | What it is |
 |---|---|
+| `platform-engineering/1-foundations/` to `4-ai/` | The modules, one folder per level, each with a README that lists its modules |
 | `platform-engineering/manifests/` | Every manifest the exercises apply, numbered by module |
 | `platform-engineering/reset.sh` | Returns routing, policies and experiment settings to the Git baseline |
 | `platform-engineering/load.sh` | Sends steady traffic so Grafana and Kiali have something to draw |
@@ -139,4 +169,4 @@ The course changes Istio resources by hand, with `kubectl apply`. ArgoCD manages
 ./platform-engineering/verify.sh 32     # creates and deletes its own k3d cluster and downloads istioctl 1.24.2, not part of the full run
 ```
 
-The script applies each module's manifests, checks the results and restores the baseline. It was run against this lab before the course was published. The [last section of module 0](00-setup.md#what-the-verification-run-showed) has the results.
+The script applies each module's manifests, checks the results and restores the baseline. It was run against this lab before the course was published. The [last section of module 0](1-foundations/00-setup.md#what-the-verification-run-showed) has the results.

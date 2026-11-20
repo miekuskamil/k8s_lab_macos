@@ -2,7 +2,7 @@
 
 > New to a term here, like CIS benchmark or ipBlock? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
 
-**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running, and for tasks 9 to 11 the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium) too. The course's [module 3](../../platform-engineering/03-authorization.md#concept-authorizationpolicy-compared-with-networkpolicy) compares NetworkPolicy with Istio's rules, and [module 11](../../platform-engineering/11-edge-tls.md) explains certificates and trust. Read those first if NetworkPolicy or TLS feel shaky.
+**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running, and for tasks 9 to 11 the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium) too. The course's [module 3](../../platform-engineering/1-foundations/03-authorization.md#concept-authorizationpolicy-compared-with-networkpolicy) compares NetworkPolicy with Istio's rules, and [module 11](../../platform-engineering/2-intermediate/11-edge-tls.md) explains certificates and trust. Read those first if NetworkPolicy or TLS feel shaky.
 
 A fresh kubeadm cluster lets every pod reach every other pod, serves profiling data about its own internals, and runs whatever binaries somebody copies onto the nodes. This domain closes those doors before the first workload arrives, so that a later mistake in one application stays inside that application. It has 13 tasks and takes about 2 hours, theory included.
 
@@ -54,7 +54,7 @@ The API server never looks at a single packet, because pod traffic goes straight
 5. kube-proxy's DNAT rule rewrites the Service address into a real pod address. DNAT (destination network address translation) means the kernel swaps the packet's destination on the way.
 6. The packet filter compares the packet with its rules and allows or drops it.
 
-The two CNI plugins in this track build step 3 in different ways. **Calico** runs an agent called Felix on every node, and Felix writes iptables rules, or eBPF programs when Calico runs its eBPF data plane. **Cilium** compiles eBPF programs and attaches them to each pod's network interface. It also gives every set of pod labels a number called a security identity, so its programs compare short identities instead of long lists of IP addresses. The course's [module 10](../../platform-engineering/10-ebpf-and-cilium.md#concept-what-ebpf-is) explains eBPF itself.
+The two CNI plugins in this track build step 3 in different ways. **Calico** runs an agent called Felix on every node, and Felix writes iptables rules, or eBPF programs when Calico runs its eBPF data plane. **Cilium** compiles eBPF programs and attaches them to each pod's network interface. It also gives every set of pod labels a number called a security identity, so its programs compare short identities instead of long lists of IP addresses. The course's [module 10](../../platform-engineering/3-advanced/10-ebpf-and-cilium.md#concept-what-ebpf-is) explains eBPF itself.
 
 A NetworkPolicy works only when the CNI plugin implements it. flannel on its own, for example, accepts the object and enforces nothing, and the API server stores the policy either way. So `kubectl get netpol` looks perfect while every packet still flows, which is why you always test a policy with real traffic.
 
@@ -200,7 +200,7 @@ Traffic from outside the cluster needs a front door that knows which host name a
 1. A Secret of type `kubernetes.io/tls` that holds the certificate and its private key.
 2. A `tls` section in the Ingress that names the host and that Secret.
 
-When the Secret is missing or the names don't match, ingress-nginx keeps serving instead of failing. It presents its own "Kubernetes Ingress Controller Fake Certificate" and carries on, so the site looks up while every browser rejects it. The course's [module 11](../../platform-engineering/11-edge-tls.md#concept-how-a-client-decides-to-trust-a-certificate) explains why a client refuses such a certificate.
+When the Secret is missing or the names don't match, ingress-nginx keeps serving instead of failing. It presents its own "Kubernetes Ingress Controller Fake Certificate" and carries on, so the site looks up while every browser rejects it. The course's [module 11](../../platform-engineering/2-intermediate/11-edge-tls.md#concept-how-a-client-decides-to-trust-a-certificate) explains why a client refuses such a certificate.
 
 **What this stops.** Real TLS at the edge stops anybody on the path between the user and the cluster from reading or changing the traffic, and the redirect from HTTP stops users from landing on the unencrypted port by accident.
 

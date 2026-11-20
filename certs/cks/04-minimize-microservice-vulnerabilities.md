@@ -2,7 +2,7 @@
 
 > New to a term here, like Pod Security Admission or RuntimeClass? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
 
-**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running. The course's [module 2](../../platform-engineering/02-identity-and-mtls.md) explains mTLS between pods, and [module 10](../../platform-engineering/10-ebpf-and-cilium.md#concept-kernel-space-and-user-space) explains the kernel boundary that gVisor moves. Read them for the pod-to-pod encryption topic. Task 10 runs on the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium).
+**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running. The course's [module 2](../../platform-engineering/1-foundations/02-identity-and-mtls.md) explains mTLS between pods, and [module 10](../../platform-engineering/3-advanced/10-ebpf-and-cilium.md#concept-kernel-space-and-user-space) explains the kernel boundary that gVisor moves. Read them for the pod-to-pod encryption topic. Task 10 runs on the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium).
 
 A container is a process with a few fences around it. It shares the node's kernel, and by default it runs as root, keeps a dozen Linux capabilities, and sees its API token and its Secrets as plain text. This domain tightens each fence in turn: what a pod may ask for, where Secrets rest, how a pod receives them, and which kernel a risky pod talks to. It has ten tasks and takes about 1 hour 45 minutes.
 
@@ -70,7 +70,7 @@ Each mode also takes a version label, such as `pod-security.kubernetes.io/enforc
 
 **What this stops.** Pod Security stops a developer, a Helm chart or an attacker with `create pods` rights from starting a pod that owns the node, because it turns the securityContext table into a rule the API server enforces.
 
-**Exam traps.** Enforce never touches pods that already run, the same lesson the course's [module 26](../../platform-engineering/26-kyverno-policy-as-code.md#concept-two-paths-to-a-verdict) teaches for Kyverno. A Deployment's existing pods keep running after you label the namespace, and the refusal hits the next pod the ReplicaSet creates, where it shows up only as an event on the ReplicaSet. A server-side dry run of the label lists the pods that would break the rule before you apply it:
+**Exam traps.** Enforce never touches pods that already run, the same lesson the course's [module 26](../../platform-engineering/2-intermediate/26-kyverno-policy-as-code.md#concept-two-paths-to-a-verdict) teaches for Kyverno. A Deployment's existing pods keep running after you label the namespace, and the refusal hits the next pod the ReplicaSet creates, where it shows up only as an event on the ReplicaSet. A server-side dry run of the label lists the pods that would break the rule before you apply it:
 
 ```console
 root@cks-cp:~# k label --dry-run=server --overwrite ns secure-apps pod-security.kubernetes.io/enforce=restricted
@@ -195,7 +195,7 @@ A **sandboxed runtime** puts a second kernel between the container and the host,
 
 ![A runc container sends every syscall through seccomp and AppArmor to the host kernel. A gVisor container sends its syscalls to the Sentry, which passes only a few to the host kernel](../../docs/diagrams/chapters/cks-sandbox-kernel.svg)
 
-The diagram compares the two paths. On the left, runc, the normal runtime, lets every syscall through to the shared kernel, filtered only by seccomp and AppArmor. On the right, gVisor's runtime `runsc` sends the container's syscalls to the Sentry first, so an attacker now needs a bug in the Sentry and then a bug in the few host syscalls the Sentry uses. The course's [module 10](../../platform-engineering/10-ebpf-and-cilium.md#concept-kernel-space-and-user-space) explains the line between kernel space and user space that gVisor moves.
+The diagram compares the two paths. On the left, runc, the normal runtime, lets every syscall through to the shared kernel, filtered only by seccomp and AppArmor. On the right, gVisor's runtime `runsc` sends the container's syscalls to the Sentry first, so an attacker now needs a bug in the Sentry and then a bug in the few host syscalls the Sentry uses. The course's [module 10](../../platform-engineering/3-advanced/10-ebpf-and-cilium.md#concept-kernel-space-and-user-space) explains the line between kernel space and user space that gVisor moves.
 
 The cost is speed, because every syscall takes a longer path, and apps that do a lot of file or network work notice it. Teams therefore use sandboxes for untrusted code, such as CI jobs, customer plugins, scanners and anything else that runs code somebody else wrote.
 
@@ -214,7 +214,7 @@ NetworkPolicy decides who may talk, but it doesn't hide what they say, because t
 | How | mTLS between proxies, with a certificate per service account | WireGuard or IPsec tunnels between nodes |
 | Proves | which workload sent the request | which node sent the packet |
 | Turn on | label the namespace for the mesh, then a `PeerAuthentication` with `mode: STRICT` | Helm values `encryption.enabled=true` and `encryption.type=wireguard` |
-| In this repo | the whole Istio route of the course, [module 2](../../platform-engineering/02-identity-and-mtls.md) first | compared in [module 10](../../platform-engineering/10-ebpf-and-cilium.md#why-this-way-the-two-designs-share-one-idea) |
+| In this repo | the whole Istio route of the course, [module 2](../../platform-engineering/1-foundations/02-identity-and-mtls.md) first | compared in [module 10](../../platform-engineering/3-advanced/10-ebpf-and-cilium.md#why-this-way-the-two-designs-share-one-idea) |
 
 **mTLS** (mutual TLS) means both sides of a connection show a certificate, so each knows who the other is, while **WireGuard** is a small, fast VPN protocol built into the Linux kernel. The two answer different questions. WireGuard encrypts every packet between two nodes, whatever pod sent it, while mTLS encrypts per connection and also proves which workload is calling, which authorization rules then use.
 

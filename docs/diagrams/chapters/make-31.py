@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagrams for platform-engineering/31-debugging-envoy.md with the kit in ../bbg.py.
+"""Draw the diagrams for platform-engineering/3-advanced/31-debugging-envoy.md with the kit in ../bbg.py.
 
   31-envoy-chain   listener, route, cluster, endpoint, and the Istio resource behind each
   31-flag-where    which proxy writes which response flag

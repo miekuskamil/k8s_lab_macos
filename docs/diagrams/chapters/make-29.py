@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagram in platform-engineering/29-life-of-a-request.md with the kit in ../bbg.py.
+"""Draw the diagram in platform-engineering/1-foundations/29-life-of-a-request.md with the kit in ../bbg.py.
 
   29-many-workers   one Deployment, many workers that each watch the API server and write back
 

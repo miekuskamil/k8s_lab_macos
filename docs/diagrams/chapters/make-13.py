@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagram for platform-engineering/13-jwt.md with the kit in ../bbg.py.
+"""Draw the diagram for platform-engineering/2-intermediate/13-jwt.md with the kit in ../bbg.py.
 
   13-two-checks        RequestAuthentication, then AuthorizationPolicy
 

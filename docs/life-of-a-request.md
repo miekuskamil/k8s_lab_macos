@@ -13,7 +13,7 @@ You type `curl localhost:8080/api/orders` on your Mac, and JSON comes back in ab
 
 Every step shows the command, the real output from one run of this lab, and what the output proves. Your IPs, names and timings will differ, while the overall pattern stays the same.
 
-[Module 29](../platform-engineering/29-life-of-a-request.md) is the hands-on version, with fewer explanations, and the [glossary](../platform-engineering/glossary.md) explains every term.
+[Module 29](../platform-engineering/1-foundations/29-life-of-a-request.md) is the hands-on version, with fewer explanations, and the [glossary](../platform-engineering/glossary.md) explains every term.
 
 **Contents**
 
@@ -205,7 +205,7 @@ validatingwebhookconfiguration.admissionregistration.k8s.io/istio-validator-isti
 validatingwebhookconfiguration.admissionregistration.k8s.io/istiod-default-validator       1
 ```
 
-Istio's sidecar injector is a mutating webhook that adds a proxy container to pods, which matters in [module 7](../platform-engineering/07-sidecar-mode.md), while Istio's validator is a validating webhook that checks every Istio resource you write. Here are two refusals, one from each kind of check:
+Istio's sidecar injector is a mutating webhook that adds a proxy container to pods, which matters in [module 7](../platform-engineering/2-intermediate/07-sidecar-mode.md), while Istio's validator is a validating webhook that checks every Istio resource you write. Here are two refusals, one from each kind of check:
 
 ```text
 The Deployment "bad" is invalid: spec.replicas: Invalid value: -1: must be greater than or equal to 0
@@ -217,7 +217,7 @@ Error from server: error when creating "STDIN": admission webhook "validation.is
 1. The first refusal came from the API server's own schema validation, with no webhook taking part.
 2. The second refusal came from istiod, Istio's control program, because the API server sent the AuthorizationPolicy to istiod, istiod found the unknown condition key `request.colour`, and the API server passed the refusal back to you word for word.
 
-A refused write stops here, so the API server stores nothing, uses no `resourceVersion`, and no controller ever hears about it. Every write in the cluster passes through this one point, like every letter passing one post office, which is why policy tools such as Kyverno ([module 26](../platform-engineering/26-kyverno-policy-as-code.md)) plug in at admission.
+A refused write stops here, so the API server stores nothing, uses no `resourceVersion`, and no controller ever hears about it. Every write in the cluster passes through this one point, like every letter passing one post office, which is why policy tools such as Kyverno ([module 26](../platform-engineering/2-intermediate/26-kyverno-policy-as-code.md)) plug in at admission.
 
 ### 1.5 Gate 6, storage: kine instead of etcd
 
@@ -1147,7 +1147,7 @@ So when a control-plane component goes down, the cluster stops changing while ru
 | ztunnel on a node | mesh traffic for that node's pods fails | |
 | waypoint | traffic to the `backend` Services fails | |
 
-The last two rows differ, because ztunnel and the waypoint sit in the request path, so when they stop, traffic stops, and they need the same care as the apps. That's why the waypoint is a Deployment you scale, and why ztunnel upgrades need a plan ([module 14](../platform-engineering/14-upgrading-istio.md)).
+The last two rows differ, because ztunnel and the waypoint sit in the request path, so when they stop, traffic stops, and they need the same care as the apps. That's why the waypoint is a Deployment you scale, and why ztunnel upgrades need a plan ([module 14](../platform-engineering/3-advanced/14-upgrading-istio.md)).
 
 ---
 
