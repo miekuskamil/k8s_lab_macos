@@ -2,7 +2,7 @@
 
 > New to a term here, like audit policy or syscall? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this module:** the [practice cluster](../practice-cluster.md) running, ideally fresh from `./platform-engineering/practice/cluster/reset.sh`. The course's [module 10](10-ebpf-and-cilium.md#concept-what-ebpf-is) explains eBPF, the technique Falco uses to watch the kernel.
+**Before this module:** the [practice cluster](../practice-cluster.md) running, ideally fresh from `./lab.sh practice reset`. The course's [module 10](10-ebpf-and-cilium.md#concept-what-ebpf-is) explains eBPF, the technique Falco uses to watch the kernel.
 
 The other security modules try to keep attackers out, while this one assumes somebody got in anyway. Three questions then matter: what did they do through the API, what are they doing inside the container right now, and how much damage does the container let them do. Audit logs answer the first, Falco the second, and immutable root file systems, seccomp and AppArmor limit the third. This module has 11 tasks here and two in module 44, and takes about 2 hours.
 
@@ -543,7 +543,7 @@ $ ./platform-engineering/task.sh check 43.4
 
 ## Task 5: AppArmor, on a VM
 
-The AppArmor tasks need a kernel with AppArmor turned on, which OrbStack's shared kernel lacks. Task 5 sits in [module 44](../kernel-and-host/44-kernel-and-host-security.md#task-6-an-apparmor-profile) as its task 6.
+The AppArmor tasks need a kernel with AppArmor turned on, which the kernel the kind nodes share lacks. Task 5 sits in [module 44](../kernel-and-host/44-kernel-and-host-security.md#task-6-an-apparmor-profile) as its task 6.
 
 ## Task 6: Investigate an attack
 
@@ -1029,4 +1029,4 @@ $ ./platform-engineering/task.sh check 43.13
 
 ## Clean up
 
-Tasks 1, 10 and 11 changed the API server, and tasks 2, 4, 7 and 8 left files on `practice-worker`, so `./platform-engineering/practice/cluster/reset.sh` removes all of it, including the Falco rules.
+Tasks 1, 10 and 11 changed the API server, and tasks 2, 4, 7 and 8 left files on `practice-worker`, so `./lab.sh practice reset` removes all of it, including the Falco rules.

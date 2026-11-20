@@ -115,7 +115,7 @@ Every pod on the node reaches it too, because pod traffic leaves through the nod
 
 An egress NetworkPolicy closes that path for pods. It allows `0.0.0.0/0` with an `except` list that names `169.254.169.254/32`, so all other traffic still flows and only the metadata address disappears. Clouds add their own fences as well. AWS's IMDSv2, for example, demands a session token from a PUT request first, and a hop limit sets how many network hops the answer with that token travels. AWS itself warns that a hop limit of 1 causes problems for containers, which is exactly the effect you want when pods have no business there.
 
-OrbStack has no metadata service, so in this lab you build the policy and prove that all other traffic still flows.
+Your Mac has no metadata service, so in this lab you build the policy and prove that all other traffic still flows.
 
 **What this stops.** A pod with an SSRF bug or a stolen shell no longer turns into the node's cloud identity. That is often the difference between one compromised pod and a compromised cloud account.
 
@@ -439,7 +439,7 @@ $ ./platform-engineering/task.sh check 38.2
 == task 38.2: 3 passed, 0 failed
 ```
 
-In the test run, the worker pod reached the API server's port both before and after the policy. The check reads the policy's structure for the block itself, because OrbStack has no metadata service that would refuse the connection.
+In the test run, the worker pod reached the API server's port both before and after the policy. The check reads the policy's structure for the block itself, because your Mac has no metadata service that would refuse the connection.
 
 ## Task 3: Fix CIS findings with kube-bench
 

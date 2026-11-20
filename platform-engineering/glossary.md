@@ -620,7 +620,11 @@ These terms come from the [practice cluster](practice-cluster.md) and the securi
 
 **Static pod.** A static pod is a pod that the kubelet starts from a YAML file in `/etc/kubernetes/manifests`, with no API server involved. kubeadm runs the API server, etcd, the scheduler and the controller manager this way. Edit the file, and the kubelet restarts the pod within seconds. [The practice cluster](practice-cluster.md), modules 38, 39, 41 and 43.
 
-**OrbStack machine.** An OrbStack machine is a lightweight Linux system that OrbStack runs on a Mac. It feels like a virtual machine, but every machine shares one Linux kernel. The practice cluster's two nodes, `practice-control-plane` and `practice-worker`, are OrbStack machines. [The practice cluster](practice-cluster.md).
+**kind.** kind, short for Kubernetes in Docker, builds a cluster whose nodes are Docker containers. Each node container runs systemd, containerd and the kubelet like a small Linux machine, and kubeadm joins the nodes the usual way. The practice cluster's two nodes, `practice-control-plane` and `practice-worker`, are kind nodes. [The practice cluster](practice-cluster.md).
+
+**Node image.** A node image is the container image that every kind node starts from. kind publishes one per Kubernetes version, and the practice cluster builds its own on top of it with every tool the tasks use, so a new cluster needs no downloads beyond the Kubernetes images. [The practice cluster](practice-cluster.md).
+
+**OrbStack machine.** An OrbStack machine is a lightweight Linux system that OrbStack runs on a Mac. It feels like a virtual machine, but every machine shares one Linux kernel. The practice cluster also runs on two OrbStack machines, `cks-cp` and `cks-w1`, as an alternative to kind. [The practice cluster](practice-cluster.md#other-platforms-orbstack-machines-and-your-own-vms).
 
 **Default-deny policy.** A default-deny policy is a NetworkPolicy that selects every pod in a namespace (`podSelector: {}`) and allows nothing, so you open every path on purpose. Smaller policies then add single paths, because NetworkPolicies only ever add to each other. Module 38.
 

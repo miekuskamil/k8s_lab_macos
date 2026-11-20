@@ -218,7 +218,7 @@ NetworkPolicy decides who may talk, but it doesn't hide what they say, because t
 
 **mTLS** (mutual TLS) means both sides of a connection show a certificate, so each knows who the other is, while **WireGuard** is a small, fast VPN protocol built into the Linux kernel. The two answer different questions. WireGuard encrypts every packet between two nodes, whatever pod sent it, while mTLS encrypts per connection and also proves which workload is calling, which authorization rules then use.
 
-The OrbStack cluster runs neither, because its kernel has no WireGuard module and Calico's own encryption needs WireGuard too. The Lima VM's kernel has the module, so task 10 turns on Cilium's WireGuard there and checks it with `cilium encrypt status`.
+The practice cluster runs neither, because the kernel its kind nodes share has no WireGuard module and Calico's own encryption needs WireGuard too. The Lima VM's kernel has the module, so task 10 turns on Cilium's WireGuard there and checks it with `cilium encrypt status`.
 
 **What this stops.** Encryption between pods stops anybody on the network path from reading or changing traffic, and mTLS also stops a pod from pretending to be another workload.
 
@@ -856,4 +856,4 @@ The WireGuard task needs Cilium on a kernel that belongs to one machine, so it s
 
 ## Clean up
 
-Tasks 2, 5 and 7 changed the API server, and task 9 labelled a node, so `./platform-engineering/practice/cluster/reset.sh` returns to a fresh cluster.
+Tasks 2, 5 and 7 changed the API server, and task 9 labelled a node, so `./lab.sh practice reset` returns to a fresh cluster.

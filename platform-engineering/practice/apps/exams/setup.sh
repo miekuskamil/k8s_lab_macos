@@ -14,7 +14,7 @@ if [ "$MOCK" = 1 ]; then . "$HERE/tasks.sh"; else . "$HERE/tasks-$MOCK.sh"; fi
 v="$(k get node $CP -o jsonpath='{.status.nodeInfo.kubeletVersion}' 2>/dev/null)"
 if [ "$v" != v1.37.1 ]; then
   echo "$CP runs '$v', and the practice exam needs the practice cluster at v1.37.1."
-  echo "Run ./platform-engineering/practice/cluster/reset.sh and ./platform-engineering/practice/app-extras/extras.sh first."
+  echo "Run ./lab.sh practice reset and ./platform-engineering/practice/app-extras/extras.sh first."
   exit 1
 fi
 need_extras || exit 1

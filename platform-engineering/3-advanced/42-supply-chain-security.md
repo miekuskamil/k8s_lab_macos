@@ -790,4 +790,4 @@ $ ./platform-engineering/task.sh check 42.10
 
 ## Clean up
 
-Tasks 5 to 7 leave the webhook on, so every later pod passes through it. Tasks 6 and 7 start from task 5's result and apply its solution when the webhook is off. Run `./platform-engineering/practice/cluster/reset.sh` before the next domain.
+Tasks 5 to 7 leave the webhook on, so every later pod passes through it. Tasks 6 and 7 start from task 5's result and apply its solution when the webhook is off. Run `./lab.sh practice reset` before the next domain.

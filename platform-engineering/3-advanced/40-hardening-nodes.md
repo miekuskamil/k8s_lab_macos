@@ -67,7 +67,7 @@ The CIS benchmark for Linux lists modules that a server never needs and asks you
 
 Use both lines. The file stops future loads only, so also unload a module that is already in with `modprobe -r dccp`, and use `modprobe -n -v dccp` to see what a load would do without doing it.
 
-OrbStack machines share one kernel and may not load modules, so this task runs on a VM, as [module 44, task 4](../kernel-and-host/44-kernel-and-host-security.md#task-4-keep-a-kernel-module-out).
+The kind nodes share one kernel with every container on your Mac and may not load modules, so this task runs on a VM, as [module 44, task 4](../kernel-and-host/44-kernel-and-host-security.md#task-4-keep-a-kernel-module-out).
 
 **What this stops.** A blocked module stops an unprivileged process from pulling buggy code into the kernel that every pod shares.
 
@@ -449,4 +449,4 @@ The kernel module task needs a kernel that belongs to one machine, so it sits in
 
 ## Clean up
 
-Task 3 restarts the API server twice, once in the setup and once in your fix. `./platform-engineering/practice/cluster/reset.sh` also wipes the users, units and packages of tasks 1 to 6.
+Task 3 restarts the API server twice, once in the setup and once in your fix. `./lab.sh practice reset` also wipes the users, units and packages of tasks 1 to 6.

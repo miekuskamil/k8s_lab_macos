@@ -2,7 +2,7 @@
 
 > New to a term here, like resourceNames or AuthenticationConfiguration? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this module:** the [practice cluster](../practice-cluster.md) at v1.37.1, so run `./platform-engineering/practice/cluster/reset.sh` after module 38. The course's [module 29](../1-foundations/29-life-of-a-request.md#concept-inside-the-api-server) walks one request through authentication, authorization and admission. Read it first, because this module changes each of those gates.
+**Before this module:** the [practice cluster](../practice-cluster.md) at v1.37.1, so run `./lab.sh practice reset` after module 38. The course's [module 29](../1-foundations/29-life-of-a-request.md#concept-inside-the-api-server) walks one request through authentication, authorization and admission. Read it first, because this module changes each of those gates.
 
 Every attack on a cluster ends at the API server, because nothing changes the cluster's state any other way. A stolen service account token, a forgotten anonymous binding or a known bug in an old version all turn into API calls that change something. This module shrinks what each caller may do, repairs a control plane that a bad edit broke, and keeps the API server patched. It has 12 tasks and takes about 2 hours.
 
@@ -514,7 +514,7 @@ $ ./platform-engineering/task.sh setup 39.4     # prints the node versions; both
 NAME     STATUS   ROLES           AGE     VERSION
 practice-control-plane   Ready    control-plane   2m12s   v1.37.1
 practice-worker   Ready    <none>          77s     v1.37.1
-  the cluster must run v1.37.1 for this task; ./platform-engineering/practice/cluster/reset.sh puts it back there
+  the cluster must run v1.37.1 for this task; ./lab.sh practice reset puts it back there
 ```
 
 > Upgrade the control plane and the worker from v1.37.1 to v1.37.2. Drain each node before you upgrade its kubelet, and make it schedulable again afterwards. Keep the packages on hold.
@@ -1218,4 +1218,4 @@ $ ./platform-engineering/task.sh check 39.12
 
 ## Clean up
 
-Tasks 9 to 12 change static pods, and each solution puts them back as kubeadm wrote them. Task 4 is one-way, because the packages stay at 1.37.2, so `./platform-engineering/practice/cluster/reset.sh` puts both nodes back at 1.37.1 and rebuilds the cluster.
+Tasks 9 to 12 change static pods, and each solution puts them back as kubeadm wrote them. Task 4 is one-way, because the packages stay at 1.37.2, so `./lab.sh practice reset` puts both nodes back at 1.37.1 and rebuilds the cluster.

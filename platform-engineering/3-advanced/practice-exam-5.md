@@ -37,11 +37,11 @@ Practice exam 4 checks that you know each topic, while this one checks that you 
    In the final test run, the OrbStack reset took 4 minutes 59 seconds, the Lima reset 1 minute 24 seconds, and the setup 2 minutes 11 seconds. The setup breaks the API server in its last step, so it doesn't wait for any pods to start.
 
 2. The clock starts when `setup.sh` ends, because it writes the start time, and `score.sh` prints the minutes since then and says when you went over 120.
-3. Work only on the nodes, through `orb -m practice-control-plane`, `orb -m practice-worker` and `./platform-engineering/practice/cluster/lima.sh shell`, and use only the documentation the exam allows.
+3. Work only on the nodes, through `./lab.sh practice shell`, `./lab.sh practice shell worker` and `./platform-engineering/practice/cluster/lima.sh shell`, and use only the documentation the exam allows.
 4. Don't open the solutions while the clock runs, because the score only means something when you worked without them.
 5. Score from your Mac with `./platform-engineering/practice-exam.sh score 5`, or score single tasks with `./platform-engineering/practice-exam.sh score 5 3 9`.
 
-Each task names its host, and `kubectl` runs on `practice-control-plane` for the OrbStack cluster and on `cks-lima` for the tasks marked Lima.
+Each task names its host, and `kubectl` runs on `practice-control-plane` for the practice cluster and on `cks-lima` for the tasks marked Lima.
 
 ## Tasks
 

@@ -8,23 +8,20 @@ A hands-on course in running applications and a platform on Kubernetes, built on
 
 The course has four levels, and each level groups its modules into domains, such as service mesh basics or supply chain security. A level spans several domains, so you climb in difficulty without finishing one topic before you start the next. One domain sits outside the levels, because its tasks need a virtual machine with a kernel of its own.
 
-```mermaid
-flowchart LR
-  L1["1 Foundations<br/>applications 33-37<br/>mesh basics 0-9, 29<br/>practice exams 1-3"]
-  L2["2 Intermediate<br/>mesh in practice<br/>platform operations<br/>a secure cluster 38-39"]
-  L3["3 Advanced<br/>hardening 40-41, supply chain 42<br/>runtime security 43<br/>platform internals<br/>practice exams 4-6"]
-  L4["4 AI on Kubernetes<br/>17, 18, 19, 27"]
-  K["Kernel and host security<br/>module 44, on a VM"]
-  L1 --> L2 --> L3 --> L4
-  L3 -.-> K
-```
+| Level | What it covers | Where it runs |
+|---|---|---|
+| [1. Foundations](1-foundations/README.md) | applications 33 to 37 and practice exams 1 to 3, mesh basics 0 to 9 and 29 | practice cluster for 33 to 37, k3d lab for the rest |
+| [2. Intermediate](2-intermediate/README.md) | the mesh in practice, platform operations, a secure cluster 38 and 39 | k3d lab, practice cluster for 38 and 39 |
+| [3. Advanced](3-advanced/README.md) | hardening 40 and 41, supply chain 42, runtime security 43, practice exams 4 to 6, platform internals | practice cluster for 40 to 43 and the exams, k3d lab for the rest |
+| [4. AI on Kubernetes](4-ai/README.md) | modules 17, 18, 19 and 27 | k3d lab |
+| [Kernel and host security](kernel-and-host/README.md) | module 44, taken next to level 3 | a VM |
 
 The modules run on three kinds of machine, and each module names its machine at the top:
 
 | Where it runs | Modules | How to start it |
 |---|---|---|
 | The k3d lab on your Mac, with Istio, the shop and every UI | 0 to 32 | `./scripts/provision.sh`, as [Before you start](#before-you-start) shows |
-| The [practice cluster](practice-cluster.md), two kubeadm nodes on OrbStack or on your own VMs | 33 to 43, practice exams 1 to 6 | `./platform-engineering/practice/cluster/create.sh` |
+| The [practice cluster](practice-cluster.md) on Docker, two kubeadm nodes that kind runs as containers | 33 to 43, practice exams 1 to 6 | `./lab.sh practice up` |
 | A VM with a kernel of its own, Lima on a Mac | 44, and three tasks of practice exams 5 and 6 | `./platform-engineering/practice/cluster/lima.sh create`, as the [VM page](kernel-and-host/README.md) shows |
 
 The lab modules take 30 to 60 minutes each. The modules on the practice cluster open with theory and then hand you timed tasks of 3 to 10 minutes each, which the [timed tasks page](timed-tasks.md) explains. Module numbers stay fixed, so a module keeps its number in every folder, and `verify.sh 4` still checks module 4.
@@ -122,7 +119,7 @@ AI workloads on Kubernetes, on the k3d lab. Modules 17 to 19 build on the founda
 
 ### [Kernel and host security (runs on a VM)](kernel-and-host/README.md)
 
-The seven tasks that change the kernel itself, so they need a VM with a kernel of its own instead of the shared OrbStack kernel. Take each task after the module it comes from.
+The seven tasks that change the kernel itself, so they need a VM with a kernel of its own instead of the kernel that Docker shares with every container. Take each task after the module it comes from.
 
 | Module | You learn | Tools you use |
 |---|---|---|
