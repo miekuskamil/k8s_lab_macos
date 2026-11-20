@@ -99,11 +99,13 @@ orb -m cks-cp                          # a shell on the control plane, then sudo
 orb stop cks-cp cks-w1                 # frees the memory; "orb start cks-cp cks-w1" brings the cluster back
 ```
 
-In the test run, `extras.sh` took 51 seconds the first time and about 20 seconds when run again. The extras follow the CKS scripts' platform setting, so with `CKS_PLATFORM=vms` they install on [your own VMs](../README.md#the-practice-cluster-on-your-own-vms-proxmox-or-any-ssh-reachable-ubuntu) the same way, and every download picks the node's CPU type from `dpkg --print-architecture`.
+In the test run, `extras.sh` took 51 seconds the first time and 31 seconds when run again. The extras follow the CKS scripts' platform setting, so with `CKS_PLATFORM=vms` they install on [your own VMs](../README.md#the-practice-cluster-on-your-own-vms-proxmox-or-any-ssh-reachable-ubuntu) the same way, and every download picks the node's CPU type from `dpkg --print-architecture`.
 
 The two tracks share one cluster, so each keeps out of the other's way. Every namespace a CKAD task creates carries the label `ckad=task`, and every mock namespace `ckad=mock`, so `reset.sh` finds and deletes them all. Cluster-wide objects that the tasks create start with `ckad-`, and Custom Resource Definitions sit in the `ckad.io` group, so the reset finds those too. The reset also removes metrics-server, which the CKS cluster doesn't run, and the tasks that need it install it again. It does that last, after the namespaces are gone, because a namespace only finishes deleting while every API group answers, and the metrics API stops answering when metrics-server goes; in one test run the opposite order held the namespaces in `Terminating` for about a minute. The tools on `cks-cp` stay, because nothing in Kubernetes sees them, and in the test run the reset took between 43 and 56 seconds, with 16 to 55 namespaces to delete.
 
 `./certs/cks/cluster/reset.sh` rebuilds the cluster from scratch, which also rewrites containerd's settings, so run `extras.sh` again after it.
+
+The test run checked that the two tracks leave each other alone. After all CKAD tasks and the three mocks, and a CKAD reset, the CKS tasks 1.1, 1.4, 2.1, 4.1, 4.3 and 4.4 each failed their check after setup and passed after their solution, gVisor included, although `extras.sh` had restarted containerd on `cks-w1`. After a full CKS reset, `extras.sh` and two CKAD tasks ran again without changes.
 
 ## How to use the track
 
