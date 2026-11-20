@@ -174,10 +174,11 @@ The ReplicaSet retries on its own with growing pauses, and the restart only spee
 helm -n k2-helm history portal
 helm -n k2-helm get values portal --revision 2
 mkdir -p /opt/ckad/m2/7 && echo 2 > /opt/ckad/m2/7/failed.txt
-helm -n k2-helm upgrade portal oci://registry.ckad:5000/charts/webapp --version 0.2.0 --plain-http --set replicaCount=2 --wait
+helm -n k2-helm upgrade portal oci://registry.ckad:5000/charts/webapp --version 0.2.0 --plain-http --set replicaCount=2
+k -n k2-helm rollout status deploy portal-webapp
 ```
 
-Revision 2 set `image.repository=docker.io/library/ngnix`, a typo. An upgrade without `--reuse-values` starts from the chart's defaults, which drops the typo, so `replicaCount` must come back with `--set`.
+Revision 2 set `image.repository=docker.io/library/ngnix`, a typo. An upgrade without `--reuse-values` starts from the chart's defaults, which drops the typo, so `replicaCount` must come back with `--set`. Leave `--wait` out here: in the test run, the broken revision had kept the Deployment stuck for more than 10 minutes, so it carried the condition `ProgressDeadlineExceeded`, and Helm 4's `--wait` read that as a failure at once and marked the good upgrade `failed` as well. `kubectl rollout status` waits for the new pods instead.
 
 </details>
 

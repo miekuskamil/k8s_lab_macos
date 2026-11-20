@@ -188,7 +188,8 @@ score_m7() {
 solve_m7() {
   cp_sh "mkdir -p /opt/ckad/m2/7
     helm -n k2-helm history portal -o json | python3 -c 'import json,sys; print([h[\"revision\"] for h in json.load(sys.stdin) if h[\"status\"]==\"failed\"][-1])' > /opt/ckad/m2/7/failed.txt
-    helm -n k2-helm upgrade portal oci://registry.ckad:5000/charts/webapp --version 0.2.0 --plain-http --set replicaCount=2 --wait --timeout 120s
+    helm -n k2-helm upgrade portal oci://registry.ckad:5000/charts/webapp --version 0.2.0 --plain-http --set replicaCount=2
+    kubectl -n k2-helm rollout status deploy portal-webapp --timeout=120s
     helm -n k2-helm history portal"
 }
 

@@ -30,15 +30,17 @@ node_sh "$CKS_CP" '
     o=$(kubectl get $r -o name 2>/dev/null | grep "/ckad-" || true)
     [ -z "$o" ] || kubectl delete $o --wait=false
   done
-  kubectl -n kube-system get deploy metrics-server >/dev/null 2>&1 && \
-    curl -fsSL https://github.com/kubernetes-sigs/metrics-server/releases/download/v'"$METRICS_SERVER_VERSION"'/components.yaml \
-    | kubectl delete -f - --ignore-not-found >/dev/null && echo "removed metrics-server"
   for n in $(kubectl get nodes -o name); do
     for l in $(kubectl get $n -o json | python3 -c "import json,sys; print(\" \".join(k for k in json.load(sys.stdin)[\"metadata\"][\"labels\"] if k.startswith(\"ckad\")))"); do
       kubectl label $n $l- >/dev/null
     done
   done
   [ -z "$ns" ] || kubectl wait --for=delete $ns --timeout=180s >/dev/null 2>&1 || echo "some namespaces still terminating"
+  # metrics-server goes last: a namespace only finishes deleting while every API group answers,
+  # and the metrics API stops answering the moment metrics-server goes away.
+  kubectl -n kube-system get deploy metrics-server >/dev/null 2>&1 && \
+    curl -fsSL https://github.com/kubernetes-sigs/metrics-server/releases/download/v'"$METRICS_SERVER_VERSION"'/components.yaml \
+    | kubectl delete -f - --ignore-not-found >/dev/null && echo "removed metrics-server"
   pv=$(kubectl get pv -o name | grep "/ckad-" || true)
   [ -z "$pv" ] || kubectl wait --for=delete $pv --timeout=60s >/dev/null 2>&1 || true
 '
