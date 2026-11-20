@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagrams for platform-engineering/32-installing-istio.md with the kit in ../bbg.py.
+"""Draw the diagrams for platform-engineering/3-advanced/32-installing-istio.md with the kit in ../bbg.py.
 
   32-profiles       which components each install profile turns on
   32-install-flow   profile + IstioOperator + --set, rendered from the same charts Helm uses

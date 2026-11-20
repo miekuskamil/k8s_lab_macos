@@ -827,7 +827,10 @@ module_27() {
   expect "Qdrant installs with a volume" "$("${H[@]}" install qdrant qdrant/qdrant --version 1.20.0 -n course-rag --create-namespace -f "$M/27-qdrant-values.yaml" --wait --timeout 5m 2>&1 | grep -c 'STATUS: deployed') $("${K[@]}" -n course-rag get pvc -o jsonpath='{.items[0].status.phase}')" '^1 Bound$'
   docker build -q -t k8s-lab/rag:1.2.0 "$ROOT/apps/rag" >/dev/null 2>&1
   k3d image import k8s-lab/rag:1.2.0 -c "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
-  "${K[@]}" -n course-rag create configmap course-docs --from-file="$ROOT/platform-engineering/" >/dev/null
+  # The course Markdown: README, start-here and glossary, plus the modules in the level folders.
+  local docs=() f
+  for f in "$ROOT"/platform-engineering/*.md "$ROOT"/platform-engineering/*/[0-9][0-9]-*.md; do docs+=(--from-file="$f"); done
+  "${K[@]}" -n course-rag create configmap course-docs "${docs[@]}" >/dev/null
   "${K[@]}" apply -f "$M/27-rag-app.yaml" >/dev/null
   expect "the rag app starts" "$("${K[@]}" -n course-rag rollout status deploy/rag --timeout=120s 2>&1 | grep -c 'successfully rolled out')" '^1$'
   "${K[@]}" -n course-rag port-forward svc/rag 8091:8000 >/dev/null 2>&1 &

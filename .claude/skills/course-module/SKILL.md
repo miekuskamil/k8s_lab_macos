@@ -9,7 +9,7 @@ A module is finished only when a learner follows it on a fresh lab and sees exac
 
 ## 1. Before writing anything
 
-- **Read two finished modules** as the reference for structure and tone: `platform-engineering/22-gitops-with-argocd.md` (a tool installed and used) and `platform-engineering/23-prometheus-and-alerting.md` (concepts plus a measured incident).
+- **Read two finished modules** as the reference for structure and tone: `platform-engineering/2-intermediate/22-gitops-with-argocd.md` (a tool installed and used) and `platform-engineering/2-intermediate/23-prometheus-and-alerting.md` (concepts plus a measured incident).
 - **Pick the number and the prerequisites.** Modules after 19 must work after `./platform-engineering/reset.sh` with only module 0 behind them. Use their own namespace, `course-<topic>`, and stay out of `shop` unless the module is about the mesh.
 - **Pick versions at least two weeks old.** Read release dates from the Helm index (`~/Library/Caches/helm/repository/<repo>-index.yaml`, field `created`). If every release shows the same date, the index was regenerated; pick a release line that's clearly older. Pin the exact chart version everywhere.
 - **Check memory.** The user's Mac has 24 GB and the lab uses about 5 GB. Give every new pod requests and limits, and say in the module how much it adds.

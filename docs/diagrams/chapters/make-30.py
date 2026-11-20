@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagrams for platform-engineering/30-sidecar-in-depth.md with the kit in ../bbg.py.
+"""Draw the diagrams for platform-engineering/3-advanced/30-sidecar-in-depth.md with the kit in ../bbg.py.
 
   30-traffic-capture   the iptables chains istio-init writes, outbound to 15001 and inbound to 15006
   30-sidecar-scope     a Sidecar resource shrinks what one proxy hears from istiod

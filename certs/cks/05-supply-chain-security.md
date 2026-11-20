@@ -2,7 +2,7 @@
 
 > New to a term here, like SBOM or ImagePolicyWebhook? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
 
-**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running. The course's [module 26](../../platform-engineering/26-kyverno-policy-as-code.md) explains admission webhooks, which task 5 configures by hand.
+**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running. The course's [module 26](../../platform-engineering/2-intermediate/26-kyverno-policy-as-code.md) explains admission webhooks, which task 5 configures by hand.
 
 Most of the code in a container image came from someone else: a base image, system packages and language libraries. A vulnerable or poisoned piece anywhere in that chain ends up running in your cluster with your permissions, so this domain checks the chain at each step, from the Dockerfile to the API server's front door. It has ten tasks and takes about 1 hour 40 minutes.
 
@@ -134,7 +134,7 @@ Every check so far runs outside the cluster, in CI, on a laptop or in a registry
 Two ways to restrict images come up in the exam:
 
 1. **ImagePolicyWebhook**, a built-in admission plugin. For every new pod, the API server POSTs an `ImageReview` with the image names to an outside service, and that service answers allowed or denied.
-2. A policy engine such as Kyverno, or a ValidatingAdmissionPolicy, which the course's [module 26](../../platform-engineering/26-kyverno-policy-as-code.md) covers. These read the whole pod and express rules such as "images only from `registry.example.com`" as cluster objects.
+2. A policy engine such as Kyverno, or a ValidatingAdmissionPolicy, which the course's [module 26](../../platform-engineering/2-intermediate/26-kyverno-policy-as-code.md) covers. These read the whole pod and express rules such as "images only from `registry.example.com`" as cluster objects.
 
 ![The API server sends an ImageReview to the policy back end and gets a verdict. When the back end doesn't answer, defaultAllow decides between failing closed and failing open](../../docs/diagrams/chapters/cks-image-policy.svg)
 

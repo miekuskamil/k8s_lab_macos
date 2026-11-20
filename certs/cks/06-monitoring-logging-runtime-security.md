@@ -2,7 +2,7 @@
 
 > New to a term here, like audit policy or syscall? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
 
-**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running, ideally fresh from `./certs/cks/cluster/reset.sh`, and the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium) for tasks 5 and 12. The course's [module 10](../../platform-engineering/10-ebpf-and-cilium.md#concept-what-ebpf-is) explains eBPF, the technique Falco uses to watch the kernel.
+**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running, ideally fresh from `./certs/cks/cluster/reset.sh`, and the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium) for tasks 5 and 12. The course's [module 10](../../platform-engineering/3-advanced/10-ebpf-and-cilium.md#concept-what-ebpf-is) explains eBPF, the technique Falco uses to watch the kernel.
 
 The other domains try to keep attackers out, while this one assumes somebody got in anyway. Three questions then matter: what did they do through the API, what are they doing inside the container right now, and how much damage does the container let them do. Audit logs answer the first, Falco the second, and immutable root file systems, seccomp and AppArmor limit the third. This domain has 13 tasks and takes about 2 hours.
 
@@ -19,7 +19,7 @@ Each task answers one of those three questions, and one task joins the answers i
 
 ## Concept: syscalls, the kernel boundary
 
-Everything a container does that matters passes one border, the line between the process and the kernel. A **system call**, or syscall, is a request from a program to the kernel: opening a file is `openat`, starting a program is `execve`, opening a connection is `connect`, and changing a file's mode is `chmod`. A process has no other way to touch files, the network or other processes. The course's [module 10](../../platform-engineering/10-ebpf-and-cilium.md#concept-kernel-space-and-user-space) explains this line between user space and kernel space.
+Everything a container does that matters passes one border, the line between the process and the kernel. A **system call**, or syscall, is a request from a program to the kernel: opening a file is `openat`, starting a program is `execve`, opening a connection is `connect`, and changing a file's mode is `chmod`. A process has no other way to touch files, the network or other processes. The course's [module 10](../../platform-engineering/3-advanced/10-ebpf-and-cilium.md#concept-kernel-space-and-user-space) explains this line between user space and kernel space.
 
 That border is the best place to defend, for two reasons:
 

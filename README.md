@@ -44,7 +44,7 @@ Run `./scripts/port-forward.sh` in a spare terminal and leave it running. The sh
 
 | UI | URL | User | Password |
 |---|---|---|---|
-| The shop | http://localhost:8080 (https://localhost:8443 during [course module 11](platform-engineering/11-edge-tls.md)) | | |
+| The shop | http://localhost:8080 (https://localhost:8443 during [course module 11](platform-engineering/2-intermediate/11-edge-tls.md)) | | |
 | Kiali, the Istio console | http://localhost:20001 | | |
 | Headlamp, a web UI for the whole cluster: pods, logs, shells, events, YAML | http://localhost:4466 | | |
 | Grafana, with Prometheus, Loki and Jaeger data sources | http://localhost:3000 | `admin` | `k8s-lab-admin` |
@@ -65,7 +65,7 @@ Every secret the lab uses is a fixed default stored in Git, so every copy of the
 | ArgoCD `admin` password | `k8s-lab-admin` | `helm/argocd-values.yaml`, as a bcrypt hash | Generate a hash with the command in that file's comment, and update `argocdServerAdminPasswordMtime` |
 | Redis password | `k8s-lab-redis` | `manifests/base/03-lab-credentials.yaml` (Secret `shop/redis-auth`) | Edit it there, then restart Redis and the backends |
 | Kiali token signing key | `k8s-lab-kiali-signing-key-32chrs` | `helm/kiali-values.yaml` (`login_token.signing_key`) | Any 16, 24 or 32 characters. It must be fixed, or Kiali restarts on every ArgoCD poll ([problem 16](docs/troubleshooting.md#16-kiali-restarts-every-few-minutes)) |
-| Gitea `lab` password (course module 22 only) | `lab-gitops-pass` | the `gitea admin user create` command in `platform-engineering/22-gitops-with-argocd.md` | Use another password in that command and in your `git push` URL |
+| Gitea `lab` password (course module 22 only) | `lab-gitops-pass` | the `gitea admin user create` command in `platform-engineering/2-intermediate/22-gitops-with-argocd.md` | Use another password in that command and in your `git push` URL |
 
 ArgoCD applies all of these from Git, so push a change before you expect it in the cluster. `provision.sh` also applies the two Secrets before ArgoCD starts, so pods that need them start on the first try.
 
@@ -96,7 +96,7 @@ k8s_lab_macos/
 │   └── scenarios/    canary, fault and circuit-breaker experiments, applied by hand
 ├── helm/             value files for every Helm chart the lab installs
 ├── scripts/          provision, start, port-forward, traffic-test, teardown
-├── platform-engineering/           the course: modules 0 to 29, their manifests and scripts
+├── platform-engineering/ the course: modules 0 to 32 in four level folders, their manifests and scripts
 └── docs/             build guide, architecture, lab guide, troubleshooting, diagrams
 ```
 
@@ -108,7 +108,7 @@ k8s_lab_macos/
 | [platform-engineering/README.md](platform-engineering/README.md) | The Kubernetes Platform Engineering course |
 | [docs/lab-guide.md](docs/lab-guide.md) | The lab's experiments and GitOps workflow, without the course depth |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Every problem hit so far, with symptom, diagnosis and fix |
-| [platform-engineering/09-command-reference.md](platform-engineering/09-command-reference.md) | Troubleshooting commands for the cluster and Istio, by layer |
+| [platform-engineering/1-foundations/09-command-reference.md](platform-engineering/1-foundations/09-command-reference.md) | Troubleshooting commands for the cluster and Istio, by layer |
 
 ## When something goes wrong
 
