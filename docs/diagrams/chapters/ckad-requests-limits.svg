@@ -65,7 +65,7 @@
 <text x="1150.0" y="291.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
 <text x="1150.0" y="259.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">stored</text>
 <rect x="380.0" y="580.0" width="1180.0" height="200.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
-<text x="1542.0" y="610.0" font-size="17.0" fill="#475569" text-anchor="end">Node cks-w1</text>
+<text x="1542.0" y="610.0" font-size="17.0" fill="#475569" text-anchor="end">Node practice-worker</text>
 <rect x="420.0" y="640.0" width="420.0" height="100.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
 <text x="630.0" y="682.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">container</text>
 <text x="630.0" y="703.3" font-size="17.0" fill="#475569" text-anchor="middle">requests 100m, limit 200m</text>

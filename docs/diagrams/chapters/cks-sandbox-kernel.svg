@@ -4,7 +4,7 @@
 <text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">One syscall, <tspan fill="#7c3aed">two runtimes</tspan></text>
 <text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">A runc container talks to the host kernel. gVisor answers most calls itself.</text>
 <rect x="40.0" y="150.0" width="1520.0" height="720.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
-<text x="1542.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">Node cks-w1</text>
+<text x="1542.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">Node practice-worker</text>
 <rect x="100.0" y="200.0" width="560.0" height="380.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
 <polygon points="127.0,215.0 135.5,219.5 135.5,229.0 127.0,233.5 118.5,229.0 118.5,219.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
 <polyline points="118.5,219.5 127.0,224.0 135.5,219.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>

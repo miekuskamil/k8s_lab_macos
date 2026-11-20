@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the diagrams for the security modules (platform-engineering/practice-cluster.md and modules 38 to 44) with the kit in ../bbg.py.
 
-  cks-practice-cluster   the two OrbStack machines, the Lima VM, and what runs on each
+  cks-practice-cluster   the two kind nodes, the Lima VM, and what runs on each
   cks-supply-chain       where each supply chain check sits, from Dockerfile to node
   cks-runtime-layers     what seccomp, AppArmor and Falco do with one system call
   cks-netpol-enforce     how a NetworkPolicy becomes packet filter rules on every node (01)
@@ -28,26 +28,26 @@ OUT = Path(__file__).resolve().parent
 
 def practice_cluster():
     c = Canvas(1600, 1000)
-    c.title("The CKS", "practice clusters")
-    c.subtitle("Two OrbStack machines share one kernel. The Lima VM brings its own, with AppArmor and WireGuard.")
+    c.title("The practice cluster", "and the Lima VM")
+    c.subtitle("Two kind nodes are containers on Docker's shared kernel. The Lima VM brings its own.")
 
     c.frame(40, 150, 1520, 820, "Your Mac", "host")
-    you = c.node(70, 210, 220, 110, SLATE, "terminal", "terminal", "orb, limactl")
+    you = c.node(70, 210, 220, 110, SLATE, "terminal", "terminal", "./lab.sh practice")
 
-    orb = c.frame(330, 200, 1200, 430, "OrbStack", "plain", icon="box")
-    cp = c.frame(360, 250, 560, 300, "cks-cp: control plane", "node")
+    dock = c.frame(330, 200, 1200, 430, "Docker engine", "plain", icon="box")
+    cp = c.frame(360, 250, 560, 300, "practice-control-plane", "node")
     c.box(385, 300, 510, 80, PURPLE, "static pods", "API server, etcd, scheduler")
     c.box(385, 395, 160, 70, GREEN, "Calico", size=17)
     c.box(560, 395, 160, 70, RED, "image policy", size=16)
     c.box(735, 395, 160, 70, TEAL, "scanners", size=17)
     c.text(385, 520, "etcdctl, trivy, kube-bench, kubesec, bom", 15, SOFT)
     c.step(cp.x, cp.y, 1)
-    w1 = c.frame(950, 250, 550, 300, "cks-w1: worker", "node")
+    w1 = c.frame(950, 250, 550, 300, "practice-worker", "node")
     c.box(975, 300, 500, 80, SLATE, "your pods", "the task workloads")
     for i, (t, col) in enumerate([("Calico", GREEN), ("runc", TEAL), ("gVisor", PINK), ("Falco", RED)]):
         c.box(975 + i * 127, 395, 115, 70, col, t, size=16)
     c.step(w1.x, w1.y, 2)
-    c.band(360, 565, 1140, 50, GREEN, "one shared OrbStack kernel: no AppArmor, no WireGuard", size=16, lx=360, ly=590)
+    c.band(360, 565, 1140, 50, GREEN, "one shared kernel: no AppArmor, no WireGuard", size=16, lx=360, ly=590)
 
     lima = c.frame(330, 670, 1200, 270, "Lima VM", "plain", icon="box")
     c.frame(360, 715, 1140, 150, "cks-lima: one-node cluster", "node")
@@ -55,7 +55,7 @@ def practice_cluster():
         c.box(385 + i * 280, 765, 255, 75, col, t, size=18)
     c.band(360, 880, 1140, 45, GREEN, "its own Linux kernel", size=16, lx=360, ly=902)
 
-    c.connect(you, orb, "orb shell", sa="right", sb="left", fa=0.5, fb=(265 - 200) / 430, pos="above")
+    c.connect(you, dock, "", sa="right", sb="left", fa=0.5, fb=(265 - 200) / 430, pos="above")
     c.connect(you, lima, "limactl shell", sa="bottom", sb="left", fa=0.5, fb=0.5, pos="right", at=(180, 700))
     c.save(OUT, "cks-practice-cluster")
 
@@ -215,7 +215,7 @@ def static_pod_loop():
     c.title("Static pods,", "the repair loop")
     c.subtitle("The kubelet runs what the folder says. No API server takes part.")
 
-    c.frame(40, 150, 1520, 530, "", "node", right="Node cks-cp")
+    c.frame(40, 150, 1520, 530, "", "node", right="Node practice-control-plane")
     you = c.node(80, 220, 260, 110, SLATE, "You", "terminal", "ssh on the node")
     fold = c.frame(430, 200, 420, 160, "/etc/kubernetes/manifests", "plain", col=ORANGE, icon="doc")
     yaml = c.box(455, 255, 370, 80, ORANGE, "kube-apiserver.yaml", size=18)
@@ -242,9 +242,9 @@ def node_limits():
     c.title("A kubelet's", "two limits")
     c.subtitle("The Node authorizer limits what a kubelet reads. NodeRestriction limits what it writes.")
 
-    c.frame(40, 150, 320, 300, "Node cks-w1", "node")
+    c.frame(40, 150, 320, 300, "Node practice-worker", "node")
     kub = c.node(70, 220, 260, 110, TEAL, "kubelet", "server", "node certificate")
-    c.chip(200, 380, "system:node:cks-w1", TEAL, anchor="middle", size=14)
+    c.chip(200, 380, "system:node:practice-worker", TEAL, anchor="middle", size=14)
 
     c.frame(420, 150, 1140, 580, "control plane", "group")
     c.frame(450, 200, 820, 490, "API server", "plain", col=PURPLE, icon="server")
@@ -294,7 +294,7 @@ def sandbox_kernel():
     c.title("One syscall,", "two runtimes")
     c.subtitle("A runc container talks to the host kernel. gVisor answers most calls itself.")
 
-    c.frame(40, 150, 1520, 720, "", "node", right="Node cks-w1")
+    c.frame(40, 150, 1520, 720, "", "node", right="Node practice-worker")
     a = c.frame(100, 200, 560, 380, "pod with runc", "pod")
     ca = c.box(130, 260, 500, 100, SLATE, "app process")
     b = c.frame(900, 200, 600, 380, "pod with runsc (gVisor)", "pod")
@@ -317,7 +317,7 @@ def image_policy():
 
     c.frame(40, 150, 270, 220, "Your Mac", "host")
     cl = c.box(65, 220, 220, 100, SLATE, "kubectl", "create pod")
-    c.frame(360, 150, 1200, 680, "", "node", right="Node cks-cp")
+    c.frame(360, 150, 1200, 680, "", "node", right="Node practice-control-plane")
     api = c.frame(400, 200, 470, 300, "API server", "plain", col=PURPLE, icon="server")
     plug = c.box(430, 260, 410, 200, PINK, "ImagePolicyWebhook", "admission plugin\ncaches allowTTL, denyTTL")
     be = c.node(1100, 260, 420, 200, RED, "policy back end", "shield", "localhost:8443")
@@ -367,7 +367,7 @@ def falco_path():
     c.title("From syscall", "to alert")
     c.subtitle("Falco reads a copy of each event. It never blocks the call.")
 
-    c.frame(40, 150, 1520, 610, "", "node", right="Node cks-w1")
+    c.frame(40, 150, 1520, 610, "", "node", right="Node practice-worker")
     c.text(70, 200, "user space", 17, SOFT, True)
     pod = c.frame(80, 220, 330, 160, "pod", "pod")
     sh = c.box(105, 275, 280, 80, SLATE, "bash", "a shell starts")

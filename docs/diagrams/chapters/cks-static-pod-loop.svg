@@ -4,7 +4,7 @@
 <text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Static pods, <tspan fill="#7c3aed">the repair loop</tspan></text>
 <text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">The kubelet runs what the folder says. No API server takes part.</text>
 <rect x="40.0" y="150.0" width="1520.0" height="530.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
-<text x="1542.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">Node cks-cp</text>
+<text x="1542.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">Node practice-control-plane</text>
 <rect x="80.0" y="220.0" width="260.0" height="110.0" rx="14.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
 <rect x="96.0" y="253.0" width="44.0" height="44.0" rx="10.0" fill="#475569" stroke="none"/>
 <rect x="105.8" y="264.8" width="24.3" height="20.5" rx="3.2" fill="none" stroke="#ffffff" stroke-width="1.536"/>

@@ -92,6 +92,10 @@ location = "registry.practice:5000"
 insecure = true
 EOF
 
+# A kind node runs systemd without D-Bus, so podman manages the cgroups of its build containers itself.
+mkdir -p /etc/containers/containers.conf.d
+printf '[engine]\ncgroup_manager = "cgroupfs"\nevents_logger = "file"\n' > /etc/containers/containers.conf.d/50-practice.conf
+
 echo "--- containerd pulls from registry.practice:5000 over plain HTTP"
 mkdir -p /etc/containerd/certs.d/registry.practice:5000
 cat > /etc/containerd/certs.d/registry.practice:5000/hosts.toml <<'EOF'
