@@ -150,7 +150,7 @@ The node used 3.3 GiB in total, including k3s itself. Loki took 84 MiB, Alloy 57
 | The course works | On a cluster built from nothing, `./platform-engineering/verify.sh` passed 54 of 54 checks | `./platform-engineering/verify.sh` |
 | The lab runs on Linux | On Ubuntu 24.04.5 with Docker Engine 29.1.3 from Ubuntu's packages, a fresh clone ran `provision.sh` to exit 0 in 195 s with all 16 health checks passing, and the course verification passed every module. The Ubuntu machine ran in OrbStack, so it shared OrbStack's kernel (7.2), whose inotify limits are already high. | `./scripts/provision.sh` on Linux |
 | Traces join across the mesh | 200 of 200 recent backend traces start at the gateway, most with 7 spans across gateway, waypoint and backend | http://localhost:16686, service `backend` |
-| The default logins work | ArgoCD issued a session token, Grafana accepted the password and rejected a wrong one, Redis answered `PONG` | see the [README](../README.md#open-it) |
+| The default logins work | ArgoCD issued a session token, Grafana accepted the password and rejected a wrong one, Redis answered `PONG` | see the [README](../README.md#open-the-uis) |
 
 ### What was not verified
 
@@ -177,7 +177,7 @@ The lab has three credentials, and all three are fixed defaults stored in Git:
 - `shop/redis-auth` and `observability/grafana-admin` are Secrets in `manifests/base/03-lab-credentials.yaml`. ArgoCD manages them through `shop-base`.
 - The ArgoCD admin password is a bcrypt hash in `helm/argocd-values.yaml`.
 
-The [README](../README.md#open-it) lists the values. Committing them keeps the lab reproducible and is safe only because nothing listens outside your Mac. [the lab guide](lab-guide.md#secrets) covers what to use on a shared cluster.
+The [README](../README.md#open-the-uis) lists the values. Committing them keeps the lab reproducible and is safe only because nothing listens outside your Mac. [the lab guide](lab-guide.md#secrets) covers what to use on a shared cluster.
 
 ## Editing the diagrams
 

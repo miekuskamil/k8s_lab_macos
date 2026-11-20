@@ -77,7 +77,7 @@ To try a branch that is not on GitHub yet, `./proxmox/pe-lab.sh install --from-c
 ./proxmox/pe-lab.sh ui
 ```
 
-The command opens one SSH session that runs `scripts/port-forward.sh` on the VM and forwards each port to the same port on your Mac, so http://localhost:8080 shows the shop and http://localhost:3000 shows Grafana, exactly as the course text says. The [main README](../README.md#open-it) lists every address and password, and Ctrl-C closes them all. The Mac's own lab uses the same ports, and the wrapper refuses to start while a port is busy, so either stop the local lab with `k3d cluster stop k8s-lab` or run `PE_LAB_PORT_OFFSET=10000 ./proxmox/pe-lab.sh ui` to move the VM's UIs to http://localhost:18080, http://localhost:13000 and so on. The plain SSH form is:
+The command opens one SSH session that runs `scripts/port-forward.sh` on the VM and forwards each port to the same port on your Mac, so http://localhost:8080 shows the shop and http://localhost:3000 shows Grafana, exactly as the course text says. The [main README](../README.md#open-the-uis) lists every address and password, and Ctrl-C closes them all. The Mac's own lab uses the same ports, and the wrapper refuses to start while a port is busy, so either stop the local lab with `k3d cluster stop k8s-lab` or run `PE_LAB_PORT_OFFSET=10000 ./proxmox/pe-lab.sh ui` to move the VM's UIs to http://localhost:18080, http://localhost:13000 and so on. The plain SSH form is:
 
 ```bash
 ssh -i ~/.ssh/cks_proxmox -L 8080:localhost:8080 -L 8443:localhost:8443 -L 8081:localhost:8081 \

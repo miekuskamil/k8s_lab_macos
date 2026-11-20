@@ -354,7 +354,7 @@ Run ./scripts/port-forward.sh to open these local ports:
   Headlamp    http://localhost:4466    no login (cluster-admin, lab only)
 
 Redis has no local port. Its password is k8s-lab-redis.
-These are lab defaults stored in Git. See README.md, section "Open it".
+These are lab defaults stored in Git. See README.md, section "Open the UIs".
 
 Cluster ports
   ingress gateway 8080, frontend 3000, backend 8000, redis 6379,
