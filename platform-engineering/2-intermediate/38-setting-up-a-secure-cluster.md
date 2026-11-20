@@ -693,7 +693,7 @@ Find the API server's real address first, because the theory showed that the Ser
 ```console
 root@practice-control-plane:~# k get endpointslice -n default -l kubernetes.io/service-name=kubernetes
 NAME         ADDRESSTYPE   PORTS   ENDPOINTS         AGE
-kubernetes   IPv4          6443    192.168.139.194   4m26s
+kubernetes   IPv4          6443    192.168.117.2   4m26s
 ```
 
 In the test run, that printed the control plane's address with port 6443, which goes into the policy:
@@ -1062,30 +1062,27 @@ $ ./platform-engineering/task.sh check 38.13
 
 ## Clean up
 
-Tasks 1, 2 and 4 to 8 leave only namespaces and files behind, while tasks 3 and 12 changed static pods and task 13 changed the kubelet on `practice-worker`. To start the next module from a fresh cluster, run the reset script, which wipes both nodes and builds the cluster again:
+Tasks 1, 2 and 4 to 8 leave only namespaces and files behind, while tasks 3 and 12 changed static pods and task 13 changed the kubelet on `practice-worker`. To start the next module from a fresh cluster, run the reset, which deletes both node containers and builds the cluster again from the cached node image:
 
 ```console
-$ ./platform-engineering/practice/cluster/reset.sh
-=== wiping practice-worker
-=== wiping practice-control-plane
+$ ./lab.sh practice reset
+Deleting cluster "practice" ...
 ...
-=== 1/7 machines
+=== 1/6 node image practice-node:v1.37.1
 ...
-=== 2/7 containerd and kubeadm 1.37.1 on both nodes
+=== 2/6 kind cluster practice: practice-control-plane and practice-worker
 ...
-=== 3/7 kubeadm init on practice-control-plane
+=== 3/6 Calico 3.32.3 (enforces NetworkPolicy)
 ...
-=== 4/7 Calico 3.32.3 (enforces NetworkPolicy)
+=== 4/6 node services: gVisor and Falco on practice-worker, the image policy back end on practice-control-plane
 ...
-=== 5/7 join practice-worker
+=== 5/6 registry registry.practice:5000 (container practice-registry on the kind network)
 ...
-=== 6/7 security tools
-...
-=== 7/7 ingress-nginx 1.15.1 on NodePorts 30080 and 30443
+=== 6/6 ingress-nginx 1.15.1 on NodePorts 30080 and 30443
 ...
 === ready
-NAME     STATUS   ROLES           AGE     VERSION   INTERNAL-IP       EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION                                CONTAINER-RUNTIME
-practice-control-plane   Ready    control-plane   2m11s   v1.37.1   192.168.139.194   <none>        Ubuntu 24.04.5 LTS   7.2.12-orbstack-00394-gbecdd6130068 (arm64)   containerd://2.2.10
-practice-worker   Ready    <none>          76s     v1.37.1   192.168.139.60    <none>        Ubuntu 24.04.5 LTS   7.2.12-orbstack-00394-gbecdd6130068 (arm64)   containerd://2.2.10
+NAME                     STATUS   ROLES           AGE   VERSION   INTERNAL-IP     EXTERNAL-IP   OS-IMAGE                       KERNEL-VERSION                                CONTAINER-RUNTIME
+practice-control-plane   Ready    control-plane   82s   v1.37.1   192.168.117.2   <none>        Debian GNU/Linux 13 (trixie)   7.2.12-orbstack-00394-gbecdd6130068 (arm64)   containerd://2.3.4
+practice-worker          Ready    <none>          73s   v1.37.1   192.168.117.3   <none>        Debian GNU/Linux 13 (trixie)   7.2.12-orbstack-00394-gbecdd6130068 (arm64)   containerd://2.3.4
 ...
 ```

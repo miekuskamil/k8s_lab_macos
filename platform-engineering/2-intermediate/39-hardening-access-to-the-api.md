@@ -1091,12 +1091,12 @@ The API server talks to etcd at `https://127.0.0.1:2379`, the value of its `--et
 root@practice-control-plane:~# grep etcd-servers /etc/kubernetes/manifests/kube-apiserver.yaml
     - --etcd-servers=https://127.0.0.1:2379
 root@practice-control-plane:~# grep -E 'listen-client-urls|advertise-client-urls' /etc/kubernetes/manifests/etcd.yaml
-    kubeadm.kubernetes.io/etcd.advertise-client-urls: https://192.168.139.194:2379
-    - --advertise-client-urls=https://192.168.139.194:2379
-    - --listen-client-urls=https://127.0.0.1:2378,https://192.168.139.194:2379
+    kubeadm.kubernetes.io/etcd.advertise-client-urls: https://192.168.117.2:2379
+    - --advertise-client-urls=https://192.168.117.2:2379
+    - --listen-client-urls=https://127.0.0.1:2378,https://192.168.117.2:2379
 root@practice-control-plane:~# ss -tlnp | grep etcd
-LISTEN 0      4096   192.168.139.194:2380       0.0.0.0:*    users:(("etcd",pid=84124,fd=4))           
-LISTEN 0      4096   192.168.139.194:2379       0.0.0.0:*    users:(("etcd",pid=84124,fd=8))           
+LISTEN 0      4096   192.168.117.2:2380       0.0.0.0:*    users:(("etcd",pid=84124,fd=4))           
+LISTEN 0      4096   192.168.117.2:2379       0.0.0.0:*    users:(("etcd",pid=84124,fd=8))           
 LISTEN 0      4096         127.0.0.1:2378       0.0.0.0:*    users:(("etcd",pid=84124,fd=7))           
 LISTEN 0      4096         127.0.0.1:2381       0.0.0.0:*    users:(("etcd",pid=84124,fd=13))          
 ```

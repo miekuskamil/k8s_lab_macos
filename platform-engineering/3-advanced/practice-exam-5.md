@@ -11,13 +11,12 @@ Practice exam 4 checks that you know each topic, while this one checks that you 
 1. Start fresh, with both resets and the setup on your Mac:
 
    ```console
-   $ ./platform-engineering/practice/cluster/reset.sh && ./platform-engineering/practice/cluster/lima.sh reset
-   === wiping practice-worker
-   === wiping practice-control-plane
+   $ ./lab.sh practice reset && ./platform-engineering/practice/cluster/lima.sh reset
+   Deleting cluster "practice" ...
    ...
-   === 1/7 machines
+   === 1/6 node image practice-node:v1.37.1
    ...
-   === 7/7 ingress-nginx 1.15.1 on NodePorts 30080 and 30443
+   === 6/6 ingress-nginx 1.15.1 on NodePorts 30080 and 30443
    ...
    === ready
    ...
@@ -79,7 +78,7 @@ root@practice-control-plane:~# crictl ps -a --name kube-apiserver
 CONTAINER           IMAGE               CREATED             STATE               NAME                ATTEMPT             POD ID              POD                     NAMESPACE
 7d5d0af53edf6       98d6e75e244ec       20 seconds ago      Exited              kube-apiserver      4                   dee2b9a849738       kube-apiserver-practice-control-plane   kube-system
 root@practice-control-plane:~# crictl logs <id of the newest exited container>
-I1115 20:48:41.870434       1 options.go:261] external host was not specified, using 192.168.139.194
+I1115 20:48:41.870434       1 options.go:261] external host was not specified, using 192.168.117.2
 I1115 20:48:41.872447       1 server.go:151] Version: v1.37.1
 I1115 20:48:41.872476       1 server.go:153] "Golang settings" GOGC="" GOMAXPROCS="" GOTRACEBACK=""
 E1115 20:48:41.880392       1 run.go:72] "command failed" err="open /etc/kubernetes/pki/apiserver.pem: no such file or directory"
@@ -93,7 +92,7 @@ The last log line names the file the API server misses, and `ls /etc/kubernetes/
 root@practice-control-plane:~# grep etcd-servers /etc/kubernetes/manifests/kube-apiserver.yaml
     - --etcd-servers=https://127.0.0.1:2380
 root@practice-control-plane:~# grep listen-client-urls /etc/kubernetes/manifests/etcd.yaml
-    - --listen-client-urls=https://127.0.0.1:2379,https://192.168.139.194:2379
+    - --listen-client-urls=https://127.0.0.1:2379,https://192.168.117.2:2379
 ```
 
 Two lines changed: `--tls-private-key-file` points to `apiserver.pem` instead of `apiserver.key`, and `--etcd-servers` names port 2380, etcd's peer port, instead of 2379. Fix both, one restart at a time, and read the log after each. [module 39, tasks 9 and 10](../2-intermediate/39-hardening-access-to-the-api.md#task-9-repair-the-api-server) practise the same hunt.

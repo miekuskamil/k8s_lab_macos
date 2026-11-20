@@ -11,13 +11,12 @@ This is the hardest of the three. When the clock starts, the API server refuses 
 1. Start fresh, with both resets and the setup on your Mac:
 
    ```console
-   $ ./platform-engineering/practice/cluster/reset.sh && ./platform-engineering/practice/cluster/lima.sh reset
-   === wiping practice-worker
-   === wiping practice-control-plane
+   $ ./lab.sh practice reset && ./platform-engineering/practice/cluster/lima.sh reset
+   Deleting cluster "practice" ...
    ...
-   === 1/7 machines
+   === 1/6 node image practice-node:v1.37.1
    ...
-   === 7/7 ingress-nginx 1.15.1 on NodePorts 30080 and 30443
+   === 6/6 ingress-nginx 1.15.1 on NodePorts 30080 and 30443
    ...
    === ready
    ...
@@ -386,7 +385,7 @@ root@practice-control-plane:~# crictl ps -a --name kube-apiserver
 CONTAINER           IMAGE               CREATED              STATE               NAME                ATTEMPT             POD ID              POD                     NAMESPACE
 ef0e95360c41f       98d6e75e244ec       About a minute ago   Exited              kube-apiserver      4                   a507ff2270144       kube-apiserver-practice-control-plane   kube-system
 root@practice-control-plane:~# crictl logs <id of the newest exited container>
-I1115 21:04:10.180684       1 options.go:261] external host was not specified, using 192.168.139.194
+I1115 21:04:10.180684       1 options.go:261] external host was not specified, using 192.168.117.2
 W1115 21:04:10.180739       1 authentication.go:841] AnonymousAuth is not allowed with the AlwaysAllow authorizer. Resetting AnonymousAuth to false. You should use a different authorizer
 I1115 21:04:10.182935       1 server.go:151] Version: v1.37.1
 I1115 21:04:10.182950       1 server.go:153] "Golang settings" GOGC="" GOMAXPROCS="" GOTRACEBACK=""

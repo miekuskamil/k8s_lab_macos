@@ -590,7 +590,7 @@ root@practice-control-plane:~# grep '"verb":"delete"' /var/log/kubernetes/audit/
             ],
 ...
     "sourceIPs": [
-        "192.168.139.60"
+        "192.168.117.3"
     ],
     "userAgent": "curl/8.11.1",
 ...
