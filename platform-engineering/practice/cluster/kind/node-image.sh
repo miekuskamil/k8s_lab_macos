@@ -92,6 +92,9 @@ location = "registry.practice:5000"
 insecure = true
 EOF
 
+# Debian's podman package drops a bridge network into /etc/cni/net.d, where containerd would find it
+# before Calico's and give pods addresses on a network nothing routes. podman itself uses netavark.
+rm -f /etc/cni/net.d/87-podman-bridge.conflist
 # A kind node runs systemd without D-Bus, so podman manages the cgroups of its build containers itself.
 mkdir -p /etc/containers/containers.conf.d
 printf '[engine]\ncgroup_manager = "cgroupfs"\nevents_logger = "file"\n' > /etc/containers/containers.conf.d/50-practice.conf
@@ -115,6 +118,9 @@ export do="--dry-run=client -o yaml"
 EOF
 printf 'runtime-endpoint: unix:///run/containerd/containerd.sock\nimage-endpoint: unix:///run/containerd/containerd.sock\n' > /etc/crictl.yaml
 
+# The package lists stay, so "apt-get install kubeadm=1.37.2-1.1" finds the package without an
+# "apt-get update" first, as in module 39. Package upgrades keep the node's changed config files.
+printf 'Dpkg::Options {"--force-confdef";"--force-confold";};\n' > /etc/apt/apt.conf.d/90-practice
 apt-get clean
-rm -rf /var/lib/apt/lists/* "$tmp" /root/.cache
+rm -rf "$tmp" /root/.cache
 echo "--- done: $(kubeadm version -o short), $(etcdctl version | head -1), trivy $(trivy --version | awk 'NR==1{print $2}'), $(helm version --short), $(podman --version), runsc $(runsc --version | awk 'NR==1{print $3}'), $(falco --version | head -1)"
