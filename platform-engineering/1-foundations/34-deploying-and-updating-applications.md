@@ -1,12 +1,12 @@
-# CKAD 02: Application deployment (20%)
+# Module 34: Deploying and updating applications
 
-> New to a term here, like ReplicaSet or Helm release? The [CKAD glossary](glossary.md) explains every term this track uses.
+> New to a term here, like ReplicaSet or Helm release? The [glossary](../glossary.md#applications-on-kubernetes) explains every term these modules use.
 
-**Before this domain:** [domain 01](01-application-design-and-build.md), for pods and Deployments, and the [practice cluster](README.md#the-practice-cluster) with the CKAD extras, because tasks 5 to 7 install Helm charts from the local registry.
+**Before this module:** [module 33](33-building-and-running-applications.md), for pods and Deployments, and the [practice cluster](../practice-cluster.md#the-application-extras) with the application extras, because tasks 5 to 7 install Helm charts from the local registry.
 
-Getting version 1 of an application running is the easy part, because every later version has to replace a running one while users keep sending requests. This domain is about that replacement: how a Deployment swaps old pods for new ones and takes a bad version back, how two versions run side by side for a blue-green switch or a canary, and how Helm and Kustomize turn one set of manifests into many installations. It has ten tasks and takes about 1 hour 30 minutes.
+Getting version 1 of an application running is the easy part, because every later version has to replace a running one while users keep sending requests. This module is about that replacement: how a Deployment swaps old pods for new ones and takes a bad version back, how two versions run side by side for a blue-green switch or a canary, and how Helm and Kustomize turn one set of manifests into many installations. It has ten tasks and takes about 1 hour 30 minutes.
 
-## The domain in one table
+## The module in one table
 
 | Question | Tool | Task |
 |---|---|---|
@@ -20,7 +20,7 @@ Getting version 1 of an application running is the easy part, because every late
 
 Take Deployment `web` from task 1, three nginx pods at version 1.27. You want version 1.28 without a moment where no pod answers, and if 1.28 breaks you want 1.27 back within seconds. Deleting the three pods and creating three new ones would leave a gap, and keeping no record of the old version would leave nothing to go back to.
 
-A Deployment solves both problems with one extra layer. It never manages pods itself: it creates a [ReplicaSet](glossary.md#replicaset) for each version of its pod template, and the ReplicaSet keeps a number of identical pods alive. A change to the template, such as a new image, makes the Deployment create a second ReplicaSet and then shift the pod count from the old one to the new one in small steps, which is a [rolling update](glossary.md#rolling-update).
+A Deployment solves both problems with one extra layer. It never manages pods itself: it creates a [ReplicaSet](../glossary.md#replicaset) for each version of its pod template, and the ReplicaSet keeps a number of identical pods alive. A change to the template, such as a new image, makes the Deployment create a second ReplicaSet and then shift the pod count from the old one to the new one in small steps, which is a [rolling update](../glossary.md#rolling-update).
 
 ![Deployment web with two ReplicaSets during a rolling update: the old one scales down from 3 while the new one scales up, and the Service sends requests to every ready pod of both](../../docs/diagrams/chapters/ckad-rolling-update.svg)
 
@@ -34,7 +34,7 @@ The default of 25% for both rounds to one surge pod and zero unavailable pods fo
 
 Each ReplicaSet carries a revision number in an annotation, and `kubectl rollout history` lists them. A rollback doesn't add a copy of the old template: it moves the old ReplicaSet to the top with a new number. In task 1, an undo to revision 2 made it revision 4, and revision 2 vanished from the list, which surprises people who expect the numbers to stay put.
 
-The pod readiness check from [domain 03](03-application-observability-and-maintenance.md#concept-three-probes-three-questions) decides when a new pod counts as ready, so a pod that never becomes ready stops the update half way, with the old pods still serving. That makes a broken image a safe failure: task 1 starts with one pod in `ImagePullBackOff` and three old pods still running. `minReadySeconds` adds a waiting time on top, so a pod must stay ready for that long before the update moves on, which catches an app that starts and then crashes after a few seconds.
+The pod readiness check from [module 35](35-observing-and-debugging-applications.md#concept-three-probes-three-questions) decides when a new pod counts as ready, so a pod that never becomes ready stops the update half way, with the old pods still serving. That makes a broken image a safe failure: task 1 starts with one pod in `ImagePullBackOff` and three old pods still running. `minReadySeconds` adds a waiting time on top, so a pod must stay ready for that long before the update moves on, which catches an app that starts and then crashes after a few seconds.
 
 Every change to the template starts a new rollout at once, so three `kubectl set` commands in a row would create three ReplicaSets. `kubectl rollout pause` stops the Deployment from acting on template changes, and `kubectl rollout resume` then rolls all of them out as one revision, which task 10 measures.
 
@@ -46,9 +46,9 @@ A rolling update mixes the old and the new version for a while, and it gives you
 
 ![Blue-green: Service shop selects version=blue, then version=green, and all traffic moves at once. Canary: Service front selects app=front, which matches four v1 pods and one v2 pod, so about one request in five reaches v2](../../docs/diagrams/chapters/ckad-blue-green-canary.svg)
 
-In a [blue-green](glossary.md#blue-green-deployment) release, version blue serves all users while version green starts next to it as a second Deployment with its own label, `version: green`. Nobody reaches green yet, because the Service's selector names `version: blue`. Once green is ready and tested, one change to the selector moves every request to green at once, and switching back is the same change in reverse. Task 3 does this with Service `shop`, which is like moving a train to a second track by throwing one switch rather than rebuilding the rails under it.
+In a [blue-green](../glossary.md#blue-green-deployment) release, version blue serves all users while version green starts next to it as a second Deployment with its own label, `version: green`. Nobody reaches green yet, because the Service's selector names `version: blue`. Once green is ready and tested, one change to the selector moves every request to green at once, and switching back is the same change in reverse. Task 3 does this with Service `shop`, which is like moving a train to a second track by throwing one switch rather than rebuilding the rails under it.
 
-A [canary](glossary.md#canary-release) release sends only a small share of the requests to the new version. The Service selects a label that both versions carry, `app: front`, so its endpoints hold the pods of both Deployments, and kube-proxy spreads connections roughly evenly over all endpoints. The share follows the pod counts: four v1 pods and one v2 pod give v2 about a fifth of the requests, which task 4 measured as 4 of 20. A mesh like Istio sets the share by weight instead of pod count, which the course's [module 16](../../platform-engineering/2-intermediate/16-istio-api.md) shows, but the exam asks for the plain Kubernetes version.
+A [canary](../glossary.md#canary-release) release sends only a small share of the requests to the new version. The Service selects a label that both versions carry, `app: front`, so its endpoints hold the pods of both Deployments, and kube-proxy spreads connections roughly evenly over all endpoints. The share follows the pod counts: four v1 pods and one v2 pod give v2 about a fifth of the requests, which task 4 measured as 4 of 20. A mesh like Istio sets the share by weight instead of pod count, which the course's [module 16](../2-intermediate/16-istio-api.md) shows, but the exam asks for the plain Kubernetes version.
 
 A Deployment's own selector must stay distinct in both patterns, because two Deployments whose selectors match the same pods would each count the other's pods as their own. So each Deployment selects its version label too, `app: shop, version: green`, while the Service selects only what the release pattern needs.
 
@@ -56,11 +56,11 @@ A Deployment's own selector must stay distinct in both patterns, because two Dep
 
 An application from someone else, such as a database or a monitoring stack, comes as dozens of manifests with values that differ per installation: the image tag, the replica count, the Service type. Editing the vendor's YAML by hand for every installation breaks the next time the vendor ships an update, so the YAML needs placeholders and a tool that fills them in.
 
-[Helm](glossary.md#helm) is that tool. A [chart](glossary.md#helm-chart) is a folder of manifest templates plus a `values.yaml` file with the defaults, and `helm install` renders the templates with the defaults, merges in what you set with `--set` or `-f my-values.yaml`, and applies the result. The installation gets a name, the [release](glossary.md#helm-release), and every install, upgrade or rollback adds a numbered revision to it.
+[Helm](../glossary.md#helm) is that tool. A [chart](../glossary.md#helm-chart) is a folder of manifest templates plus a `values.yaml` file with the defaults, and `helm install` renders the templates with the defaults, merges in what you set with `--set` or `-f my-values.yaml`, and applies the result. The installation gets a name, the [release](../glossary.md#helm-release), and every install, upgrade or rollback adds a numbered revision to it.
 
 Helm stores each revision as a Secret in the release's namespace, named like `sh.helm.release.v1.blog.v4`, which holds the rendered manifests and the values. That storage gives Helm its two most useful commands. `helm history` lists the revisions with their status, chart version and description, and `helm rollback blog 1` applies the manifests of revision 1 again as a new revision. Task 6 does both on a release whose last upgrade set a wrong image tag.
 
-Charts come from a [chart repository](glossary.md#chart-repository), which you add with `helm repo add NAME URL`, or from an OCI registry, the same kind of registry that stores images. The practice cluster keeps its chart `webapp` at `oci://registry.ckad:5000/charts/webapp`, so a full reference names the chart and its version, and `--plain-http` allows the registry's plain HTTP:
+Charts come from a [chart repository](../glossary.md#chart-repository), which you add with `helm repo add NAME URL`, or from an OCI registry, the same kind of registry that stores images. The practice cluster keeps its chart `webapp` at `oci://registry.ckad:5000/charts/webapp`, so a full reference names the chart and its version, and `--plain-http` allows the registry's plain HTTP:
 
 ```bash
 helm show values oci://registry.ckad:5000/charts/webapp --version 0.1.0 --plain-http
@@ -84,7 +84,7 @@ With a repository, the same install reads `helm install shop myrepo/webapp --ver
 
 ## Concept: Kustomize patches one base for many environments
 
-Kustomize solves the same problem as Helm from the other side. Helm puts placeholders into the YAML, and Kustomize keeps the YAML plain and describes changes to it. A [base](glossary.md#kustomize-base) folder holds ordinary manifests and a `kustomization.yaml` that lists them, and an [overlay](glossary.md#kustomize-overlay) folder points at the base and lists what to change for one environment.
+Kustomize solves the same problem as Helm from the other side. Helm puts placeholders into the YAML, and Kustomize keeps the YAML plain and describes changes to it. A [base](../glossary.md#kustomize-base) folder holds ordinary manifests and a `kustomization.yaml` that lists them, and an [overlay](../glossary.md#kustomize-overlay) folder points at the base and lists what to change for one environment.
 
 Take the `web` Deployment and Service of task 8. Production wants them in namespace `kust-prod`, with names that start with `prod-`, three replicas, nginx 1.28, and the label `env=prod` on everything. The overlay says exactly that:
 
@@ -111,9 +111,9 @@ Both fixes of task 9 come from these two mechanisms. A patch whose `metadata.nam
 
 ## The bigger picture: releases as data
 
-Every tool in this domain turns a release into data that the cluster keeps: ReplicaSets for Deployments, Secrets for Helm revisions, and folders of plain YAML for Kustomize. Keeping the history as data is what makes a rollback cheap, because going back means pointing at something that still exists rather than rebuilding it.
+Every tool in this module turns a release into data that the cluster keeps: ReplicaSets for Deployments, Secrets for Helm revisions, and folders of plain YAML for Kustomize. Keeping the history as data is what makes a rollback cheap, because going back means pointing at something that still exists rather than rebuilding it.
 
-GitOps tools such as Argo CD, which the course's [module 22](../../platform-engineering/2-intermediate/22-gitops-with-argocd.md) installs, push the same idea one step further. They render Helm charts and Kustomize overlays from a Git repository and apply the result, so Git holds the history and a rollback is a `git revert`. Progressive delivery tools such as Argo Rollouts and Flagger automate the canary of task 4: they shift the share in steps and roll back when the error rate rises.
+GitOps tools such as Argo CD, which the course's [module 22](../2-intermediate/22-gitops-with-argocd.md) installs, push the same idea one step further. They render Helm charts and Kustomize overlays from a Git repository and apply the result, so Git holds the history and a rollback is a `git revert`. Progressive delivery tools such as Argo Rollouts and Flagger automate the canary of task 4: they shift the share in steps and roll back when the error rate rises.
 
 ## Why this way
 
@@ -128,8 +128,8 @@ Helm and Kustomize both exist because they suit different owners. A vendor ships
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 2.1
-== setup task 2.1
+$ ./platform-engineering/task.sh setup 34.1
+== setup task 34.1
 NAME                   READY   STATUS         RESTARTS   AGE
 web-64fc786fb9-2z4bf   1/1     Running        0          13s
 web-64fc786fb9-dpmmn   1/1     Running        0          9s
@@ -179,13 +179,13 @@ The three old pods ran 1.28 the whole time, because the broken pod never became 
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 2.1
-== check task 2.1
+$ ./platform-engineering/task.sh check 34.1
+== check task 34.1
   PASS  Deployment web runs nginx:1.28-alpine again
   PASS  all 3 replicas are ready and up to date
   PASS  the strategy is maxSurge 1, maxUnavailable 0
   PASS  the change-cause says 'rollback to 1.28-alpine'
-== task 2.1: 4 passed, 0 failed
+== task 34.1: 4 passed, 0 failed
 ```
 
 ## Task 2: Recreate instead of a rolling update
@@ -222,13 +222,13 @@ All four old pods terminate before any new pod exists, which is the gap `Recreat
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 2.2
-== check task 2.2
+$ ./platform-engineering/task.sh check 34.2
+== check task 34.2
   PASS  Deployment worker uses the Recreate strategy
   PASS  4 replicas, 2 old ReplicaSets kept, a pod counts as available after 5 seconds
   PASS  the container has the variable VERSION=2
   PASS  4 pods are available
-== task 2.2: 4 passed, 0 failed
+== task 34.2: 4 passed, 0 failed
 ```
 
 ## Task 3: Blue-green
@@ -236,8 +236,8 @@ $ ./certs/ckad/task.sh check 2.2
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 2.3
-== setup task 2.3
+$ ./platform-engineering/task.sh setup 34.3
+== setup task 34.3
 NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
 deployment.apps/shop-blue   3/3     3            3           1s
 
@@ -285,12 +285,12 @@ The merge patch changes only the `version` key of the selector and keeps `app: s
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 2.3
-== check task 2.3
+$ ./platform-engineering/task.sh check 34.3
+== check task 34.3
   PASS  Service shop answers 'green' on every call
   PASS  Deployment shop-green has 3 ready pods labelled version=green
   PASS  Deployment shop-blue still exists, scaled to 0
-== task 2.3: 3 passed, 0 failed
+== task 34.3: 3 passed, 0 failed
 ```
 
 ## Task 4: A canary with a fifth of the traffic
@@ -298,8 +298,8 @@ $ ./certs/ckad/task.sh check 2.3
 **Time budget:** 7 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 2.4
-== setup task 2.4
+$ ./platform-engineering/task.sh setup 34.4
+== setup task 34.4
 NAME                       READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS   IMAGES         SELECTOR
 deployment.apps/front-v1   4/4     4            4           1s    web          busybox:1.36   app=front,track=stable
 
@@ -345,13 +345,13 @@ Four of 20 requests reached v2 in the test run, exactly the fifth that the pod c
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 2.4
-== check task 2.4
+$ ./platform-engineering/task.sh check 34.4
+== check task 34.4
   PASS  Deployment front-v2 has 1 ready pod labelled app=front, track=canary
   PASS  front-v1 keeps 4 ready pods
   PASS  Service front sends traffic to all 5 pods
   PASS  40 calls to front get answers from both v1 and v2
-== task 2.4: 4 passed, 0 failed
+== task 34.4: 4 passed, 0 failed
 ```
 
 ## Task 5: Install a Helm chart from a registry
@@ -359,8 +359,8 @@ $ ./certs/ckad/task.sh check 2.4
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 2.5
-== setup task 2.5
+$ ./platform-engineering/task.sh setup 34.5
+== setup task 34.5
 Pulled: registry.ckad:5000/charts/webapp:0.1.0
 Digest: sha256:c3e28adbe840a3d0a19966f3ca79ada291977947ad625d5e7886c4cc4bd8e984
 apiVersion: v2
@@ -409,12 +409,12 @@ service/shop-webapp   NodePort   10.105.191.104   <none>        80:32532/TCP   1
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 2.5
-== check task 2.5
+$ ./platform-engineering/task.sh check 34.5
+== check task 34.5
   PASS  release shop in helm-shop is deployed from chart webapp 0.1.0
   PASS  its Deployment has 2 ready replicas
   PASS  its Service is a NodePort
-== task 2.5: 3 passed, 0 failed
+== task 34.5: 3 passed, 0 failed
 ```
 
 ## Task 6: Roll a release back, then upgrade it
@@ -422,8 +422,8 @@ $ ./certs/ckad/task.sh check 2.5
 **Time budget:** 7 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 2.6
-== setup task 2.6
+$ ./platform-engineering/task.sh setup 34.6
+== setup task 34.6
 NAME                           READY   STATUS         RESTARTS   AGE
 blog-webapp-5b77b696fc-fpllj   1/1     Running        0          6s
 blog-webapp-777cbcdb9d-rkhg4   0/1     ErrImagePull   0          5s
@@ -474,13 +474,13 @@ Helm reported revision 2 as `deployed` although its pods never started, because 
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 2.6
-== check task 2.6
+$ ./platform-engineering/task.sh check 34.6
+== check task 34.6
   PASS  the latest revision of blog is deployed from chart webapp 0.2.0
   PASS  Deployment blog-webapp has 3 ready replicas
   PASS  no image tag 1.27-alpne is left
   PASS  the history shows a rollback to revision 1
-== task 2.6: 4 passed, 0 failed
+== task 34.6: 4 passed, 0 failed
 ```
 
 ## Task 7: Helm housekeeping
@@ -488,8 +488,8 @@ $ ./certs/ckad/task.sh check 2.6
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 2.7
-== setup task 2.7
+$ ./platform-engineering/task.sh setup 34.7
+== setup task 34.7
 NAME   	NAMESPACE	REVISION	UPDATED                                	STATUS  	CHART       	APP VERSION
 cache  	helm-ops 	1       	2026-11-20 10:52:26.363165592 +0000 UTC	failed  	webapp-0.1.0	1.27-alpine
 old-api	helm-ops 	1       	2026-11-20 10:52:26.06449185 +0000 UTC 	deployed	webapp-0.1.0	1.27-alpine
@@ -538,14 +538,14 @@ The release `cache` failed because its install used `--wait` with an image tag t
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 2.7
-== check task 2.7
+$ ./platform-engineering/task.sh check 34.7
+== check task 34.7
   PASS  release old-api is gone
   PASS  no release in helm-ops is in the failed state
   PASS  release metrics-ui is deployed from chart webapp 0.2.0
   PASS  metrics-ui runs 2 pods labelled team=observability that request 20m CPU
   PASS  release reports still runs
-== task 2.7: 5 passed, 0 failed
+== task 34.7: 5 passed, 0 failed
 ```
 
 ## Task 8: A Kustomize overlay for production
@@ -553,8 +553,8 @@ $ ./certs/ckad/task.sh check 2.7
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 2.8
-== setup task 2.8
+$ ./platform-engineering/task.sh setup 34.8
+== setup task 34.8
 /opt/ckad/2.8/base/deployment.yaml
 /opt/ckad/2.8/base/service.yaml
 /opt/ckad/2.8/base/kustomization.yaml
@@ -599,13 +599,13 @@ service/prod-web   ClusterIP   10.101.162.227   <none>        80/TCP    1s    en
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 2.8
-== check task 2.8
+$ ./platform-engineering/task.sh check 34.8
+== check task 34.8
   PASS  Deployment prod-web runs in kust-prod with 3 ready replicas
   PASS  it runs nginx:1.28-alpine
   PASS  the Deployment, its pods and Service prod-web carry env=prod
   PASS  the overlay lives in /opt/ckad/2.8/overlays/prod and the base is unchanged
-== task 2.8: 4 passed, 0 failed
+== task 34.8: 4 passed, 0 failed
 ```
 
 ## Task 9: Repair a Kustomize overlay
@@ -613,8 +613,8 @@ $ ./certs/ckad/task.sh check 2.8
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 2.9
-== setup task 2.9
+$ ./platform-engineering/task.sh setup 34.9
+== setup task 34.9
 error: merging from generator &{0x318ba94db790 <nil>}: id resid.ResId{Gvk:resid.Gvk{Group:"", Version:"v1", Kind:"ConfigMap", isClusterScoped:false}, Name:"api-config", Namespace:""} exists; can not use behavior: 'unspecified', behavior must be merge or replace
 ```
 
@@ -661,12 +661,12 @@ The ConfigMap's name ends with a hash of its content, `7t6ch9d7dd`, and Kustomiz
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 2.9
-== check task 2.9
+$ ./platform-engineering/task.sh check 34.9
+== check task 34.9
   PASS  Deployment staging-api in kust-staging has a limit of 64Mi memory
   PASS  its pod logs mode=staging
   PASS  /opt/ckad/2.9/staging.yaml holds the rendered overlay
-== task 2.9: 3 passed, 0 failed
+== task 34.9: 3 passed, 0 failed
 ```
 
 ## Task 10: Three changes, one new revision
@@ -674,8 +674,8 @@ $ ./certs/ckad/task.sh check 2.9
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 2.10
-== setup task 2.10
+$ ./platform-engineering/task.sh setup 34.10
+== setup task 34.10
 NAME             DESIRED   CURRENT   READY   AGE
 api-776fc4695b   2         2         2       1s
 ```
@@ -723,15 +723,15 @@ The history copies the Deployment's `change-cause` annotation into the new Repli
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 2.10
-== check task 2.10
+$ ./platform-engineering/task.sh check 34.10
+== check task 34.10
   PASS  Deployment api: nginx:1.28-alpine, TIER=backend, memory limit 128Mi
   PASS  the three changes made exactly one new ReplicaSet (revision 2)
   PASS  the rollout is resumed and both pods are ready
   PASS  the change-cause of revision 2 is 'nginx 1.28, tier and limit'
-== task 2.10: 4 passed, 0 failed
+== task 34.10: 4 passed, 0 failed
 ```
 
 ## Clean up
 
-`./certs/ckad/cluster/reset.sh` deletes the namespaces with their Helm releases, because Helm keeps each release's history as Secrets inside the namespace, and empties the chart store in the local registry.
+`./platform-engineering/practice/app-extras/reset.sh` deletes the namespaces with their Helm releases, because Helm keeps each release's history as Secrets inside the namespace, and empties the chart store in the local registry.

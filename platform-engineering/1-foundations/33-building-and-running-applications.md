@@ -1,12 +1,12 @@
-# CKAD 01: Application design and build (20%)
+# Module 33: Building and running applications
 
-> New to a term here, like init container or PersistentVolumeClaim? The [CKAD glossary](glossary.md) explains every term this track uses.
+> New to a term here, like init container or PersistentVolumeClaim? The [glossary](../glossary.md#applications-on-kubernetes) explains every term these modules use.
 
-**Before this domain:** the [practice cluster](README.md#the-practice-cluster) running, with the CKAD extras from `./certs/ckad/cluster/extras.sh`, because tasks 1 and 2 build images with podman and push them to the local registry.
+**Before this module:** the [practice cluster](../practice-cluster.md#the-application-extras) running, with the application extras from `./platform-engineering/practice/app-extras/extras.sh`, because tasks 1 and 2 build images with podman and push them to the local registry.
 
-An application reaches Kubernetes in two pieces. The first piece is an [image](glossary.md#image), a packed file system with everything the program needs, and the second is a workload object that tells the cluster how many copies of that image to run, on which nodes, and when they may stop. This domain covers both pieces: how you build and change an image, which workload object fits which job, how several containers share one pod, and where a pod keeps data that must survive a restart. It has ten tasks and takes about 1 hour 30 minutes.
+An application reaches Kubernetes in two pieces. The first piece is an [image](../glossary.md#image), a packed file system with everything the program needs, and the second is a workload object that tells the cluster how many copies of that image to run, on which nodes, and when they may stop. This module covers both pieces: how you build and change an image, which workload object fits which job, how several containers share one pod, and where a pod keeps data that must survive a restart. It has ten tasks and takes about 1 hour 30 minutes.
 
-## The domain in one table
+## The module in one table
 
 Each task answers one design question, and the table maps the question to the tool that answers it:
 
@@ -24,7 +24,7 @@ Each task answers one design question, and the table maps the question to the to
 
 Take a small program, the greeter of task 1, which prints a greeting every five seconds. On your laptop it needs a shell, the script itself and one environment variable, and the node that runs it has none of those. Copying the files onto every node by hand breaks the moment a pod moves to another node, so the program has to travel together with everything it needs, as one object that any node fetches by name.
 
-That object is an **image**. A build tool reads a recipe called a [Dockerfile](glossary.md#dockerfile), runs its instructions one by one, and saves the file system changes of each instruction as a separate [layer](glossary.md#layer), much like the pages of a flip book where each page only adds what changed. The greeter's Dockerfile has five instructions:
+That object is an **image**. A build tool reads a recipe called a [Dockerfile](../glossary.md#dockerfile), runs its instructions one by one, and saves the file system changes of each instruction as a separate [layer](../glossary.md#layer), much like the pages of a flip book where each page only adds what changed. The greeter's Dockerfile has five instructions:
 
 ```dockerfile
 FROM docker.io/library/busybox:1.36
@@ -48,7 +48,7 @@ CMD ["/usr/local/bin/greet.sh"]
 | `ENTRYPOINT [...]` | the program the container always runs | a pod's `command` replaces it |
 | `CMD [...]` | default arguments, or the program when there is no `ENTRYPOINT` | a pod's `args` replaces it |
 
-After the build, the image needs a name that tells a node where to fetch it. A full image name has three parts, and `registry.ckad:5000/greeter:v1` shows all of them: the [registry](glossary.md#registry) host `registry.ckad:5000`, the repository `greeter`, and the [tag](glossary.md#tag) `v1`. A name without a host, like `nginx:1.27-alpine`, points to Docker Hub, which is why the greeter's tag carries the local registry's address. Without that address, the push goes to Docker Hub and the node never finds the image in the local registry.
+After the build, the image needs a name that tells a node where to fetch it. A full image name has three parts, and `registry.ckad:5000/greeter:v1` shows all of them: the [registry](../glossary.md#registry) host `registry.ckad:5000`, the repository `greeter`, and the [tag](../glossary.md#tag) `v1`. A name without a host, like `nginx:1.27-alpine`, points to Docker Hub, which is why the greeter's tag carries the local registry's address. Without that address, the push goes to Docker Hub and the node never finds the image in the local registry.
 
 ![The greeter image travels from the Dockerfile on cks-cp through podman build and podman push into the local registry, and the kubelet on cks-w1 pulls it through containerd when a pod needs it](../../docs/diagrams/chapters/ckad-image-flow.svg)
 
@@ -59,7 +59,7 @@ The figure follows the greeter through four steps, which tasks 1 and 2 run on th
 3. A pod that names the image lands on `cks-w1`, because the control plane node keeps its taint, and the kubelet there asks containerd for the image.
 4. containerd pulls the layers from the registry and starts the container from them.
 
-[podman](glossary.md#podman) and Docker accept the same commands and read the same Dockerfiles, so `docker build` and `docker push` work the same way on an exam host that has Docker instead. `podman save -o file.tar image` writes the image into a single archive file, which some exam tasks ask for when no registry exists, and `podman load -i file.tar` reads it back.
+[podman](../glossary.md#podman) and Docker accept the same commands and read the same Dockerfiles, so `docker build` and `docker push` work the same way on an exam host that has Docker instead. `podman save -o file.tar image` writes the image into a single archive file, which some exam tasks ask for when no registry exists, and `podman load -i file.tar` reads it back.
 
 The practice registry speaks plain HTTP, and both podman and containerd refuse plain HTTP by default because an attacker on the network might swap the layers in transit. So `extras.sh` marks `registry.ckad:5000` as insecure in `/etc/containers/registries.conf.d/50-ckad.conf` for podman, and in `/etc/containerd/certs.d/registry.ckad:5000/hosts.toml` for containerd. An exam host has the same kind of setting already in place, and a `http: server gave HTTP response to HTTPS client` error means the setting is missing.
 
@@ -67,34 +67,34 @@ The practice registry speaks plain HTTP, and both podman and containerd refuse p
 
 A pod on its own runs until something stops it, and nothing brings it back when its node fails, because no controller watches a bare pod. Real applications need more than that: a web server must keep three copies alive, a nightly report must run once and then stop, and a log agent must run exactly once on every node. Each of these needs a different controller, which is a loop in the controller manager that compares the pods that exist with the pods that should exist and creates or deletes pods until both match.
 
-So Kubernetes offers one workload object per kind of job, and each one hands a [pod template](glossary.md#pod-template) to its controller:
+So Kubernetes offers one workload object per kind of job, and each one hands a [pod template](../glossary.md#pod-template) to its controller:
 
 | Object | Keeps | Use it for | Task |
 |---|---|---|---|
-| Deployment | N identical, interchangeable pods, replaced on updates | web servers, APIs, workers | 9 and domain 02 |
-| StatefulSet | N pods with fixed names and their own storage | databases, queues | [05, task 10](05-services-and-networking.md#task-10-a-statefulset-behind-a-headless-service) |
+| Deployment | N identical, interchangeable pods, replaced on updates | web servers, APIs, workers | 9 and module 34 |
+| StatefulSet | N pods with fixed names and their own storage | databases, queues | [module 37, task 10](37-services-and-networking.md#task-10-a-statefulset-behind-a-headless-service) |
 | DaemonSet | one pod on every node that matches | log and metrics agents, node tools | 7 |
 | Job | pods until a number of them succeed | migrations, batch runs | 5 |
 | CronJob | one Job per schedule tick | backups, reports, cleanups | 6 |
 
 The template is the same pod spec in every row, which means a container you tested in a bare pod moves into any controller unchanged, and task 9 does exactly that with a pod that has no controller yet.
 
-A [Job](glossary.md#job) counts successful pods, not running ones. `completions: 6` means six pods must exit with code 0, and `parallelism: 3` means at most three run at the same time, so the Job of task 5 runs two waves of three. `backoffLimit` counts failed pods before the Job gives up, and `activeDeadlineSeconds` stops the whole Job after a time limit even when pods are still retrying. A Job's pods need `restartPolicy: Never` or `OnFailure`, because the default `Always` would restart a finished container forever and the Job would never complete.
+A [Job](../glossary.md#job) counts successful pods, not running ones. `completions: 6` means six pods must exit with code 0, and `parallelism: 3` means at most three run at the same time, so the Job of task 5 runs two waves of three. `backoffLimit` counts failed pods before the Job gives up, and `activeDeadlineSeconds` stops the whole Job after a time limit even when pods are still retrying. A Job's pods need `restartPolicy: Never` or `OnFailure`, because the default `Always` would restart a finished container forever and the Job would never complete.
 
-A [CronJob](glossary.md#cronjob) wraps a Job template in a schedule written in cron syntax, where `*/30 * * * *` means minute 0 and minute 30 of every hour. `concurrencyPolicy: Forbid` skips a run while the previous one still works, `successfulJobsHistoryLimit` and `failedJobsHistoryLimit` set how many finished Jobs stay for you to inspect, and `startingDeadlineSeconds` lets the controller skip a run that it missed by more than that many seconds, for example after the control plane was down. The exam often asks you to start a CronJob's work right now, and `kubectl create job NAME --from=cronjob/CRONJOB` creates a Job from the template without waiting for the schedule.
+A [CronJob](../glossary.md#cronjob) wraps a Job template in a schedule written in cron syntax, where `*/30 * * * *` means minute 0 and minute 30 of every hour. `concurrencyPolicy: Forbid` skips a run while the previous one still works, `successfulJobsHistoryLimit` and `failedJobsHistoryLimit` set how many finished Jobs stay for you to inspect, and `startingDeadlineSeconds` lets the controller skip a run that it missed by more than that many seconds, for example after the control plane was down. The exam often asks you to start a CronJob's work right now, and `kubectl create job NAME --from=cronjob/CRONJOB` creates a Job from the template without waiting for the schedule.
 
 ## Concept: several containers in one pod
 
 Go back to the greeter and suppose its log should also reach a central log store. The greeter writes a file and knows nothing about log stores, and changing its code for every new log store makes no sense. A second program next to it solves this: it reads the file and sends the lines on, and the greeter keeps doing only its own job.
 
-For that, both programs need to see the same files and, often, the same network. A pod gives exactly that. Every container in one pod shares the pod's network namespace, so they reach each other on `localhost`, and they share the pod's volumes, so a file one container writes into a shared [emptyDir](glossary.md#emptydir) volume appears in the other at once. The kubelet also starts and stops them as one unit on one node.
+For that, both programs need to see the same files and, often, the same network. A pod gives exactly that. Every container in one pod shares the pod's network namespace, so they reach each other on `localhost`, and they share the pod's volumes, so a file one container writes into a shared [emptyDir](../glossary.md#emptydir) volume appears in the other at once. The kubelet also starts and stops them as one unit on one node.
 
 ![One pod with an init container that runs first and exits, a native sidecar that starts next and keeps running, and the app container, all sharing one emptyDir volume and the pod's network](../../docs/diagrams/chapters/ckad-pod-patterns.svg)
 
 A pod has two lists of containers, and the order in which they start follows from the list each container sits in:
 
-1. The kubelet runs the [init containers](glossary.md#init-container) one after another, and each must exit with code 0 before the next starts. An init container prepares something: it writes a config file, waits for a database, or fetches data.
-2. An init container with `restartPolicy: Always` is a [native sidecar](glossary.md#native-sidecar). It starts in its place in the init list, but the kubelet moves on as soon as it runs, keeps it running for the pod's whole life, and stops it only after the app containers.
+1. The kubelet runs the [init containers](../glossary.md#init-container) one after another, and each must exit with code 0 before the next starts. An init container prepares something: it writes a config file, waits for a database, or fetches data.
+2. An init container with `restartPolicy: Always` is a [native sidecar](../glossary.md#native-sidecar). It starts in its place in the init list, but the kubelet moves on as soon as it runs, keeps it running for the pod's whole life, and stops it only after the app containers.
 3. The kubelet then starts every container of the `containers` list at the same time, and the pod is Ready when all of them, sidecars included, pass their readiness checks.
 
 The native sidecar became stable in Kubernetes 1.33, and before it a sidecar was simply a second entry in `containers`. That older form still works, but it has two flaws that the native form fixes: the sidecar might start after the app and miss its first log lines, and a Job never completes while a sidecar in `containers` keeps running. A native sidecar starts before the app, and the kubelet stops it when the Job's main container exits, so the Job completes.
@@ -115,7 +115,7 @@ A container's own file system lives only as long as the container, so a restart 
 
 An **emptyDir** volume starts empty when the pod lands on a node and lives exactly as long as the pod, which makes it the right choice for scratch space and for files that containers of one pod share. With `medium: Memory`, it lives in RAM, and `sizeLimit` caps it. The kubelet deletes an emptyDir together with its pod, so data that must outlive the pod needs a different kind of volume.
 
-Durable storage comes as a [PersistentVolume](glossary.md#persistentvolume), a piece of storage that the cluster knows about, such as a cloud disk, an NFS share, or here a folder on a node. A pod never names a PersistentVolume directly, because the developer who writes the pod spec rarely knows which disks exist. The pod names a [PersistentVolumeClaim](glossary.md#persistentvolumeclaim) instead, which is a request for storage of a size, an [access mode](glossary.md#access-mode) and a [StorageClass](glossary.md#storageclass), much like a cloakroom ticket that names the size of coat hanger you need and not the hanger itself.
+Durable storage comes as a [PersistentVolume](../glossary.md#persistentvolume), a piece of storage that the cluster knows about, such as a cloud disk, an NFS share, or here a folder on a node. A pod never names a PersistentVolume directly, because the developer who writes the pod spec rarely knows which disks exist. The pod names a [PersistentVolumeClaim](../glossary.md#persistentvolumeclaim) instead, which is a request for storage of a size, an [access mode](../glossary.md#access-mode) and a [StorageClass](../glossary.md#storageclass), much like a cloakroom ticket that names the size of coat hanger you need and not the hanger itself.
 
 The control plane binds a claim to a volume that matches all three, and the claim then shows `Bound` with the volume's name. Cloud clusters create matching volumes on demand through a provisioner, but the practice cluster has none, which is also common in exam clusters, so you create the PersistentVolume yourself. The binding needs three things to agree:
 
@@ -127,9 +127,9 @@ A `hostPath` volume points at a folder on whatever node runs the pod. Task 8 use
 
 ## The bigger picture: images and templates as the contract
 
-Every concept in this domain draws the same line between the application and the platform. The image fixes what runs, the workload object fixes how it runs, and the volumes fix where its data lives. A developer owns the first and describes the other two in YAML, and the cluster carries out that description on whatever nodes exist. That split lets one platform team run hundreds of applications, because no application needs anything from a node beyond what its spec asks for.
+Every concept in this module draws the same line between the application and the platform. The image fixes what runs, the workload object fixes how it runs, and the volumes fix where its data lives. A developer owns the first and describes the other two in YAML, and the cluster carries out that description on whatever nodes exist. That split lets one platform team run hundreds of applications, because no application needs anything from a node beyond what its spec asks for.
 
-The industry keeps moving work out of the app and into the pod around it. Sidecars ship logs, terminate TLS and fetch secrets, and the native sidecar made that pattern safe for Jobs too. Images get smaller and more fixed: a distroless image ships no shell at all, which is why [domain 03](03-application-observability-and-maintenance.md#task-5-debug-a-container-that-has-no-shell) shows how to debug one from outside.
+The industry keeps moving work out of the app and into the pod around it. Sidecars ship logs, terminate TLS and fetch secrets, and the native sidecar made that pattern safe for Jobs too. Images get smaller and more fixed: a distroless image ships no shell at all, which is why [module 35](35-observing-and-debugging-applications.md#task-5-debug-a-container-that-has-no-shell) shows how to debug one from outside.
 
 ## Why this way
 
@@ -144,8 +144,8 @@ A pod names a claim rather than a volume because the two belong to different peo
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 1.1
-== setup task 1.1
+$ ./platform-engineering/task.sh setup 33.1
+== setup task 33.1
 total 8
 -rw-r--r-- 1 root root 163 Nov 20 10:33 Dockerfile
 -rw-r--r-- 1 root root  76 Nov 20 10:33 greet.sh
@@ -199,13 +199,13 @@ Three blobs went up: busybox's own layer, and one layer each for `COPY` and `RUN
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 1.1
-== check task 1.1
+$ ./platform-engineering/task.sh check 33.1
+== check task 33.1
   PASS  the registry holds greeter:v1
   PASS  /opt/ckad/1.1/greeter-v1.tar is an image archive
   PASS  pod greeter in build runs registry.ckad:5000/greeter:v1
   PASS  pod greeter logs 'hello from greeter'
-== task 1.1: 4 passed, 0 failed
+== task 33.1: 4 passed, 0 failed
 ```
 
 ## Task 2: Change a Dockerfile and roll the new image out
@@ -213,8 +213,8 @@ $ ./certs/ckad/task.sh check 1.1
 **Time budget:** 7 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 1.2
-== setup task 1.2
+$ ./platform-engineering/task.sh setup 33.2
+== setup task 33.2
 deployment.apps/report created
 Waiting for deployment "report" rollout to finish: 0 of 1 updated replicas are available...
 deployment "report" successfully rolled out
@@ -268,12 +268,12 @@ color=blue user=1000
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 1.2
-== check task 1.2
+$ ./platform-engineering/task.sh check 33.2
+== check task 33.2
   PASS  Deployment report runs registry.ckad:5000/report:v2
   PASS  the registry still holds report:v1 and now report:v2
   PASS  the new pods log color=blue user=1000
-== task 1.2: 3 passed, 0 failed
+== task 33.2: 3 passed, 0 failed
 ```
 
 ## Task 3: An init container prepares the content
@@ -281,8 +281,8 @@ $ ./certs/ckad/task.sh check 1.2
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 1.3
-== setup task 1.3
+$ ./platform-engineering/task.sh setup 33.3
+== setup task 33.3
 apiVersion: v1
 kind: Pod
 metadata:
@@ -342,12 +342,12 @@ ready from init
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 1.3
-== check task 1.3
+$ ./platform-engineering/task.sh check 33.3
+== check task 33.3
   PASS  pod web has an init container prepare
   PASS  pod web is Ready
   PASS  nginx serves 'ready from init'
-== task 1.3: 3 passed, 0 failed
+== task 33.3: 3 passed, 0 failed
 ```
 
 ## Task 4: A native sidecar that ships the log
@@ -355,8 +355,8 @@ $ ./certs/ckad/task.sh check 1.3
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 1.4
-== setup task 1.4
+$ ./platform-engineering/task.sh setup 33.4
+== setup task 33.4
 NAME   READY   UP-TO-DATE   AVAILABLE   AGE
 app    1/1     1            1           1s
 ```
@@ -406,13 +406,13 @@ The new pod shows `2/2`, which counts the sidecar with the app. `tail -F`, with 
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 1.4
-== check task 1.4
+$ ./platform-engineering/task.sh check 33.4
+== check task 33.4
   PASS  the pod template has a native sidecar named shipper
   PASS  the Deployment is rolled out
   PASS  the shipper's log shows the orders
   PASS  container app still writes the log
-== task 1.4: 4 passed, 0 failed
+== task 33.4: 4 passed, 0 failed
 ```
 
 ## Task 5: A Job with parallel completions
@@ -469,13 +469,13 @@ Three pods started at once, as `parallelism` asked, and the six completions took
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 1.5
-== check task 1.5
+$ ./platform-engineering/task.sh check 33.5
+== check task 33.5
   PASS  Job checksum: 6 completions, 3 at a time, backoffLimit 3, deadline 120s
   PASS  its pods carry the label job-type=checksum
   PASS  the Job completed 6 times
   PASS  a pod logged its checksum line
-== task 1.5: 4 passed, 0 failed
+== task 33.5: 4 passed, 0 failed
 ```
 
 ## Task 6: A CronJob, and a run right now
@@ -519,13 +519,13 @@ removed temporary files
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 1.6
-== check task 1.6
+$ ./platform-engineering/task.sh check 33.6
+== check task 33.6
   PASS  CronJob cleanup runs every 30 minutes and forbids overlaps
   PASS  it keeps 2 successful and 4 failed Jobs, and starts at most 60s late
   PASS  Job cleanup-now came from the CronJob and completed
   PASS  its pod logged 'removed temporary files'
-== task 1.6: 4 passed, 0 failed
+== task 33.6: 4 passed, 0 failed
 ```
 
 ## Task 7: A DaemonSet on every node
@@ -537,7 +537,7 @@ $ ./certs/ckad/task.sh check 1.6
 <details>
 <summary>Solution</summary>
 
-`kubectl create` has no DaemonSet generator, so write the manifest, or generate a Deployment with `$do` and change its `kind`, then delete `replicas` and `strategy`. The control plane node carries a taint that keeps ordinary pods away, and a [toleration](glossary.md#toleration) that matches it lets the DaemonSet's pod in:
+`kubectl create` has no DaemonSet generator, so write the manifest, or generate a Deployment with `$do` and change its `kind`, then delete `replicas` and `strategy`. The control plane node carries a taint that keeps ordinary pods away, and a [toleration](../glossary.md#toleration) that matches it lets the DaemonSet's pod in:
 
 ```yaml
 apiVersion: apps/v1
@@ -588,12 +588,12 @@ Without the toleration, the DaemonSet would report 1 of 1 pods and skip `cks-cp`
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 1.7
-== check task 1.7
+$ ./platform-engineering/task.sh check 33.7
+== check task 33.7
   PASS  DaemonSet node-agent has a ready pod on both nodes
   PASS  one of its pods runs on cks-cp
   PASS  the container requests 10m CPU and 16Mi memory
-== task 1.7: 3 passed, 0 failed
+== task 33.7: 3 passed, 0 failed
 ```
 
 ## Task 8: A PersistentVolume, a claim and a pod
@@ -680,13 +680,13 @@ visit 10:40:34
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 1.8
-== check task 1.8
+$ ./platform-engineering/task.sh check 33.8
+== check task 33.8
   PASS  PersistentVolume ckad-pv-data: 1Gi, ReadWriteOnce, class manual, hostPath /var/lib/ckad-data
   PASS  PVC data-claim in storage is Bound to ckad-pv-data
   PASS  pod writer mounts the claim at /data and is Ready
   PASS  the file lands on cks-w1 in /var/lib/ckad-data/visits.log
-== task 1.8: 4 passed, 0 failed
+== task 33.8: 4 passed, 0 failed
 ```
 
 ## Task 9: From a bare pod to a Deployment
@@ -694,8 +694,8 @@ $ ./certs/ckad/task.sh check 1.8
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 1.9
-== setup task 1.9
+$ ./platform-engineering/task.sh setup 33.9
+== setup task 33.9
 pod/api condition met
 NAME   READY   STATUS    RESTARTS   AGE   LABELS
 api    1/1     Running   0          1s    app=api,tier=backend
@@ -761,12 +761,12 @@ Delete the bare pod only after the Deployment exists, but know that the Deployme
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 1.9
-== check task 1.9
+$ ./platform-engineering/task.sh check 33.9
+== check task 33.9
   PASS  Deployment api has 3 ready replicas
   PASS  its pods keep the labels, image, env and requests of the old pod
   PASS  the bare pod api is gone
-== task 1.9: 3 passed, 0 failed
+== task 33.9: 3 passed, 0 failed
 ```
 
 ## Task 10: Init, sidecar and main container in one pod
@@ -836,15 +836,15 @@ GAMMA
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 1.10
-== check task 1.10
+$ ./platform-engineering/task.sh check 33.10
+== check task 33.10
   PASS  pod pipeline: init container fetch runs once, exporter is a native sidecar
   PASS  the main container is transform, and one emptyDir volume work is shared by all three
   PASS  pod pipeline is Ready
   PASS  the exporter serves output.txt in capitals on port 8080
-== task 1.10: 4 passed, 0 failed
+== task 33.10: 4 passed, 0 failed
 ```
 
 ## Clean up
 
-`./certs/ckad/cluster/reset.sh` deletes every namespace the tasks created, the PersistentVolume `ckad-pv-data`, the images in podman's store and the registry's contents, and leaves the cluster as the CKS track expects it.
+`./platform-engineering/practice/app-extras/reset.sh` deletes every namespace the tasks created, the PersistentVolume `ckad-pv-data`, the images in podman's store and the registry's contents, and leaves the cluster as the CKS track expects it.

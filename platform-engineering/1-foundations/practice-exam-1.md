@@ -1,41 +1,41 @@
-# CKAD mock exam 1
+# Timed practice exam 1: applications, one topic per task
 
-> New to a term here? The [CKAD glossary](glossary.md) explains every term this track uses.
+> New to a term here? The [glossary](../glossary.md#applications-on-kubernetes) explains every term these modules use.
 
-**Before the mock exam:** all five domain files, or the confidence to skip them, and the [practice cluster](README.md#the-practice-cluster) with the CKAD extras. This is the first of three mock exams, and [mock exam 2](mock-exam-2.md) and [mock exam 3](mock-exam-3.md) get harder.
+**Before the practice exam:** modules 33 to 37, or the confidence to skip them, and the [practice cluster](../practice-cluster.md#the-application-extras) with the application extras. This is the first of three practice exams, and [practice exam 2](practice-exam-2.md) and [practice exam 3](practice-exam-3.md) get harder.
 
-The real exam gives you 2 hours for 15 to 20 tasks, and this mock gives you 2 hours for 16 tasks worth 100 points, one topic per task, spread over the five domains by their weights. A script checks the cluster's state afterwards and gives partial credit, the way the exam does.
+The real exam gives you 2 hours for 15 to 20 tasks, and this practice exam gives you 2 hours for 16 tasks worth 100 points, one topic per task, spread over modules 33 to 37 by their size. A script checks the cluster's state afterwards and gives partial credit, the way the exam does.
 
 ## Rules
 
-1. Start from a clean cluster with `./certs/ckad/cluster/reset.sh`, then run `./certs/ckad/mock-exam/setup.sh`. In the test run, the reset took 45 seconds and the setup 27 seconds, because the nodes already had the images; on a new cluster the first run also downloads them.
+1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./platform-engineering/practice-exam.sh setup 1`. In the test run, the reset took 45 seconds and the setup 27 seconds, because the nodes already had the images; on a new cluster the first run also downloads them.
 2. The clock starts when `setup.sh` ends, because it writes the start time, and `score.sh` prints the minutes since then and flags a run over 120 minutes.
 3. Work only on `cks-cp`, in a root shell from `orb -m cks-cp` and `sudo -i`, and use only the documentation the exam allows: kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
 4. Don't open the solutions while the timer runs, because the score only means something when you worked without them.
-5. When time is up, score from your Mac with `./certs/ckad/mock-exam/score.sh`, or score single tasks with `./certs/ckad/mock-exam/score.sh 4 9`.
+5. When time is up, score from your Mac with `./platform-engineering/practice-exam.sh score 1`, or score single tasks with `./platform-engineering/practice-exam.sh score 1 4 9`.
 
 Task files sit in `/opt/ckad/m1/N` on `cks-cp`, where N is the task's number. Every task names its namespace, and the namespaces already exist.
 
 ## Tasks
 
-| # | Task | Points | Domain |
+| # | Task | Points | Module |
 |---|---|---|---|
-| 1 | Build, push and run an image | 8 | 01 |
-| 2 | A log sidecar | 6 | 01 |
-| 3 | A nightly CronJob | 5 | 01 |
-| 4 | Update, then roll back | 6 | 02 |
-| 5 | A quarter of the traffic | 6 | 02 |
-| 6 | A Helm release | 6 | 02 |
-| 7 | A Kustomize overlay | 6 | 02 |
-| 8 | Probes for an API | 6 | 03 |
-| 9 | Why the pod crashes | 5 | 03 |
-| 10 | The hungriest pod | 4 | 03 |
-| 11 | ConfigMap and Secret | 8 | 04 |
-| 12 | Defaults and requests | 6 | 04 |
-| 13 | A ServiceAccount that reads ConfigMaps | 8 | 04 |
-| 14 | Run as a normal user | 6 | 04 |
-| 15 | Service and Ingress | 8 | 05 |
-| 16 | Only the frontend reaches the API | 6 | 05 |
+| 1 | Build, push and run an image | 8 | 33 |
+| 2 | A log sidecar | 6 | 33 |
+| 3 | A nightly CronJob | 5 | 33 |
+| 4 | Update, then roll back | 6 | 34 |
+| 5 | A quarter of the traffic | 6 | 34 |
+| 6 | A Helm release | 6 | 34 |
+| 7 | A Kustomize overlay | 6 | 34 |
+| 8 | Probes for an API | 6 | 35 |
+| 9 | Why the pod crashes | 5 | 35 |
+| 10 | The hungriest pod | 4 | 35 |
+| 11 | ConfigMap and Secret | 8 | 36 |
+| 12 | Defaults and requests | 6 | 36 |
+| 13 | A ServiceAccount that reads ConfigMaps | 8 | 36 |
+| 14 | Run as a normal user | 6 | 36 |
+| 15 | Service and Ingress | 8 | 37 |
+| 16 | Only the frontend reaches the API | 6 | 37 |
 
 ### Task 1: Build, push and run an image (8 points)
 
@@ -244,7 +244,7 @@ k -n k1-logs logs deploy/importer --previous | grep ERROR > /opt/ckad/m1/9/error
 k -n k1-logs get pod -l app=importer -o jsonpath='{.items[0].status.containerStatuses[0].lastState.terminated.exitCode}' > /opt/ckad/m1/9/exit-code.txt
 ```
 
-`k describe pod` shows the same exit code under `Last State: Terminated`. When the pod sits in `Error`, use `k logs` without `--previous`, as [domain 03](03-application-observability-and-maintenance.md#concept-logs-events-and-metrics) explains.
+`k describe pod` shows the same exit code under `Last State: Terminated`. When the pod sits in `Error`, use `k logs` without `--previous`, as [module 35](35-observing-and-debugging-applications.md#concept-logs-events-and-metrics) explains.
 
 </details>
 
@@ -405,4 +405,4 @@ A default deny for the whole namespace would also stop `batch` from reaching `fr
 
 `score.sh` runs two to four checks per task and splits the task's points evenly over them, rounded down, then prints each check, the points per task and the total. A task scores only when its first check, the main change, passes, so checks such as "the key is not an environment variable" earn nothing on an untouched cluster, where they pass by themselves.
 
-In the test run, on a cluster fresh from `reset.sh` and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` After `./certs/ckad/mock-exam/solve.sh`, which applies every solution above and took 62 seconds, it was `TOTAL: 100 of 100 points (100%).` The first full run scored 95, because the reference solution of task 9 read the log with `--previous` while the pod sat in `Error`, the trap that [domain 03](03-application-observability-and-maintenance.md#concept-logs-events-and-metrics) describes; the solution now reads both logs, and the fixed task scored 5 of 5.
+In the test run, on a cluster fresh from `reset.sh` and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` After `./platform-engineering/practice-exam.sh solve 1`, which applies every solution above and took 62 seconds, it was `TOTAL: 100 of 100 points (100%).` The first full run scored 95, because the reference solution of task 9 read the log with `--previous` while the pod sat in `Error`, the trap that [module 35](35-observing-and-debugging-applications.md#concept-logs-events-and-metrics) describes; the solution now reads both logs, and the fixed task scored 5 of 5.

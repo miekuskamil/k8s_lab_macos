@@ -1,17 +1,17 @@
-# CKS mock exam 2
+# Timed practice exam 5: security, when topics collide
 
-> New to a term here? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
+> New to a term here? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this mock exam:** [mock exam 1](mock-exam.md) under time, all tasks of each domain file, and the [practice cluster](../README.md#the-practice-cluster) and the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium), both freshly reset.
+**Before this practice exam:** [practice exam 4](practice-exam-4.md) under time, all tasks of modules 38 to 44, and the [practice cluster](../practice-cluster.md) and the [Lima VM](../kernel-and-host/README.md#the-lima-vm-on-a-mac), both freshly reset.
 
-Mock exam 1 checks that you know each topic, while this one checks that you keep your head when topics collide. The API server is down when you start, two tasks write the same admission configuration file, and one fix makes the cluster refuse every new pod until a second fix lands, which is how the real exam feels after the first hour. You get 2 hours for 17 tasks worth 100 points, on two clusters, the OrbStack cluster and the Lima VM.
+Practice exam 4 checks that you know each topic, while this one checks that you keep your head when topics collide. The API server is down when you start, two tasks write the same admission configuration file, and one fix makes the cluster refuse every new pod until a second fix lands, which is how the real exam feels after the first hour. You get 2 hours for 17 tasks worth 100 points, on two clusters, the OrbStack cluster and the Lima VM.
 
 ## Rules
 
 1. Start fresh, with both resets and the setup on your Mac:
 
    ```console
-   $ ./certs/cks/cluster/reset.sh && ./certs/cks/cluster/lima.sh reset
+   $ ./platform-engineering/practice/cluster/reset.sh && ./platform-engineering/practice/cluster/lima.sh reset
    === wiping cks-w1
    === wiping cks-cp
    ...
@@ -26,44 +26,44 @@ Mock exam 1 checks that you know each topic, while this one checks that you keep
    === 4/4 Cilium 1.20.4
    ...
    cluster ready
-   $ MOCK=2 ./certs/cks/mock-exam/setup.sh
+   $ ./platform-engineering/practice-exam.sh setup 5
    == setting up task 13: The image policy fails open
    == setting up task 16: Who deleted the Secret?
    ...
-   Ready. The clock runs from now: 2 hours. Open certs/cks/mock-exam-2.md.
-   Score yourself at any time with MOCK=2 ./certs/cks/mock-exam/score.sh
+   Ready. The clock runs from now: 2 hours. Open platform-engineering/3-advanced/practice-exam-5.md.
+   Score yourself at any time with ./platform-engineering/practice-exam.sh score 5
    ```
 
    In the final test run, the OrbStack reset took 4 minutes 59 seconds, the Lima reset 1 minute 24 seconds, and the setup 2 minutes 11 seconds. The setup breaks the API server in its last step, so it doesn't wait for any pods to start.
 
 2. The clock starts when `setup.sh` ends, because it writes the start time, and `score.sh` prints the minutes since then and says when you went over 120.
-3. Work only on the nodes, through `orb -m cks-cp`, `orb -m cks-w1` and `./certs/cks/cluster/lima.sh shell`, and use only the documentation the exam allows.
+3. Work only on the nodes, through `orb -m cks-cp`, `orb -m cks-w1` and `./platform-engineering/practice/cluster/lima.sh shell`, and use only the documentation the exam allows.
 4. Don't open the solutions while the clock runs, because the score only means something when you worked without them.
-5. Score from your Mac with `MOCK=2 ./certs/cks/mock-exam/score.sh`, or score single tasks with `MOCK=2 ./certs/cks/mock-exam/score.sh 3 9`.
+5. Score from your Mac with `./platform-engineering/practice-exam.sh score 5`, or score single tasks with `./platform-engineering/practice-exam.sh score 5 3 9`.
 
 Each task names its host, and `kubectl` runs on `cks-cp` for the OrbStack cluster and on `cks-lima` for the tasks marked Lima.
 
 ## Tasks
 
-| # | Task | Points | Domain | Host |
+| # | Task | Points | Module | Host |
 |---|---|---|---|---|
-| 1 | The API server is down | 8 | 02 | cks-cp |
-| 2 | Lock down the payments namespace | 6 | 01 | cks-cp |
-| 3 | HTTP rules with Cilium | 6 | 01 | cks-lima |
-| 4 | Harden the worker's kubelet | 6 | 01 | cks-w1 |
-| 5 | TLS 1.3 only | 5 | 01 | cks-cp |
-| 6 | Who may exec into pods? | 6 | 02 | cks-cp |
-| 7 | A token for the vault | 5 | 02 | cks-cp |
-| 8 | A backdoor on the worker | 4 | 03 | cks-w1 |
-| 9 | AppArmor for the web Deployment | 7 | 06 | cks-lima |
-| 10 | Read a Secret from etcd | 5 | 04 | cks-cp |
-| 11 | Pod Security for every namespace | 7 | 04 | cks-cp |
-| 12 | Pods with host access | 4 | 04 | cks-cp |
-| 13 | The image policy fails open | 7 | 05 | cks-cp |
-| 14 | Pin by digest | 4 | 05 | cks-cp |
-| 15 | Catch package managers with Falco | 8 | 06 | cks-w1, cks-cp |
-| 16 | Who deleted the Secret? | 6 | 06 | cks-cp |
-| 17 | Immutable nginx | 6 | 06 | cks-cp |
+| 1 | The API server is down | 8 | 39 | cks-cp |
+| 2 | Lock down the payments namespace | 6 | 38 | cks-cp |
+| 3 | HTTP rules with Cilium | 6 | 38 | cks-lima |
+| 4 | Harden the worker's kubelet | 6 | 38 | cks-w1 |
+| 5 | TLS 1.3 only | 5 | 38 | cks-cp |
+| 6 | Who may exec into pods? | 6 | 39 | cks-cp |
+| 7 | A token for the vault | 5 | 39 | cks-cp |
+| 8 | A backdoor on the worker | 4 | 40 | cks-w1 |
+| 9 | AppArmor for the web Deployment | 7 | 43 | cks-lima |
+| 10 | Read a Secret from etcd | 5 | 41 | cks-cp |
+| 11 | Pod Security for every namespace | 7 | 41 | cks-cp |
+| 12 | Pods with host access | 4 | 41 | cks-cp |
+| 13 | The image policy fails open | 7 | 42 | cks-cp |
+| 14 | Pin by digest | 4 | 42 | cks-cp |
+| 15 | Catch package managers with Falco | 8 | 43 | cks-w1, cks-cp |
+| 16 | Who deleted the Secret? | 6 | 43 | cks-cp |
+| 17 | Immutable nginx | 6 | 43 | cks-cp |
 
 ### Task 1: The API server is down (8 points)
 
@@ -87,7 +87,7 @@ E1115 20:48:41.880392       1 run.go:72] "command failed" err="open /etc/kuberne
 
 The transcript ran `crictl logs` with the ID of the newest exited container.
 
-The last log line names the file the API server misses, and `ls /etc/kubernetes/pki/` shows `apiserver.key`. Fix that line, wait, and read the newest container's log again, which shows that the API server now starts but fails to reach etcd. Compare its `--etcd-servers` with etcd's own flags, as [02, task 10](02-cluster-hardening.md#task-10-repair-etcd) does:
+The last log line names the file the API server misses, and `ls /etc/kubernetes/pki/` shows `apiserver.key`. Fix that line, wait, and read the newest container's log again, which shows that the API server now starts but fails to reach etcd. Compare its `--etcd-servers` with etcd's own flags, as [module 39, task 10](../2-intermediate/39-hardening-access-to-the-api.md#task-10-repair-etcd) does:
 
 ```console
 root@cks-cp:~# grep etcd-servers /etc/kubernetes/manifests/kube-apiserver.yaml
@@ -96,7 +96,7 @@ root@cks-cp:~# grep listen-client-urls /etc/kubernetes/manifests/etcd.yaml
     - --listen-client-urls=https://127.0.0.1:2379,https://192.168.139.194:2379
 ```
 
-Two lines changed: `--tls-private-key-file` points to `apiserver.pem` instead of `apiserver.key`, and `--etcd-servers` names port 2380, etcd's peer port, instead of 2379. Fix both, one restart at a time, and read the log after each. [02, tasks 9 and 10](02-cluster-hardening.md#task-9-repair-the-api-server) practise the same hunt.
+Two lines changed: `--tls-private-key-file` points to `apiserver.pem` instead of `apiserver.key`, and `--etcd-servers` names port 2380, etcd's peer port, instead of 2379. Fix both, one restart at a time, and read the log after each. [module 39, tasks 9 and 10](../2-intermediate/39-hardening-access-to-the-api.md#task-9-repair-the-api-server) practise the same hunt.
 
 </details>
 
@@ -144,7 +144,7 @@ spec:
     ports: [{protocol: TCP, port: 80}]
 ```
 
-`postgres` lives in another namespace without policies, so it accepts the connection. The `gateway` egress rule and the DNS rule follow [01, task 1](01-cluster-setup.md#task-1-default-deny-and-one-allowed-path).
+`postgres` lives in another namespace without policies, so it accepts the connection. The `gateway` egress rule and the DNS rule follow [module 38, task 1](../2-intermediate/38-setting-up-a-secure-cluster.md#task-1-default-deny-and-one-allowed-path).
 
 </details>
 
@@ -186,7 +186,7 @@ Each item under `http` is one allowed kind of request, and a request passes when
 <details>
 <summary>Solution</summary>
 
-Set `authentication.anonymous.enabled: false`, `authorization.mode: Webhook` and `readOnlyPort: 0` in `/var/lib/kubelet/config.yaml`, then run `systemctl restart kubelet`. [01, task 13](01-cluster-setup.md#task-13-harden-the-kubelet) explains each setting.
+Set `authentication.anonymous.enabled: false`, `authorization.mode: Webhook` and `readOnlyPort: 0` in `/var/lib/kubelet/config.yaml`, then run `systemctl restart kubelet`. [module 38, task 13](../2-intermediate/38-setting-up-a-secure-cluster.md#task-13-harden-the-kubelet) explains each setting.
 
 </details>
 
@@ -246,7 +246,7 @@ rolebinding.rbac.authorization.k8s.io/restart-web created
 <details>
 <summary>Solution</summary>
 
-Set `automountServiceAccountToken: false` in the pod spec, and add a projected volume with a `serviceAccountToken` source (`audience: vault.m2`, `expirationSeconds: 1800`, `path: vault-token`) mounted at `/var/run/secrets/tokens`. [02, task 7](02-cluster-hardening.md#task-7-a-bound-token-for-another-audience) shows the full YAML.
+Set `automountServiceAccountToken: false` in the pod spec, and add a projected volume with a `serviceAccountToken` source (`audience: vault.m2`, `expirationSeconds: 1800`, `path: vault-token`) mounted at `/var/run/secrets/tokens`. [module 39, task 7](../2-intermediate/39-hardening-access-to-the-api.md#task-7-a-bound-token-for-another-audience) shows the full YAML.
 
 </details>
 
@@ -335,7 +335,7 @@ root@cks-cp:~# etcdctl --endpoints=https://127.0.0.1:2379 --cacert=/etc/kubernet
 VWVdGs0ADxi6ev1R
 ```
 
-Secrets sit under `/registry/secrets/<namespace>/<name>`, and without encryption the value is protobuf with the plain password inside. `tr` turns every run of unprintable bytes into one line break, so the field name `password` lands on one line and its value on the next, and `tail -1 | tee` writes that value to the file while it shows it. `strings` does the same job where binutils is installed, but `cks-cp` lacks it. Search for the exact line `password`, because the object's `managedFields` also contain the text `f:password`, earlier in the value. That this works at all is the reason for [04, task 2](04-minimize-microservice-vulnerabilities.md#task-2-encrypt-secrets-at-rest).
+Secrets sit under `/registry/secrets/<namespace>/<name>`, and without encryption the value is protobuf with the plain password inside. `tr` turns every run of unprintable bytes into one line break, so the field name `password` lands on one line and its value on the next, and `tail -1 | tee` writes that value to the file while it shows it. `strings` does the same job where binutils is installed, but `cks-cp` lacks it. Search for the exact line `password`, because the object's `managedFields` also contain the text `f:password`, earlier in the value. That this works at all is the reason for [module 41, task 2](41-hardening-workloads.md#task-2-encrypt-secrets-at-rest).
 
 </details>
 
@@ -348,7 +348,7 @@ Secrets sit under `/registry/secrets/<namespace>/<name>`, and without encryption
 <details>
 <summary>Solution</summary>
 
-The file already configures ImagePolicyWebhook for task 13, and one `AdmissionConfiguration` holds every plugin, so add PodSecurity as a second item of its `plugins` list, the way [04, task 7](04-minimize-microservice-vulnerabilities.md#task-7-cluster-wide-pod-security-defaults-with-exemptions) writes it:
+The file already configures ImagePolicyWebhook for task 13, and one `AdmissionConfiguration` holds every plugin, so add PodSecurity as a second item of its `plugins` list, the way [module 41, task 7](41-hardening-workloads.md#task-7-cluster-wide-pod-security-defaults-with-exemptions) writes it:
 
 ```yaml
 - name: PodSecurity
@@ -372,7 +372,7 @@ Then restart the API server by moving its manifest out and back. The flag `--adm
 <details>
 <summary>Solution</summary>
 
-Use the `jsonpath` from [04, task 8](04-minimize-microservice-vulnerabilities.md#task-8-pods-that-reach-into-the-node), and add `{.spec.hostIPC}`. `shell` shares IPC, `backup` mounts `/etc`, and `sidecar-priv` hides a privileged container in second place, so only `app` stays.
+Use the `jsonpath` from [module 41, task 8](41-hardening-workloads.md#task-8-pods-that-reach-into-the-node), and add `{.spec.hostIPC}`. `shell` shares IPC, `backup` mounts `/etc`, and `sidecar-priv` hides a privileged container in second place, so only `app` stays.
 
 </details>
 
@@ -385,7 +385,7 @@ Use the `jsonpath` from [04, task 8](04-minimize-microservice-vulnerabilities.md
 <details>
 <summary>Solution</summary>
 
-The setup left `defaultAllow: true` in `/etc/kubernetes/admission/config.yaml` and stopped and disabled the service. Set `defaultAllow: false`, run `systemctl enable --now image-policy`, and restart the API server, in the order [05, task 7](05-supply-chain-security.md#task-7-the-back-end-is-down-and-nobody-noticed) explains. Do this one early, because once `defaultAllow` is false and the back end is down, every pod that another task creates fails.
+The setup left `defaultAllow: true` in `/etc/kubernetes/admission/config.yaml` and stopped and disabled the service. Set `defaultAllow: false`, run `systemctl enable --now image-policy`, and restart the API server, in the order [module 42, task 7](42-supply-chain-security.md#task-7-the-back-end-is-down-and-nobody-noticed) explains. Do this one early, because once `defaultAllow` is false and the back end is down, every pod that another task creates fails.
 
 </details>
 
@@ -420,7 +420,7 @@ The transcript ran the second command with the digest that the first command pri
 <details>
 <summary>Solution</summary>
 
-The rules file follows [06, task 7](06-monitoring-logging-runtime-security.md#task-7-a-falco-rule-with-a-list-and-a-macro). Once Falco has reloaded it, search the journal for the new alert:
+The rules file follows [module 43, task 7](43-runtime-security-and-auditing.md#task-7-a-falco-rule-with-a-list-and-a-macro). Once Falco has reloaded it, search the journal for the new alert:
 
 ```console
 root@cks-w1:~# journalctl -u falco-modern-bpf --since -2min | grep 'Critical pkg (ns=m2-run'
@@ -472,7 +472,7 @@ rolebinding.rbac.authorization.k8s.io "erin" deleted from m2-audit namespace
 <details>
 <summary>Solution</summary>
 
-Set `readOnlyRootFilesystem: true`, `allowPrivilegeEscalation: false` and `seccompProfile: {type: RuntimeDefault}` in the container's `securityContext`, and add `emptyDir` volumes at `/var/cache/nginx`, `/run` and `/tmp`, as in [06, task 3](06-monitoring-logging-runtime-security.md#task-3-make-a-container-immutable).
+Set `readOnlyRootFilesystem: true`, `allowPrivilegeEscalation: false` and `seccompProfile: {type: RuntimeDefault}` in the container's `securityContext`, and add `emptyDir` volumes at `/var/cache/nginx`, `/run` and `/tmp`, as in [module 43, task 3](43-runtime-security-and-auditing.md#task-3-make-a-container-immutable).
 
 </details>
 
@@ -480,6 +480,6 @@ Set `readOnlyRootFilesystem: true`, `allowPrivilegeEscalation: false` and `secco
 
 `score.sh` runs two to six checks per task, splits the task's points evenly over them, rounded down, and gives points only when a task's first check passes.
 
-In the final test run, on clusters fresh from both resets and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` with `TIME: 2 minutes since setup, 118 minutes left.` After `MOCK=2 ./certs/cks/mock-exam/solve.sh`, which applies every solution above in its order (1, 13, 11, 5, then the rest) in 3 minutes 43 seconds, it was `TOTAL: 100 of 100 points (100%).`
+In the final test run, on clusters fresh from both resets and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` with `TIME: 2 minutes since setup, 118 minutes left.` After `./platform-engineering/practice-exam.sh solve 5`, which applies every solution above in its order (1, 13, 11, 5, then the rest) in 3 minutes 43 seconds, it was `TOTAL: 100 of 100 points (100%).`
 
 Earlier test runs found three faults in the scoring, and each changed the checks. A check that asks "is it gone?" passed while the API server was down, so it now also asks something that must succeed. Right after the API server restarts for task 5, Calico needed longer than 30 seconds to apply new policies, so the reachability checks of task 2 retry for up to 3 minutes while the API server answers. `wget` also exits with an error on a `403`, which the scorer read as a failed check until it looked at the output instead. While the API server is down, `score.sh` takes a few minutes, because the network checks retry before they give up.

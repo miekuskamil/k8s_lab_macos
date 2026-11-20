@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagrams for the CKAD track (certs/ckad) with the kit in ../bbg.py.
+"""Draw the diagrams for the application modules (platform-engineering/practice-cluster.md and modules 33 to 37) with the kit in ../bbg.py.
 
   ckad-practice-cluster   the CKS machines with the CKAD extras on top (README)
   ckad-image-flow         Dockerfile to registry to node, the four steps of tasks 1 and 2 (01)

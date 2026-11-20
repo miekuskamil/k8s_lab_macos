@@ -1,41 +1,41 @@
-# CKAD mock exam 3
+# Timed practice exam 3: applications, several objects per task
 
-> New to a term here? The [CKAD glossary](glossary.md) explains every term this track uses.
+> New to a term here? The [glossary](../glossary.md#applications-on-kubernetes) explains every term these modules use.
 
-**Before the mock exam:** [mock exam 2](mock-exam-2.md), and the [practice cluster](README.md#the-practice-cluster) with the CKAD extras.
+**Before the practice exam:** [practice exam 2](practice-exam-2.md), and the [practice cluster](../practice-cluster.md#the-application-extras) with the application extras.
 
-This mock aims at the difficulty of the killer.sh simulator, which most candidates find harder than the real exam. Each task asks for several objects that have to fit together, such as a StatefulSet with a claim per pod, three NetworkPolicies for three tiers, or a ClusterRole bound in two namespaces, and a few tasks need a flag that the earlier domains only mention once. It has 16 tasks worth 100 points, with the same 2-hour clock, and 80 points inside the time is a good sign for the exam.
+This practice exam is the hardest of the three, harder than most real exam tasks. Each task asks for several objects that have to fit together, such as a StatefulSet with a claim per pod, three NetworkPolicies for three tiers, or a ClusterRole bound in two namespaces, and a few tasks need a flag that the earlier domains only mention once. It has 16 tasks worth 100 points, with the same 2-hour clock, and 80 points inside the time is a good sign for the exam.
 
 ## Rules
 
-1. Start from a clean cluster with `./certs/ckad/cluster/reset.sh`, then run `MOCK=3 ./certs/ckad/mock-exam/setup.sh`. In the test run, the reset took 46 seconds and the setup 57 seconds, most of it for the two Helm releases of task 3.
-2. The clock starts when `setup.sh` ends, and `MOCK=3 ./certs/ckad/mock-exam/score.sh` prints the minutes since then.
+1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./platform-engineering/practice-exam.sh setup 3`. In the test run, the reset took 46 seconds and the setup 57 seconds, most of it for the two Helm releases of task 3.
+2. The clock starts when `setup.sh` ends, and `./platform-engineering/practice-exam.sh score 3` prints the minutes since then.
 3. Work only on `cks-cp`, and use only kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
 4. Don't open the solutions while the timer runs.
-5. Score from your Mac with `MOCK=3 ./certs/ckad/mock-exam/score.sh`.
+5. Score from your Mac with `./platform-engineering/practice-exam.sh score 3`.
 
 Task files sit in `/opt/ckad/m3/N` on `cks-cp`.
 
 ## Tasks
 
-| # | Task | Points | Domain |
+| # | Task | Points | Module |
 |---|---|---|---|
-| 1 | Image with a build argument | 8 | 01 |
+| 1 | Image with a build argument | 8 | 33 |
 | 2 | Blue-green behind an Ingress | 7 | 02, 05 |
-| 3 | Helm: values, failure, rollback | 7 | 02 |
+| 3 | Helm: values, failure, rollback | 7 | 34 |
 | 4 | StatefulSet with its own volumes | 7 | 01, 05 |
 | 5 | Init, sidecar, probes | 7 | 01, 03 |
-| 6 | A ClusterRole for custom resources | 6 | 04 |
-| 7 | Custom resources by the numbers | 4 | 04 |
-| 8 | Three tiers, three policies | 7 | 05 |
-| 9 | Quota and LimitRange together | 6 | 04 |
-| 10 | One volume, two sources | 6 | 04 |
-| 11 | Debug a copy of a crashing pod | 6 | 03 |
-| 12 | A history to read | 6 | 02 |
-| 13 | Two overlays from one base | 7 | 02 |
-| 14 | A Job that cleans up after itself | 5 | 01 |
-| 15 | An Ingress with a default backend | 5 | 05 |
-| 16 | Port 80 without root | 6 | 04 |
+| 6 | A ClusterRole for custom resources | 6 | 36 |
+| 7 | Custom resources by the numbers | 4 | 36 |
+| 8 | Three tiers, three policies | 7 | 37 |
+| 9 | Quota and LimitRange together | 6 | 36 |
+| 10 | One volume, two sources | 6 | 36 |
+| 11 | Debug a copy of a crashing pod | 6 | 35 |
+| 12 | A history to read | 6 | 34 |
+| 13 | Two overlays from one base | 7 | 34 |
+| 14 | A Job that cleans up after itself | 5 | 33 |
+| 15 | An Ingress with a default backend | 5 | 37 |
+| 16 | Port 80 without root | 6 | 36 |
 
 ### Task 1: Image with a build argument (8 points)
 
@@ -495,6 +495,6 @@ busybox's `httpd` binds port 80 as user 101 here, but not because of the capabil
 
 ## Scoring
 
-`score.sh` runs two to four checks per task, splits the task's points evenly over them, rounded down, and gives a task points only when its first check, the main change, passes. In the final test run it scored `TOTAL: 0 of 100 points (0%).` after `setup.sh`, and `TOTAL: 100 of 100 points (100%).` after `MOCK=3 ./certs/ckad/mock-exam/solve.sh`, which took 59 seconds.
+`score.sh` runs two to four checks per task, splits the task's points evenly over them, rounded down, and gives a task points only when its first check, the main change, passes. In the final test run it scored `TOTAL: 0 of 100 points (0%).` after `setup.sh`, and `TOTAL: 100 of 100 points (100%).` after `./platform-engineering/practice-exam.sh solve 3`, which took 59 seconds.
 
-The first run of this mock scored 84, and the four lost tasks taught more than the ones that passed. Task 1's init container waited for a name that only the nodes resolve, task 9's quota deadlock needed the scale to 0, task 8's first check passed on an untouched cluster, and task 10's check counted the ServiceAccount token, which Kubernetes also mounts as a projected volume. The text above includes each fix.
+The first run of this practice exam scored 84, and the four lost tasks taught more than the ones that passed. Task 1's init container waited for a name that only the nodes resolve, task 9's quota deadlock needed the scale to 0, task 8's first check passed on an untouched cluster, and task 10's check counted the ServiceAccount token, which Kubernetes also mounts as a projected volume. The text above includes each fix.

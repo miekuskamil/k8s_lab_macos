@@ -1,44 +1,44 @@
-# CKS mock exam 1
+# Timed practice exam 4: security, one topic per task
 
-> New to a term here? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
+> New to a term here? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before the mock exam:** all six domain files, or the confidence to skip them, and the [practice cluster](../README.md#the-practice-cluster), freshly reset. This is the first of three mock exams, and [mock exam 2](mock-exam-2.md) and [mock exam 3](mock-exam-3.md) get harder.
+**Before the practice exam:** modules 38 to 43, or the confidence to skip them, and the [practice cluster](../practice-cluster.md), freshly reset. This is the first of three practice exams, and [practice exam 5](practice-exam-5.md) and [practice exam 6](practice-exam-6.md) get harder.
 
-The real exam gives you 2 hours for 15 to 20 tasks on several clusters, and this mock gives you 2 hours for 17 tasks on one cluster, worth 100 points in total. The weights roughly follow the curriculum's domains, and a script checks the cluster's state and gives partial credit, the way the exam does.
+The real exam gives you 2 hours for 15 to 20 tasks on several clusters, and this practice exam gives you 2 hours for 17 tasks on one cluster, worth 100 points in total. The points spread over modules 38 to 43 by their size, and a script checks the cluster's state and gives partial credit, the way the exam does.
 
 ## Rules
 
-1. Start fresh with `./certs/cks/cluster/reset.sh`, then `./certs/cks/mock-exam/setup.sh`. In the test run, the setup took 8 seconds, because the node already had the images, while on new machines the first run also downloads them.
+1. Start fresh with `./platform-engineering/practice/cluster/reset.sh`, then `./platform-engineering/practice-exam.sh setup 4`. In the test run, the setup took 8 seconds, because the node already had the images, while on new machines the first run also downloads them.
 2. The clock starts when `setup.sh` ends, because it writes the start time, and `score.sh` prints the minutes since then and flags a run over 120 minutes.
 3. Work only on the nodes, through `orb -m cks-cp` and `orb -m cks-w1`, and use only the documentation the exam allows: kubernetes.io, and the docs of Falco, bom, etcd, ingress-nginx, Cilium and Istio.
 4. Don't open the solutions while the timer runs, because the score only means something when you worked without them.
-5. When time is up, score from your Mac with `./certs/cks/mock-exam/score.sh`, or score single tasks with `./certs/cks/mock-exam/score.sh 4 9`.
+5. When time is up, score from your Mac with `./platform-engineering/practice-exam.sh score 4`, or score single tasks with `./platform-engineering/practice-exam.sh score 4 4 9`.
 
-**Do task 1 first.** `kubeadm upgrade apply` rewrites every static pod manifest from the cluster's stored configuration, so it wipes any API server flag you added before it. The real exam avoids this by giving the upgrade its own cluster, but this mock shares one cluster, so the order matters, and noticing that is part of the test.
+**Do task 1 first.** `kubeadm upgrade apply` rewrites every static pod manifest from the cluster's stored configuration, so it wipes any API server flag you added before it. The real exam avoids this by giving the upgrade its own cluster, but this practice exam shares one cluster, so the order matters, and noticing that is part of the test.
 
 Each task names the host it runs on, and `kubectl` always runs on `cks-cp`.
 
 ## Tasks
 
-| # | Task | Points | Domain |
+| # | Task | Points | Module |
 |---|---|---|---|
-| 1 | Upgrade the control plane | 7 | 02 |
-| 2 | Protect the database | 7 | 01 |
-| 3 | CIS findings | 6 | 01 |
-| 4 | Ingress with TLS | 4 | 01 |
-| 5 | Take cluster-admin away | 6 | 02 |
-| 6 | No token in the metrics pod | 4 | 02 |
-| 7 | Remove a web server from a node | 4 | 03 |
-| 8 | An intern with root | 4 | 03 |
-| 9 | Restricted namespace | 6 | 04 |
-| 10 | Secrets encrypted with secretbox | 7 | 04 |
-| 11 | A sandboxed pod | 5 | 04 |
-| 12 | Vulnerable images | 5 | 05 |
-| 13 | Approved registries only | 9 | 05 |
-| 14 | A smaller Node.js image | 4 | 05 |
-| 15 | Audit policy | 8 | 06 |
-| 16 | Falco finds a snooper | 8 | 06 |
-| 17 | Harden a Deployment | 6 | 06 |
+| 1 | Upgrade the control plane | 7 | 39 |
+| 2 | Protect the database | 7 | 38 |
+| 3 | CIS findings | 6 | 38 |
+| 4 | Ingress with TLS | 4 | 38 |
+| 5 | Take cluster-admin away | 6 | 39 |
+| 6 | No token in the metrics pod | 4 | 39 |
+| 7 | Remove a web server from a node | 4 | 40 |
+| 8 | An intern with root | 4 | 40 |
+| 9 | Restricted namespace | 6 | 41 |
+| 10 | Secrets encrypted with secretbox | 7 | 41 |
+| 11 | A sandboxed pod | 5 | 41 |
+| 12 | Vulnerable images | 5 | 42 |
+| 13 | Approved registries only | 9 | 42 |
+| 14 | A smaller Node.js image | 4 | 42 |
+| 15 | Audit policy | 8 | 43 |
+| 16 | Falco finds a snooper | 8 | 43 |
+| 17 | Harden a Deployment | 6 | 43 |
 
 ### Task 1: Upgrade the control plane (7 points)
 
@@ -79,7 +79,7 @@ root@cks-cp:~# k uncordon cks-cp
 node/cks-cp uncordoned
 ```
 
-The worker stays at 1.37.1, which is fine, because a kubelet older than the API server is within the skew rule. [02, task 4](02-cluster-hardening.md#task-4-upgrade-the-cluster-with-kubeadm) explains the steps.
+The worker stays at 1.37.1, which is fine, because a kubelet older than the API server is within the skew rule. [module 39, task 4](../2-intermediate/39-hardening-access-to-the-api.md#task-4-upgrade-the-cluster-with-kubeadm) explains the steps.
 
 </details>
 
@@ -293,7 +293,7 @@ User intern is not allowed to run sudo on cks-w1.
 <details>
 <summary>Solution</summary>
 
-Label the namespace, then add to the pod template what the warning lists, as in [04, task 1](04-minimize-microservice-vulnerabilities.md#task-1-enforce-the-restricted-standard):
+Label the namespace, then add to the pod template what the warning lists, as in [module 41, task 1](41-hardening-workloads.md#task-1-enforce-the-restricted-standard):
 
 ```console
 root@cks-cp:~# k label ns m-secure pod-security.kubernetes.io/enforce=restricted
@@ -329,7 +329,7 @@ The transcript leaves out the editor session, which makes the change the YAML be
 <details>
 <summary>Solution</summary>
 
-The steps are the same as in [04, task 2](04-minimize-microservice-vulnerabilities.md#task-2-encrypt-secrets-at-rest), with a different provider in the file:
+The steps are the same as in [module 41, task 2](41-hardening-workloads.md#task-2-encrypt-secrets-at-rest), with a different provider in the file:
 
 ```yaml
 apiVersion: apiserver.config.k8s.io/v1
@@ -412,7 +412,7 @@ pod "session-store" deleted from m-scan namespace
 <details>
 <summary>Solution</summary>
 
-The steps are the same as in [05, task 5](05-supply-chain-security.md#task-5-allow-only-approved-registries), with the file name `mock-admission.yaml`. Remember both mounts, `/etc/kubernetes/admission` and `/etc/kubernetes/policy-webhook`, because a missing one keeps the API server down. Then test an image the policy must refuse:
+The steps are the same as in [module 42, task 5](42-supply-chain-security.md#task-5-allow-only-approved-registries), with the file name `mock-admission.yaml`. Remember both mounts, `/etc/kubernetes/admission` and `/etc/kubernetes/policy-webhook`, because a missing one keeps the API server down. Then test an image the policy must refuse:
 
 ```console
 root@cks-cp:~# k run t --image=quay.io/evil/miner:1 --dry-run=server     # refused
@@ -472,7 +472,7 @@ rules:
 - level: None
 ```
 
-The flags and the two mounts follow [06, task 1](06-monitoring-logging-runtime-security.md#task-1-turn-on-audit-logging), with `--audit-log-maxage=7`, `--audit-log-maxbackup=5` and `--audit-log-maxsize=50`.
+The flags and the two mounts follow [module 43, task 1](43-runtime-security-and-auditing.md#task-1-turn-on-audit-logging), with `--audit-log-maxage=7`, `--audit-log-maxbackup=5` and `--audit-log-maxsize=50`.
 
 </details>
 
@@ -533,4 +533,4 @@ The transcript ran the first command with the name of the reporter pod from the 
 
 `score.sh` runs between two and six checks per task and splits the task's points evenly over them, rounded down, then prints each check, the points per task and the total.
 
-In the test run, on a cluster fresh from `reset.sh` and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` After `./certs/cks/mock-exam/solve.sh`, which applies every solution above in order and took 5 minutes 57 seconds in the final run, it was `TOTAL: 100 of 100 points (100%).` A task scores only when its first check, the main change, passes, because without that rule an untouched cluster scored 18, since checks such as "the scheduler still runs" pass by themselves.
+In the test run, on a cluster fresh from `reset.sh` and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` After `./platform-engineering/practice-exam.sh solve 4`, which applies every solution above in order and took 5 minutes 57 seconds in the final run, it was `TOTAL: 100 of 100 points (100%).` A task scores only when its first check, the main change, passes, because without that rule an untouched cluster scored 18, since checks such as "the scheduler still runs" pass by themselves.

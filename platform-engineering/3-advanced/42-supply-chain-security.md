@@ -1,12 +1,12 @@
-# CKS 05: Supply chain security (20%)
+# Module 42: Supply chain security
 
-> New to a term here, like SBOM or ImagePolicyWebhook? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
+> New to a term here, like SBOM or ImagePolicyWebhook? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running. The course's [module 26](../../platform-engineering/2-intermediate/26-kyverno-policy-as-code.md) explains admission webhooks, which task 5 configures by hand.
+**Before this module:** the [practice cluster](../practice-cluster.md) running. The course's [module 26](../2-intermediate/26-kyverno-policy-as-code.md) explains admission webhooks, which task 5 configures by hand.
 
-Most of the code in a container image came from someone else: a base image, system packages and language libraries. A vulnerable or poisoned piece anywhere in that chain ends up running in your cluster with your permissions, so this domain checks the chain at each step, from the Dockerfile to the API server's front door. It has ten tasks and takes about 1 hour 40 minutes.
+Most of the code in a container image came from someone else: a base image, system packages and language libraries. A vulnerable or poisoned piece anywhere in that chain ends up running in your cluster with your permissions, so this module checks the chain at each step, from the Dockerfile to the API server's front door. It has ten tasks and takes about 1 hour 40 minutes.
 
-## The domain in one table
+## The module in one table
 
 Each task checks the chain at one point, from the image's contents to what the cluster agrees to run:
 
@@ -33,7 +33,7 @@ An image travels through five places before it runs, and each place has its own 
 2. The build. **trivy** lists known vulnerabilities in the image, and an **SBOM** lists everything inside it.
 3. The registry. A signature, made with a tool such as cosign, proves who built the image.
 4. The API server. An admission check refuses images from registries you don't trust.
-5. The node. Falco watches what the container does, which is [domain 06](06-monitoring-logging-runtime-security.md#task-2-catch-a-shell-with-falco).
+5. The node. Falco watches what the container does, which is [module 43](43-runtime-security-and-auditing.md#task-2-catch-a-shell-with-falco).
 
 No single check is enough, because each one has a blind spot. trivy knows only vulnerabilities somebody already found, a signature proves where an image came from but not that it is safe, and the admission check is the only one the cluster enforces by itself. Food safety works the same way: the farm, the factory, the truck and the shop each check something different, and a scandal usually means one of them skipped its check.
 
@@ -117,7 +117,7 @@ The exam allows the docs of **bom**, a Kubernetes SIG tool that writes SPDX. tri
 
 ## Concept: static analysis of manifests
 
-**Static analysis** reads a file without running it, and kubesec applies it to Kubernetes manifests. It gives points for good settings, such as `readOnlyRootFilesystem` or resource limits, and marks dangerous ones such as `privileged` or `hostPID` as critical. KubeLinter, also named in the curriculum, works the same way with a different rule set, and tools such as hadolint do the same for Dockerfiles.
+**Static analysis** reads a file without running it, and kubesec applies it to Kubernetes manifests. It gives points for good settings, such as `readOnlyRootFilesystem` or resource limits, and marks dangerous ones such as `privileged` or `hostPID` as critical. KubeLinter works the same way with a different rule set, and tools such as hadolint do the same for Dockerfiles.
 
 Static analysis runs earliest in the chain, in the editor or the pull request, where a fix costs a minute. The same mistake found by admission costs a failed deployment, and found by Falco it costs an incident.
 
@@ -127,14 +127,14 @@ Static analysis runs earliest in the chain, in the editor or the pull request, w
 
 ## Concept: admission, the cluster's front door
 
-Every check so far runs outside the cluster, in CI, on a laptop or in a registry, and the cluster trusts none of them by default. A developer who skips CI, or an attacker with `create pods` rights, deploys whatever image they like. Admission control, the step of [domain 02's request chain](02-cluster-hardening.md#concept-one-request-six-steps) that reads the object, is the only check the cluster enforces on itself.
+Every check so far runs outside the cluster, in CI, on a laptop or in a registry, and the cluster trusts none of them by default. A developer who skips CI, or an attacker with `create pods` rights, deploys whatever image they like. Admission control, the step of [module 39's request chain](../2-intermediate/39-hardening-access-to-the-api.md#concept-one-request-six-steps) that reads the object, is the only check the cluster enforces on itself.
 
 ### Allowing only approved registries
 
 Two ways to restrict images come up in the exam:
 
 1. **ImagePolicyWebhook**, a built-in admission plugin. For every new pod, the API server POSTs an `ImageReview` with the image names to an outside service, and that service answers allowed or denied.
-2. A policy engine such as Kyverno, or a ValidatingAdmissionPolicy, which the course's [module 26](../../platform-engineering/2-intermediate/26-kyverno-policy-as-code.md) covers. These read the whole pod and express rules such as "images only from `registry.example.com`" as cluster objects.
+2. A policy engine such as Kyverno, or a ValidatingAdmissionPolicy, which the course's [module 26](../2-intermediate/26-kyverno-policy-as-code.md) covers. These read the whole pod and express rules such as "images only from `registry.example.com`" as cluster objects.
 
 ![The API server sends an ImageReview to the policy back end and gets a verdict. When the back end doesn't answer, defaultAllow decides between failing closed and failing open](../../docs/diagrams/chapters/cks-image-policy.svg)
 
@@ -165,7 +165,7 @@ When the webhook goes wrong, the symptoms depend on which file is wrong, and eac
 | the webhook kubeconfig's `certificate-authority` doesn't sign the back end's certificate | the API server runs, and every new pod fails with an `x509` error, because the call fails and `defaultAllow: false` refuses |
 | the back end is down, with `defaultAllow: true` | everything works, including images the policy forbids. Nobody notices |
 
-The practice cluster runs a small back end on `cks-cp` at `https://localhost:8443/review`, from `certs/cks/cluster/image-policy/`. It allows images from the prefixes in `/etc/image-policy/allowed-registries`, refuses `latest` and untagged images, and logs each verdict to `journalctl -u image-policy`.
+The practice cluster runs a small back end on `cks-cp` at `https://localhost:8443/review`, from `platform-engineering/practice/cluster/image-policy/`. It allows images from the prefixes in `/etc/image-policy/allowed-registries`, refuses `latest` and untagged images, and logs each verdict to `journalctl -u image-policy`.
 
 **What this stops.** An admission rule stops images from unknown registries, and `latest` tags, from running in the cluster, whoever deploys them and whatever CI they skipped.
 
@@ -210,8 +210,8 @@ The industry calls the goal **provenance**, a verifiable record of where every a
 **Time budget:** 4 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 5.1
-== setup task 5.1
+$ ./platform-engineering/task.sh setup 42.1
+== setup task 42.1
 FROM ubuntu:latest
 RUN apt-get update && apt-get install -y python3 curl wget netcat-openbsd vim
 COPY app.py /app/app.py
@@ -242,13 +242,13 @@ The alpine image already has `python3`, so the `RUN` line goes, and the `USER ro
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 5.1
-== check task 5.1
+$ ./platform-engineering/task.sh check 42.1
+== check task 42.1
   PASS  the base image has an explicit tag, not latest
   PASS  the base image is a slim, alpine or distroless variant
   PASS  no RUN line installs curl, wget, netcat or vim
   PASS  the last USER is neither root nor 0
-== task 5.1: 4 passed, 0 failed
+== task 42.1: 4 passed, 0 failed
 ```
 
 ## Task 2: Find and remove vulnerable images
@@ -256,8 +256,8 @@ $ ./certs/cks/task.sh check 5.1
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 5.2
-== setup task 5.2
+$ ./platform-engineering/task.sh setup 42.2
+== setup task 42.2
 pod/web created
 pod/cache created
 pod/tools created
@@ -295,12 +295,12 @@ pod "cache" deleted from scan namespace
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 5.2
-== check task 5.2
+$ ./platform-engineering/task.sh check 42.2
+== check task 42.2
   PASS  pod web (nginx:1.19.0, CRITICAL findings) is gone
   PASS  pod cache (redis:6.0.5, CRITICAL findings) is gone
   PASS  pod tools (busybox:1.36, no CRITICAL findings) still runs
-== task 5.2: 3 passed, 0 failed
+== task 42.2: 3 passed, 0 failed
 ```
 
 ## Task 3: Write an SBOM
@@ -308,8 +308,8 @@ $ ./certs/cks/task.sh check 5.2
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 5.3
-== setup task 5.3
+$ ./platform-engineering/task.sh setup 42.3
+== setup task 42.3
   /root/cks is ready
 ```
 
@@ -345,12 +345,12 @@ An SBOM is also something trivy scans later, without the image, with `trivy sbom
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 5.3
-== check task 5.3
+$ ./platform-engineering/task.sh check 42.3
+== check task 42.3
   PASS  /root/cks/kube-proxy.spdx.json is SPDX JSON for kube-proxy v1.37.1
   PASS  /root/cks/kube-proxy.cdx.json is a CycloneDX SBOM
   PASS  /root/cks/iptables-version.txt holds the iptables version from the SBOM
-== task 5.3: 3 passed, 0 failed
+== task 42.3: 3 passed, 0 failed
 ```
 
 ## Task 4: Static analysis with kubesec
@@ -358,8 +358,8 @@ $ ./certs/cks/task.sh check 5.3
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 5.4
-== setup task 5.4
+$ ./platform-engineering/task.sh setup 42.4
+== setup task 42.4
 score -39 critical ['Privileged', 'HostPID']
 ```
 
@@ -443,12 +443,12 @@ In the test run, the score went from -39 to 10. The `sleep` command writes nothi
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 5.4
-== check task 5.4
+$ ./platform-engineering/task.sh check 42.4
+== check task 42.4
   PASS  kubesec finds no critical issue and scores 8 or more
   PASS  pod report runs in namespace reports
   PASS  the running pod has no hostPID and is not privileged
-== task 5.4: 3 passed, 0 failed
+== task 42.4: 3 passed, 0 failed
 ```
 
 ## Task 5: Allow only approved registries
@@ -456,8 +456,8 @@ $ ./certs/cks/task.sh check 5.4
 **Time budget:** 10 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 5.5
-== setup task 5.5
+$ ./platform-engineering/task.sh setup 42.5
+== setup task 42.5
 active
 registry.k8s.io/
 docker.io/library/
@@ -498,7 +498,7 @@ In the API server manifest, after a backup, turn the plugin on and point it at t
     - --admission-control-config-file=/etc/kubernetes/admission/admission-config.yaml
 ```
 
-The API server reads two folders it doesn't mount yet, `/etc/kubernetes/admission` and `/etc/kubernetes/policy-webhook`, so add a `volumeMount` and a `hostPath` volume for each, as in [02, task 3](02-cluster-hardening.md#task-3-restrict-anonymous-access-to-the-api). Forgetting one is the most common reason the API server doesn't come back. The test run left out the `policy-webhook` mount, and `crictl logs` on the exited container said `couldn't init admission plugin "ImagePolicyWebhook": stat /etc/kubernetes/policy-webhook/kubeconfig.yaml: no such file or directory`.
+The API server reads two folders it doesn't mount yet, `/etc/kubernetes/admission` and `/etc/kubernetes/policy-webhook`, so add a `volumeMount` and a `hostPath` volume for each, as in [module 39, task 3](../2-intermediate/39-hardening-access-to-the-api.md#task-3-restrict-anonymous-access-to-the-api). Forgetting one is the most common reason the API server doesn't come back. The test run left out the `policy-webhook` mount, and `crictl logs` on the exited container said `couldn't init admission plugin "ImagePolicyWebhook": stat /etc/kubernetes/policy-webhook/kubeconfig.yaml: no such file or directory`.
 
 When the API server answers again, test one image the policy must refuse and one it must allow:
 
@@ -520,14 +520,14 @@ In the test run, the first command failed with `image policy webhook backend den
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 5.5
-== check task 5.5
+$ ./platform-engineering/task.sh check 42.5
+== check task 42.5
   PASS  the API server enables ImagePolicyWebhook
   PASS  the admission configuration sets defaultAllow: false
   PASS  a pod with busybox:1.36 is admitted
   PASS  a pod with nginx:latest is refused
   PASS  a pod from quay.io/evil is refused
-== task 5.5: 5 passed, 0 failed
+== task 42.5: 5 passed, 0 failed
 ```
 
 ## Task 6: The webhook's files are wrong
@@ -535,8 +535,8 @@ $ ./certs/cks/task.sh check 5.5
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 5.6
-== setup task 5.6
+$ ./platform-engineering/task.sh setup 42.6
+== setup task 42.6
   the API server restarted with the changed files at 15:06:39
 ```
 
@@ -564,7 +564,7 @@ The transcript ran `crictl logs` with the ID of the newest exited container.
 Error from server (Forbidden): pods "x509" is forbidden: Post "https://localhost:8443/review?timeout=30s": tls: failed to verify certificate: x509: certificate signed by unknown authority
 ```
 
-The kubeconfig's `certificate-authority` points to the cluster's CA, `/etc/kubernetes/pki/ca.crt`, which never signed the back end's certificate, so set it to `/etc/kubernetes/policy-webhook/ca.crt`. The API server reads the kubeconfig only at start, and the manifest didn't change, so restart it the way [04, task 5](04-minimize-microservice-vulnerabilities.md#task-5-rotate-the-encryption-key) does, by moving the manifest out of the folder and back. Then test:
+The kubeconfig's `certificate-authority` points to the cluster's CA, `/etc/kubernetes/pki/ca.crt`, which never signed the back end's certificate, so set it to `/etc/kubernetes/policy-webhook/ca.crt`. The API server reads the kubeconfig only at start, and the manifest didn't change, so restart it the way [module 41, task 5](41-hardening-workloads.md#task-5-rotate-the-encryption-key) does, by moving the manifest out of the folder and back. Then test:
 
 ```console
 root@cks-cp:~# k run t --image=quay.io/evil/miner:1 --dry-run=server
@@ -576,13 +576,13 @@ In the test run, that printed `image policy webhook backend denied one or more i
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 5.6
-== check task 5.6
+$ ./platform-engineering/task.sh check 42.6
+== check task 42.6
   PASS  the API server answers
   PASS  ImagePolicyWebhook stays enabled, with defaultAllow: false
   PASS  a pod with busybox:1.36 is admitted
   PASS  a pod from quay.io/evil is refused by the back end
-== task 5.6: 4 passed, 0 failed
+== task 42.6: 4 passed, 0 failed
 ```
 
 ## Task 7: The back end is down and nobody noticed
@@ -590,8 +590,8 @@ $ ./certs/cks/task.sh check 5.6
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 5.7
-== setup task 5.7
+$ ./platform-engineering/task.sh setup 42.7
+== setup task 42.7
   quay.io/evil/miner:1 today: pod/probe created (server dry run)
 ```
 
@@ -639,13 +639,13 @@ Error from server (Forbidden): pods "bad" is forbidden: image policy webhook bac
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 5.7
-== check task 5.7
+$ ./platform-engineering/task.sh check 42.7
+== check task 42.7
   PASS  the admission configuration sets defaultAllow: false
   PASS  the image-policy service runs and starts at boot
   PASS  a pod with busybox:1.36 is admitted
   PASS  a pod from quay.io/evil is refused
-== task 5.7: 4 passed, 0 failed
+== task 42.7: 4 passed, 0 failed
 ```
 
 ## Task 8: Pin an image by digest
@@ -653,8 +653,8 @@ $ ./certs/cks/task.sh check 5.7
 **Time budget:** 4 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 5.8
-== setup task 5.8
+$ ./platform-engineering/task.sh setup 42.8
+== setup task 42.8
 deployment.apps/web created
 Waiting for deployment "web" rollout to finish: 0 of 1 updated replicas are available...
 deployment "web" successfully rolled out
@@ -685,12 +685,12 @@ In the test run, the imageID was `docker.io/library/nginx@sha256:65645c7bb6a0661
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 5.8
-== check task 5.8
+$ ./platform-engineering/task.sh check 42.8
+== check task 42.8
   PASS  Deployment web names its image by a sha256 digest
   PASS  the digest is the one nginx:1.27-alpine had on the node
   PASS  the Deployment has a ready pod
-== task 5.8: 3 passed, 0 failed
+== task 42.8: 3 passed, 0 failed
 ```
 
 ## Task 9: Scan what the cluster runs
@@ -698,8 +698,8 @@ $ ./certs/cks/task.sh check 5.8
 **Time budget:** 7 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 5.9
-== setup task 5.9
+$ ./platform-engineering/task.sh setup 42.9
+== setup task 42.9
 deployment.apps/web created
 deployment.apps/tools created
 deployment.apps/cache created
@@ -741,12 +741,12 @@ In the test run, trivy found 44 CRITICAL findings in `nginx:1.19.0`, 22 in `redi
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 5.9
-== check task 5.9
+$ ./platform-engineering/task.sh check 42.9
+== check task 42.9
   PASS  /root/cks/critical-images.txt lists exactly the images with CRITICAL findings
   PASS  the Deployments running those images are scaled to 0
   PASS  the Deployments with clean images keep their replica
-== task 5.9: 3 passed, 0 failed
+== task 42.9: 3 passed, 0 failed
 ```
 
 ## Task 10: Which SBOM carries the risk?
@@ -754,8 +754,8 @@ $ ./certs/cks/task.sh check 5.9
 **Time budget:** 4 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 5.10
-== setup task 5.10
+$ ./platform-engineering/task.sh setup 42.10
+== setup task 42.10
 app-1.cdx.json
 app-2.cdx.json
 app-3.cdx.json
@@ -782,12 +782,12 @@ In the test run, `app-2.cdx.json` showed `Total: 44 (CRITICAL: 44)`, and the oth
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 5.10
-== check task 5.10
+$ ./platform-engineering/task.sh check 42.10
+== check task 42.10
   PASS  /root/cks/risky-sboms.txt names exactly the SBOMs with CRITICAL findings
-== task 5.10: 1 passed, 0 failed
+== task 42.10: 1 passed, 0 failed
 ```
 
 ## Clean up
 
-Tasks 5 to 7 leave the webhook on, so every later pod passes through it. Tasks 6 and 7 start from task 5's result and apply its solution when the webhook is off. Run `./certs/cks/cluster/reset.sh` before the next domain.
+Tasks 5 to 7 leave the webhook on, so every later pod passes through it. Tasks 6 and 7 start from task 5's result and apply its solution when the webhook is off. Run `./platform-engineering/practice/cluster/reset.sh` before the next domain.

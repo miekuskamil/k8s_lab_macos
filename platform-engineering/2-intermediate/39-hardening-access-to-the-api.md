@@ -1,14 +1,14 @@
-# CKS 02: Cluster hardening (15%)
+# Module 39: Hardening access to the API
 
-> New to a term here, like resourceNames or AuthenticationConfiguration? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
+> New to a term here, like resourceNames or AuthenticationConfiguration? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) at v1.37.1, so run `./certs/cks/cluster/reset.sh` after domain 01. The course's [module 29](../../platform-engineering/1-foundations/29-life-of-a-request.md#concept-inside-the-api-server) walks one request through authentication, authorization and admission. Read it first, because this domain changes each of those gates.
+**Before this module:** the [practice cluster](../practice-cluster.md) at v1.37.1, so run `./platform-engineering/practice/cluster/reset.sh` after module 38. The course's [module 29](../1-foundations/29-life-of-a-request.md#concept-inside-the-api-server) walks one request through authentication, authorization and admission. Read it first, because this module changes each of those gates.
 
-Every attack on a cluster ends at the API server, because nothing changes the cluster's state any other way. A stolen service account token, a forgotten anonymous binding or a known bug in an old version all turn into API calls that change something. This domain shrinks what each caller may do, repairs a control plane that a bad edit broke, and keeps the API server patched. It has 12 tasks and takes about 2 hours.
+Every attack on a cluster ends at the API server, because nothing changes the cluster's state any other way. A stolen service account token, a forgotten anonymous binding or a known bug in an old version all turn into API calls that change something. This module shrinks what each caller may do, repairs a control plane that a bad edit broke, and keeps the API server patched. It has 12 tasks and takes about 2 hours.
 
-## The domain in one table
+## The module in one table
 
-Every request to the API server passes the same gates, and this domain changes each of them, so the tasks map onto the gates like this:
+Every request to the API server passes the same gates, and this module changes each of them, so the tasks map onto the gates like this:
 
 | Gate or job | Tasks |
 |---|---|
@@ -69,7 +69,7 @@ Once the API server knows who is calling, authorization takes the user, the grou
 
 | Authorizer | What it decides |
 |---|---|
-| `Node` | requests from kubelets: a kubelet may read only what its own pods need. [Domain 03](03-system-hardening.md#concept-a-stolen-kubelet-identity) explains it |
+| `Node` | requests from kubelets: a kubelet may read only what its own pods need. [Module 40](../3-advanced/40-hardening-nodes.md#concept-a-stolen-kubelet-identity) explains it |
 | `RBAC` | everything else, from Roles and bindings stored in the cluster |
 | `Webhook` | asks an outside service with a SubjectAccessReview |
 | `ABAC` | an old file of policies, read at start. Nobody uses it any more |
@@ -94,7 +94,7 @@ Admission runs in two phases with a schema check between them, so that the final
 2. Schema validation checks the result.
 3. Validating controllers run last. They accept or refuse, and never change anything. Because they run after every mutation, they judge exactly what etcd will store.
 
-Kubernetes compiles some admission controllers into the API server, and `--enable-admission-plugins` turns them on. kubeadm adds `NodeRestriction`, and Kubernetes turns on a default set that includes `ServiceAccount` and `PodSecurity`. Others live outside the API server as **admission webhooks**, which means the API server sends the object to an HTTPS service and waits for its verdict. Kyverno works this way, and so does the back end behind the ImagePolicyWebhook of [domain 05](05-supply-chain-security.md#concept-admission-the-clusters-front-door), and the course's [module 26](../../platform-engineering/2-intermediate/26-kyverno-policy-as-code.md#concept-where-kyverno-sits) shows one in action. A ValidatingAdmissionPolicy is a third kind, a rule written in the CEL expression language that the API server runs itself, with no webhook to call.
+Kubernetes compiles some admission controllers into the API server, and `--enable-admission-plugins` turns them on. kubeadm adds `NodeRestriction`, and Kubernetes turns on a default set that includes `ServiceAccount` and `PodSecurity`. Others live outside the API server as **admission webhooks**, which means the API server sends the object to an HTTPS service and waits for its verdict. Kyverno works this way, and so does the back end behind the ImagePolicyWebhook of [module 42](../3-advanced/42-supply-chain-security.md#concept-admission-the-clusters-front-door), and the course's [module 26](26-kyverno-policy-as-code.md#concept-where-kyverno-sits) shows one in action. A ValidatingAdmissionPolicy is a third kind, a rule written in the CEL expression language that the API server runs itself, with no webhook to call.
 
 **What this stops.** Admission stops dangerous objects that a caller may legally create, such as privileged pods, images from unknown registries or objects without required labels, because it is the only gate that reads the object itself.
 
@@ -193,7 +193,7 @@ The audience protects you from a replay, which means reusing a stolen token agai
 
 **What this stops.** No token in the pod means nothing for an attacker to steal. Bound tokens mean that a stolen token dies with its pod or its expiry, and never works against a service it wasn't minted for.
 
-**Exam traps.** A legacy token keeps working until somebody deletes its Secret. In task 8, the setup's legacy token answered `200`, and after the delete it got `401` 8 seconds later, once the API server's token cache expired. `k get secrets -A --field-selector type=kubernetes.io/service-account-token` finds them all. The API server's `--service-account-extend-token-expiration`, on by default, stretches the tokens that pods get to a year, which kube-bench flags in [domain 01](01-cluster-setup.md#concept-a-checklist-for-the-control-plane).
+**Exam traps.** A legacy token keeps working until somebody deletes its Secret. In task 8, the setup's legacy token answered `200`, and after the delete it got `401` 8 seconds later, once the API server's token cache expired. `k get secrets -A --field-selector type=kubernetes.io/service-account-token` finds them all. The API server's `--service-account-extend-token-expiration`, on by default, stretches the tokens that pods get to a year, which kube-bench flags in [module 38](38-setting-up-a-secure-cluster.md#concept-a-checklist-for-the-control-plane).
 
 ## Concept: static pods and control plane repair
 
@@ -258,11 +258,11 @@ kubeadm then upgrades one node at a time, in the same order on each node:
 
 **What this stops.** Patching stops attacks that use published bugs, which are the cheapest attacks there are, because the attacker only follows a public write-up.
 
-**Exam traps.** The test run found the biggest trap of this domain. `kubeadm upgrade apply` rewrites every static pod manifest from the cluster's stored kubeadm configuration, so flags you added by hand disappear. After the upgrade, `--profiling=false` from domain 01 and `--authentication-config` from task 3 were gone, and an anonymous request for pods got `403` again instead of `401`. To make a flag survive upgrades, add it to the `kubeadm-config` ConfigMap in `kube-system` under `apiServer.extraArgs`, with `extraVolumes` for any file it reads. Keep the packages on hold with `apt-mark hold` as well, so that a routine `apt-get upgrade` never moves the kubelet past the API server.
+**Exam traps.** The test run found the biggest trap of this module. `kubeadm upgrade apply` rewrites every static pod manifest from the cluster's stored kubeadm configuration, so flags you added by hand disappear. After the upgrade, `--profiling=false` from module 38 and `--authentication-config` from task 3 were gone, and an anonymous request for pods got `403` again instead of `401`. To make a flag survive upgrades, add it to the `kubeadm-config` ConfigMap in `kube-system` under `apiServer.extraArgs`, with `extraVolumes` for any file it reads. Keep the packages on hold with `apt-mark hold` as well, so that a routine `apt-get upgrade` never moves the kubelet past the API server.
 
 ## The bigger picture: the API is the cluster
 
-Every attack on a cluster ends at the API server. A stolen token, a forgotten anonymous binding, a pod that may create privileged pods, or a known bug in an old version all turn into API calls that change something, and the gates in this domain give defenders four separate chances to stop such a call:
+Every attack on a cluster ends at the API server. A stolen token, a forgotten anonymous binding, a pod that may create privileged pods, or a known bug in an old version all turn into API calls that change something, and the gates in this module give defenders four separate chances to stop such a call:
 
 1. Authentication rejects credentials that are fake, expired or minted for another audience.
 2. Authorization rejects callers who hold a real credential with too little right.
@@ -288,8 +288,8 @@ Real platform teams rarely hand out client certificates to people, because a cer
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 2.1
-== setup task 2.1
+$ ./platform-engineering/task.sh setup 39.1
+== setup task 39.1
 serviceaccount/reporter created
 secret/report-key created
 secret/db-password created
@@ -334,8 +334,8 @@ list secrets: no
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 2.1
-== check task 2.1
+$ ./platform-engineering/task.sh check 39.1
+== check task 39.1
   PASS  reporter lists pods
   PASS  reporter watches pods
   PASS  reporter does not delete pods
@@ -343,7 +343,7 @@ $ ./certs/cks/task.sh check 2.1
   PASS  reporter gets the Secret report-key
   PASS  reporter does not get the Secret db-password
   PASS  reporter does not list Secrets
-== task 2.1: 7 passed, 0 failed
+== task 39.1: 7 passed, 0 failed
 ```
 
 In the test run, the setup's Role failed three of the seven checks, because it allowed deleting pods, reading `db-password` and listing Secrets.
@@ -353,8 +353,8 @@ In the test run, the setup's Role failed three of the seven checks, because it a
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 2.2
-== setup task 2.2
+$ ./platform-engineering/task.sh setup 39.2
+== setup task 39.2
 deployment.apps/checkout created
 Waiting for deployment "checkout" rollout to finish: 0 of 1 updated replicas are available...
 deployment "checkout" successfully rolled out
@@ -391,13 +391,13 @@ command terminated with exit code 1
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 2.2
-== check task 2.2
+$ ./platform-engineering/task.sh check 39.2
+== check task 39.2
   PASS  ServiceAccount default in payments has automountServiceAccountToken: false
   PASS  ServiceAccount checkout exists, also without automount
   PASS  Deployment checkout runs as ServiceAccount checkout
   PASS  the running pod has no API token mounted
-== task 2.2: 4 passed, 0 failed
+== task 39.2: 4 passed, 0 failed
 ```
 
 ## Task 3: Restrict anonymous access to the API
@@ -405,8 +405,8 @@ $ ./certs/cks/task.sh check 2.2
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 2.3
-== setup task 2.3
+$ ./platform-engineering/task.sh setup 39.3
+== setup task 39.3
 clusterrolebinding.rbac.authorization.k8s.io/anonymous-view created
 anonymous list of pods: 200
 ```
@@ -492,14 +492,14 @@ In the test run, the API server answered again within a minute of the manifest c
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 2.3
-== check task 2.3
+$ ./platform-engineering/task.sh check 39.3
+== check task 39.3
   PASS  ClusterRoleBinding anonymous-view is gone
   PASS  an anonymous request for pods gets 401
   PASS  an anonymous request for /livez still gets 200
   PASS  the API server uses --authentication-config
   PASS  the API server pod is Ready
-== task 2.3: 5 passed, 0 failed
+== task 39.3: 5 passed, 0 failed
 ```
 
 `401` means "I don't know who you are". Before the fix, an anonymous caller without the binding got `403`, which means "I know you're anonymous, and anonymous may not". Both refuse the request, but `401` refuses it earlier, at the authentication gate.
@@ -509,12 +509,12 @@ $ ./certs/cks/task.sh check 2.3
 **Time budget:** 12 minutes. **Hosts:** `cks-cp`, then `cks-w1`.
 
 ```console
-$ ./certs/cks/task.sh setup 2.4     # prints the node versions; both must say v1.37.1
-== setup task 2.4
+$ ./platform-engineering/task.sh setup 39.4     # prints the node versions; both must say v1.37.1
+== setup task 39.4
 NAME     STATUS   ROLES           AGE     VERSION
 cks-cp   Ready    control-plane   2m12s   v1.37.1
 cks-w1   Ready    <none>          77s     v1.37.1
-  the cluster must run v1.37.1 for this task; ./certs/cks/cluster/reset.sh puts it back there
+  the cluster must run v1.37.1 for this task; ./platform-engineering/practice/cluster/reset.sh puts it back there
 ```
 
 > Upgrade the control plane and the worker from v1.37.1 to v1.37.2. Drain each node before you upgrade its kubelet, and make it schedulable again afterwards. Keep the packages on hold.
@@ -699,14 +699,14 @@ Finally, back on `cks-cp`, run `k uncordon cks-w1` so the worker accepts pods ag
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 2.4
-== check task 2.4
+$ ./platform-engineering/task.sh check 39.4
+== check task 39.4
   PASS  cks-cp kubelet reports v1.37.2
   PASS  cks-w1 kubelet reports v1.37.2
   PASS  the API server runs image v1.37.2
   PASS  both nodes are schedulable
   PASS  kubeadm, kubelet and kubectl stay on hold on cks-w1
-== task 2.4: 5 passed, 0 failed
+== task 39.4: 5 passed, 0 failed
 ```
 
 ## Task 5: Aggregated ClusterRoles
@@ -714,8 +714,8 @@ $ ./certs/cks/task.sh check 2.4
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 2.5
-== setup task 2.5
+$ ./platform-engineering/task.sh setup 39.5
+== setup task 39.5
 serviceaccount/prom created
 clusterrole.rbac.authorization.k8s.io/monitoring-reader created
 clusterrole.rbac.authorization.k8s.io/monitoring-pods created
@@ -782,15 +782,15 @@ no
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 2.5
-== check task 2.5
+$ ./platform-engineering/task.sh check 39.5
+== check task 39.5
   PASS  ClusterRole monitoring-endpoints carries the aggregation label
   PASS  prom lists endpoints in every namespace
   PASS  prom watches services in every namespace
   PASS  prom still lists pods
   PASS  prom may no longer exec into pods
   PASS  monitoring-reader still aggregates, with no rules of its own written by hand
-== task 2.5: 6 passed, 0 failed
+== task 39.5: 6 passed, 0 failed
 ```
 
 In the test run, the check failed four of six items before the solution.
@@ -800,8 +800,8 @@ In the test run, the check failed four of six items before the solution.
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 2.6
-== setup task 2.6
+$ ./platform-engineering/task.sh setup 39.6
+== setup task 39.6
 serviceaccount/builder created
 serviceaccount/deployer created
 serviceaccount/viewer created
@@ -853,14 +853,14 @@ services                                        []                  []          
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 2.6
-== check task 2.6
+$ ./platform-engineering/task.sh check 39.6
+== check task 39.6
   PASS  /root/cks/secret-reader.txt names cleaner
   PASS  cleaner may no longer read Secrets in kube-system
   PASS  ServiceAccount cleaner still exists
   PASS  deployer keeps its rights
   PASS  /root/cks/viewer-perms.txt holds viewer's can-i list
-== task 2.6: 5 passed, 0 failed
+== task 39.6: 5 passed, 0 failed
 ```
 
 ## Task 7: A bound token for another audience
@@ -868,8 +868,8 @@ $ ./certs/cks/task.sh check 2.6
 **Time budget:** 7 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 2.7
-== setup task 2.7
+$ ./platform-engineering/task.sh setup 39.7
+== setup task 39.7
 serviceaccount/vault-auth created
 ```
 
@@ -924,12 +924,12 @@ In the test run, the claims held `"aud":["vault"]`, and `exp` minus `iat` was ex
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 2.7
-== check task 2.7
+$ ./platform-engineering/task.sh check 39.7
+== check task 39.7
   PASS  /root/cks/vault-token.txt is a token for vault-auth with audience vault, valid 2 hours
   PASS  pod client runs as vault-auth without the default token
   PASS  a projected token with audience vault and 3600 seconds sits at /var/run/secrets/vault/token
-== task 2.7: 3 passed, 0 failed
+== task 39.7: 3 passed, 0 failed
 ```
 
 ## Task 8: Clean up legacy token Secrets
@@ -937,8 +937,8 @@ $ ./certs/cks/task.sh check 2.7
 **Time budget:** 4 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 2.8
-== setup task 2.8
+$ ./platform-engineering/task.sh setup 39.8
+== setup task 39.8
 serviceaccount/old-ci created
 secret/old-ci-token created
 serviceaccount/old-batch created
@@ -972,12 +972,12 @@ Secret `app-config` has type `Opaque`, so the selector leaves it alone. In the t
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 2.8
-== check task 2.8
+$ ./platform-engineering/task.sh check 39.8
+== check task 39.8
   PASS  no Secret of type kubernetes.io/service-account-token is left in legacy
   PASS  old-ci's old token no longer authenticates (401)
   PASS  both ServiceAccounts and Secret app-config still exist
-== task 2.8: 3 passed, 0 failed
+== task 39.8: 3 passed, 0 failed
 ```
 
 ## Task 9: Repair the API server
@@ -985,8 +985,8 @@ $ ./certs/cks/task.sh check 2.8
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 2.9
-== setup task 2.9
+$ ./platform-engineering/task.sh setup 39.9
+== setup task 39.9
   a colleague edited the API server manifest at 23:38:55
 ```
 
@@ -1039,13 +1039,13 @@ root@cks-cp:~# k run pull-test --image=busybox:1.36 --image-pull-policy=IfNotPre
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 2.9
-== check task 2.9
+$ ./platform-engineering/task.sh check 39.9
+== check task 39.9
   PASS  the API server answers and its pod is Ready
   PASS  the admission plugins are NodeRestriction and AlwaysPullImages
   PASS  --etcd-cafile points to the etcd CA
   PASS  AlwaysPullImages sets imagePullPolicy Always on a new pod
-== task 2.9: 4 passed, 0 failed
+== task 39.9: 4 passed, 0 failed
 ```
 
 ## Task 10: Repair etcd
@@ -1053,8 +1053,8 @@ $ ./certs/cks/task.sh check 2.9
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 2.10
-== setup task 2.10
+$ ./platform-engineering/task.sh setup 39.10
+== setup task 39.10
 configmap/cks-canary created
   someone edited etcd's manifest at 23:40:55
 ```
@@ -1108,14 +1108,14 @@ Never change `--data-dir` or the `etcd-data` volume to make etcd start, because 
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 2.10
-== check task 2.10
+$ ./platform-engineering/task.sh check 39.10
+== check task 39.10
   PASS  the API server answers again
   PASS  etcd uses its server certificate
   PASS  etcd listens for clients on 127.0.0.1:2379
   PASS  the cluster's data survived: ConfigMap cks-canary still exists
   PASS  the etcd pod is Ready
-== task 2.10: 5 passed, 0 failed
+== task 39.10: 5 passed, 0 failed
 ```
 
 ## Task 11: No pods for a new Deployment
@@ -1123,8 +1123,8 @@ $ ./certs/cks/task.sh check 2.10
 **Time budget:** 7 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 2.11
-== setup task 2.11
+$ ./platform-engineering/task.sh setup 39.11
+== setup task 39.11
 deployment.apps/canary created
 ```
 
@@ -1161,13 +1161,13 @@ The scheduler said `"command failed" err="stat /etc/kubernetes/scheduler.config:
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 2.11
-== check task 2.11
+$ ./platform-engineering/task.sh check 39.11
+== check task 39.11
   PASS  kube-scheduler runs and is Ready
   PASS  kube-controller-manager runs and is Ready
   PASS  Deployment canary has a ready pod
   PASS  the manifests use scheduler.conf and --cluster-signing-key-file
-== task 2.11: 4 passed, 0 failed
+== task 39.11: 4 passed, 0 failed
 ```
 
 ## Task 12: An API server that allows everything
@@ -1175,8 +1175,8 @@ $ ./certs/cks/task.sh check 2.11
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 2.12
-== setup task 2.12
+$ ./platform-engineering/task.sh setup 39.12
+== setup task 39.12
   may the default ServiceAccount list every Secret? yes
 ```
 
@@ -1207,15 +1207,15 @@ The same switch has a side effect that shows within minutes. kubeadm's health pr
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 2.12
-== check task 2.12
+$ ./platform-engineering/task.sh check 39.12
+== check task 39.12
   PASS  the API server uses --authorization-mode=Node,RBAC
   PASS  an anonymous request for kube-system Secrets gets 403
   PASS  the default ServiceAccount may not list Secrets
   PASS  the nodes stay Ready
-== task 2.12: 4 passed, 0 failed
+== task 39.12: 4 passed, 0 failed
 ```
 
 ## Clean up
 
-Tasks 9 to 12 change static pods, and each solution puts them back as kubeadm wrote them. Task 4 is one-way, because the packages stay at 1.37.2, so `./certs/cks/cluster/reset.sh` puts both nodes back at 1.37.1 and rebuilds the cluster.
+Tasks 9 to 12 change static pods, and each solution puts them back as kubeadm wrote them. Task 4 is one-way, because the packages stay at 1.37.2, so `./platform-engineering/practice/cluster/reset.sh` puts both nodes back at 1.37.1 and rebuilds the cluster.

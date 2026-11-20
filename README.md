@@ -1,6 +1,6 @@
 # k8s_lab_macos
 
-A small shop runs on your laptop inside a k3d cluster, together with the tools a platform team uses: Istio ambient mesh, ArgoCD, cert-manager, Prometheus, Grafana, Jaeger, Loki, Kiali and Headlamp. The shop is a Node.js frontend, a Python FastAPI backend in two versions, and Redis. You break it on purpose, for example by sending 10% of traffic to the new version, and watch the result in the UIs. A [course](platform-engineering/README.md) and [certification tracks](certs/README.md) build on it, and you need no cloud account. [This diagram](docs/diagrams/chapters/architecture-request-path.svg) shows how a request travels through the lab.
+A small shop runs on your laptop inside a k3d cluster, together with the tools a platform team uses: Istio ambient mesh, ArgoCD, cert-manager, Prometheus, Grafana, Jaeger, Loki, Kiali and Headlamp. The shop is a Node.js frontend, a Python FastAPI backend in two versions, and Redis. You break it on purpose, for example by sending 10% of traffic to the new version, and watch the result in the UIs. A [course](platform-engineering/README.md) in four levels builds on it, and you need no cloud account. [This diagram](docs/diagrams/chapters/architecture-request-path.svg) shows how a request travels through the lab.
 
 ## What you need
 
@@ -85,14 +85,14 @@ Redis has no local port. Headlamp has no login and acts as `cluster-admin`, so a
 
 ## Learn
 
-The [Kubernetes Platform Engineering course](platform-engineering/README.md) runs from your first service mesh to AI workloads in four levels. Read [Istio in one picture](platform-engineering/start-here.md) first, about 15 minutes.
+The [course](platform-engineering/README.md) is one path in four levels, from building your first application to AI workloads. Read [Istio in one picture](platform-engineering/start-here.md) first, about 15 minutes.
 
-1. [Foundations](platform-engineering/1-foundations/README.md): identity and mTLS, authorization, routing, resilience, observability and incidents.
-2. [Intermediate](platform-engineering/2-intermediate/README.md): sidecar mode, edge TLS, egress, JWT, nodes, GitOps, alerting, dashboards and policy as code.
-3. [Advanced](platform-engineering/3-advanced/README.md): eBPF, Istio and k3s upgrades, OpenTelemetry, profiling, sidecar internals and Envoy debugging.
-4. [AI](platform-engineering/4-ai/README.md): an LLM in the mesh, model serving, AI agents and RAG.
+1. [Foundations](platform-engineering/1-foundations/README.md): building, deploying, configuring, observing and networking applications, and the service mesh basics.
+2. [Intermediate](platform-engineering/2-intermediate/README.md): the mesh in practice, platform operations from GitOps to policy as code, and setting up a secure cluster.
+3. [Advanced](platform-engineering/3-advanced/README.md): hardening nodes and workloads, supply chain and runtime security, and platform internals.
+4. [AI on Kubernetes](platform-engineering/4-ai/README.md): an LLM in the mesh, model serving, AI agents and RAG.
 
-[Certification tracks](certs/README.md): CKS, and CKAD in progress.
+The mesh and platform modules run on this lab. The application and security modules run on a [practice cluster](platform-engineering/practice-cluster.md) of two kubeadm nodes with timed tasks and six timed practice exams, and a few kernel tasks run on a [VM](platform-engineering/kernel-and-host/README.md).
 
 The [lab guide](docs/lab-guide.md) is a shorter tour without the course depth. To run the AI modules on another model or on Claude, see [Choosing the model](docs/ai-models.md).
 

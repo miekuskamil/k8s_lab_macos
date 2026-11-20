@@ -1,12 +1,12 @@
-# CKAD 03: Application observability and maintenance (15%)
+# Module 35: Observing and debugging applications
 
-> New to a term here, like readiness probe or ephemeral container? The [CKAD glossary](glossary.md) explains every term this track uses.
+> New to a term here, like readiness probe or ephemeral container? The [glossary](../glossary.md#applications-on-kubernetes) explains every term these modules use.
 
-**Before this domain:** [domain 01](01-application-design-and-build.md) and [domain 02](02-application-deployment.md), because the probes here decide when a rolling update moves on. Task 4 needs metrics-server, which its setup installs.
+**Before this module:** [module 33](33-building-and-running-applications.md) and [module 34](34-deploying-and-updating-applications.md), because the probes here decide when a rolling update moves on. Task 4 needs metrics-server, which its setup installs.
 
-A running pod tells you very little by itself, because `Running` only means that a process exists, not that it answers requests or that it will still answer in five minutes. This domain is about seeing inside an application and keeping it healthy: probes that let the kubelet test the app, logs and metrics that show what it does, debugging tools for containers that have no shell, and manifests that need updating when an API version disappears. It has eight tasks and takes about 1 hour 5 minutes.
+A running pod tells you very little by itself, because `Running` only means that a process exists, not that it answers requests or that it will still answer in five minutes. This module is about seeing inside an application and keeping it healthy: probes that let the kubelet test the app, logs and metrics that show what it does, debugging tools for containers that have no shell, and manifests that need updating when an API version disappears. It has eight tasks and takes about 1 hour 5 minutes.
 
-## The domain in one table
+## The module in one table
 
 | Question | Tool | Task |
 |---|---|---|
@@ -21,13 +21,13 @@ A running pod tells you very little by itself, because `Running` only means that
 
 Take the API server of task 1, a small web server on port 8080 behind a Service. The kubelet starts its container and sees the process running, but that tells it nothing about the server: it might still load its data, it might be stuck in a deadlock, or it might answer every request with an error. Sending users to it in any of those states loses requests, and leaving a deadlocked process alone keeps it broken forever.
 
-So the kubelet asks the app directly, with a [probe](glossary.md#probe): a small test it runs on a schedule, either an HTTP request (`httpGet`), a TCP connection (`tcpSocket`), a command inside the container (`exec`), or a gRPC health call. Each probe has one job, and the three jobs differ in what happens when the answer is no:
+So the kubelet asks the app directly, with a [probe](../glossary.md#probe): a small test it runs on a schedule, either an HTTP request (`httpGet`), a TCP connection (`tcpSocket`), a command inside the container (`exec`), or a gRPC health call. Each probe has one job, and the three jobs differ in what happens when the answer is no:
 
 | Probe | The question | When it fails |
 |---|---|---|
-| [readiness](glossary.md#readiness-probe) | should this pod get requests now? | the pod leaves the Service's endpoints; nothing restarts |
-| [liveness](glossary.md#liveness-probe) | is the process still healthy, or stuck for good? | the kubelet kills the container and starts it again |
-| [startup](glossary.md#startup-probe) | has a slow app finished starting? | the kubelet keeps waiting, and kills it after `failureThreshold × periodSeconds` |
+| [readiness](../glossary.md#readiness-probe) | should this pod get requests now? | the pod leaves the Service's endpoints; nothing restarts |
+| [liveness](../glossary.md#liveness-probe) | is the process still healthy, or stuck for good? | the kubelet kills the container and starts it again |
+| [startup](../glossary.md#startup-probe) | has a slow app finished starting? | the kubelet keeps waiting, and kills it after `failureThreshold × periodSeconds` |
 
 ![The kubelet on cks-w1 runs the three probes against one container: startup first, then readiness and liveness side by side. A failed readiness probe removes the pod from the Service's endpoints, a failed liveness probe restarts the container](../../docs/diagrams/chapters/ckad-probes.svg)
 
@@ -35,7 +35,7 @@ The figure shows the order on one pod, which follows from the startup probe's jo
 
 1. While a startup probe exists and hasn't succeeded yet, the kubelet runs no other probe, so a slow start never counts as a liveness failure.
 2. After the startup probe succeeds once, the kubelet runs readiness and liveness on their own schedules for the rest of the container's life.
-3. Each readiness answer adds the pod to the Service's [EndpointSlice](glossary.md#endpointslice) or removes it, which is exactly the signal a rolling update in [domain 02](02-application-deployment.md#concept-a-deployment-changes-versions-through-replicasets) waits for.
+3. Each readiness answer adds the pod to the Service's [EndpointSlice](../glossary.md#endpointslice) or removes it, which is exactly the signal a rolling update in [module 34](34-deploying-and-updating-applications.md#concept-a-deployment-changes-versions-through-replicasets) waits for.
 4. A run of liveness failures as long as `failureThreshold` makes the kubelet restart the container, and the `RESTARTS` column counts up.
 
 Five numbers tune every probe: `initialDelaySeconds` before the first try, `periodSeconds` between tries, `timeoutSeconds` for one answer, `failureThreshold` failures in a row before the probe counts as failed, and `successThreshold` successes in a row before it counts as passed again, which must be 1 for liveness and startup. The defaults are 0, 10, 1, 3 and 1.
@@ -54,15 +54,15 @@ A container's logs are whatever its process writes to standard output and standa
 | `k logs -l app=x --prefix --tail=20` | the last 20 lines of every pod with that label, each with its pod name |
 | `k logs POD -f --since=5m` | follows the log, starting 5 minutes back |
 
-[Events](glossary.md#event) tell the cluster's side of the story: the scheduler explains why a pod stays `Pending`, the kubelet reports image pulls, probe failures and kills, and controllers report what they refused to create. `kubectl describe` shows the events of one object at the end of its output, and `kubectl events --types=Warning` lists the warnings of a namespace. The API server keeps events for one hour, so an old failure has no event left.
+[Events](../glossary.md#event) tell the cluster's side of the story: the scheduler explains why a pod stays `Pending`, the kubelet reports image pulls, probe failures and kills, and controllers report what they refused to create. `kubectl describe` shows the events of one object at the end of its output, and `kubectl events --types=Warning` lists the warnings of a namespace. The API server keeps events for one hour, so an old failure has no event left.
 
-Metrics answer a third question, how much CPU and memory each pod uses right now. The kubelet measures every container, and [metrics-server](glossary.md#metrics-server) collects those numbers from every node every 15 seconds and serves them through the API, where `kubectl top pod` and `kubectl top node` read them. A new pod shows no numbers for its first minute, because metrics-server needs two samples to compute a rate. `--sort-by=cpu` or `--sort-by=memory` sorts the list, and `--containers` splits it per container.
+Metrics answer a third question, how much CPU and memory each pod uses right now. The kubelet measures every container, and [metrics-server](../glossary.md#metrics-server) collects those numbers from every node every 15 seconds and serves them through the API, where `kubectl top pod` and `kubectl top node` read them. A new pod shows no numbers for its first minute, because metrics-server needs two samples to compute a rate. `--sort-by=cpu` or `--sort-by=memory` sorts the list, and `--containers` splits it per container.
 
 ## Concept: debugging a container from the outside
 
-Modern images often ship without a shell, because every extra binary in an image adds size and something an attacker might use. A [distroless image](glossary.md#distroless-image) holds only the application and its libraries, so `kubectl exec POD -- sh` fails with `executable file not found`, and the usual way into a container is gone.
+Modern images often ship without a shell, because every extra binary in an image adds size and something an attacker might use. A [distroless image](../glossary.md#distroless-image) holds only the application and its libraries, so `kubectl exec POD -- sh` fails with `executable file not found`, and the usual way into a container is gone.
 
-`kubectl debug` adds a way back in without restarting the pod. It appends an [ephemeral container](glossary.md#ephemeral-container), a temporary container with an image you choose, such as `busybox`, to the running pod. With `--target=app`, the new container joins the process namespace of the container `app`, so `ps` inside the debugger lists the app's processes, and `/proc/1/root` shows the app's file system. The pod keeps running the whole time, and the ephemeral container stays in its spec until the pod goes away, because a pod's container list never shrinks.
+`kubectl debug` adds a way back in without restarting the pod. It appends an [ephemeral container](../glossary.md#ephemeral-container), a temporary container with an image you choose, such as `busybox`, to the running pod. With `--target=app`, the new container joins the process namespace of the container `app`, so `ps` inside the debugger lists the app's processes, and `/proc/1/root` shows the app's file system. The pod keeps running the whole time, and the ephemeral container stays in its spec until the pod goes away, because a pod's container list never shrinks.
 
 Two more forms of `kubectl debug` help in other situations. `kubectl debug POD -it --copy-to=POD-debug --container=app --image=busybox -- sh` makes a copy of the pod with a changed container, which helps when the original crashes too fast to inspect. `kubectl debug node/cks-w1 -it --image=busybox` starts a pod on the node with the node's file system mounted at `/host`, which replaces an `ssh` to the node.
 
@@ -86,7 +86,7 @@ The `kubectl convert` plugin rewrites a manifest from one version to another, bu
 
 Probes turn the kubelet into a tireless tester that asks every container the same questions every few seconds, and the rest of Kubernetes acts on its answers: Services route by readiness, Deployments pace updates by it, and the kubelet restarts what fails liveness. An application that answers those questions truthfully gets self-healing for free, and one that answers them carelessly gets restarted at the worst moment.
 
-Logs, events and `kubectl top` are the built-in floor of observability, enough for the exam and for a first look. Production clusters collect the same signals centrally, with Prometheus for metrics, a log store such as Loki, and traces, which the course builds in [module 23](../../platform-engineering/2-intermediate/23-prometheus-and-alerting.md) and [module 25](../../platform-engineering/3-advanced/25-opentelemetry-and-tempo.md).
+Logs, events and `kubectl top` are the built-in floor of observability, enough for the exam and for a first look. Production clusters collect the same signals centrally, with Prometheus for metrics, a log store such as Loki, and traces, which the course builds in [module 23](../2-intermediate/23-prometheus-and-alerting.md) and [module 25](../3-advanced/25-opentelemetry-and-tempo.md).
 
 ## Why this way
 
@@ -101,8 +101,8 @@ Kubernetes removes old API versions instead of serving them forever because ever
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 3.1
-== setup task 3.1
+$ ./platform-engineering/task.sh setup 35.1
+== setup task 35.1
 Waiting for deployment "api" rollout to finish: 0 of 2 updated replicas are available...
 Waiting for deployment "api" rollout to finish: 1 of 2 updated replicas are available...
 deployment "api" successfully rolled out
@@ -159,13 +159,13 @@ root@cks-cp:~# k -n probes describe pod -l app=api | grep -E 'Liveness|Readiness
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 3.1
-== check task 3.1
+$ ./platform-engineering/task.sh check 35.1
+== check task 35.1
   PASS  container 1 has a readiness probe: GET /ready on 8080 every 5s
   PASS  a liveness probe: TCP 8080 every 10s, 3 failures allowed
   PASS  a startup probe: GET /live, up to 30 tries 2s apart
   PASS  both pods are ready
-== task 3.1: 4 passed, 0 failed
+== task 35.1: 4 passed, 0 failed
 ```
 
 ## Task 2: Probes that kill a healthy app
@@ -173,8 +173,8 @@ $ ./certs/ckad/task.sh check 3.1
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 3.2
-== setup task 3.2
+$ ./platform-engineering/task.sh setup 35.2
+== setup task 35.2
 NAME                    READY   STATUS    RESTARTS     AGE
 shop-65d9d5cd87-9b46d   0/1     Running   2 (7s ago)   25s
 shop-65d9d5cd87-jt2jc   0/1     Running   2 (7s ago)   25s
@@ -217,12 +217,12 @@ The `connection refused` lines come from the moments right after each restart, w
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 3.2
-== check task 3.2
+$ ./platform-engineering/task.sh check 35.2
+== check task 35.2
   PASS  both pods of shop are ready
   PASS  no restart in the 20 seconds after the rollout
   PASS  both probes still exist and check port 80
-== task 3.2: 3 passed, 0 failed
+== task 35.2: 3 passed, 0 failed
 ```
 
 ## Task 3: Logs of a container that crashed
@@ -230,8 +230,8 @@ $ ./certs/ckad/task.sh check 3.2
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 3.3
-== setup task 3.3
+$ ./platform-engineering/task.sh setup 35.3
+== setup task 35.3
 NAME                       READY   STATUS   RESTARTS      AGE
 billing-84d5744958-6blzl   0/1     Error    1 (18s ago)   31s
 ```
@@ -268,11 +268,11 @@ In the test run's first attempt, the pod showed `Error` at that moment, and `--p
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 3.3
-== check task 3.3
+$ ./platform-engineering/task.sh check 35.3
+== check task 35.3
   PASS  /opt/ckad/3.3/crash.log holds the crash message
   PASS  billing's pod is ready and logs 'connected to postgres://db.logs:5432/billing'
-== task 3.3: 2 passed, 0 failed
+== task 35.3: 2 passed, 0 failed
 ```
 
 ## Task 4: Which pod uses the most CPU
@@ -280,8 +280,8 @@ $ ./certs/ckad/task.sh check 3.3
 **Time budget:** 3 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 3.4
-== setup task 3.4
+$ ./platform-engineering/task.sh setup 35.4
+== setup task 35.4
 NAME     READY   STATUS    RESTARTS   AGE
 calc-a   1/1     Running   0          22s
 calc-b   1/1     Running   0          22s
@@ -309,11 +309,11 @@ root@cks-cp:~# echo calc-b > /opt/ckad/3.4/top-pod.txt
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 3.4
-== check task 3.4
+$ ./platform-engineering/task.sh check 35.4
+== check task 35.4
   PASS  /opt/ckad/3.4/top-pod.txt names calc-b
   PASS  /opt/ckad/3.4/top.sh lists the pods of metrics-load, busiest first
-== task 3.4: 2 passed, 0 failed
+== task 35.4: 2 passed, 0 failed
 ```
 
 ## Task 5: Debug a container that has no shell
@@ -321,8 +321,8 @@ $ ./certs/ckad/task.sh check 3.4
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 3.5
-== setup task 3.5
+$ ./platform-engineering/task.sh setup 35.5
+== setup task 35.5
 error: Internal error occurred: Internal error occurred: error executing command in container: failed to exec in container: failed to start exec "7f521802c9d96c0d7ec604ee860deaeb445631822dd6b7d845d33053a46a8f32": OCI runtime exec failed: exec failed: unable to start container process: exec: "sh": executable file not found in $PATH
 ```
 
@@ -353,12 +353,12 @@ Process 1 belongs to `app` and runs as user 65535, while the debugger's own proc
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 3.5
-== check task 3.5
+$ ./platform-engineering/task.sh check 35.5
+== check task 35.5
   PASS  pod vault has an ephemeral container debugger (busybox:1.36) that targets app
   PASS  /opt/ckad/3.5/process.txt holds the command of app's process
   PASS  pod vault was not restarted or replaced
-== task 3.5: 3 passed, 0 failed
+== task 35.5: 3 passed, 0 failed
 ```
 
 ## Task 6: Pods that stay Pending
@@ -366,8 +366,8 @@ $ ./certs/ckad/task.sh check 3.5
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 3.6
-== setup task 3.6
+$ ./platform-engineering/task.sh setup 35.6
+== setup task 35.6
 NAME                      READY   STATUS    RESTARTS   AGE
 report-5bc98b878c-c6d24   0/1     Pending   0          3s
 report-5bc98b878c-dcxlw   0/1     Pending   0          3s
@@ -410,12 +410,12 @@ report-57cbc8947d-vfc8x   1/1     Running   0          1s    10.244.135.169   ck
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 3.6
-== check task 3.6
+$ ./platform-engineering/task.sh check 35.6
+== check task 35.6
   PASS  node cks-w1 carries the label ckad-disk=ssd
   PASS  the nodeSelector stays, and each pod requests 100m CPU
   PASS  both pods run on cks-w1
-== task 3.6: 3 passed, 0 failed
+== task 35.6: 3 passed, 0 failed
 ```
 
 ## Task 7: Manifests written for APIs that no longer exist
@@ -423,8 +423,8 @@ $ ./certs/ckad/task.sh check 3.6
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 3.7
-== setup task 3.7
+$ ./platform-engineering/task.sh setup 35.7
+== setup task 35.7
 no matches for kind "Deployment" in version "extensions/v1beta1"
 no matches for kind "HorizontalPodAutoscaler" in version "autoscaling/v2beta1"
 no matches for kind "PodDisruptionBudget" in version "policy/v1beta1"
@@ -507,14 +507,14 @@ The HPA shows `<unknown>` until metrics-server has two samples of the new pods, 
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 3.7
-== check task 3.7
+$ ./platform-engineering/task.sh check 35.7
+== check task 35.7
   PASS  /opt/ckad/3.7/current.yaml uses apps/v1, policy/v1 and autoscaling/v2 only
   PASS  the file applies cleanly (server dry run)
   PASS  Deployment catalog runs 2 ready pods in upgrade
   PASS  the HPA targets Deployment catalog at 70% CPU, 2 to 5 replicas
   PASS  the PodDisruptionBudget keeps 1 pod of catalog
-== task 3.7: 5 passed, 0 failed
+== task 35.7: 5 passed, 0 failed
 ```
 
 ## Task 8: A client that never reaches its backend
@@ -567,14 +567,14 @@ The slice listed four addresses for a moment, the old pods and the new ones, and
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 3.8
-== check task 3.8
+$ ./platform-engineering/task.sh check 35.8
+== check task 35.8
   PASS  client gets 'backend ok' from http://backend
   PASS  Service backend has 2 ready endpoints
   PASS  the Deployment keeps its labels and a readiness probe
-== task 3.8: 3 passed, 0 failed
+== task 35.8: 3 passed, 0 failed
 ```
 
 ## Clean up
 
-`./certs/ckad/cluster/reset.sh` deletes the task namespaces, removes the label `ckad-disk` from `cks-w1`, and removes metrics-server again, which task 4 installed.
+`./platform-engineering/practice/app-extras/reset.sh` deletes the task namespaces, removes the label `ckad-disk` from `cks-w1`, and removes metrics-server again, which task 4 installed.

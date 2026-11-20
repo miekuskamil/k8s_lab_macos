@@ -1,12 +1,12 @@
-# CKAD 04: Application environment, configuration and security (25%)
+# Module 36: Configuration and secrets
 
-> New to a term here, like ResourceQuota or RoleBinding? The [CKAD glossary](glossary.md) explains every term this track uses.
+> New to a term here, like ResourceQuota or RoleBinding? The [glossary](../glossary.md#applications-on-kubernetes) explains every term these modules use.
 
-**Before this domain:** [domain 01](01-application-design-and-build.md) for pods and Deployments, and the [practice cluster](README.md#the-practice-cluster). The CKS track's [domain 04](../cks/04-minimize-microservice-vulnerabilities.md) goes deeper into security contexts and Pod Security, and its [domain 02](../cks/02-cluster-hardening.md) into RBAC.
+**Before this module:** [module 33](33-building-and-running-applications.md) for pods and Deployments, and the [practice cluster](../practice-cluster.md#the-application-extras). [Module 41](../3-advanced/41-hardening-workloads.md) goes deeper into security contexts and Pod Security, and [module 39](../2-intermediate/39-hardening-access-to-the-api.md) into RBAC.
 
-The same image runs in testing and in production, which means everything that differs between the two has to come from outside the image: settings, passwords, how much CPU the app gets, and which API calls it may make. This domain is about that outside layer. It covers ConfigMaps and Secrets, requests and limits with the namespace rules that enforce them, ServiceAccounts and RBAC for the app's own API calls, the security context, and resources that extend Kubernetes itself. It carries the most weight of the five domains, has twelve tasks, and takes about 1 hour 45 minutes.
+The same image runs in testing and in production, which means everything that differs between the two has to come from outside the image: settings, passwords, how much CPU the app gets, and which API calls it may make. This module is about that outside layer. It covers ConfigMaps and Secrets, requests and limits with the namespace rules that enforce them, ServiceAccounts and RBAC for the app's own API calls, the security context, and resources that extend Kubernetes itself. It is the largest of the five application modules, has twelve tasks, and takes about 1 hour 45 minutes.
 
-## The domain in one table
+## The module in one table
 
 | Question | Tool | Task |
 |---|---|---|
@@ -22,7 +22,7 @@ The same image runs in testing and in production, which means everything that di
 
 ## Concept: configuration outside the image
 
-Take the shop app of task 1, which reads its currency and page size from `app.properties` and its log level from a variable. Baking those values into the image means one image per environment, and a new build for every changed setting. So the values travel separately, in a [ConfigMap](glossary.md#configmap): an object that holds keys and values, either short strings or whole files, which the API server stores like any other object.
+Take the shop app of task 1, which reads its currency and page size from `app.properties` and its log level from a variable. Baking those values into the image means one image per environment, and a new build for every changed setting. So the values travel separately, in a [ConfigMap](../glossary.md#configmap): an object that holds keys and values, either short strings or whole files, which the API server stores like any other object.
 
 A pod reads a ConfigMap in one of two ways, and the choice decides what happens when the ConfigMap changes later:
 
@@ -35,7 +35,7 @@ A pod reads a ConfigMap in one of two ways, and the choice decides what happens 
 
 Variables never change after the process starts, because the kernel copies them into the process once, at start. Files in a ConfigMap volume do change, because the kubelet rewrites them in place, but the app must read the file again to notice. Task 3 takes the route that most teams settle on: it never changes a ConfigMap in place. A new ConfigMap with a new name, marked `immutable: true`, goes into the Deployment's template, and the template change rolls out new pods by itself, while the old ConfigMap stays as the way back. An immutable ConfigMap also spares the kubelet from watching it for changes, which matters in clusters with thousands of them.
 
-A [Secret](glossary.md#secret) works exactly like a ConfigMap, with the same variables, volumes and `items`, but it holds passwords, tokens and keys. Its values sit in the object as [base64](glossary.md#base64), an encoding that only keeps binary data safe in YAML and that anyone reverses with `base64 -d`. So a Secret is not encrypted by default, and the protection comes from elsewhere: RBAC keeps most users from reading Secrets, and encryption at rest in etcd, which the [CKS track](../cks/04-minimize-microservice-vulnerabilities.md#concept-secrets-at-rest) sets up, protects the stored copy.
+A [Secret](../glossary.md#secret) works exactly like a ConfigMap, with the same variables, volumes and `items`, but it holds passwords, tokens and keys. Its values sit in the object as [base64](../glossary.md#base64), an encoding that only keeps binary data safe in YAML and that anyone reverses with `base64 -d`. So a Secret is not encrypted by default, and the protection comes from elsewhere: RBAC keeps most users from reading Secrets, and encryption at rest in etcd, which the [CKS track](../3-advanced/41-hardening-workloads.md#concept-secrets-at-rest) sets up, protects the stored copy.
 
 A Secret mounted as a file is safer than one in a variable, because variables leak easily: a crash report, a debug endpoint or `kubectl describe` on the process shows the whole environment. A file with `defaultMode: 0400` is readable only by the file's owner, and it updates in place when the Secret changes. Task 2 uses a variable for the user name, which is no secret, and a file for the password.
 
@@ -47,14 +47,14 @@ Every container shares a node with other containers, so two numbers per resource
 2. The **limit** is the most the container may use. The kernel enforces it on the node through cgroups: a container at its CPU limit waits for the next time slice, and a container above its memory limit gets killed, with `OOMKilled` as the reason.
 3. A container without numbers uses whatever is free and gets evicted first when the node runs short.
 
-The kubelet sorts pods into three [QoS classes](glossary.md#qos-class) from these numbers, which decide who goes first when a node runs out of memory. A pod whose every container has requests equal to its limits is `Guaranteed` and goes last, a pod with some numbers is `Burstable`, and a pod with none is `BestEffort` and goes first. CPU counts in cores, so `100m` means a tenth of one core, and memory counts in bytes with suffixes, where `Mi` means mebibytes and `M` megabytes.
+The kubelet sorts pods into three [QoS classes](../glossary.md#qos-class) from these numbers, which decide who goes first when a node runs out of memory. A pod whose every container has requests equal to its limits is `Guaranteed` and goes last, a pod with some numbers is `Burstable`, and a pod with none is `BestEffort` and goes first. CPU counts in cores, so `100m` means a tenth of one core, and memory counts in bytes with suffixes, where `Mi` means mebibytes and `M` megabytes.
 
 ![A pod without resources passes the LimitRange, which fills in defaults, and the ResourceQuota, which adds the numbers to the namespace's totals and refuses the pod past the hard limit. The scheduler places the pod by its requests, and the kernel enforces its limits on the node](../../docs/diagrams/chapters/ckad-requests-limits.svg)
 
 Two namespace objects turn these numbers into rules, and both act at admission, before the pod exists:
 
-1. A [LimitRange](glossary.md#limitrange) sets defaults for containers that name no numbers, and minimum and maximum values for those that do. A pod without resources in a namespace with a LimitRange gets the defaults written into its spec, which task 5 shows.
-2. A [ResourceQuota](glossary.md#resourcequota) caps the totals of a namespace: the sum of all requests and limits, and the number of pods, Services, ConfigMaps and other objects. Each new pod adds to the totals, and a pod that would push one past its `hard` value gets refused with `exceeded quota`.
+1. A [LimitRange](../glossary.md#limitrange) sets defaults for containers that name no numbers, and minimum and maximum values for those that do. A pod without resources in a namespace with a LimitRange gets the defaults written into its spec, which task 5 shows.
+2. A [ResourceQuota](../glossary.md#resourcequota) caps the totals of a namespace: the sum of all requests and limits, and the number of pods, Services, ConfigMaps and other objects. Each new pod adds to the totals, and a pod that would push one past its `hard` value gets refused with `exceeded quota`.
 
 The quota has a side effect that task 4 starts from. Once a quota caps `requests.cpu` or `limits.memory`, every new pod in the namespace must name that resource, because the API server has no number to add to the total for a field that is missing. A Deployment without resources in such a namespace then shows `0/3` ready, no pods at all, and the reason appears only as an event on its ReplicaSet. A LimitRange next to the quota avoids that, because its defaults fill the gap before the quota counts.
 
@@ -62,23 +62,23 @@ The quota has a side effect that task 4 starts from. Once a quota caps `requests
 
 A pod that calls the Kubernetes API, such as a CI runner that deploys or a dashboard that lists pods, has to prove who it is, and the API server must decide what that identity may do. Both steps happen on every request, in the order the API server's chain runs them.
 
-The identity is a [ServiceAccount](glossary.md#serviceaccount), an account for a program rather than a person, and every namespace has one called `default`. The kubelet mounts a short-lived token for the pod's ServiceAccount at `/var/run/secrets/kubernetes.io/serviceaccount/token`, and renews it before it expires. The token is a signed JWT whose subject names the account, `system:serviceaccount:NAMESPACE:NAME`, so the API server knows who calls without any password. `automountServiceAccountToken: false` on the pod or the ServiceAccount leaves the token out, which suits every pod that never calls the API, and `kubectl create token NAME --duration=2h` issues a token for use outside a pod.
+The identity is a [ServiceAccount](../glossary.md#serviceaccount), an account for a program rather than a person, and every namespace has one called `default`. The kubelet mounts a short-lived token for the pod's ServiceAccount at `/var/run/secrets/kubernetes.io/serviceaccount/token`, and renews it before it expires. The token is a signed JWT whose subject names the account, `system:serviceaccount:NAMESPACE:NAME`, so the API server knows who calls without any password. `automountServiceAccountToken: false` on the pod or the ServiceAccount leaves the token out, which suits every pod that never calls the API, and `kubectl create token NAME --duration=2h` issues a token for use outside a pod.
 
-The permissions come from [RBAC](glossary.md#rbac), role-based access control, in two objects that work like a job description and a hiring contract:
+The permissions come from [RBAC](../glossary.md#rbac), role-based access control, in two objects that work like a job description and a hiring contract:
 
-1. A [Role](glossary.md#role) lists rules, each a set of verbs (`get`, `list`, `watch`, `create`, `update`, `patch`, `delete`) on a set of resources in one API group, inside one namespace.
-2. A [RoleBinding](glossary.md#rolebinding) in the same namespace gives a Role to subjects: users, groups or ServiceAccounts, and the ServiceAccounts may come from any namespace.
+1. A [Role](../glossary.md#role) lists rules, each a set of verbs (`get`, `list`, `watch`, `create`, `update`, `patch`, `delete`) on a set of resources in one API group, inside one namespace.
+2. A [RoleBinding](../glossary.md#rolebinding) in the same namespace gives a Role to subjects: users, groups or ServiceAccounts, and the ServiceAccounts may come from any namespace.
 3. A ClusterRole and a ClusterRoleBinding do the same for the whole cluster, and a RoleBinding may also grant a ClusterRole inside its one namespace, which lets you reuse one rule set in many namespaces.
 
 ![Pod watcher in namespace observer sends its ServiceAccount token with a list request. The API server authenticates the token, then finds a RoleBinding in namespace shop-front that grants the Role pod-reader to observer:watcher, so the list succeeds](../../docs/diagrams/chapters/ckad-rbac.svg)
 
 RBAC only adds permissions and never takes them away, so everything that no rule allows stays forbidden, and the API server answers `403 Forbidden`. Task 9 starts from exactly that error in a pod's log. The figure shows the fix: the RoleBinding lives in the namespace whose pods the watcher lists, `shop-front`, not in the watcher's own namespace, because a RoleBinding grants rights only where it sits. `kubectl auth can-i list pods -n shop-front --as=system:serviceaccount:observer:watcher` asks the API server the same question without running the pod, and answers `yes` or `no`.
 
-[Admission control](glossary.md#admission-controller) is the third step, after authentication and authorization. Admission plugins inspect, and sometimes change, an object that the user may create, before the API server stores it. LimitRange and ResourceQuota are admission plugins, and so is [Pod Security Admission](glossary.md#pod-security-admission), which refuses pods that break a namespace's Pod Security level. Task 12 meets the `restricted` level, whose refusal again appears only as a ReplicaSet event.
+[Admission control](../glossary.md#admission-controller) is the third step, after authentication and authorization. Admission plugins inspect, and sometimes change, an object that the user may create, before the API server stores it. LimitRange and ResourceQuota are admission plugins, and so is [Pod Security Admission](../glossary.md#pod-security-admission), which refuses pods that break a namespace's Pod Security level. Task 12 meets the `restricted` level, whose refusal again appears only as a ReplicaSet event.
 
 ## Concept: the security context
 
-A container's process runs as some user, with some Linux capabilities, on some file system, and the defaults are generous: an image without a `USER` line runs as root, keeps a dozen capabilities, and may write anywhere in its own file system. The [security context](glossary.md#security-context) is the part of the pod spec that narrows those defaults, with fields at two levels:
+A container's process runs as some user, with some Linux capabilities, on some file system, and the defaults are generous: an image without a `USER` line runs as root, keeps a dozen capabilities, and may write anywhere in its own file system. The [security context](../glossary.md#security-context) is the part of the pod spec that narrows those defaults, with fields at two levels:
 
 | Field | Level | Effect |
 |---|---|---|
@@ -94,13 +94,13 @@ A container-level field overrides the same field at pod level, so the pod sets t
 
 ## Concept: resources that extend Kubernetes
 
-Kubernetes knows pods, Services and Deployments out of the box, but a team that runs databases wants objects like `Backup` or `PostgresCluster`, with fields that make sense for them. A [CustomResourceDefinition](glossary.md#customresourcedefinition), or CRD, adds such a type to the API server: it names the type, its group and version, and an OpenAPI schema that every object of the type must match. After that, `kubectl get backups`, `kubectl explain backup.spec` and `kubectl apply` work on the new type like on any built-in one, and the API server stores [custom resources](glossary.md#custom-resource) in etcd.
+Kubernetes knows pods, Services and Deployments out of the box, but a team that runs databases wants objects like `Backup` or `PostgresCluster`, with fields that make sense for them. A [CustomResourceDefinition](../glossary.md#customresourcedefinition), or CRD, adds such a type to the API server: it names the type, its group and version, and an OpenAPI schema that every object of the type must match. After that, `kubectl get backups`, `kubectl explain backup.spec` and `kubectl apply` work on the new type like on any built-in one, and the API server stores [custom resources](../glossary.md#custom-resource) in etcd.
 
-A custom resource on its own does nothing, because no controller acts on it. An [operator](glossary.md#operator) is a controller that does: a program in a pod that watches the custom resources of its type and makes the world match them, for example by running a backup Job every night for each `Backup`. The course already runs several, such as Istio's control plane and Kyverno, which the [gap map](README.md#gap-map) points to. The exam asks you to use them, not to write them, so the skills are discovery and use: `kubectl get crd`, `kubectl api-resources --api-group=GROUP`, `kubectl explain`, and a manifest that passes the schema. Task 11 follows that order.
+A custom resource on its own does nothing, because no controller acts on it. An [operator](../glossary.md#operator) is a controller that does: a program in a pod that watches the custom resources of its type and makes the world match them, for example by running a backup Job every night for each `Backup`. The course already runs several, such as Istio's control plane and Kyverno, which the [topic map](../timed-tasks.md#appendix-where-the-lab-modules-explain-each-topic) points to. The exam asks you to use them, not to write them, so the skills are discovery and use: `kubectl get crd`, `kubectl api-resources --api-group=GROUP`, `kubectl explain`, and a manifest that passes the schema. Task 11 follows that order.
 
 ## The bigger picture: the platform owns the outside of the box
 
-Everything in this domain lets a platform team set rules once and lets app teams live inside them. A namespace for a team comes with a quota and a LimitRange, a Pod Security level, a ServiceAccount per app with exactly the RBAC it needs, and ConfigMaps and Secrets that a GitOps tool writes from a repository or a secret manager. The image stays the same everywhere, and the outside layer turns it into a test or a production deployment.
+Everything in this module lets a platform team set rules once and lets app teams live inside them. A namespace for a team comes with a quota and a LimitRange, a Pod Security level, a ServiceAccount per app with exactly the RBAC it needs, and ConfigMaps and Secrets that a GitOps tool writes from a repository or a secret manager. The image stays the same everywhere, and the outside layer turns it into a test or a production deployment.
 
 The direction of travel is toward less trust by default. Short-lived, automatically rotated tokens replaced the long-lived token Secrets of older versions, Pod Security replaced the old PodSecurityPolicy, and secret managers such as Vault or a cloud's key service increasingly hand Secrets to pods directly, so that no copy sits in etcd at all.
 
@@ -117,8 +117,8 @@ RBAC has no deny rules because a list of grants is easy to audit: reading the bi
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 4.1
-== setup task 4.1
+$ ./platform-engineering/task.sh setup 36.1
+== setup task 36.1
 shop.currency=EUR
 shop.page-size=20
 shop.cache=on
@@ -173,12 +173,12 @@ The volume shows every key as a file, `LOG_LEVEL` included. `items` in the volum
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 4.1
-== check task 4.1
+$ ./platform-engineering/task.sh check 36.1
+== check task 36.1
   PASS  ConfigMap app-config has the keys app.properties and LOG_LEVEL=debug
   PASS  pod app has LOG_LEVEL=debug in its environment
   PASS  pod app reads /etc/app/app.properties
-== task 4.1: 3 passed, 0 failed
+== task 36.1: 3 passed, 0 failed
 ```
 
 ## Task 2: A Secret as an environment variable and as a file
@@ -239,13 +239,13 @@ total 4
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 4.2
-== check task 4.2
+$ ./platform-engineering/task.sh check 36.2
+== check task 36.2
   PASS  Secret db-credentials holds user=admin and password=S3cr3t-pw
   PASS  pod db-client has DB_USER=admin from the Secret
   PASS  the password is a file /etc/db/password, mode 400
   PASS  the password is not in the environment
-== task 4.2: 4 passed, 0 failed
+== task 36.2: 4 passed, 0 failed
 ```
 
 ## Task 3: New configuration in an immutable ConfigMap
@@ -253,8 +253,8 @@ $ ./certs/ckad/task.sh check 4.2
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 4.3
-== setup task 4.3
+$ ./platform-engineering/task.sh setup 36.3
+== setup task 36.3
 NAME                         DATA   AGE
 configmap/kube-root-ca.crt   1      1s
 configmap/web-config         1      1s
@@ -292,13 +292,13 @@ The last command proves the ConfigMap is immutable. Changing `web-config` in pla
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 4.3
-== check task 4.3
+$ ./platform-engineering/task.sh check 36.3
+== check task 36.3
   PASS  ConfigMap web-config-v2 holds COLOR=green and is immutable
   PASS  Deployment web reads COLOR from web-config-v2
   PASS  every pod of web logs color=green
   PASS  web-config still holds COLOR=red
-== task 4.3: 4 passed, 0 failed
+== task 36.3: 4 passed, 0 failed
 ```
 
 ## Task 4: A Deployment that a quota keeps from starting
@@ -306,8 +306,8 @@ $ ./certs/ckad/task.sh check 4.3
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 4.4
-== setup task 4.4
+$ ./platform-engineering/task.sh setup 36.4
+== setup task 36.4
 NAME     READY   UP-TO-DATE   AVAILABLE   AGE
 worker   0/3     0            0           3s
 ```
@@ -349,12 +349,12 @@ The quota names all four numbers, so the pod must name all four too. Three pods 
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 4.4
-== check task 4.4
+$ ./platform-engineering/task.sh check 36.4
+== check task 36.4
   PASS  worker's container requests 100m CPU and 64Mi, limited to 200m and 128Mi
   PASS  all 3 replicas are ready
   PASS  the quota is unchanged
-== task 4.4: 3 passed, 0 failed
+== task 36.4: 3 passed, 0 failed
 ```
 
 ## Task 5: Defaults for every container with a LimitRange
@@ -406,12 +406,12 @@ Container   cpu       -    -      50m              200m           -
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 4.5
-== check task 4.5
+$ ./platform-engineering/task.sh check 36.5
+== check task 36.5
   PASS  LimitRange container-defaults: default 200m/128Mi, default request 50m/64Mi, max memory 256Mi
   PASS  pod plain got the defaults although its spec names none
   PASS  a pod that asks for 512Mi is refused
-== task 4.5: 3 passed, 0 failed
+== task 36.5: 3 passed, 0 failed
 ```
 
 ## Task 6: A ResourceQuota for a team
@@ -453,12 +453,12 @@ The pod count ran out first, while CPU and memory had room left: 5 pods of 50m e
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 4.6
-== check task 4.6
+$ ./platform-engineering/task.sh check 36.6
+== check task 36.6
   PASS  ResourceQuota team-a-quota: 5 pods, 1 CPU and 1Gi requested, 2 CPU and 2Gi limits, 4 Services
   PASS  Deployment filler asks for 6 replicas and runs 5
   PASS  /opt/ckad/4.6/reason.txt holds the quota's refusal
-== task 4.6: 3 passed, 0 failed
+== task 36.6: 3 passed, 0 failed
 ```
 
 ## Task 7: ServiceAccounts and their tokens
@@ -466,8 +466,8 @@ $ ./certs/ckad/task.sh check 4.6
 **Time budget:** 7 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 4.7
-== setup task 4.7
+$ ./platform-engineering/task.sh setup 36.7
+== setup task 36.7
 NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
 deployment.apps/reporter      1/1     1            1           4s
 deployment.apps/static-site   1/1     1            1           4s
@@ -512,14 +512,14 @@ command terminated with exit code 1
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 4.7
-== check task 4.7
+$ ./platform-engineering/task.sh check 36.7
+== check task 36.7
   PASS  Deployment reporter runs as ServiceAccount reporter
   PASS  the reporter pod's token names system:serviceaccount:sa-apps:reporter
   PASS  static-site's pods mount no token
   PASS  /opt/ckad/4.7/token.txt authenticates as reporter
   PASS  the kubeconfig has a user ckad-reporter with that token
-== task 4.7: 5 passed, 0 failed
+== task 36.7: 5 passed, 0 failed
 ```
 
 ## Task 8: A Role for a CI pipeline
@@ -566,13 +566,13 @@ Pods live in the core API group, written `""`, and Deployments in `apps`; `kubec
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 4.8
-== check task 4.8
+$ ./platform-engineering/task.sh check 36.8
+== check task 36.8
   PASS  deployer may create, update and patch deployments in ci
   PASS  deployer may get and list pods and read pod logs in ci
   PASS  deployer may not delete deployments or read Secrets
   PASS  deployer has no rights in default
-== task 4.8: 4 passed, 0 failed
+== task 36.8: 4 passed, 0 failed
 ```
 
 ## Task 9: The logs say 403
@@ -580,8 +580,8 @@ $ ./certs/ckad/task.sh check 4.8
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 4.9
-== setup task 4.9
+$ ./platform-engineering/task.sh setup 36.9
+== setup task 36.9
 11:02:27 wget: server returned error: HTTP/1.1 403 Forbidden
 ```
 
@@ -609,12 +609,12 @@ The RoleBinding sits in `shop-front` and names a ServiceAccount from `observer`,
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 4.9
-== check task 4.9
+$ ./platform-engineering/task.sh check 36.9
+== check task 36.9
   PASS  watcher may list pods in shop-front
   PASS  watcher may not list pods in other namespaces, or delete them
   PASS  the watcher's log shows 2 running pods
-== task 4.9: 3 passed, 0 failed
+== task 36.9: 3 passed, 0 failed
 ```
 
 ## Task 10: A security context, field by field
@@ -622,8 +622,8 @@ $ ./certs/ckad/task.sh check 4.9
 **Time budget:** 7 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 4.10
-== setup task 4.10
+$ ./platform-engineering/task.sh setup 36.10
+== setup task 36.10
 uid=0(root) gid=0(root) groups=0(root),10(wheel)
 ```
 
@@ -678,12 +678,12 @@ The heartbeat file belongs to user 1000 and group 2000, because the kubelet give
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 4.10
-== check task 4.10
+$ ./platform-engineering/task.sh check 36.10
+== check task 36.10
   PASS  the process runs as uid 1000, gid 3000, with group 2000
   PASS  no privilege escalation, every capability dropped, root file system read-only
   PASS  the app still writes /tmp/heartbeat, and nothing else is writable
-== task 4.10: 3 passed, 0 failed
+== task 36.10: 3 passed, 0 failed
 ```
 
 ## Task 11: Use a CustomResourceDefinition
@@ -691,8 +691,8 @@ $ ./certs/ckad/task.sh check 4.10
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 4.11
-== setup task 4.11
+$ ./platform-engineering/task.sh setup 36.11
+== setup task 36.11
 backups.ckad.io                                         Namespaced   v1(storage)         2026-11-20T10:53:02Z
 ```
 
@@ -761,12 +761,12 @@ The columns `SCHEDULE`, `TARGET` and `KEEP` come from the CRD's `additionalPrint
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 4.11
-== check task 4.11
+$ ./platform-engineering/task.sh check 36.11
+== check task 36.11
   PASS  Backup nightly in crd-demo: 0 2 * * *, target postgres, kept 7 days
   PASS  /opt/ckad/4.11/backups.txt lists the Backups of every namespace
   PASS  /opt/ckad/4.11/max-retention.txt holds the largest retentionDays allowed
-== task 4.11: 3 passed, 0 failed
+== task 36.11: 3 passed, 0 failed
 ```
 
 ## Task 12: A namespace that enforces the restricted standard
@@ -774,8 +774,8 @@ $ ./certs/ckad/task.sh check 4.11
 **Time budget:** 7 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 4.12
-== setup task 4.12
+$ ./platform-engineering/task.sh setup 36.12
+== setup task 36.12
 Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "busybox" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "busybox" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "busybox" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "busybox" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
 NAME   READY   UP-TO-DATE   AVAILABLE   AGE
 web    0/1     0            0           3s
@@ -827,14 +827,14 @@ Port 8080 works for user 1000 because only ports below 1024 need the capability 
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 4.12
-== check task 4.12
+$ ./platform-engineering/task.sh check 36.12
+== check task 36.12
   PASS  Deployment web has a ready pod
   PASS  the namespace still enforces restricted
   PASS  the pod answers on port 8080
-== task 4.12: 3 passed, 0 failed
+== task 36.12: 3 passed, 0 failed
 ```
 
 ## Clean up
 
-`./certs/ckad/cluster/reset.sh` deletes the task namespaces, the CRD `backups.ckad.io` with every Backup, and the `ckad-reporter` user that task 7 added to root's kubeconfig.
+`./platform-engineering/practice/app-extras/reset.sh` deletes the task namespaces, the CRD `backups.ckad.io` with every Backup, and the `ckad-reporter` user that task 7 added to root's kubeconfig.

@@ -1,16 +1,16 @@
-# CKS 03: System hardening (10%)
+# Module 40: Hardening nodes
 
-> New to a term here, like attack surface or NodeRestriction? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
+> New to a term here, like attack surface or NodeRestriction? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running, and the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium) for task 7. No course module covers node hardening, so this domain starts from the basics.
+**Before this module:** the [practice cluster](../practice-cluster.md) running. No course module covers node hardening, so this module starts from the basics.
 
-Kubernetes runs on ordinary Linux machines, so an attacker who escapes a container lands on a machine with whatever services, users and credentials it holds. This domain makes the node itself a poor place to land, so that an escape stays a small incident. It has seven tasks and takes about an hour.
+Kubernetes runs on ordinary Linux machines, so an attacker who escapes a container lands on a machine with whatever services, users and credentials it holds. This module makes the node itself a poor place to land, so that an escape stays a small incident. It has six tasks here and one in module 44, and takes about an hour.
 
-The curriculum lists AppArmor and seccomp under domain 06, so they live in [06, tasks 4 and 5](06-monitoring-logging-runtime-security.md#task-4-a-seccomp-profile).
+Seccomp and AppArmor protect the node as well, and they live in [module 43, task 4](43-runtime-security-and-auditing.md#task-4-a-seccomp-profile) and [module 44, task 6](../kernel-and-host/44-kernel-and-host-security.md#task-6-an-apparmor-profile).
 
-## The domain in one table
+## The module in one table
 
-Kubernetes security usually starts at the API, but this domain starts one floor lower, at the Linux machine under the kubelet, and each task answers one question about that machine:
+Kubernetes security usually starts at the API, but this module starts one floor lower, at the Linux machine under the kubelet, and each task answers one question about that machine:
 
 | Question | Tool | Task |
 |---|---|---|
@@ -19,7 +19,7 @@ Kubernetes security usually starts at the API, but this domain starts one floor 
 | What may a kubelet change in the cluster? | NodeRestriction | 3 |
 | Who may log in, and how? | `sshd -T` | 5 |
 | Which files on the node hold cluster keys? | `grep`, `chmod` | 6 |
-| Which kernel code may load at all? | `/etc/modprobe.d/` | 7 |
+| Which kernel code may load at all? | `/etc/modprobe.d/` | module 44, task 4 |
 
 ## Concept: the node is the last wall
 
@@ -29,7 +29,7 @@ A hotel shows the idea well, with the container as a room and the node as the bu
 
 The **attack surface** is everything an attacker might use to get in or move on: listening ports, installed packages, running services, user accounts, files with credentials and kernel features. Each item is a door, and a Kubernetes node needs very few of them, namely the kubelet, the container runtime, the CNI agent and SSH for the admins. Everything else is risk without benefit.
 
-**Least privilege** is the rule that narrows the remaining doors as far as the job allows, because each user, each program and each credential gets the rights its job needs and nothing more. The rest of this domain applies those two ideas, a small surface and least privilege, to services, kernel modules, logins, users, kubeconfig files and the kubelet's own identity.
+**Least privilege** is the rule that narrows the remaining doors as far as the job allows, because each user, each program and each credential gets the rights its job needs and nothing more. The rest of this module applies those two ideas, a small surface and least privilege, to services, kernel modules, logins, users, kubeconfig files and the kubelet's own identity.
 
 ## Concept: services nobody needs
 
@@ -67,7 +67,7 @@ The CIS benchmark for Linux lists modules that a server never needs and asks you
 
 Use both lines. The file stops future loads only, so also unload a module that is already in with `modprobe -r dccp`, and use `modprobe -n -v dccp` to see what a load would do without doing it.
 
-OrbStack machines share one kernel and may not load modules, so task 7 runs on the Lima VM.
+OrbStack machines share one kernel and may not load modules, so this task runs on a VM, as [module 44, task 4](../kernel-and-host/44-kernel-and-host-security.md#task-4-keep-a-kernel-module-out).
 
 **What this stops.** A blocked module stops an unprivileged process from pulling buggy code into the kernel that every pod shares.
 
@@ -123,7 +123,7 @@ The question is how far those rights reach. If every kubelet read every Secret i
 2. The **Node authorizer** checks reads and writes against the node's own pods. A kubelet reads only the Secrets, ConfigMaps and volumes that pods on its own node use, and in 1.37 only its own Node object.
 3. The **NodeRestriction** admission plugin checks the object of every write. A kubelet changes only its own Node and the pods bound to it, and never sets labels with the `node-restriction.kubernetes.io/` prefix.
 
-The two layers split the work along the request chain from [domain 02](02-cluster-hardening.md#concept-one-request-six-steps). The Node authorizer works at step 2 and sees the verb and the target, while NodeRestriction works at step 5 and sees the object's contents, such as which labels a Node update sets.
+The two layers split the work along the request chain from [module 39](../2-intermediate/39-hardening-access-to-the-api.md#concept-one-request-six-steps). The Node authorizer works at step 2 and sees the verb and the target, while NodeRestriction works at step 5 and sees the object's contents, such as which labels a Node update sets.
 
 The label prefix exists for a reason. Admins use labels under it to steer sensitive workloads to trusted nodes with a nodeSelector or node affinity, so a kubelet that set such a label on itself would let a compromised node attract the very workloads meant to avoid it.
 
@@ -133,7 +133,7 @@ The label prefix exists for a reason. Admins use labels under it to steer sensit
 
 ## The bigger picture: defence in depth on the node
 
-No single control in this domain stops a determined attacker, but together they make each step costly. An attacker who escapes a container finds no extra services to abuse, no buggy kernel modules to load, no admin kubeconfig to pick up, no sudo rights for the account they stole, and a kubelet identity that reaches only its own node. Security people call that **defence in depth**, which means several independent layers, so that one failure doesn't decide the outcome.
+No single control in this module stops a determined attacker, but together they make each step costly. An attacker who escapes a container finds no extra services to abuse, no buggy kernel modules to load, no admin kubeconfig to pick up, no sudo rights for the account they stole, and a kubelet identity that reaches only its own node. Security people call that **defence in depth**, which means several independent layers, so that one failure doesn't decide the outcome.
 
 Real platform teams go further than hand-tuning each node. They build node images with a minimal operating system, often one made only for containers, such as Talos, which has no package manager and no SSH at all. They replace nodes instead of patching them, so any backdoor dies with the old machine, and they log every sudo and SSH session centrally, so the record survives an attacker who wipes the node's own logs.
 
@@ -152,8 +152,8 @@ Real platform teams go further than hand-tuning each node. They build node image
 **Time budget:** 4 minutes. **Host:** `cks-w1`.
 
 ```console
-$ ./certs/cks/task.sh setup 3.1
-== setup task 3.1
+$ ./platform-engineering/task.sh setup 40.1
+== setup task 40.1
 LISTEN 0      32                 *:21               *:*    users:(("vsftpd",pid=68941,fd=3))     
 ```
 
@@ -196,11 +196,11 @@ In the test run, `ss` showed `users:(("vsftpd",pid=41498,fd=3))` on `*:21`, and 
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 3.1
-== check task 3.1
+$ ./platform-engineering/task.sh check 40.1
+== check task 40.1
   PASS  nothing listens on TCP port 21
   PASS  the package vsftpd is removed
-== task 3.1: 2 passed, 0 failed
+== task 40.1: 2 passed, 0 failed
 ```
 
 ## Task 2: A user with too much power
@@ -208,8 +208,8 @@ $ ./certs/cks/task.sh check 3.1
 **Time budget:** 4 minutes. **Host:** `cks-w1`.
 
 ```console
-$ ./certs/cks/task.sh setup 3.2
-== setup task 3.2
+$ ./platform-engineering/task.sh setup 40.2
+== setup task 40.2
 ```
 
 > On `cks-w1`, user `cks-dev` must keep the account but lose every root right. User `old-admin` left the team: lock the account's password without deleting the user.
@@ -238,13 +238,13 @@ The `grep` finds the second grant, a `NOPASSWD:ALL` line in `/etc/sudoers.d/cks-
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 3.2
-== check task 3.2
+$ ./platform-engineering/task.sh check 40.2
+== check task 40.2
   PASS  cks-dev is no longer in the sudo group
   PASS  sudo grants cks-dev nothing
   PASS  cks-dev still exists
   PASS  old-admin's password is locked
-== task 3.2: 4 passed, 0 failed
+== task 40.2: 4 passed, 0 failed
 ```
 
 ## Task 3: Limit what a kubelet may change
@@ -252,8 +252,8 @@ $ ./certs/cks/task.sh check 3.2
 **Time budget:** 6 minutes. **Hosts:** `cks-cp`, and `cks-w1` to test.
 
 ```console
-$ ./certs/cks/task.sh setup 3.3
-== setup task 3.3
+$ ./platform-engineering/task.sh setup 40.3
+== setup task 40.3
     - --enable-admission-plugins=AlwaysAdmit
 ```
 
@@ -293,13 +293,13 @@ Change the line to this value:
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 3.3
-== check task 3.3
+$ ./platform-engineering/task.sh check 40.3
+== check task 40.3
   PASS  the API server enables NodeRestriction
   PASS  the API server no longer enables AlwaysAdmit
   PASS  cks-w1's kubelet may not label node cks-cp (the Node authorizer already blocks this)
   PASS  cks-w1's kubelet may not set a node-restriction label on itself
-== task 3.3: 4 passed, 0 failed
+== task 40.3: 4 passed, 0 failed
 ```
 
 In the test run, the third check passed even before the fix, for the reason the theory gives.
@@ -309,8 +309,8 @@ In the test run, the third check passed even before the fix, for the reason the 
 **Time budget:** 5 minutes. **Host:** `cks-w1`.
 
 ```console
-$ ./certs/cks/task.sh setup 3.4
-== setup task 3.4
+$ ./platform-engineering/task.sh setup 40.4
+== setup task 40.4
 LISTEN 0      5                  *:4444             *:*    users:(("sysmond",pid=71147,fd=5))    
 ```
 
@@ -345,13 +345,13 @@ Kill only the process, and `Restart=always` starts it again a moment later. Dele
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 3.4
-== check task 3.4
+$ ./platform-engineering/task.sh check 40.4
+== check task 40.4
   PASS  nothing listens on TCP port 4444
   PASS  systemd knows no sysmon unit any more
   PASS  the binary behind it is gone
   PASS  the socat package stays installed
-== task 3.4: 4 passed, 0 failed
+== task 40.4: 4 passed, 0 failed
 ```
 
 ## Task 5: Harden sshd
@@ -359,8 +359,8 @@ $ ./certs/cks/task.sh check 3.4
 **Time budget:** 4 minutes. **Host:** `cks-w1`.
 
 ```console
-$ ./certs/cks/task.sh setup 3.5
-== setup task 3.5
+$ ./platform-engineering/task.sh setup 40.5
+== setup task 40.5
 permitrootlogin yes
 passwordauthentication yes
 ```
@@ -395,12 +395,12 @@ passwordauthentication no
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 3.5
-== check task 3.5
+$ ./platform-engineering/task.sh check 40.5
+== check task 40.5
   PASS  sshd's effective config says permitrootlogin no
   PASS  sshd's effective config says passwordauthentication no
   PASS  sshd runs, with the new config loaded
-== task 3.5: 3 passed, 0 failed
+== task 40.5: 3 passed, 0 failed
 ```
 
 ## Task 6: Admin credentials lying around
@@ -408,8 +408,8 @@ $ ./certs/cks/task.sh check 3.5
 **Time budget:** 4 minutes. **Host:** `cks-w1`.
 
 ```console
-$ ./certs/cks/task.sh setup 3.6
-== setup task 3.6
+$ ./platform-engineering/task.sh setup 40.6
+== setup task 40.6
   kubectl auth can-i "*" "*" as cks-ops on cks-w1: yes
 ```
 
@@ -435,59 +435,18 @@ In the test run, the search found `/home/cks-ops/.kube/config` and `/var/backups
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 3.6
-== check task 3.6
+$ ./platform-engineering/task.sh check 40.6
+== check task 40.6
   PASS  no file on cks-w1 holds the admin client certificate any more
   PASS  user cks-ops still exists
   PASS  /etc/kubernetes/kubelet.conf is 600 and owned by root
-== task 3.6: 3 passed, 0 failed
+== task 40.6: 3 passed, 0 failed
 ```
 
-## Task 7: Keep a kernel module out
+## Task 7: Kernel modules, on a VM
 
-**Time budget:** 4 minutes. **Host:** `cks-lima`.
-
-```console
-$ ./certs/cks/cluster/lima.sh start      # once, when the VM is off
-cluster ready
-$ ./certs/cks/task.sh setup 3.7
-== setup task 3.7
-dccp                  114688  0
-tipc                  425984  0
-```
-
-> On `cks-lima`, the kernel holds the modules `dccp` and `tipc`. Unload them, and make sure no later request loads them again. Put the rules in a file under `/etc/modprobe.d/`.
-
-<details>
-<summary>Solution</summary>
-
-```console
-root@cks-lima:~# cat > /etc/modprobe.d/cks-blacklist.conf <<EOF
-install dccp /bin/false
-blacklist dccp
-install tipc /bin/false
-blacklist tipc
-EOF
-root@cks-lima:~# modprobe -r dccp tipc
-root@cks-lima:~# lsmod | grep -E '^(dccp|tipc) '       # prints nothing
-root@cks-lima:~# modprobe -n -v tipc                    # install /bin/false
-install /bin/false 
-```
-
-In the test run, a direct `modprobe tipc` afterwards failed with `Error running install command '/bin/false' for module tipc: retcode 1`. The `sctp` module sat in the kernel too, with 8 users, and refused to unload, which is why the task picks two modules nobody uses.
-
-</details>
-
-```console
-$ ./certs/cks/task.sh check 3.7
-== check task 3.7
-  PASS  tipc is not loaded
-  PASS  modprobe refuses to load tipc
-  PASS  dccp is not loaded, and modprobe refuses it
-  PASS  the rule lives in a file under /etc/modprobe.d
-== task 3.7: 4 passed, 0 failed
-```
+The kernel module task needs a kernel that belongs to one machine, so it sits in [module 44](../kernel-and-host/44-kernel-and-host-security.md#task-4-keep-a-kernel-module-out) as its task 4.
 
 ## Clean up
 
-Task 3 restarts the API server twice, once in the setup and once in your fix. `./certs/cks/cluster/reset.sh` also wipes the users, units and packages of tasks 1 to 6, and `./certs/cks/cluster/lima.sh reset` removes task 7's file.
+Task 3 restarts the API server twice, once in the setup and once in your fix. `./platform-engineering/practice/cluster/reset.sh` also wipes the users, units and packages of tasks 1 to 6.

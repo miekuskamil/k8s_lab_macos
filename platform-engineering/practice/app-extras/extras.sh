@@ -44,4 +44,4 @@ say "3/3 metrics-server $METRICS_SERVER_VERSION"
 metrics
 
 say "ready"
-echo "Work on $CKS_CP as in the CKS track: $(node_shell_hint "$CKS_CP"), then sudo -i"
+echo "Work on $CKS_CP as in the security modules: $(node_shell_hint "$CKS_CP"), then sudo -i"

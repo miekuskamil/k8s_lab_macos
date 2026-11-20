@@ -1,40 +1,40 @@
-# CKAD mock exam 2
+# Timed practice exam 2: applications, broken things to repair
 
-> New to a term here? The [CKAD glossary](glossary.md) explains every term this track uses.
+> New to a term here? The [glossary](../glossary.md#applications-on-kubernetes) explains every term these modules use.
 
-**Before the mock exam:** [mock exam 1](mock-exam.md) and a review of every point you lost there, and the [practice cluster](README.md#the-practice-cluster) with the CKAD extras.
+**Before the practice exam:** [practice exam 1](practice-exam-1.md) and a review of every point you lost there, and the [practice cluster](../practice-cluster.md#the-application-extras) with the application extras.
 
-Most tasks in this mock start from something broken: a pod that never schedules, a Service without endpoints, an Ingress that answers 503, a Helm release in the `failed` state. That matches the exam, where a good share of the tasks hand you a working cluster with one wrong field somewhere, and the skill is to find that field quickly from events, logs and `describe`. The last task builds a whole chain from an image to an Ingress. It has 16 tasks worth 100 points, with the same 2-hour clock.
+Most tasks in this practice exam start from something broken: a pod that never schedules, a Service without endpoints, an Ingress that answers 503, a Helm release in the `failed` state. That matches the exam, where a good share of the tasks hand you a working cluster with one wrong field somewhere, and the skill is to find that field quickly from events, logs and `describe`. The last task builds a whole chain from an image to an Ingress. It has 16 tasks worth 100 points, with the same 2-hour clock.
 
 ## Rules
 
-1. Start from a clean cluster with `./certs/ckad/cluster/reset.sh`, then run `MOCK=2 ./certs/ckad/mock-exam/setup.sh`. In the test run, the reset took 45 seconds and the setup 40 seconds, most of it for the Helm release of task 7.
-2. The clock starts when `setup.sh` ends, and `MOCK=2 ./certs/ckad/mock-exam/score.sh` prints the minutes since then.
+1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./platform-engineering/practice-exam.sh setup 2`. In the test run, the reset took 45 seconds and the setup 40 seconds, most of it for the Helm release of task 7.
+2. The clock starts when `setup.sh` ends, and `./platform-engineering/practice-exam.sh score 2` prints the minutes since then.
 3. Work only on `cks-cp`, and use only kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
 4. Don't open the solutions while the timer runs.
-5. Score from your Mac with `MOCK=2 ./certs/ckad/mock-exam/score.sh`, or single tasks with `MOCK=2 ./certs/ckad/mock-exam/score.sh 4 9`.
+5. Score from your Mac with `./platform-engineering/practice-exam.sh score 2`, or single tasks with `./platform-engineering/practice-exam.sh score 2 4 9`.
 
 Task files sit in `/opt/ckad/m2/N` on `cks-cp`. A task that says "fix" means: change as little as possible, and leave everything the task doesn't mention as it is.
 
 ## Tasks
 
-| # | Task | Points | Domain |
+| # | Task | Points | Module |
 |---|---|---|---|
-| 1 | Pending pods | 5 | 03 |
-| 2 | A container that exits | 6 | 03 |
-| 3 | A Service with no endpoints | 6 | 05 |
-| 4 | Ingress answers 503 | 6 | 05 |
-| 5 | Refused by Pod Security | 7 | 04 |
-| 6 | Refused by a quota | 6 | 04 |
-| 7 | A Helm upgrade gone wrong | 7 | 02 |
-| 8 | An overlay that won't build | 6 | 02 |
-| 9 | Old API versions | 5 | 03 |
-| 10 | Forbidden in the logs | 7 | 04 |
-| 11 | A liveness probe that kills | 6 | 03 |
-| 12 | A Job that never ends | 6 | 01 |
-| 13 | Blocked by a default deny | 6 | 05 |
-| 14 | A Dockerfile that won't build | 7 | 01 |
-| 15 | CreateContainerConfigError | 6 | 04 |
+| 1 | Pending pods | 5 | 35 |
+| 2 | A container that exits | 6 | 35 |
+| 3 | A Service with no endpoints | 6 | 37 |
+| 4 | Ingress answers 503 | 6 | 37 |
+| 5 | Refused by Pod Security | 7 | 36 |
+| 6 | Refused by a quota | 6 | 36 |
+| 7 | A Helm upgrade gone wrong | 7 | 34 |
+| 8 | An overlay that won't build | 6 | 34 |
+| 9 | Old API versions | 5 | 35 |
+| 10 | Forbidden in the logs | 7 | 36 |
+| 11 | A liveness probe that kills | 6 | 35 |
+| 12 | A Job that never ends | 6 | 33 |
+| 13 | Blocked by a default deny | 6 | 37 |
+| 14 | A Dockerfile that won't build | 7 | 33 |
+| 15 | CreateContainerConfigError | 6 | 36 |
 | 16 | From image to Ingress | 8 | 01, 02, 05 |
 
 ### Task 1: Pending pods (5 points)
@@ -375,4 +375,4 @@ k -n k2-chain create ingress status --class=nginx --rule='status.k2.local/*=stat
 
 `score.sh` runs two to four checks per task, splits the task's points evenly over them, rounded down, and gives a task points only when its first check, the main fix, passes. It checks the cluster as it is and waits at most 10 seconds for anything, so on an untouched cluster it takes about 4 minutes, and on a solved one under a minute.
 
-In the final test run, the score was `TOTAL: 0 of 100 points (0%).` after `setup.sh`, and `TOTAL: 100 of 100 points (100%).` after `MOCK=2 ./certs/ckad/mock-exam/solve.sh`, which took 2 minutes 52 seconds. An earlier run scored 93, because the reference solution of task 7 used `helm upgrade --wait`, and Helm 4 judged the Deployment by the `ProgressDeadlineExceeded` condition that the broken revision had left on it, so it marked the good upgrade `failed`. The solution above now waits with `kubectl rollout status` instead.
+In the final test run, the score was `TOTAL: 0 of 100 points (0%).` after `setup.sh`, and `TOTAL: 100 of 100 points (100%).` after `./platform-engineering/practice-exam.sh solve 2`, which took 2 minutes 52 seconds. An earlier run scored 93, because the reference solution of task 7 used `helm upgrade --wait`, and Helm 4 judged the Deployment by the `ProgressDeadlineExceeded` condition that the broken revision had left on it, so it marked the good upgrade `failed`. The solution above now waits with `kubectl rollout status` instead.

@@ -1,12 +1,12 @@
-# CKAD 05: Services and networking (20%)
+# Module 37: Services and networking
 
-> New to a term here, like EndpointSlice or NetworkPolicy? The [CKAD glossary](glossary.md) explains every term this track uses.
+> New to a term here, like EndpointSlice or NetworkPolicy? The [glossary](../glossary.md#applications-on-kubernetes) explains every term these modules use.
 
-**Before this domain:** [domain 03](03-application-observability-and-maintenance.md), whose readiness probes decide which pods a Service uses, and the [practice cluster](README.md#the-practice-cluster), which runs ingress-nginx on NodePort 30080 and Calico, so NetworkPolicies take effect. The course's [module 29](../../platform-engineering/1-foundations/29-life-of-a-request.md) follows one request through kube-proxy in more depth.
+**Before this module:** [module 35](35-observing-and-debugging-applications.md), whose readiness probes decide which pods a Service uses, and the [practice cluster](../practice-cluster.md#the-application-extras), which runs ingress-nginx on NodePort 30080 and Calico, so NetworkPolicies take effect. The course's [module 29](29-life-of-a-request.md) follows one request through kube-proxy in more depth.
 
-Pods come and go, and each new pod gets a new IP address, so nothing should ever talk to a pod by its address. This domain is about the stable names and addresses that sit in front of pods: Services inside the cluster, NodePorts and Ingress for traffic from outside, and NetworkPolicies that decide which pods may talk at all. It has ten tasks and takes about 1 hour 20 minutes.
+Pods come and go, and each new pod gets a new IP address, so nothing should ever talk to a pod by its address. This module is about the stable names and addresses that sit in front of pods: Services inside the cluster, NodePorts and Ingress for traffic from outside, and NetworkPolicies that decide which pods may talk at all. It has ten tasks and takes about 1 hour 20 minutes.
 
-## The domain in one table
+## The module in one table
 
 | Question | Tool | Task |
 |---|---|---|
@@ -19,7 +19,7 @@ Pods come and go, and each new pod gets a new IP address, so nothing should ever
 
 Take the catalog of task 1, three pods that answer on port 8080 behind a client that needs the catalog. The client might pick a pod's IP address, but that address vanishes with the next restart or rollout, and the client would need to spread its requests over all three pods by itself. What the client needs is one name and one address that stay put while the pods behind them change.
 
-A [Service](glossary.md#service) provides both. It gets a virtual IP address, the ClusterIP, from the service network, and a DNS name in the cluster's DNS server, CoreDNS: `catalog.svc-basic.svc.cluster.local`, or `catalog` from inside the same namespace. Its `selector` names labels, and the control plane keeps a list of the ready pods that carry them in an [EndpointSlice](glossary.md#endpointslice), updated whenever a pod starts, stops, or changes its readiness.
+A [Service](../glossary.md#service) provides both. It gets a virtual IP address, the ClusterIP, from the service network, and a DNS name in the cluster's DNS server, CoreDNS: `catalog.svc-basic.svc.cluster.local`, or `catalog` from inside the same namespace. Its `selector` names labels, and the control plane keeps a list of the ready pods that carry them in an [EndpointSlice](../glossary.md#endpointslice), updated whenever a pod starts, stops, or changes its readiness.
 
 The virtual IP belongs to no network card. kube-proxy on every node reads the Service and its EndpointSlice and writes packet filter rules into the node's kernel, which rewrite a connection to the ClusterIP into a connection to one of the endpoints, picked at random. So the client connects to `catalog:80`, the kernel on the client's node changes the destination to, say, `10.244.135.159:8080`, and the pod answers. Two port fields describe that translation, and mixing them up is the most common Service bug:
 
@@ -29,7 +29,7 @@ The virtual IP belongs to no network card. kube-proxy on every node reads the Se
 | `targetPort` | the port the container listens on, as a number or the name of a container port | 8080 |
 | `nodePort` | for type NodePort: the port on every node's address, 30000 to 32767 | (task 2: 30100) |
 
-A Service that answers nothing almost always fails at one of three links, and checking them in order finds the fault fast. First, `kubectl get endpointslice -l kubernetes.io/service-name=NAME` shows whether any pod matched at all, and an empty list means the selector misses the pods' labels or no pod is ready. Second, the `PORTS` column of the slice must show the port the container listens on. Third, a `wget` from a pod in the same namespace tests the whole path. [Domain 03's task 8](03-application-observability-and-maintenance.md#task-8-a-client-that-never-reaches-its-backend) breaks all three links at once.
+A Service that answers nothing almost always fails at one of three links, and checking them in order finds the fault fast. First, `kubectl get endpointslice -l kubernetes.io/service-name=NAME` shows whether any pod matched at all, and an empty list means the selector misses the pods' labels or no pod is ready. Second, the `PORTS` column of the slice must show the port the container listens on. Third, a `wget` from a pod in the same namespace tests the whole path. [Module 35's task 8](35-observing-and-debugging-applications.md#task-8-a-client-that-never-reaches-its-backend) breaks all three links at once.
 
 A Service has a type, and each type adds one way in on top of the previous one:
 
@@ -40,13 +40,13 @@ A Service has a type, and each type adds one way in on top of the previous one:
 | `LoadBalancer` | the internet | a cloud load balancer in front of the NodePorts |
 | headless (`clusterIP: None`) | pods in the cluster | DNS returns the pod IPs themselves, one record per pod |
 
-The headless Service needs a word more, because task 10 builds one. A database with two replicas needs each client to reach a specific replica, such as the primary, so a random pick behind one virtual IP doesn't help. A [StatefulSet](glossary.md#statefulset) gives its pods fixed names, `db-0` and `db-1`, and with a headless Service named in its `serviceName`, CoreDNS also answers for `db-0.db.stateful.svc.cluster.local`, which always points at that one pod, even after it restarts with a new IP address.
+The headless Service needs a word more, because task 10 builds one. A database with two replicas needs each client to reach a specific replica, such as the primary, so a random pick behind one virtual IP doesn't help. A [StatefulSet](../glossary.md#statefulset) gives its pods fixed names, `db-0` and `db-1`, and with a headless Service named in its `serviceName`, CoreDNS also answers for `db-0.db.stateful.svc.cluster.local`, which always points at that one pod, even after it restarts with a new IP address.
 
 ## Concept: Ingress routes HTTP by host and path
 
 A NodePort opens one port per Service on every node, which quickly becomes a long list of numbers that nobody remembers, and it knows nothing about HTTP: it has no way to send `/api` to one Service and `/` to another. Web traffic needs a single entry point that reads each request's host name and path and picks the Service from them.
 
-That entry point is an [Ingress controller](glossary.md#ingress-controller), a reverse proxy in a pod, here ingress-nginx, which itself sits behind a NodePort Service on port 30080. An [Ingress](glossary.md#ingress) object holds the routing rules: for host `shop.ckad.local`, path `/api` goes to Service `api` on port 80, and everything else to Service `web`. The controller watches every Ingress whose `ingressClassName` names its class, and rewrites its own configuration from them.
+That entry point is an [Ingress controller](../glossary.md#ingress-controller), a reverse proxy in a pod, here ingress-nginx, which itself sits behind a NodePort Service on port 30080. An [Ingress](../glossary.md#ingress) object holds the routing rules: for host `shop.ckad.local`, path `/api` goes to Service `api` on port 80, and everything else to Service `web`. The controller watches every Ingress whose `ingressClassName` names its class, and rewrites its own configuration from them.
 
 ![A request from curl with the Host header shop.ckad.local reaches NodePort 30080 on cks-w1, kube-proxy hands it to the ingress-nginx pod, nginx matches the Ingress rules and sends it to an endpoint of Service api, the pod that serves /api/orders](../../docs/diagrams/chapters/ckad-ingress-path.svg)
 
@@ -59,11 +59,11 @@ The figure follows one request through four steps:
 
 Each path has a `pathType`, which decides how strictly nginx matches. `Prefix` matches the path and everything below it, split at slashes, so `/api` matches `/api/orders` but not `/apiv2`, while `Exact` matches only the exact path. `kubectl create ingress` writes `Exact` for a rule like `host/path=svc:80` and `Prefix` for `host/path*=svc:80`, which is the reason task 4's solution ends its paths with `*`.
 
-Two settings break an Ingress quietly, without any error on `kubectl apply`. An `ingressClassName` that names no existing class means no controller picks the Ingress up, and a backend port that the Service doesn't have means nginx finds no endpoint and answers `503`. `kubectl describe ingress` shows the second fault, because a backend without endpoints shows empty parentheses. Task 5 has both. The Gateway API is the newer successor of Ingress, which the course uses in [module 11](../../platform-engineering/2-intermediate/11-edge-tls.md), but the CKAD 1.37 curriculum still asks for Ingress.
+Two settings break an Ingress quietly, without any error on `kubectl apply`. An `ingressClassName` that names no existing class means no controller picks the Ingress up, and a backend port that the Service doesn't have means nginx finds no endpoint and answers `503`. `kubectl describe ingress` shows the second fault, because a backend without endpoints shows empty parentheses. Task 5 has both. The Gateway API is the newer successor of Ingress, which the course uses in [module 11](../2-intermediate/11-edge-tls.md), but the CKAD 1.37 curriculum still asks for Ingress.
 
 ## Concept: NetworkPolicy, a firewall per pod
 
-By default, every pod reaches every other pod in the cluster, in every namespace, which is convenient and risky: a compromised frontend pod reaches the database directly. A [NetworkPolicy](glossary.md#networkpolicy) restricts that per pod, and the rules follow a few principles that explain every task here:
+By default, every pod reaches every other pod in the cluster, in every namespace, which is convenient and risky: a compromised frontend pod reaches the database directly. A [NetworkPolicy](../glossary.md#networkpolicy) restricts that per pod, and the rules follow a few principles that explain every task here:
 
 1. A policy's `podSelector` picks the pods it protects, in its own namespace. `podSelector: {}` picks every pod in the namespace.
 2. As soon as any policy selects a pod for `Ingress`, that pod accepts only incoming traffic that some policy allows. The same goes for `Egress` and outgoing traffic. A pod that no policy selects keeps accepting everything.
@@ -92,7 +92,7 @@ Put a dash in front of `podSelector`, and the same lines become two entries: eve
 
 ## The bigger picture: names, not addresses
 
-Every object in this domain replaces an address with a name or a label. A Service name replaces pod IPs, an Ingress host name replaces node ports, and a NetworkPolicy's label selector replaces the firewall rules that once listed IP ranges. That is what lets pods move between nodes and come back with new addresses, while the cluster's network keeps working.
+Every object in this module replaces an address with a name or a label. A Service name replaces pod IPs, an Ingress host name replaces node ports, and a NetworkPolicy's label selector replaces the firewall rules that once listed IP ranges. That is what lets pods move between nodes and come back with new addresses, while the cluster's network keeps working.
 
 Service meshes push the same idea one level further, which the course explores in depth: Istio identifies callers by their ServiceAccount rather than their labels, encrypts every connection, and routes by headers and weights. The Gateway API, Ingress's successor, splits the job between the platform team, which owns the gateway, and app teams, which own their routes.
 
@@ -109,8 +109,8 @@ NetworkPolicies only allow and never deny because allow-lists add up safely: a n
 **Time budget:** 3 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 5.1
-== setup task 5.1
+$ ./platform-engineering/task.sh setup 37.1
+== setup task 37.1
 NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
 deployment.apps/catalog   3/3     3            3           1s
 
@@ -146,12 +146,12 @@ The Service shows port 80, and its EndpointSlice shows the pods' port 8080 with 
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 5.1
-== check task 5.1
+$ ./platform-engineering/task.sh check 37.1
+== check task 37.1
   PASS  Service catalog is a ClusterIP on port 80 to target port 8080
   PASS  the Service has 3 endpoints
   PASS  client reaches http://catalog.svc-basic.svc.cluster.local
-== task 5.1: 3 passed, 0 failed
+== task 37.1: 3 passed, 0 failed
 ```
 
 ## Task 2: A NodePort Service
@@ -159,8 +159,8 @@ $ ./certs/ckad/task.sh check 5.1
 **Time budget:** 4 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 5.2
-== setup task 5.2
+$ ./platform-engineering/task.sh setup 37.2
+== setup task 37.2
 Waiting for deployment "web" rollout to finish: 0 of 2 updated replicas are available...
 Waiting for deployment "web" rollout to finish: 1 of 2 updated replicas are available...
 deployment "web" successfully rolled out
@@ -201,11 +201,11 @@ root@cks-cp:~# curl -s http://$(k get node cks-w1 -o jsonpath='{.status.addresse
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 5.2
-== check task 5.2
+$ ./platform-engineering/task.sh check 37.2
+== check task 37.2
   PASS  Service web-np is a NodePort on 30100, port 80
   PASS  nginx answers on cks-w1's address, port 30100
-== task 5.2: 2 passed, 0 failed
+== task 37.2: 2 passed, 0 failed
 ```
 
 ## Task 3: One Service, two named ports
@@ -256,12 +256,12 @@ The EndpointSlice resolved both names to numbers, `8080,9090`, which confirms th
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 5.3
-== check task 5.3
+$ ./platform-engineering/task.sh check 37.3
+== check task 37.3
   PASS  Service shop has port http 80 and port metrics 9090, both by the container's port names
   PASS  client gets 'shop' from http://shop
   PASS  client gets the metrics from http://shop:9090
-== task 5.3: 3 passed, 0 failed
+== task 37.3: 3 passed, 0 failed
 ```
 
 ## Task 4: An Ingress with two paths
@@ -269,8 +269,8 @@ $ ./certs/ckad/task.sh check 5.3
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 5.4
-== setup task 5.4
+$ ./platform-engineering/task.sh setup 37.4
+== setup task 37.4
 NAME    CONTROLLER             PARAMETERS   AGE
 nginx   k8s.io/ingress-nginx   <none>       38m
 NAME                       TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)                      AGE
@@ -320,13 +320,13 @@ nginx picks the longest matching prefix, so `/api/orders` goes to `api` although
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 5.4
-== check task 5.4
+$ ./platform-engineering/task.sh check 37.4
+== check task 37.4
   PASS  Ingress shop uses class nginx and host shop.ckad.local
   PASS  shop.ckad.local/ answers web
   PASS  shop.ckad.local/api/ answers api, /api/orders answers orders
   PASS  another host gets no answer from the shop
-== task 5.4: 4 passed, 0 failed
+== task 37.4: 4 passed, 0 failed
 ```
 
 ## Task 5: Repair an Ingress for two hosts
@@ -334,8 +334,8 @@ $ ./certs/ckad/task.sh check 5.4
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 5.5
-== setup task 5.5
+$ ./platform-engineering/task.sh setup 37.5
+== setup task 37.5
 NAME                              CLASS            HOSTS                             ADDRESS   PORTS   AGE
 ingress.networking.k8s.io/sites   nginx-internal   blog.ckad.local,docs.ckad.local             80      1s
 
@@ -387,12 +387,12 @@ docs
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 5.5
-== check task 5.5
+$ ./platform-engineering/task.sh check 37.5
+== check task 37.5
   PASS  blog.ckad.local answers blog
   PASS  docs.ckad.local answers docs
   PASS  both Services keep their ports
-== task 5.5: 3 passed, 0 failed
+== task 37.5: 3 passed, 0 failed
 ```
 
 ## Task 6: Deny by default, then allow one path
@@ -400,8 +400,8 @@ $ ./certs/ckad/task.sh check 5.5
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 5.6
-== setup task 5.6
+$ ./platform-engineering/task.sh setup 37.6
+== setup task 37.6
 NAME       READY   STATUS    RESTARTS   AGE   IP               NODE     NOMINATED NODE   READINESS GATES   LABELS
 backend    1/1     Running   0          1s    10.244.135.173   cks-w1   <none>           <none>            app=backend
 frontend   1/1     Running   0          1s    10.244.135.174   cks-w1   <none>           <none>            role=frontend
@@ -466,13 +466,13 @@ A blocked connection times out rather than failing at once, because Calico drops
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 5.6
-== check task 5.6
+$ ./platform-engineering/task.sh check 37.6
+== check task 37.6
   PASS  NetworkPolicy default-deny-ingress selects every pod and allows no ingress
   PASS  frontend reaches backend on 8080
   PASS  other does not reach backend
   PASS  backend does not reach frontend (the default deny holds)
-== task 5.6: 4 passed, 0 failed
+== task 37.6: 4 passed, 0 failed
 ```
 
 ## Task 7: Egress only to the database and DNS
@@ -528,13 +528,13 @@ The rule names the pod's port, 5432, not a Service port, because the policy acts
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 5.7
-== check task 5.7
+$ ./platform-engineering/task.sh check 37.7
+== check task 37.7
   PASS  NetworkPolicy app-egress selects app=app and controls only egress
   PASS  app reaches the database by name: http://db:5432
   PASS  app does not reach partner.np-egress-other
   PASS  app does not reach the API server
-== task 5.7: 4 passed, 0 failed
+== task 37.7: 4 passed, 0 failed
 ```
 
 ## Task 8: Traffic from one namespace, one kind of pod
@@ -542,8 +542,8 @@ $ ./certs/ckad/task.sh check 5.7
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 5.8
-== setup task 5.8
+$ ./platform-engineering/task.sh setup 37.8
+== setup task 37.8
 NAME            STATUS   AGE   LABELS
 np-dev          Active   2s    ckad=task,kubernetes.io/metadata.name=np-dev,team=dev
 np-monitoring   Active   2s    ckad=task,kubernetes.io/metadata.name=np-monitoring,team=monitoring
@@ -595,13 +595,13 @@ With two entries instead, grafana would get in through the namespace entry, and 
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 5.8
-== check task 5.8
+$ ./platform-engineering/task.sh check 37.8
+== check task 37.8
   PASS  NetworkPolicy allow-prometheus exists in np-metrics
   PASS  prometheus in np-monitoring reaches the exporter
   PASS  grafana in np-monitoring does not
   PASS  prometheus in np-dev does not
-== task 5.8: 4 passed, 0 failed
+== task 37.8: 4 passed, 0 failed
 ```
 
 ## Task 9: Fit a pod to policies you may not change
@@ -609,8 +609,8 @@ $ ./certs/ckad/task.sh check 5.8
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/ckad/task.sh setup 5.9
-== setup task 5.9
+$ ./platform-engineering/task.sh setup 37.9
+== setup task 37.9
 NAME               POD-SELECTOR           AGE
 default-deny       <none>                 0s
 payments-clients   role=payments-client   0s
@@ -656,13 +656,13 @@ The connection needs permission at both ends, which is why one label alone fails
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 5.9
-== check task 5.9
+$ ./platform-engineering/task.sh check 37.9
+== check task 37.9
   PASS  checkout reaches http://payments
   PASS  stranger still does not
   PASS  the three NetworkPolicies are unchanged
   PASS  checkout keeps its label app=checkout
-== task 5.9: 4 passed, 0 failed
+== task 37.9: 4 passed, 0 failed
 ```
 
 ## Task 10: A StatefulSet behind a headless Service
@@ -739,14 +739,14 @@ The Service name returns both pod addresses instead of one virtual IP, which is 
 </details>
 
 ```console
-$ ./certs/ckad/task.sh check 5.10
-== check task 5.10
+$ ./platform-engineering/task.sh check 37.10
+== check task 37.10
   PASS  Service db is headless
   PASS  StatefulSet db has 2 ready pods and names db as its Service
   PASS  db-0.db and db-1.db each answer with their own name
-== task 5.10: 3 passed, 0 failed
+== task 37.10: 3 passed, 0 failed
 ```
 
 ## Clean up
 
-`./certs/ckad/cluster/reset.sh` deletes the namespaces with their Services, Ingresses and NetworkPolicies. The ingress controller and Calico stay, because the CKS cluster has them too.
+`./platform-engineering/practice/app-extras/reset.sh` deletes the namespaces with their Services, Ingresses and NetworkPolicies. The ingress controller and Calico stay, because the security modules use them too.

@@ -1,12 +1,12 @@
-# CKS 06: Monitoring, logging and runtime security (20%)
+# Module 43: Runtime security and auditing
 
-> New to a term here, like audit policy or syscall? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
+> New to a term here, like audit policy or syscall? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running, ideally fresh from `./certs/cks/cluster/reset.sh`, and the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium) for tasks 5 and 12. The course's [module 10](../../platform-engineering/3-advanced/10-ebpf-and-cilium.md#concept-what-ebpf-is) explains eBPF, the technique Falco uses to watch the kernel.
+**Before this module:** the [practice cluster](../practice-cluster.md) running, ideally fresh from `./platform-engineering/practice/cluster/reset.sh`. The course's [module 10](10-ebpf-and-cilium.md#concept-what-ebpf-is) explains eBPF, the technique Falco uses to watch the kernel.
 
-The other domains try to keep attackers out, while this one assumes somebody got in anyway. Three questions then matter: what did they do through the API, what are they doing inside the container right now, and how much damage does the container let them do. Audit logs answer the first, Falco the second, and immutable root file systems, seccomp and AppArmor limit the third. This domain has 13 tasks and takes about 2 hours.
+The other security modules try to keep attackers out, while this one assumes somebody got in anyway. Three questions then matter: what did they do through the API, what are they doing inside the container right now, and how much damage does the container let them do. Audit logs answer the first, Falco the second, and immutable root file systems, seccomp and AppArmor limit the third. This module has 11 tasks here and two in module 44, and takes about 2 hours.
 
-## The domain in one table
+## The module in one table
 
 Each task answers one of those three questions, and one task joins the answers into a single story:
 
@@ -14,19 +14,19 @@ Each task answers one of those three questions, and one task joins the answers i
 |---|---|---|
 | What did they do through the API? | audit logs | 1, 10, 11 |
 | What are they doing inside the container right now? | Falco | 2, 7, 8, 9 |
-| How much damage does the container let them do? | read-only root, seccomp, AppArmor | 3, 4, 5, 12, 13 |
+| How much damage does the container let them do? | read-only root, seccomp, AppArmor | 3, 4, 13; AppArmor in module 44, tasks 6 and 7 |
 | What happened, from start to end? | audit log and Falco together | 6 |
 
 ## Concept: syscalls, the kernel boundary
 
-Everything a container does that matters passes one border, the line between the process and the kernel. A **system call**, or syscall, is a request from a program to the kernel: opening a file is `openat`, starting a program is `execve`, opening a connection is `connect`, and changing a file's mode is `chmod`. A process has no other way to touch files, the network or other processes. The course's [module 10](../../platform-engineering/3-advanced/10-ebpf-and-cilium.md#concept-kernel-space-and-user-space) explains this line between user space and kernel space.
+Everything a container does that matters passes one border, the line between the process and the kernel. A **system call**, or syscall, is a request from a program to the kernel: opening a file is `openat`, starting a program is `execve`, opening a connection is `connect`, and changing a file's mode is `chmod`. A process has no other way to touch files, the network or other processes. The course's [module 10](10-ebpf-and-cilium.md#concept-kernel-space-and-user-space) explains this line between user space and kernel space.
 
 That border is the best place to defend, for two reasons:
 
 1. Every action passes it, so a check there misses nothing, whatever language or tool the attacker uses.
 2. Attackers need syscalls too, because an exploit that breaks out of a container calls the kernel, a cryptominer opens connections, and a shell starts with `execve`.
 
-Three tools in this domain work at the border, each in its own way, and the diagram follows one `open()` call through them:
+Three tools in this module work at the border, each in its own way, and the diagram follows one `open()` call through them:
 
 ![One system call passes seccomp, then AppArmor, then reaches the kernel; Falco gets a copy and writes an alert](../../docs/diagrams/chapters/cks-runtime-layers.svg)
 
@@ -38,7 +38,7 @@ The call passes five steps:
 4. The kernel does the work, and Falco's probe gets a copy of the event.
 5. Falco matches a rule and writes an alert. It blocks nothing.
 
-gVisor, from [domain 04](04-minimize-microservice-vulnerabilities.md#concept-sandboxes-a-second-kernel), sits in a different place, because it answers the syscall itself before the host kernel ever sees it. The four tools layer like this:
+gVisor, from [module 41](41-hardening-workloads.md#concept-sandboxes-a-second-kernel), sits in a different place, because it answers the syscall itself before the host kernel ever sees it. The four tools layer like this:
 
 | Tool | Decides by | Action | Stops |
 |---|---|---|---|
@@ -86,7 +86,7 @@ profile cks-deny-write flags=(attach_disconnected) {
 }
 ```
 
-That profile, from task 5, pulls in the basic rules every program needs, allows file access in general, and denies every write. A profile runs in one of two modes:
+That profile, from [module 44, task 6](../kernel-and-host/44-kernel-and-host-security.md#task-6-an-apparmor-profile), pulls in the basic rules every program needs, allows file access in general, and denies every write. A profile runs in one of two modes:
 
 1. **Enforce** blocks what the rules deny and logs it.
 2. **Complain** blocks nothing and only logs what enforce mode would block, which teams use to learn what an app does before they enforce.
@@ -240,7 +240,7 @@ The response follows a fixed order. First contain the attack, by scaling the Dep
 
 ## The bigger picture: assume breach
 
-Security teams used to aim for a perfect wall, and today the common stance is **assume breach**, which means planning as if an attacker is already inside and making sure you see them and limit them. This domain is that stance in practice:
+Security teams used to aim for a perfect wall, and today the common stance is **assume breach**, which means planning as if an attacker is already inside and making sure you see them and limit them. This module is that stance in practice:
 
 1. Limit: read-only roots, seccomp and AppArmor shrink what a compromised container does.
 2. See: Falco watches the kernel, and the audit log watches the API.
@@ -263,8 +263,8 @@ Real platform teams ship audit logs and Falco alerts off the node to a central s
 **Time budget:** 10 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 6.1
-== setup task 6.1
+$ ./platform-engineering/task.sh setup 43.1
+== setup task 43.1
 secret/token created
 0
 ```
@@ -353,8 +353,8 @@ root@cks-cp:~# tail -1 /var/log/kubernetes/audit/audit.log | python3 -m json.too
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 6.1
-== check task 6.1
+$ ./platform-engineering/task.sh check 43.1
+== check task 43.1
   PASS  --audit-policy-file is /etc/kubernetes/audit/policy.yaml
   PASS  --audit-log-path is /var/log/kubernetes/audit/audit.log
   PASS  --audit-log-maxage=30, maxbackup=10, maxsize=100
@@ -362,7 +362,7 @@ $ ./certs/cks/task.sh check 6.1
   PASS  no Secret appears with its body
   PASS  a configmap create in audit-me appears at RequestResponse
   PASS  a configmap create in default does not appear
-== task 6.1: 7 passed, 0 failed
+== task 43.1: 7 passed, 0 failed
 ```
 
 The check makes three requests of its own and looks for each one in the log.
@@ -372,8 +372,8 @@ The check makes three requests of its own and looks for each one in the log.
 **Time budget:** 8 minutes. **Host:** `cks-w1`.
 
 ```console
-$ ./certs/cks/task.sh setup 6.2
-== setup task 6.2
+$ ./platform-engineering/task.sh setup 43.2
+== setup task 43.2
 pod/target created
 pod/target condition met
 active
@@ -408,12 +408,12 @@ Falco's documentation, which the exam allows, lists every field under "Supported
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 6.2
-== check task 6.2
+$ ./platform-engineering/task.sh check 43.2
+== check task 43.2
   PASS  a rule named 'Shell in container (cks)' exists in /etc/falco/rules.d/
   PASS  falco accepts every rules file
   PASS  a shell in falco-test/target produces the alert with namespace, pod and command
-== task 6.2: 3 passed, 0 failed
+== task 43.2: 3 passed, 0 failed
 ```
 
 ## Task 3: Make a container immutable
@@ -421,8 +421,8 @@ $ ./certs/cks/task.sh check 6.2
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 6.3
-== setup task 6.3
+$ ./platform-engineering/task.sh setup 43.3
+== setup task 43.3
 deployment.apps/web created
 service/web exposed
 Waiting for deployment "web" rollout to finish: 0 of 1 updated replicas are available...
@@ -469,13 +469,13 @@ If you don't see a command prompt, try pressing enter.
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 6.3
-== check task 6.3
+$ ./platform-engineering/task.sh check 43.3
+== check task 43.3
   PASS  container web has readOnlyRootFilesystem: true
   PASS  the Deployment's pod is Ready
   PASS  writing to / fails inside the pod
   PASS  nginx still serves on the Service
-== task 6.3: 4 passed, 0 failed
+== task 43.3: 4 passed, 0 failed
 ```
 
 ## Task 4: A seccomp profile
@@ -483,8 +483,8 @@ $ ./certs/cks/task.sh check 6.3
 **Time budget:** 6 minutes. **Hosts:** `cks-w1`, then `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 6.4
-== setup task 6.4
+$ ./platform-engineering/task.sh setup 43.4
+== setup task 43.4
 -rw-r--r-- 1 root root 149 Nov 15 15:17 /root/cks/no-chmod.json
 ```
 
@@ -531,110 +531,27 @@ In the test run, that printed `chmod: /tmp/f: Operation not permitted`, while wr
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 6.4
-== check task 6.4
+$ ./platform-engineering/task.sh check 43.4
+== check task 43.4
   PASS  the kubelet finds the profile at /var/lib/kubelet/seccomp/profiles/no-chmod.json
   PASS  pod locked in seccomp uses the Localhost profile profiles/no-chmod.json
   PASS  pod locked runs on cks-w1
   PASS  chmod fails inside pod locked
   PASS  other writes still work inside pod locked
-== task 6.4: 5 passed, 0 failed
+== task 43.4: 5 passed, 0 failed
 ```
 
-## Task 5: An AppArmor profile
+## Task 5: AppArmor, on a VM
 
-**Time budget:** 7 minutes. **Host:** `cks-lima`.
-
-```console
-$ ./certs/cks/cluster/lima.sh start      # once, when the VM is off
-cluster ready
-$ ./certs/cks/task.sh setup 6.5
-== setup task 6.5
-AppArmor parser error for /root/cks/cks-deny-write in profile /root/cks/cks-deny-write at line 6: syntax error, unexpected TOK_DENY, expecting TOK_ID or TOK_MODE or TOK_SET_VAR
-```
-
-The setup writes a profile with a mistake and shows the parser's complaint, which in the test run was `syntax error, unexpected TOK_DENY, expecting TOK_ID or TOK_MODE or TOK_SET_VAR`.
-
-> On `cks-lima`:
->
-> 1. Fix `/root/cks/cks-deny-write` so `apparmor_parser` accepts it. It must still deny every write.
-> 2. Load the profile into the kernel, so that it also loads after a reboot.
-> 3. Create pod `writer` in namespace `apparmor`, image `busybox:1.36`, command `sh -c "echo hi > /tmp/x; sleep 1d"`, with its container confined by the profile `cks-deny-write`.
-
-<details>
-<summary>Solution</summary>
-
-The parser points at line 6, but the mistake sits one line higher, because the `file` rule above it lacks its comma, and every rule in an AppArmor profile ends with one:
-
-```
-profile cks-deny-write flags=(attach_disconnected) {
-  #include <abstractions/base>
-  file,
-  deny /** w,
-}
-```
-
-Then load the profile the way the theory shows:
-
-```console
-root@cks-lima:~# apparmor_parser -Q /root/cks/cks-deny-write && echo parses
-parses
-root@cks-lima:~# cp /root/cks/cks-deny-write /etc/apparmor.d/
-root@cks-lima:~# apparmor_parser -r /etc/apparmor.d/cks-deny-write
-root@cks-lima:~# aa-status | grep cks-deny-write
-   cks-deny-write
-```
-
-The pod names the profile in its container's `securityContext`:
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: writer
-  namespace: apparmor
-spec:
-  containers:
-  - name: c
-    image: busybox:1.36
-    command: [sh, -c, "echo hi > /tmp/x; sleep 1d"]
-    securityContext:
-      appArmorProfile:
-        type: Localhost
-        localhostProfile: cks-deny-write
-```
-
-```console
-root@cks-lima:~# k -n apparmor logs writer
-sh: can't create /tmp/x: Permission denied
-root@cks-lima:~# k -n apparmor exec writer -- cat /proc/1/attr/current
-cks-deny-write (enforce)
-```
-
-In the test run, the log said `sh: can't create /tmp/x: Permission denied`, and the process's AppArmor label read `cks-deny-write (enforce)`. The name in `localhostProfile` is the name after `profile` in the file, not the file name, and here both are `cks-deny-write`. Before Kubernetes 1.30, the annotation `container.apparmor.security.beta.kubernetes.io/<container>: localhost/<profile>` did this job, and old exam tasks still show it, but write the field.
-
-</details>
-
-```console
-$ ./certs/cks/task.sh check 6.5
-== check task 6.5
-  PASS  the profile in /root/cks/cks-deny-write parses and still denies every write
-  PASS  profile cks-deny-write is loaded in enforce mode
-  PASS  pod writer asks for the Localhost profile cks-deny-write
-  PASS  pod writer runs, confined by the profile
-  PASS  the write to /tmp/x was denied
-== task 6.5: 5 passed, 0 failed
-```
-
-In the test run, every check failed before the solution.
+The AppArmor tasks need a kernel with AppArmor turned on, which OrbStack's shared kernel lacks. Task 5 sits in [module 44](../kernel-and-host/44-kernel-and-host-security.md#task-6-an-apparmor-profile) as its task 6.
 
 ## Task 6: Investigate an attack
 
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 6.6
-== setup task 6.6
+$ ./platform-engineering/task.sh setup 43.6
+== setup task 43.6
 serviceaccount/ci-bot created
 serviceaccount/docs-bot created
 role.rbac.authorization.k8s.io/secret-admin created
@@ -696,13 +613,13 @@ no
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 6.6
-== check task 6.6
+$ ./platform-engineering/task.sh check 43.6
+== check task 43.6
   PASS  /root/cks/culprit.txt names the ServiceAccount and the pod
   PASS  RoleBinding ci-bot-secrets is gone
   PASS  docs-bot keeps its RoleBinding
   PASS  ci-bot may no longer delete Secrets in team-x
-== task 6.6: 4 passed, 0 failed
+== task 43.6: 4 passed, 0 failed
 ```
 
 ## Task 7: A Falco rule with a list and a macro
@@ -710,8 +627,8 @@ $ ./certs/cks/task.sh check 6.6
 **Time budget:** 8 minutes. **Host:** `cks-w1`.
 
 ```console
-$ ./certs/cks/task.sh setup 6.7
-== setup task 6.7
+$ ./platform-engineering/task.sh setup 43.7
+== setup task 43.7
 active
 ```
 
@@ -774,13 +691,13 @@ In the alert, everything after the closing bracket is the part Falco 0.45 append
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 6.7
-== check task 6.7
+$ ./platform-engineering/task.sh check 43.7
+== check task 43.7
   PASS  /etc/falco/rules.d/cks-pkg.yaml defines the list cks_pkg_mgrs with apk, apt, apt-get, dpkg and pip
   PASS  /etc/falco/rules.d/cks-pkg.yaml defines the macro cks_in_pod, and the rule uses the macro and the list
   PASS  falco accepts the rules
   PASS  apk in falco-test/target raises an Error alert with ns, pod and process
-== task 6.7: 4 passed, 0 failed
+== task 43.7: 4 passed, 0 failed
 ```
 
 ## Task 8: Change what a default Falco rule does
@@ -788,8 +705,8 @@ $ ./certs/cks/task.sh check 6.7
 **Time budget:** 6 minutes. **Host:** `cks-w1`.
 
 ```console
-$ ./certs/cks/task.sh setup 6.8
-== setup task 6.8
+$ ./platform-engineering/task.sh setup 43.8
+== setup task 43.8
   /etc/falco/falco_rules.yaml matches the package
 ```
 
@@ -836,12 +753,12 @@ The rule's name and its output text differ, so find a rule by name with `grep -n
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 6.8
-== check task 6.8
+$ ./platform-engineering/task.sh check 43.8
+== check task 43.8
   PASS  /etc/falco/falco_rules.yaml is unchanged
   PASS  reading /etc/shadow in falco-test/target raises a Critical alert
   PASS  a shell with a terminal in falco-test/target raises no alert
-== task 6.8: 3 passed, 0 failed
+== task 43.8: 3 passed, 0 failed
 ```
 
 ## Task 9: Which pod hunts for keys?
@@ -849,8 +766,8 @@ $ ./certs/cks/task.sh check 6.8
 **Time budget:** 6 minutes. **Hosts:** `cks-w1`, then `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 6.9
-== setup task 6.9
+$ ./platform-engineering/task.sh setup 43.9
+== setup task 43.9
 deployment.apps/cart created
 deployment.apps/inventory created
 deployment.apps/reports created
@@ -891,12 +808,12 @@ The transcript ran the first command with the name of the inventory pod from the
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 6.9
-== check task 6.9
+$ ./platform-engineering/task.sh check 43.9
+== check task 43.9
   PASS  /root/cks/falco-finding.txt holds the rule name and shop-runtime/inventory
   PASS  Deployment inventory is gone
   PASS  Deployments cart and reports still run
-== task 6.9: 3 passed, 0 failed
+== task 43.9: 3 passed, 0 failed
 ```
 
 ## Task 10: Read the audit log like a detective
@@ -904,8 +821,8 @@ $ ./certs/cks/task.sh check 6.9
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 6.10
-== setup task 6.10
+$ ./platform-engineering/task.sh setup 43.10
+== setup task 43.10
 role.rbac.authorization.k8s.io/secret-admin created
 rolebinding.rbac.authorization.k8s.io/alice-secrets created
 rolebinding.rbac.authorization.k8s.io/bob-secrets created
@@ -956,13 +873,13 @@ rolebinding.rbac.authorization.k8s.io "bob-secrets" deleted from hr namespace
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 6.10
-== check task 6.10
+$ ./platform-engineering/task.sh check 43.10
+== check task 43.10
   PASS  line 1 of /root/cks/audit-answers.txt: alice read salaries
   PASS  line 2: bob deleted old-salaries
   PASS  line 3: carol listed the Secrets 2 times
   PASS  bob may no longer delete Secrets in hr, alice and carol keep their rights
-== task 6.10: 4 passed, 0 failed
+== task 43.10: 4 passed, 0 failed
 ```
 
 ## Task 11: An audit policy per user and per resource
@@ -970,8 +887,8 @@ $ ./certs/cks/task.sh check 6.10
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 6.11
-== setup task 6.11
+$ ./platform-engineering/task.sh setup 43.11
+== setup task 43.11
 rolebinding.rbac.authorization.k8s.io/alice-edit created
 secret/s1 created
 apiVersion: audit.k8s.io/v1
@@ -1025,7 +942,7 @@ rules:
 - level: None
 ```
 
-The API server reads the policy only at start, and the manifest doesn't change, so restart it by moving the manifest out and back, as in [04, task 5](04-minimize-microservice-vulnerabilities.md#task-5-rotate-the-encryption-key). In the test run, that took 42 seconds. Then make some traffic and read the newest lines:
+The API server reads the policy only at start, and the manifest doesn't change, so restart it by moving the manifest out and back, as in [module 41, task 5](41-hardening-workloads.md#task-5-rotate-the-encryption-key). In the test run, that took 42 seconds. Then make some traffic and read the newest lines:
 
 ```console
 root@cks-cp:~# k -n audit-11 run p1 --image=busybox:1.36 -- sleep 1
@@ -1039,89 +956,30 @@ root@cks-cp:~# tail -3 /var/log/kubernetes/audit/audit.log | grep -o '"level":"[
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 6.11
-== check task 6.11
+$ ./platform-engineering/task.sh check 43.11
+== check task 43.11
   PASS  alice's get on a Secret appears at Metadata
   PASS  alice's Deployment create appears at RequestResponse
   PASS  an admin's pod create appears at Request
   PASS  an admin's pod get does not appear
   PASS  a ConfigMap create appears at Metadata
   PASS  events appear nowhere in the log since the change
-== task 6.11: 6 passed, 0 failed
+== task 43.11: 6 passed, 0 failed
 ```
 
 The check makes requests as `alice` and as the admin, then looks for each one, and in the test run it failed three of six items before the solution.
 
-## Task 12: AppArmor for a Deployment
+## Task 12: AppArmor for a Deployment, on a VM
 
-**Time budget:** 6 minutes. **Host:** `cks-lima`.
-
-```console
-$ ./certs/cks/task.sh setup 6.12
-== setup task 6.12
-deployment.apps/web created
-  web-6c48cbcc8b-87qfj CreateContainerError
-  Error: failed to get container spec opts: failed to generate apparmor spec opts: apparmor profile not found cks-nginx
-```
-
-The setup shows the Deployment's pod and its error, which in the test run were `CreateContainerError` and `failed to generate apparmor spec opts: apparmor profile not found cks-nginx`.
-
-> Deployment `web` in namespace `aa-web` asks for the AppArmor profile `cks-nginx`, and its pod doesn't start. The profile file is `/etc/apparmor.d/cks-nginx` on `cks-lima`. Make the Deployment run confined by that profile.
-
-<details>
-<summary>Solution</summary>
-
-The profile file exists, but nothing loaded it into the kernel, so load it and restart the Deployment:
-
-```console
-root@cks-lima:~# aa-status | grep cks-nginx || echo not loaded
-not loaded
-root@cks-lima:~# apparmor_parser -r /etc/apparmor.d/cks-nginx
-root@cks-lima:~# aa-status | grep cks-nginx
-   cks-nginx
-root@cks-lima:~# k -n aa-web rollout restart deploy web
-deployment.apps/web restarted
-root@cks-lima:~# k -n aa-web rollout status deploy web
-Waiting for deployment "web" rollout to finish: 1 old replicas are pending termination...
-Waiting for deployment "web" rollout to finish: 1 old replicas are pending termination...
-Waiting for deployment "web" rollout to finish: 1 old replicas are pending termination...
-deployment "web" successfully rolled out
-```
-
-The profile allows nginx everything except writes below `/usr/share/nginx/html`, so prove both sides:
-
-```console
-root@cks-lima:~# k -n aa-web exec deploy/web -- sh -c 'echo x > /usr/share/nginx/html/index.html'    # Permission denied
-sh: can't create /usr/share/nginx/html/index.html: Permission denied
-command terminated with exit code 1
-root@cks-lima:~# k -n aa-web exec deploy/web -- wget -qO- http://127.0.0.1 | head -4                  # the nginx page
-<!DOCTYPE html>
-<html>
-<head>
-<title>Welcome to nginx!</title>
-```
-
-A process started with `kubectl exec` runs under the container's profile too, which is why the first command fails. The kubelet retries a failed container with a growing delay, so `rollout restart` gets a new pod at once instead of waiting for the next retry.
-
-</details>
-
-```console
-$ ./certs/cks/task.sh check 6.12
-== check task 6.12
-  PASS  profile cks-nginx is loaded in enforce mode
-  PASS  Deployment web has a ready pod
-  PASS  a write below /usr/share/nginx/html fails with Permission denied
-  PASS  a write to /tmp still works, and nginx serves
-== task 6.12: 4 passed, 0 failed
-```
+This task sits in [module 44](../kernel-and-host/44-kernel-and-host-security.md#task-7-apparmor-for-a-deployment) as its task 7, for the same reason as task 5.
 
 ## Task 13: Pods that are not immutable
 
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 6.13
-== setup task 6.13
+$ ./platform-engineering/task.sh setup 43.13
+== setup task 43.13
 pod/frozen created
 pod/frozen-too created
 pod/writable created
@@ -1162,13 +1020,13 @@ pod "frozen-but-privileged" deleted from immutable-check namespace
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 6.13
-== check task 6.13
+$ ./platform-engineering/task.sh check 43.13
+== check task 43.13
   PASS  writable, half-frozen and frozen-but-privileged are gone
   PASS  frozen and frozen-too still run
-== task 6.13: 2 passed, 0 failed
+== task 43.13: 2 passed, 0 failed
 ```
 
 ## Clean up
 
-Tasks 1, 10 and 11 changed the API server, and tasks 2, 4, 7 and 8 left files on `cks-w1`, so `./certs/cks/cluster/reset.sh` removes all of it, including the Falco rules. Tasks 5 and 12 loaded AppArmor profiles on `cks-lima`, and `./certs/cks/cluster/lima.sh reset` unloads and deletes them.
+Tasks 1, 10 and 11 changed the API server, and tasks 2, 4, 7 and 8 left files on `cks-w1`, so `./platform-engineering/practice/cluster/reset.sh` removes all of it, including the Falco rules.

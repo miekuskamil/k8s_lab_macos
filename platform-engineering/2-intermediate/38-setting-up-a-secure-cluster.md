@@ -1,19 +1,19 @@
-# CKS 01: Cluster setup (15%)
+# Module 38: Setting up a secure cluster
 
-> New to a term here, like CIS benchmark or ipBlock? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
+> New to a term here, like CIS benchmark or ipBlock? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this domain:** the [practice cluster](../README.md#the-practice-cluster) running, and for tasks 9 to 11 the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium) too. The course's [module 3](../../platform-engineering/1-foundations/03-authorization.md#concept-authorizationpolicy-compared-with-networkpolicy) compares NetworkPolicy with Istio's rules, and [module 11](../../platform-engineering/2-intermediate/11-edge-tls.md) explains certificates and trust. Read those first if NetworkPolicy or TLS feel shaky.
+**Before this module:** the [practice cluster](../practice-cluster.md) running. The course's [module 3](../1-foundations/03-authorization.md#concept-authorizationpolicy-compared-with-networkpolicy) compares NetworkPolicy with Istio's rules, and [module 11](11-edge-tls.md) explains certificates and trust. Read those first if NetworkPolicy or TLS feel shaky.
 
-A fresh kubeadm cluster lets every pod reach every other pod, serves profiling data about its own internals, and runs whatever binaries somebody copies onto the nodes. This domain closes those doors before the first workload arrives, so that a later mistake in one application stays inside that application. It has 13 tasks and takes about 2 hours, theory included.
+A fresh kubeadm cluster lets every pod reach every other pod, serves profiling data about its own internals, and runs whatever binaries somebody copies onto the nodes. This module closes those doors before the first workload arrives, so that a later mistake in one application stays inside that application. It has 10 tasks here and 3 Cilium tasks in module 44, and takes about 2 hours, theory included.
 
-## The domain in one table
+## The module in one table
 
-The exam's cluster setup domain covers five competencies, and each task in this file answers one concrete question about them:
+The module covers five topics, and each task answers one concrete question about them:
 
 | Question | Tool | Task |
 |---|---|---|
 | Which pods may talk to which? | NetworkPolicy | 1, 6, 7, 8 |
-| Which pods may talk to which, on a Cilium cluster, down to the HTTP path? | CiliumNetworkPolicy | 9, 10, 11 |
+| Which pods may talk to which, on a Cilium cluster, down to the HTTP path? | CiliumNetworkPolicy | module 44, tasks 1 to 3 |
 | May a pod reach the cloud's metadata service? | NetworkPolicy with `ipBlock` | 2 |
 | Do the control plane flags follow the industry baseline? | kube-bench | 3 |
 | Do the control plane and the kubelet speak only modern TLS? | `--tls-min-version`, `--tls-cipher-suites` | 12, 13 |
@@ -54,7 +54,7 @@ The API server never looks at a single packet, because pod traffic goes straight
 5. kube-proxy's DNAT rule rewrites the Service address into a real pod address. DNAT (destination network address translation) means the kernel swaps the packet's destination on the way.
 6. The packet filter compares the packet with its rules and allows or drops it.
 
-The two CNI plugins in this track build step 3 in different ways. **Calico** runs an agent called Felix on every node, and Felix writes iptables rules, or eBPF programs when Calico runs its eBPF data plane. **Cilium** compiles eBPF programs and attaches them to each pod's network interface. It also gives every set of pod labels a number called a security identity, so its programs compare short identities instead of long lists of IP addresses. The course's [module 10](../../platform-engineering/3-advanced/10-ebpf-and-cilium.md#concept-what-ebpf-is) explains eBPF itself.
+The two CNI plugins in these modules build step 3 in different ways. **Calico** runs an agent called Felix on every node, and Felix writes iptables rules, or eBPF programs when Calico runs its eBPF data plane. **Cilium** compiles eBPF programs and attaches them to each pod's network interface. It also gives every set of pod labels a number called a security identity, so its programs compare short identities instead of long lists of IP addresses. The course's [module 10](../3-advanced/10-ebpf-and-cilium.md#concept-what-ebpf-is) explains eBPF itself.
 
 A NetworkPolicy works only when the CNI plugin implements it. flannel on its own, for example, accepts the object and enforces nothing, and the API server stores the policy either way. So `kubectl get netpol` looks perfect while every packet still flows, which is why you always test a policy with real traffic.
 
@@ -101,7 +101,7 @@ A CiliumNetworkPolicy selects pods with `endpointSelector` instead of `podSelect
 
 The layer 7 rule needs an extra hop, because eBPF programs in the kernel handle layers 3 and 4 quickly but parsing HTTP is a job for a proxy. So Cilium sends the selected traffic through an Envoy proxy on the node, and Envoy reads each HTTP request and answers `403 Forbidden` itself when no rule matches. A connection refused at layer 4 times out instead, because the kernel simply drops the packets. That difference tells you which layer refused the request.
 
-The practice cluster runs Calico, so the Cilium tasks run on the third practice machine, the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium) `cks-lima`. It holds a one-node kubeadm cluster with Cilium 1.20.4, and `./certs/cks/cluster/lima.sh shell` opens a root shell there.
+The practice cluster runs Calico, so the Cilium tasks run on the third practice machine, the [Lima VM](../kernel-and-host/README.md#the-lima-vm-on-a-mac) `cks-lima`. It holds a one-node kubeadm cluster with Cilium 1.20.4, and `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell there.
 
 **What this stops.** An HTTP rule stops a compromised frontend from calling admin endpoints on a service it legitimately talks to. An `egressDeny` to `world` stops a pod from sending stolen data to the internet, whatever allow rules other teams add later.
 
@@ -137,7 +137,7 @@ On a fresh practice cluster, the test runs printed 37 to 39 passes, 10 to 12 fai
 
 **What this stops.** The benchmark stops the slow drift where each cluster ends up with a slightly different and slightly weaker set of flags. It gives a security team one shared list to argue about, instead of a hundred opinions.
 
-**Exam traps.** kube-bench reads the flags of the running processes, so a fix shows up only after the kubelet restarts the static pod, which is why the solution waits for the API server before it runs kube-bench again. A file permission check such as 4.1.9 reads the file on disk and passes at once. A later `kubeadm upgrade` rewrites the manifests and drops hand-added flags, which [domain 02](02-cluster-hardening.md#task-4-upgrade-the-cluster-with-kubeadm) measured.
+**Exam traps.** kube-bench reads the flags of the running processes, so a fix shows up only after the kubelet restarts the static pod, which is why the solution waits for the API server before it runs kube-bench again. A file permission check such as 4.1.9 reads the file on disk and passes at once. A later `kubeadm upgrade` rewrites the manifests and drops hand-added flags, which [module 39](39-hardening-access-to-the-api.md#task-4-upgrade-the-cluster-with-kubeadm) measured.
 
 ## Concept: TLS versions, cipher suites and downgrades
 
@@ -200,7 +200,7 @@ Traffic from outside the cluster needs a front door that knows which host name a
 1. A Secret of type `kubernetes.io/tls` that holds the certificate and its private key.
 2. A `tls` section in the Ingress that names the host and that Secret.
 
-When the Secret is missing or the names don't match, ingress-nginx keeps serving instead of failing. It presents its own "Kubernetes Ingress Controller Fake Certificate" and carries on, so the site looks up while every browser rejects it. The course's [module 11](../../platform-engineering/2-intermediate/11-edge-tls.md#concept-how-a-client-decides-to-trust-a-certificate) explains why a client refuses such a certificate.
+When the Secret is missing or the names don't match, ingress-nginx keeps serving instead of failing. It presents its own "Kubernetes Ingress Controller Fake Certificate" and carries on, so the site looks up while every browser rejects it. The course's [module 11](11-edge-tls.md#concept-how-a-client-decides-to-trust-a-certificate) explains why a client refuses such a certificate.
 
 **What this stops.** Real TLS at the edge stops anybody on the path between the user and the cluster from reading or changing the traffic, and the redirect from HTTP stops users from landing on the unencrypted port by accident.
 
@@ -216,7 +216,7 @@ A **checksum** solves that by giving each file a fingerprint. A hash function su
 2. Compute the checksum of the file on the node with `sha512sum`.
 3. Compare the two. Any difference means the file isn't the release.
 
-A checksum proves that the file matches what the release page lists, but it says nothing about who wrote the release page. For that, Kubernetes also signs its release artifacts with cosign, the signing tool that [domain 05](05-supply-chain-security.md#concept-signatures) explains, and a signature ties the file to the Kubernetes release process itself.
+A checksum proves that the file matches what the release page lists, but it says nothing about who wrote the release page. For that, Kubernetes also signs its release artifacts with cosign, the signing tool that [module 42](../3-advanced/42-supply-chain-security.md#concept-signatures) explains, and a signature ties the file to the Kubernetes release process itself.
 
 **What this stops.** A checksum stops a tampered or corrupted binary from running unnoticed. In task 5, the setup appended three bytes to `kube-proxy`, and `sha512sum -c` reported `FAILED`.
 
@@ -224,7 +224,7 @@ A checksum proves that the file matches what the release page lists, but it says
 
 ## The bigger picture: a fresh cluster has wide doors
 
-A kubeadm cluster arrives tuned to work, not to resist an attacker. Every control in this domain closes one wide door that the defaults leave open:
+A kubeadm cluster arrives tuned to work, not to resist an attacker. Every control in this module closes one wide door that the defaults leave open:
 
 1. The network door: every pod reaches every pod. NetworkPolicy closes it, and Cilium narrows it to single HTTP paths.
 2. The cloud door: every pod reaches the metadata service. An egress `except` closes it.
@@ -254,8 +254,8 @@ Real platform teams rarely make these changes by hand on each cluster, because h
 Prepare the task from your Mac, which creates the namespace, the three pods and their Services:
 
 ```console
-$ ./certs/cks/task.sh setup 1.1
-== setup task 1.1
+$ ./platform-engineering/task.sh setup 38.1
+== setup task 38.1
 pod/frontend created
 pod/api created
 service/api created
@@ -383,13 +383,13 @@ Two details decide whether the policies work, and both come from the theory:
 Run the check from your Mac, which tests each allowed and refused path with real connections:
 
 ```console
-$ ./certs/cks/task.sh check 1.1
-== check task 1.1
+$ ./platform-engineering/task.sh check 38.1
+== check task 38.1
   PASS  NetworkPolicy default-deny selects every pod, Ingress and Egress
   PASS  frontend reaches api on port 80, by name
   PASS  frontend does not reach db
   PASS  db does not reach api
-== task 1.1: 4 passed, 0 failed
+== task 38.1: 4 passed, 0 failed
 ```
 
 In the test run, the check failed three of four items before the solution and passed all four after it.
@@ -399,8 +399,8 @@ In the test run, the check failed three of four items before the solution and pa
 **Time budget:** 4 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 1.2
-== setup task 1.2
+$ ./platform-engineering/task.sh setup 38.2
+== setup task 38.2
 pod/worker created
 pod/worker condition met
 ```
@@ -431,12 +431,12 @@ The policy selects every pod for egress, so egress becomes an allow list, and th
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 1.2
-== check task 1.2
+$ ./platform-engineering/task.sh check 38.2
+== check task 38.2
   PASS  NetworkPolicy deny-metadata exists and selects every pod
   PASS  it allows 0.0.0.0/0 except 169.254.169.254/32
   PASS  the worker still resolves names and reaches the API server
-== task 1.2: 3 passed, 0 failed
+== task 38.2: 3 passed, 0 failed
 ```
 
 In the test run, the worker pod reached the API server's port both before and after the policy. The check reads the policy's structure for the block itself, because OrbStack has no metadata service that would refuse the connection.
@@ -446,8 +446,8 @@ In the test run, the worker pod reached the API server's port both before and af
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 1.3     # seeds nothing: a fresh kubeadm cluster fails these checks already
-== setup task 1.3
+$ ./platform-engineering/task.sh setup 38.3     # seeds nothing: a fresh kubeadm cluster fails these checks already
+== setup task 38.3
   nothing to seed: a fresh kubeadm cluster already fails these checks
 ```
 
@@ -496,7 +496,7 @@ chmod 600 /var/lib/kubelet/config.yaml
 ...
 ```
 
-On a fresh cluster, the test runs printed 37 to 39 passes, 10 to 12 failures and 11 warnings for the master target. The failures were profiling on all three components, four audit log flags, etcd's data directory owner, `--kubelet-certificate-authority` and `--service-account-extend-token-expiration`. Minutes after a reset, kube-bench also failed 1.1.7 and 1.1.8, the mode and owner of etcd's manifest, and both passed when it ran again later. Audit logging comes in [domain 06](06-monitoring-logging-runtime-security.md#task-1-turn-on-audit-logging).
+On a fresh cluster, the test runs printed 37 to 39 passes, 10 to 12 failures and 11 warnings for the master target. The failures were profiling on all three components, four audit log flags, etcd's data directory owner, `--kubelet-certificate-authority` and `--service-account-extend-token-expiration`. Minutes after a reset, kube-bench also failed 1.1.7 and 1.1.8, the mode and owner of etcd's manifest, and both passed when it ran again later. Audit logging comes in [module 43](../3-advanced/43-runtime-security-and-auditing.md#task-1-turn-on-audit-logging).
 
 <details>
 <summary>Solution</summary>
@@ -553,14 +553,14 @@ In the test run, the three pods came back in under a minute, and kube-bench then
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 1.3
-== check task 1.3
+$ ./platform-engineering/task.sh check 38.3
+== check task 38.3
   PASS  kube-bench 1.2.15 passes
   PASS  kube-bench 1.3.2 passes
   PASS  kube-bench 1.4.1 passes
   PASS  kube-bench 4.1.9 passes
   PASS  every control plane pod runs
-== task 1.3: 5 passed, 0 failed
+== task 38.3: 5 passed, 0 failed
 ```
 
 ## Task 4: An Ingress with TLS
@@ -568,8 +568,8 @@ $ ./certs/cks/task.sh check 1.3
 **Time budget:** 6 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 1.4
-== setup task 1.4
+$ ./platform-engineering/task.sh setup 38.4
+== setup task 38.4
 deployment.apps/shop created
 service/shop exposed
 Waiting for deployment "shop" rollout to finish: 0 of 1 updated replicas are available...
@@ -616,13 +616,13 @@ In the test run, these printed `200`, `subject=CN = shop.cks.local` and `308`. T
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 1.4
-== check task 1.4
+$ ./platform-engineering/task.sh check 38.4
+== check task 38.4
   PASS  Secret shop-tls has type kubernetes.io/tls
   PASS  HTTPS on shop.cks.local:30443 answers 200
   PASS  the certificate served is CN=shop.cks.local, not the controller's fake one
   PASS  plain HTTP redirects to HTTPS (308)
-== task 1.4: 4 passed, 0 failed
+== task 38.4: 4 passed, 0 failed
 ```
 
 ## Task 5: Verify a platform binary
@@ -630,8 +630,8 @@ $ ./certs/cks/task.sh check 1.4
 **Time budget:** 3 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 1.5
-== setup task 1.5
+$ ./platform-engineering/task.sh setup 38.5
+== setup task 38.5
 total 98120
 -rwxr-xr-x 1 root root 57868450 Nov 14 22:51 kubectl
 -rwxr-xr-x 1 root root 42598565 Nov 14 22:52 kube-proxy
@@ -659,11 +659,11 @@ The setup had appended three bytes to `kube-proxy`, which changed its checksum c
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 1.5
-== check task 1.5
+$ ./platform-engineering/task.sh check 38.5
+== check task 38.5
   PASS  the tampered kube-proxy is gone
   PASS  kubectl stays, and matches the official v1.37.1 sha512
-== task 1.5: 2 passed, 0 failed
+== task 38.5: 2 passed, 0 failed
 ```
 
 ## Task 6: Egress to DNS and the API server only
@@ -671,8 +671,8 @@ $ ./certs/cks/task.sh check 1.5
 **Time budget:** 7 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 1.6
-== setup task 1.6
+$ ./platform-engineering/task.sh setup 38.6
+== setup task 38.6
 pod/agent created
 pod/web created
 service/web created
@@ -748,14 +748,14 @@ The `nc` goes to the Service's port 443 while the policy names port 6443, and bo
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 1.6
-== check task 1.6
+$ ./platform-engineering/task.sh check 38.6
+== check task 38.6
   PASS  NetworkPolicy deny-all-egress selects every pod for Egress and allows nothing
   PASS  agent resolves kubernetes.default
   PASS  agent reaches the API server through the kubernetes Service
   PASS  agent does not reach web
   PASS  web reaches nothing, not even the API server
-== task 1.6: 5 passed, 0 failed
+== task 38.6: 5 passed, 0 failed
 ```
 
 In the test run, the check failed three of five items before the solution and passed all five after it.
@@ -765,8 +765,8 @@ In the test run, the check failed three of five items before the solution and pa
 **Time budget:** 5 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 1.7
-== setup task 1.7
+$ ./platform-engineering/task.sh setup 38.7
+== setup task 38.7
 pod/db created
 service/db created
 pod/api created
@@ -844,13 +844,13 @@ command terminated with exit code 1
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 1.7
-== check task 1.7
+$ ./platform-engineering/task.sh check 38.7
+== check task 38.7
   PASS  NetworkPolicy db-ingress still exists
   PASS  api in team-api reaches db
   PASS  debug in team-api does not reach db
   PASS  api in team-web does not reach db
-== task 1.7: 4 passed, 0 failed
+== task 38.7: 4 passed, 0 failed
 ```
 
 In the test run, the setup printed `debug in team-api reaches db: yes`, and the check failed one item before the fix.
@@ -860,8 +860,8 @@ In the test run, the setup printed `debug in team-api reaches db: yes`, and the 
 **Time budget:** 4 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 1.8
-== setup task 1.8
+$ ./platform-engineering/task.sh setup 38.8
+== setup task 38.8
 pod/server created
 pod/client created
 pod/client condition met
@@ -904,252 +904,25 @@ command terminated with exit code 1
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 1.8
-== check task 1.8
+$ ./platform-engineering/task.sh check 38.8
+== check task 38.8
   PASS  NetworkPolicy server-ports opens one port entry, 7000 to 7100 with endPort
   PASS  client reaches server on 7000, 7050 and 7100
   PASS  client does not reach server on 8000
-== task 1.8: 3 passed, 0 failed
+== task 38.8: 3 passed, 0 failed
 ```
 
-## Task 9: A CiliumNetworkPolicy at layers 3 and 4
+## Tasks 9 to 11: Cilium, on a VM
 
-**Time budget:** 5 minutes. **Host:** `cks-lima`.
-
-```console
-$ ./certs/cks/cluster/lima.sh start      # once, when the VM is off
-...
-time="2026-11-14T22:52:45Z" level=info msg="READY. Run `limactl shell cks-lima` to open the shell."
-cluster ready
-$ ./certs/cks/task.sh setup 1.9
-== setup task 1.9
-pod/backend created
-service/backend created
-pod/frontend created
-pod/other created
-pod/backend condition met
-pod/frontend condition met
-pod/other condition met
-```
-
-> Namespace `cilium-l4` runs pods `backend` (label `app=backend`, Service `backend` on port 80), `frontend` (`app=frontend`) and `other` (`app=other`). Create a CiliumNetworkPolicy `backend-ingress` so that `backend` accepts only TCP port 80, and only from `frontend`.
-
-<details>
-<summary>Solution</summary>
-
-The Cilium docs' pages "Layer 3 examples" and "Layer 4 examples" hold this shape, so you copy it from there in the exam:
-
-```yaml
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: backend-ingress
-  namespace: cilium-l4
-spec:
-  endpointSelector:
-    matchLabels: {app: backend}
-  ingress:
-  - fromEndpoints:
-    - matchLabels: {app: frontend}
-    toPorts:
-    - ports:
-      - {port: "80", protocol: TCP}
-```
-
-The port is a string in a CiliumNetworkPolicy. A peer in `fromEndpoints` without a namespace label matches pods in the policy's own namespace only, the same way a plain `podSelector` does.
-
-```console
-root@cks-lima:~# k -n cilium-l4 get cnp
-NAME              AGE   VALID
-backend-ingress   20s   True
-root@cks-lima:~# k -n cilium-l4 exec frontend -- wget -qO- -T 3 http://backend | head -4
-<!DOCTYPE html>
-<html>
-<head>
-<title>Welcome to nginx!</title>
-root@cks-lima:~# k -n cilium-l4 exec other -- wget -qO- -T 3 http://backend          # download timed out
-wget: download timed out
-command terminated with exit code 1
-```
-
-</details>
-
-```console
-$ ./certs/cks/task.sh check 1.9
-== check task 1.9
-  PASS  CiliumNetworkPolicy backend-ingress selects app=backend and opens only TCP 80
-  PASS  frontend reaches backend on port 80
-  PASS  other does not reach backend
-== task 1.9: 3 passed, 0 failed
-```
-
-## Task 10: An HTTP rule with Cilium
-
-**Time budget:** 6 minutes. **Host:** `cks-lima`.
-
-```console
-$ ./certs/cks/task.sh setup 1.10
-== setup task 1.10
-pod/api created
-service/api created
-pod/client created
-pod/other created
-pod/api condition met
-pod/client condition met
-pod/other condition met
-```
-
-> Pod `api` in namespace `cilium-l7` serves `/public/` and `/admin/` on port 80. Create a CiliumNetworkPolicy `api-l7`:
->
-> 1. Pods labelled `app=client` may send `GET` requests for paths under `/public/`.
-> 2. Every other request from `client` gets refused at the HTTP layer.
-> 3. No other pod reaches `api`.
-
-<details>
-<summary>Solution</summary>
-
-A layer 7 rule hangs under `toPorts`, next to the port whose traffic it filters:
-
-```yaml
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: api-l7
-  namespace: cilium-l7
-spec:
-  endpointSelector:
-    matchLabels: {app: api}
-  ingress:
-  - fromEndpoints:
-    - matchLabels: {app: client}
-    toPorts:
-    - ports:
-      - {port: "80", protocol: TCP}
-      rules:
-        http:
-        - method: GET
-          path: "/public/.*"
-```
-
-`path` is a regular expression, so `/public/.*` covers everything under the folder. Test three requests, one allowed and two refused:
-
-```console
-root@cks-lima:~# k -n cilium-l7 exec client -- wget -qO- -T 5 http://api/public/                  # public
-public
-root@cks-lima:~# k -n cilium-l7 exec client -- wget -qO- -T 5 http://api/admin/                   # 403
-wget: server returned error: HTTP/1.1 403 Forbidden
-command terminated with exit code 1
-root@cks-lima:~# k -n cilium-l7 exec client -- wget -qO- -T 5 --post-data=x http://api/public/    # 403
-wget: server returned error: HTTP/1.1 403 Forbidden
-command terminated with exit code 1
-```
-
-In the test run, the second and third commands printed `wget: server returned error: HTTP/1.1 403 Forbidden`, an answer from Cilium's Envoy proxy rather than from nginx. A request from `other` printed `wget: download timed out` instead, because layer 4 dropped it before any HTTP happened.
-
-</details>
-
-```console
-$ ./certs/cks/task.sh check 1.10
-== check task 1.10
-  PASS  CiliumNetworkPolicy api-l7 has an HTTP rule
-  PASS  client gets /public/ with GET
-  PASS  client gets 403 for /admin/
-  PASS  client gets 403 for a POST to /public/
-  PASS  other does not reach api at all
-== task 1.10: 5 passed, 0 failed
-```
-
-In the test run, the check failed four of five items before the solution.
-
-## Task 11: Entities and an explicit deny with Cilium
-
-**Time budget:** 6 minutes. **Host:** `cks-lima`.
-
-```console
-$ ./certs/cks/task.sh setup 1.11
-== setup task 1.11
-pod/agent created
-pod/web created
-service/web created
-pod/agent condition met
-pod/web condition met
-  web reaches 1.1.1.1:443 before any policy: yes
-```
-
-> In namespace `cilium-egress`:
->
-> 1. Create a CiliumNetworkPolicy `deny-world` that denies egress from every pod to everything outside the cluster. Use an entity and a deny rule.
-> 2. Create a CiliumNetworkPolicy `agent-egress` so that pod `agent` reaches the Kubernetes API server, through an entity, and DNS, and nothing else.
-
-<details>
-<summary>Solution</summary>
-
-```yaml
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: deny-world
-  namespace: cilium-egress
-spec:
-  endpointSelector: {}
-  egressDeny:
-  - toEntities: [world]
----
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: agent-egress
-  namespace: cilium-egress
-spec:
-  endpointSelector:
-    matchLabels: {app: agent}
-  egress:
-  - toEntities: [kube-apiserver]
-  - toEndpoints:
-    - matchLabels:
-        k8s:io.kubernetes.pod.namespace: kube-system
-        k8s-app: kube-dns
-    toPorts:
-    - ports:
-      - {port: "53", protocol: ANY}
-```
-
-Three details make these policies behave as the task asks:
-
-- `deny-world` has no allow rules, so it doesn't turn `web`'s egress into an allow list. `web` still reaches other pods and only loses the world.
-- `kube-apiserver` matches the API server wherever it runs, so the Service-address trap of task 6 doesn't exist here, because Cilium works out the real address itself.
-- `protocol: ANY` covers DNS over UDP and TCP in one entry.
-
-```console
-root@cks-lima:~# k -n cilium-egress exec agent -- nc -z -w 3 kubernetes.default.svc.cluster.local 443 && echo api ok
-api ok
-root@cks-lima:~# k -n cilium-egress exec web -- nc -z -w 3 1.1.1.1 443 || echo world blocked
-command terminated with exit code 1
-world blocked
-```
-
-In the test run, the setup printed `web reaches 1.1.1.1:443 before any policy: yes`, and after the solution the second command printed `world blocked`.
-
-</details>
-
-```console
-$ ./certs/cks/task.sh check 1.11
-== check task 1.11
-  PASS  CiliumNetworkPolicy deny-world denies egress to the world entity for every pod
-  PASS  CiliumNetworkPolicy agent-egress uses the kube-apiserver entity
-  PASS  agent resolves names and reaches the API server
-  PASS  agent does not reach web
-  PASS  web reaches nothing outside the cluster
-== task 1.11: 5 passed, 0 failed
-```
+The three Cilium tasks need a cluster whose kernel belongs to one machine, because Cilium loads its programs into that kernel. They sit in [module 44](../kernel-and-host/44-kernel-and-host-security.md#task-1-a-ciliumnetworkpolicy-at-layers-3-and-4) as its tasks 1 to 3, next to the other tasks that run on a VM.
 
 ## Task 12: TLS versions and ciphers for the API server and etcd
 
 **Time budget:** 8 minutes. **Host:** `cks-cp`.
 
 ```console
-$ ./certs/cks/task.sh setup 1.12
-== setup task 1.12
+$ ./platform-engineering/task.sh setup 38.12
+== setup task 38.12
 /etc/kubernetes/manifests/kube-apiserver.yaml:    - --tls-cert-file=/etc/kubernetes/pki/apiserver.crt
 /etc/kubernetes/manifests/kube-apiserver.yaml:    - --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
 New, TLSv1.2, Cipher is ECDHE-RSA-CHACHA20-POLY1305
@@ -1204,8 +977,8 @@ OpenSSL names the suites differently from Go, so `ECDHE-RSA-AES128-GCM-SHA256` i
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 1.12
-== check task 1.12
+$ ./platform-engineering/task.sh check 38.12
+== check task 38.12
   PASS  the API server sets --tls-min-version=VersionTLS12 and the two cipher suites
   PASS  the API server accepts ECDHE-RSA-AES128-GCM-SHA256 on TLS 1.2
   PASS  the API server refuses ECDHE-RSA-CHACHA20-POLY1305 on TLS 1.2
@@ -1213,7 +986,7 @@ $ ./certs/cks/task.sh check 1.12
   PASS  etcd refuses TLS 1.2 on 2379
   PASS  etcd accepts TLS 1.3 on 2379
   PASS  the API server and etcd pods are Ready
-== task 1.12: 7 passed, 0 failed
+== task 38.12: 7 passed, 0 failed
 ```
 
 ## Task 13: Harden the kubelet
@@ -1221,8 +994,8 @@ $ ./certs/cks/task.sh check 1.12
 **Time budget:** 6 minutes. **Host:** `cks-w1`.
 
 ```console
-$ ./certs/cks/task.sh setup 1.13
-== setup task 1.13
+$ ./platform-engineering/task.sh setup 38.13
+== setup task 38.13
   read-only port /pods: 200
   anonymous /pods on 10250: 200
 ```
@@ -1277,22 +1050,22 @@ root@cks-w1:~# curl -sk -o /dev/null -w '%{http_code}\n' https://127.0.0.1:10250
 </details>
 
 ```console
-$ ./certs/cks/task.sh check 1.13
-== check task 1.13
+$ ./platform-engineering/task.sh check 38.13
+== check task 38.13
   PASS  nothing answers on the read-only port 10255
   PASS  an anonymous request to the kubelet API gets 401
   PASS  the kubelet config sets authorization mode Webhook
   PASS  the kubelet refuses TLS 1.2
   PASS  cks-w1 is Ready and kubectl logs still works for its pods
-== task 1.13: 5 passed, 0 failed
+== task 38.13: 5 passed, 0 failed
 ```
 
 ## Clean up
 
-Tasks 1, 2 and 4 to 8 leave only namespaces and files behind, while tasks 3 and 12 changed static pods and task 13 changed the kubelet on `cks-w1`. To start the next domain from a fresh cluster, run the reset script, which wipes both nodes and builds the cluster again, and reset the Lima VM when you did the Cilium tasks:
+Tasks 1, 2 and 4 to 8 leave only namespaces and files behind, while tasks 3 and 12 changed static pods and task 13 changed the kubelet on `cks-w1`. To start the next module from a fresh cluster, run the reset script, which wipes both nodes and builds the cluster again:
 
 ```console
-$ ./certs/cks/cluster/reset.sh
+$ ./platform-engineering/practice/cluster/reset.sh
 === wiping cks-w1
 === wiping cks-cp
 ...
@@ -1315,14 +1088,4 @@ NAME     STATUS   ROLES           AGE     VERSION   INTERNAL-IP       EXTERNAL-I
 cks-cp   Ready    control-plane   2m11s   v1.37.1   192.168.139.194   <none>        Ubuntu 24.04.5 LTS   7.2.12-orbstack-00394-gbecdd6130068 (arm64)   containerd://2.2.10
 cks-w1   Ready    <none>          76s     v1.37.1   192.168.139.60    <none>        Ubuntu 24.04.5 LTS   7.2.12-orbstack-00394-gbecdd6130068 (arm64)   containerd://2.2.10
 ...
-$ ./certs/cks/cluster/lima.sh reset     # only when you did tasks 9 to 11; takes about 2 minutes
-=== wiping the cluster on cks-lima
-...
-=== 2/4 containerd and kubeadm 1.37.1
-...
-=== 3/4 kubeadm init
-...
-=== 4/4 Cilium 1.20.4
-cilium 1.20.4 ready
-cluster ready
 ```

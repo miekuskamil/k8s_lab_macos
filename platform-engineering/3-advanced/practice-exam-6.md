@@ -1,8 +1,8 @@
-# CKS mock exam 3
+# Timed practice exam 6: security, a broken control plane
 
-> New to a term here? The [glossary](../../platform-engineering/glossary.md#cks-exam-track) explains every term this track uses.
+> New to a term here? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this mock exam:** [mock exam 2](mock-exam-2.md) under time, and the [practice cluster](../README.md#the-practice-cluster) and the [Lima VM](../README.md#the-lima-vm-for-apparmor-and-cilium), both freshly reset.
+**Before this practice exam:** [practice exam 5](practice-exam-5.md) under time, and the [practice cluster](../practice-cluster.md) and the [Lima VM](../kernel-and-host/README.md#the-lima-vm-on-a-mac), both freshly reset.
 
 This is the hardest of the three. When the clock starts, the API server refuses to start, the scheduler and the controller manager crash, every caller is cluster admin, and Secrets sit encrypted with a key you're asked to retire. Nothing tells you which of those to fix first, except the order in which the layers depend on each other, so reading that order is part of the test. You get 2 hours for 17 tasks worth 100 points, on the OrbStack cluster and the Lima VM.
 
@@ -11,7 +11,7 @@ This is the hardest of the three. When the clock starts, the API server refuses 
 1. Start fresh, with both resets and the setup on your Mac:
 
    ```console
-   $ ./certs/cks/cluster/reset.sh && ./certs/cks/cluster/lima.sh reset
+   $ ./platform-engineering/practice/cluster/reset.sh && ./platform-engineering/practice/cluster/lima.sh reset
    === wiping cks-w1
    === wiping cks-cp
    ...
@@ -26,42 +26,42 @@ This is the hardest of the three. When the clock starts, the API server refuses 
    === 4/4 Cilium 1.20.4
    ...
    cluster ready
-   $ MOCK=3 ./certs/cks/mock-exam/setup.sh
+   $ ./platform-engineering/practice-exam.sh setup 6
    == setting up task 11: Rotate to a new provider
    == setting up task 2: One port range, two selectors
    ...
-   Ready. The clock runs from now: 2 hours. Open certs/cks/mock-exam-3.md.
-   Score yourself at any time with MOCK=3 ./certs/cks/mock-exam/score.sh
+   Ready. The clock runs from now: 2 hours. Open platform-engineering/3-advanced/practice-exam-6.md.
+   Score yourself at any time with ./platform-engineering/practice-exam.sh score 6
    ```
 
    In the final test run, the OrbStack reset took 3 minutes 7 seconds, the Lima reset 1 minute 54 seconds, and the setup 1 minute 13 seconds. The setup breaks the control plane in its last steps, so it doesn't wait for any pods to start.
 
 2. The clock starts when `setup.sh` ends, and `score.sh` prints the minutes since then.
-3. Work only on the nodes, through `orb -m cks-cp`, `orb -m cks-w1` and `./certs/cks/cluster/lima.sh shell`, and use only the documentation the exam allows.
+3. Work only on the nodes, through `orb -m cks-cp`, `orb -m cks-w1` and `./platform-engineering/practice/cluster/lima.sh shell`, and use only the documentation the exam allows.
 4. Don't open the solutions while the clock runs, because the score only means something when you worked without them.
-5. Score from your Mac with `MOCK=3 ./certs/cks/mock-exam/score.sh`, or score single tasks with `MOCK=3 ./certs/cks/mock-exam/score.sh 1 13`.
+5. Score from your Mac with `./platform-engineering/practice-exam.sh score 6`, or score single tasks with `./platform-engineering/practice-exam.sh score 6 1 13`.
 
 ## Tasks
 
-| # | Task | Points | Domain | Host |
+| # | Task | Points | Module | Host |
 |---|---|---|---|---|
-| 1 | Pods stay Pending | 8 | 02 | cks-cp |
-| 2 | One port range, two selectors | 5 | 01 | cks-cp |
-| 3 | Keep a job off the internet | 6 | 01 | cks-lima |
-| 4 | CIS findings and etcd TLS | 6 | 01 | cks-cp |
-| 5 | An Ingress for two hosts | 4 | 01 | cks-cp |
-| 6 | A role that grows by itself | 6 | 02 | cks-cp |
-| 7 | Old tokens and mounted ones | 5 | 02 | cks-cp |
-| 8 | Everyone is admin | 5 | 02 | cks-cp |
-| 9 | SSH the right way | 4 | 03 | cks-w1 |
-| 10 | Kernel modules nobody needs | 4 | 03 | cks-lima |
-| 11 | Rotate to a new provider | 8 | 04 | cks-cp |
-| 12 | gVisor where it exists | 5 | 04 | cks-cp |
-| 13 | The API server doesn't start | 8 | 05 | cks-cp |
-| 14 | Delete what's vulnerable | 5 | 05 | cks-cp |
-| 15 | Tune Falco and act on it | 8 | 06 | cks-w1, cks-cp |
-| 16 | An audit policy for one team | 7 | 06 | cks-cp |
-| 17 | seccomp and a read-only root | 6 | 06 | cks-w1, cks-cp |
+| 1 | Pods stay Pending | 8 | 39 | cks-cp |
+| 2 | One port range, two selectors | 5 | 38 | cks-cp |
+| 3 | Keep a job off the internet | 6 | 38 | cks-lima |
+| 4 | CIS findings and etcd TLS | 6 | 38 | cks-cp |
+| 5 | An Ingress for two hosts | 4 | 38 | cks-cp |
+| 6 | A role that grows by itself | 6 | 39 | cks-cp |
+| 7 | Old tokens and mounted ones | 5 | 39 | cks-cp |
+| 8 | Everyone is admin | 5 | 39 | cks-cp |
+| 9 | SSH the right way | 4 | 40 | cks-w1 |
+| 10 | Kernel modules nobody needs | 4 | 40 | cks-lima |
+| 11 | Rotate to a new provider | 8 | 41 | cks-cp |
+| 12 | gVisor where it exists | 5 | 41 | cks-cp |
+| 13 | The API server doesn't start | 8 | 42 | cks-cp |
+| 14 | Delete what's vulnerable | 5 | 42 | cks-cp |
+| 15 | Tune Falco and act on it | 8 | 43 | cks-w1, cks-cp |
+| 16 | An audit policy for one team | 7 | 43 | cks-cp |
+| 17 | seccomp and a read-only root | 6 | 43 | cks-w1, cks-cp |
 
 ### Task 1: Pods stay Pending (8 points)
 
@@ -164,7 +164,7 @@ spec:
     toPorts: [{ports: [{port: "53", protocol: ANY}]}]
 ```
 
-[01, task 11](01-cluster-setup.md#task-11-entities-and-an-explicit-deny-with-cilium) explains entities and deny rules.
+[module 44, task 3](../kernel-and-host/44-kernel-and-host-security.md#task-3-entities-and-an-explicit-deny-with-cilium) explains entities and deny rules.
 
 </details>
 
@@ -177,7 +177,7 @@ spec:
 <details>
 <summary>Solution</summary>
 
-Set `--profiling=false` in the API server and controller manager manifests, and `--tls-min-version=TLS1.3` in etcd's. Change etcd first and wait for it, then the API server, as [01, task 12](01-cluster-setup.md#task-12-tls-versions-and-ciphers-for-the-api-server-and-etcd) explains, and confirm with `kube-bench run --targets master --check 1.2.15,1.3.2`.
+Set `--profiling=false` in the API server and controller manager manifests, and `--tls-min-version=TLS1.3` in etcd's. Change etcd first and wait for it, then the API server, as [module 38, task 12](../2-intermediate/38-setting-up-a-secure-cluster.md#task-12-tls-versions-and-ciphers-for-the-api-server-and-etcd) explains, and confirm with `kube-bench run --targets master --check 1.2.15,1.3.2`.
 
 </details>
 
@@ -249,7 +249,7 @@ clusterrole.rbac.authorization.k8s.io/ops-deploys created
 
 The transcript leaves out both editor sessions: the first removes `secrets` from the rules of `ops-config`, the second adds the label to `d.yaml`.
 
-Deleting `ops-config` would remove the Secrets too, but it would take ConfigMaps with it, which the check catches. [02, task 5](02-cluster-hardening.md#task-5-aggregated-clusterroles) has the theory.
+Deleting `ops-config` would remove the Secrets too, but it would take ConfigMaps with it, which the check catches. [module 39, task 5](../2-intermediate/39-hardening-access-to-the-api.md#task-5-aggregated-clusterroles) has the theory.
 
 </details>
 
@@ -289,7 +289,7 @@ A running pod keeps its token, so it needs recreating. The exported YAML spells 
 <details>
 <summary>Solution</summary>
 
-Set `--authorization-mode=Node,RBAC`, as in [02, task 12](02-cluster-hardening.md#task-12-an-api-server-that-allows-everything), so the Node authorizer and RBAC decide again instead of `AlwaysAllow`.
+Set `--authorization-mode=Node,RBAC`, as in [module 39, task 12](../2-intermediate/39-hardening-access-to-the-api.md#task-12-an-api-server-that-allows-everything), so the Node authorizer and RBAC decide again instead of `AlwaysAllow`.
 
 </details>
 
@@ -327,7 +327,7 @@ All three values come from `/etc/ssh/sshd_config.d/05-vendor.conf`, which sshd r
 <details>
 <summary>Solution</summary>
 
-Write `install udf /bin/false`, `blacklist udf` and the same two lines for `dccp` into a file such as `/etc/modprobe.d/m3.conf`, then run `modprobe -r udf dccp`. [03, task 7](03-system-hardening.md#task-7-keep-a-kernel-module-out) explains both lines.
+Write `install udf /bin/false`, `blacklist udf` and the same two lines for `dccp` into a file such as `/etc/modprobe.d/m3.conf`, then run `modprobe -r udf dccp`. [module 44, task 4](../kernel-and-host/44-kernel-and-host-security.md#task-4-keep-a-kernel-module-out) explains both lines.
 
 </details>
 
@@ -340,7 +340,7 @@ Write `install udf /bin/false`, `blacklist udf` and the same two lines for `dccp
 <details>
 <summary>Solution</summary>
 
-The steps are the four of [04, task 5](04-minimize-microservice-vulnerabilities.md#task-5-rotate-the-encryption-key), with a new provider instead of a new key, so put `secretbox` first and keep `aescbc` below it:
+The steps are the four of [module 41, task 5](41-hardening-workloads.md#task-5-rotate-the-encryption-key), with a new provider instead of a new key, so put `secretbox` first and keep `aescbc` below it:
 
 ```yaml
   providers:
@@ -368,7 +368,7 @@ Restart the API server, run `k get secrets -A -o json | k replace -f -`, delete 
 <details>
 <summary>Solution</summary>
 
-Put `scheduling.nodeSelector: {runtime: gvisor}` in the RuntimeClass, as in [04, task 9](04-minimize-microservice-vulnerabilities.md#task-9-a-sandbox-only-on-the-nodes-that-have-it). Afterwards, `k -n m3-sbx exec scan -- dmesg` starts with `Starting gVisor...`.
+Put `scheduling.nodeSelector: {runtime: gvisor}` in the RuntimeClass, as in [module 41, task 9](41-hardening-workloads.md#task-9-a-sandbox-only-on-the-nodes-that-have-it). Afterwards, `k -n m3-sbx exec scan -- dmesg` starts with `Starting gVisor...`.
 
 </details>
 
@@ -396,7 +396,7 @@ E1115 21:04:10.459263       1 run.go:72] "command failed" err="failed to apply a
 
 The transcript ran `crictl logs` with the ID of the newest exited container.
 
-The last log line names the file the API server misses. `ls /etc/kubernetes/policy-webhook/` shows `kubeconfig.yaml`, so fix `kubeConfigFile` in `/etc/kubernetes/admission/m3.yaml`. The API server still doesn't start, with the same `stat ... no such file or directory`, now for the right file name, because the colleague mounted `/etc/kubernetes/admission` into the pod but not `/etc/kubernetes/policy-webhook`. Add a `volumeMount` and a `hostPath` volume for it, as [05, task 5](05-supply-chain-security.md#task-5-allow-only-approved-registries) shows. Do this task first, because until the API server runs, no other task on `cks-cp` works.
+The last log line names the file the API server misses. `ls /etc/kubernetes/policy-webhook/` shows `kubeconfig.yaml`, so fix `kubeConfigFile` in `/etc/kubernetes/admission/m3.yaml`. The API server still doesn't start, with the same `stat ... no such file or directory`, now for the right file name, because the colleague mounted `/etc/kubernetes/admission` into the pod but not `/etc/kubernetes/policy-webhook`. Add a `volumeMount` and a `hostPath` volume for it, as [module 42, task 5](42-supply-chain-security.md#task-5-allow-only-approved-registries) shows. Do this task first, because until the API server runs, no other task on `cks-cp` works.
 
 </details>
 
@@ -507,7 +507,7 @@ rules:
 - level: None
 ```
 
-Deployments live in the API group `apps`, not in the core group `""`, so with `group: ""` the rule never matches a Deployment. The flags and the two volumes follow [06, task 1](06-monitoring-logging-runtime-security.md#task-1-turn-on-audit-logging).
+Deployments live in the API group `apps`, not in the core group `""`, so with `group: ""` the rule never matches a Deployment. The flags and the two volumes follow [module 43, task 1](43-runtime-security-and-auditing.md#task-1-turn-on-audit-logging).
 
 </details>
 
@@ -549,6 +549,6 @@ A fresh kubeadm node has no `/var/lib/kubelet/seccomp` folder until somebody cre
 
 `score.sh` runs two to five checks per task, splits the task's points evenly over them, rounded down, and gives points only when a task's first check passes.
 
-In the final test run, on clusters fresh from both resets and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` with `TIME: 3 minutes since setup, 117 minutes left.` After `MOCK=3 ./certs/cks/mock-exam/solve.sh`, which applies every solution above in its order (13, 8, 1, 11, 4, 16, then the rest) in 7 minutes 47 seconds, it was `TOTAL: 100 of 100 points (100%).` The solve order is the lesson, because each layer needs the one below it: the API server first, then the authorizer that keeps restarting it, then the scheduler and controller manager, and only then everything that needs a working cluster.
+In the final test run, on clusters fresh from both resets and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` with `TIME: 3 minutes since setup, 117 minutes left.` After `./platform-engineering/practice-exam.sh solve 6`, which applies every solution above in its order (13, 8, 1, 11, 4, 16, then the rest) in 7 minutes 47 seconds, it was `TOTAL: 100 of 100 points (100%).` The solve order is the lesson, because each layer needs the one below it: the API server first, then the authorizer that keeps restarting it, then the scheduler and controller manager, and only then everything that needs a working cluster.
 
-Three things broke the first test runs of this mock, and each became part of the text. Under `AlwaysAllow`, the API server's health probes get `401`, so the kubelet kills it every few minutes. Without a controller manager, a new namespace gets no `default` ServiceAccount, so no pod starts in it. A check that asks "is it gone?" also passes on a dead API server, so every such check here also asks the API server something that must succeed.
+Three things broke the first test runs of this practice exam, and each became part of the text. Under `AlwaysAllow`, the API server's health probes get `401`, so the kubelet kills it every few minutes. Without a controller manager, a new namespace gets no `default` ServiceAccount, so no pod starts in it. A check that asks "is it gone?" also passes on a dead API server, so every such check here also asks the API server something that must succeed.
