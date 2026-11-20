@@ -80,7 +80,7 @@ So an old manifest needs a new `apiVersion`, and sometimes new fields too, becau
 
 Three commands find the right version on any cluster, because they read the cluster's own API. `kubectl api-resources` lists every resource with its current group and version, `kubectl api-versions` lists every group and version the API server serves, and `kubectl explain hpa.spec.metrics.resource.target --api-version=autoscaling/v2` shows the fields of one version. The [deprecation guide](https://kubernetes.io/docs/reference/using-api/deprecation-guide/) on kubernetes.io lists each removal with its field changes.
 
-The `kubectl convert` plugin rewrites a manifest from one version to another, but only between versions that its own code still knows. The 1.37 plugin knows none of the removed versions in the table, so on task 7's file it stops with `no kind "HorizontalPodAutoscaler" is registered for version "autoscaling/v2beta1"`. It helps with versions that the API server still serves although they are deprecated, and for removed ones the manual edit with `kubectl explain` is the reliable path.
+The `kubectl convert` plugin rewrites a manifest from one version to another, but only between versions that its own code still knows. The 1.37 plugin knows none of the removed versions in the table, so on task 7's file it stops with `no kind "HorizontalPodAutoscaler" is registered for version "autoscaling/v2beta1"`. It helps with versions that the API server still serves after their deprecation, and for removed ones the manual edit with `kubectl explain` is the reliable path.
 
 ## The bigger picture: the cluster tests your app all day
 

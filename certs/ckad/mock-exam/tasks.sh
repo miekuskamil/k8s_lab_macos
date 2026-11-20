@@ -106,7 +106,7 @@ score_m3() {
   check_json "its Job retries at most twice and its pods never restart in place" "kubectl -n k1-batch get cronjob report -o json" \
     'j=p["spec"]["jobTemplate"]["spec"]; j["backoffLimit"]==2 and j["template"]["spec"]["restartPolicy"]=="Never"'
   check_cp "Job report-now ran from it and printed 'report done'" \
-    "kubectl -n k1-batch wait job report-now --for=condition=Complete --timeout=60s && kubectl -n k1-batch logs job/report-now | grep -q 'report done'"
+    "kubectl -n k1-batch wait job report-now --for=condition=Complete --timeout=10s && kubectl -n k1-batch logs job/report-now | grep -q 'report done'"
 }
 solve_m3() {
   cp_sh "kubectl -n k1-batch create cronjob report --image=busybox:1.36 --schedule='30 1 * * *' --dry-run=client -o json -- sh -c 'echo report done' \
@@ -126,7 +126,7 @@ score_m4() {
   check_cp "Deployment store has three revisions and runs nginx:1.27-alpine again" \
     "[ \$(kubectl -n k1-roll get rs -l app=store --no-headers | wc -l) -ge 2 ] && kubectl -n k1-roll get deploy store -o jsonpath='{.metadata.annotations.deployment\.kubernetes\.io/revision} {.spec.template.spec.containers[0].image}' | grep -qx '3 nginx:1.27-alpine'"
   check_cp "/opt/ckad/m1/4/history.txt holds the history with the 1.28 update" "grep -q 'image 1.28' /opt/ckad/m1/4/history.txt"
-  check_cp "both pods are ready" "kubectl -n k1-roll rollout status deploy store --timeout=60s"
+  check_cp "both pods are ready" "kubectl -n k1-roll rollout status deploy store --timeout=10s"
 }
 solve_m4() {
   cp_sh "mkdir -p /opt/ckad/m1/4
@@ -147,7 +147,7 @@ setup_m5() {
 }
 score_m5() {
   check_cp "Deployment checkout-v2 runs 1 pod labelled app=checkout, version=v2, answering v2" \
-    "kubectl -n k1-canary get deploy checkout-v2 -o jsonpath='{.status.readyReplicas} {.spec.template.metadata.labels.app} {.spec.template.metadata.labels.version}' | grep -qx '1 checkout v2' && kubectl -n k1-canary exec deploy/checkout-v2 -- wget -qO- localhost:8080 | grep -qx v2"
+    "kubectl -n k1-canary get deploy checkout-v2 -o jsonpath='{.status.readyReplicas} {.spec.template.metadata.labels.app} {.spec.template.metadata.labels.version}' | grep -qx '1 checkout v2' && kubectl -n k1-canary exec --pod-running-timeout=5s deploy/checkout-v2 -- wget -qO- localhost:8080 | grep -qx v2"
   check_cp "checkout-v1 still runs 3 pods" "kubectl -n k1-canary get deploy checkout-v1 -o jsonpath='{.status.readyReplicas}' | grep -qx 3"
   check_cp "Service checkout has 4 endpoints" "[ \$(kubectl -n k1-canary get endpointslice -l kubernetes.io/service-name=checkout -o jsonpath='{.items[*].endpoints[*].addresses[0]}' | wc -w) = 4 ]"
 }
@@ -252,7 +252,7 @@ score_m8() {
     'r=p["spec"]["template"]["spec"]["containers"][0]["readinessProbe"]; r["httpGet"]["path"]=="/ready" and str(r["httpGet"]["port"])=="8080" and r["initialDelaySeconds"]==3 and r["periodSeconds"]==4'
   check_json "liveness: the command test -f /www/live, every 15s" "kubectl -n k1-probe get deploy api -o json" \
     'r=p["spec"]["template"]["spec"]["containers"][0]["livenessProbe"]; r["exec"]["command"]==["test","-f","/www/live"] and r["periodSeconds"]==15'
-  check_cp "both pods are ready" "kubectl -n k1-probe rollout status deploy api --timeout=90s"
+  check_cp "both pods are ready" "kubectl -n k1-probe rollout status deploy api --timeout=10s"
 }
 solve_m8() {
   cp_sh "kubectl -n k1-probe patch deploy api --type=json -p='[
@@ -356,7 +356,7 @@ score_m12() {
   check_json "Deployment cache requests 250m CPU and limits it to 500m" "kubectl -n k1-res get deploy cache -o json" \
     'r=p["spec"]["template"]["spec"]["containers"][0]["resources"]; r["requests"]["cpu"]=="250m" and r["limits"]["cpu"]=="500m"'
   check_cp "the running cache pod got the memory defaults" \
-    "kubectl -n k1-res rollout status deploy cache --timeout=60s && kubectl -n k1-res get pod -l app=cache --field-selector=status.phase=Running -o jsonpath='{.items[0].spec.containers[0].resources.limits.memory}' | grep -qx 256Mi"
+    "kubectl -n k1-res rollout status deploy cache --timeout=10s && kubectl -n k1-res get pod -l app=cache --field-selector=status.phase=Running -o jsonpath='{.items[0].spec.containers[0].resources.limits.memory}' | grep -qx 256Mi"
 }
 solve_m12() {
   cp_sh "kubectl apply -f - <<'EOF'
@@ -403,10 +403,10 @@ setup_m14() {
 }
 score_m14() {
   check_cp "worker's process runs as uid 2000, gid 2000" \
-    "kubectl -n k1-sec rollout status deploy worker --timeout=60s && kubectl -n k1-sec exec deploy/worker -- id | grep -q '^uid=2000 gid=2000'"
+    "kubectl -n k1-sec rollout status deploy worker --timeout=10s && kubectl -n k1-sec exec --pod-running-timeout=5s deploy/worker -- id | grep -q '^uid=2000 gid=2000'"
   check_json "runAsNonRoot is set, privilege escalation is off and every capability is dropped" "kubectl -n k1-sec get deploy worker -o json" \
     't=p["spec"]["template"]["spec"]; c=t["containers"][0].get("securityContext",{}); (t.get("securityContext",{}).get("runAsNonRoot") or c.get("runAsNonRoot")) is True and c.get("allowPrivilegeEscalation") is False and c["capabilities"]["drop"]==["ALL"]'
-  check_cp "the app still writes /tmp/whoami" "kubectl -n k1-sec exec deploy/worker -- sh -c 'sleep 6; grep -q uid=2000 /tmp/whoami'"
+  check_cp "the app still writes /tmp/whoami" "kubectl -n k1-sec exec --pod-running-timeout=5s deploy/worker -- sh -c 'sleep 6; grep -q uid=2000 /tmp/whoami'"
 }
 solve_m14() {
   cp_sh "kubectl -n k1-sec patch deploy worker -p '{\"spec\":{\"template\":{\"spec\":{\"securityContext\":{\"runAsUser\":2000,\"runAsGroup\":2000,\"runAsNonRoot\":true},\"containers\":[{\"name\":\"busybox\",\"securityContext\":{\"allowPrivilegeEscalation\":false,\"capabilities\":{\"drop\":[\"ALL\"]}}}]}}}}'

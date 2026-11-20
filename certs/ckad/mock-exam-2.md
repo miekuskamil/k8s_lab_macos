@@ -165,7 +165,7 @@ The ReplicaSet retries on its own with growing pauses, and the restart only spee
 
 ### Task 7: A Helm upgrade gone wrong (7 points)
 
-> The last upgrade of release `portal` in namespace `k2-helm`, to chart `webapp` 0.2.0, failed. Write the number of the failed revision to `/opt/ckad/m2/7/failed.txt`. Then upgrade the release again to chart 0.2.0 with the chart's own image and 2 replicas, so that the newest revision is deployed.
+> The last upgrade of release `portal` in namespace `k2-helm`, to chart `webapp` 0.2.0, failed. Write the number of the failed revision to `/opt/ckad/m2/7/failed.txt`. Then upgrade the release again to chart 0.2.0 with the chart's own image and 2 replicas, so that the newest revision shows the status deployed.
 
 <details>
 <summary>Solution</summary>

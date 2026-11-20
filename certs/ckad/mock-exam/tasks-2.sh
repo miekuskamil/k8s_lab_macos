@@ -42,7 +42,7 @@ spec:
 EOF
 }
 score_m1() {
-  check_cp "Deployment render has 2 ready pods" "kubectl -n k2-sched rollout status deploy render --timeout=60s && kubectl -n k2-sched get deploy render -o jsonpath='{.status.readyReplicas}' | grep -qx 2"
+  check_cp "Deployment render has 2 ready pods" "kubectl -n k2-sched rollout status deploy render --timeout=10s && kubectl -n k2-sched get deploy render -o jsonpath='{.status.readyReplicas}' | grep -qx 2"
   check_cp "they run on cks-w1" "[ \"\$(kubectl -n k2-sched get pod -l app=render --field-selector=status.phase=Running -o jsonpath='{.items[*].spec.nodeName}')\" = 'cks-w1 cks-w1' ]"
   check_json "each pod requests 64Mi memory" "kubectl -n k2-sched get deploy render -o json" \
     'p["spec"]["template"]["spec"]["containers"][0]["resources"]["requests"]["memory"]=="64Mi"'
@@ -59,7 +59,7 @@ setup_m2() {
 }
 score_m2() {
   check_cp "Deployment poller runs without restarts for 20 seconds" \
-    "kubectl -n k2-crash rollout status deploy poller --timeout=60s && sleep 20 && kubectl -n k2-crash get pod -l app=poller --field-selector=status.phase=Running -o jsonpath='{.items[*].status.containerStatuses[0].restartCount}' | grep -qx 0"
+    "kubectl -n k2-crash rollout status deploy poller --timeout=10s && sleep 20 && kubectl -n k2-crash get pod -l app=poller --field-selector=status.phase=Running -o jsonpath='{.items[*].status.containerStatuses[0].restartCount}' | grep -qx 0"
   check_cp "its container polls every 10 seconds in a loop that logs 'polling'" \
     "kubectl -n k2-crash logs deploy/poller | grep -q polling && kubectl -n k2-crash get deploy poller -o yaml | grep -q 'while'"
   check_cp "/opt/ckad/m2/2/reason.txt names why the old pods restarted" "grep -qiE 'completed|exit code 0|exited' /opt/ckad/m2/2/reason.txt"
@@ -136,9 +136,9 @@ setup_m5() {
     kubectl -n k2-psa create deploy metrics --image=busybox:1.36 --replicas=2 -- sh -c 'while true; do date >> /data/metrics.log; sleep 5; done' >/dev/null"
 }
 score_m5() {
-  check_cp "Deployment metrics has 2 ready pods" "kubectl -n k2-psa rollout status deploy metrics --timeout=60s && kubectl -n k2-psa get deploy metrics -o jsonpath='{.status.readyReplicas}' | grep -qx 2"
+  check_cp "Deployment metrics has 2 ready pods" "kubectl -n k2-psa rollout status deploy metrics --timeout=10s && kubectl -n k2-psa get deploy metrics -o jsonpath='{.status.readyReplicas}' | grep -qx 2"
   check_cp "the namespace still enforces restricted" "kubectl get ns k2-psa -o jsonpath='{.metadata.labels.pod-security\.kubernetes\.io/enforce}' | grep -qx restricted"
-  check_cp "the app writes /data/metrics.log" "kubectl -n k2-psa exec deploy/metrics -- sh -c 'sleep 6; test -s /data/metrics.log'"
+  check_cp "the app writes /data/metrics.log" "kubectl -n k2-psa exec --pod-running-timeout=5s deploy/metrics -- sh -c 'sleep 6; test -s /data/metrics.log'"
 }
 solve_m5() {
   cp_sh "kubectl -n k2-psa patch deploy metrics -p '{\"spec\":{\"template\":{\"spec\":{\"securityContext\":{\"runAsNonRoot\":true,\"runAsUser\":1000,\"seccompProfile\":{\"type\":\"RuntimeDefault\"}},\"volumes\":[{\"name\":\"data\",\"emptyDir\":{}}],\"containers\":[{\"name\":\"busybox\",\"volumeMounts\":[{\"name\":\"data\",\"mountPath\":\"/data\"}],\"securityContext\":{\"allowPrivilegeEscalation\":false,\"capabilities\":{\"drop\":[\"ALL\"]}}}]}}}}'
@@ -152,7 +152,7 @@ setup_m6() {
     kubectl -n k2-quota create deploy search --image=busybox:1.36 --replicas=4 -- sleep 1d >/dev/null"
 }
 score_m6() {
-  check_cp "Deployment search has 4 ready pods" "kubectl -n k2-quota rollout status deploy search --timeout=60s && kubectl -n k2-quota get deploy search -o jsonpath='{.status.readyReplicas}' | grep -qx 4"
+  check_cp "Deployment search has 4 ready pods" "kubectl -n k2-quota rollout status deploy search --timeout=10s && kubectl -n k2-quota get deploy search -o jsonpath='{.status.readyReplicas}' | grep -qx 4"
   check_json "LimitRange defaults in k2-quota gives containers defaults, so the quota counts them" "kubectl -n k2-quota get limitrange defaults -o json" \
     'l=p["spec"]["limits"][0]; all(k in l["default"] for k in ("cpu","memory")) and all(k in l["defaultRequest"] for k in ("cpu","memory"))'
   check_cp "the quota is unchanged" "kubectl -n k2-quota get quota team -o jsonpath='{.spec.hard.requests\.cpu}' | grep -qx 400m"
@@ -182,7 +182,7 @@ setup_m7() {
 score_m7() {
   check_cp "the newest revision of portal is deployed from chart 0.2.0 with nginx" \
     "helm -n k2-helm history portal -o json | python3 -c 'import json,sys; h=json.load(sys.stdin)[-1]; sys.exit(0 if h[\"status\"]==\"deployed\" and h[\"chart\"]==\"webapp-0.2.0\" else 1)' && kubectl -n k2-helm get deploy portal-webapp -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -q '/nginx:'"
-  check_cp "it runs 2 ready pods" "kubectl -n k2-helm rollout status deploy portal-webapp --timeout=60s && kubectl -n k2-helm get deploy portal-webapp -o jsonpath='{.status.readyReplicas}' | grep -qx 2"
+  check_cp "it runs 2 ready pods" "kubectl -n k2-helm rollout status deploy portal-webapp --timeout=10s && kubectl -n k2-helm get deploy portal-webapp -o jsonpath='{.status.readyReplicas}' | grep -qx 2"
   check_cp "/opt/ckad/m2/7/failed.txt names the revision that failed" "grep -qx 2 /opt/ckad/m2/7/failed.txt"
 }
 solve_m7() {
@@ -400,7 +400,7 @@ score_m11() {
     's=p["spec"]["template"]["spec"]["containers"][0]["startupProbe"]; s["httpGet"]["path"]=="/" and str(s["httpGet"]["port"])=="8080" and s.get("periodSeconds",10)*s.get("failureThreshold",3)>=40'
   check_cp "the liveness probe stays as it was" "kubectl -n k2-probe get deploy slowstart -o jsonpath='{.spec.template.spec.containers[0].livenessProbe.periodSeconds}' | grep -qx 5"
   check_cp "the new pod is ready without a restart" \
-    "kubectl -n k2-probe rollout status deploy slowstart --timeout=90s && kubectl -n k2-probe get pod -l app=slowstart --field-selector=status.phase=Running -o jsonpath='{.items[*].status.containerStatuses[0].restartCount}' | grep -qx 0"
+    "kubectl -n k2-probe rollout status deploy slowstart --timeout=10s && kubectl -n k2-probe get pod -l app=slowstart --field-selector=status.phase=Running -o jsonpath='{.items[*].status.containerStatuses[0].restartCount}' | grep -qx 0"
 }
 solve_m11() {
   cp_sh "kubectl -n k2-probe patch deploy slowstart --type=json -p='[{\"op\":\"add\",\"path\":\"/spec/template/spec/containers/0/startupProbe\",\"value\":{\"httpGet\":{\"path\":\"/\",\"port\":8080},\"periodSeconds\":5,\"failureThreshold\":12}}]'
@@ -427,7 +427,7 @@ spec:
 EOF
 }
 score_m12() {
-  check_cp "Job migrate in k2-job completed" "kubectl -n k2-job wait job migrate --for=condition=Complete --timeout=60s"
+  check_cp "Job migrate in k2-job completed" "kubectl -n k2-job wait job migrate --for=condition=Complete --timeout=10s"
   check_cp "its log says it migrated 2 statements" "kubectl -n k2-job logs job/migrate | grep -q 'migrated 2 statements'"
   check_json "the Job retries at most 4 times" "kubectl -n k2-job get job migrate -o json" \
     'p["spec"]["backoffLimit"]<=4'
@@ -514,8 +514,8 @@ EOF
 score_m14() {
   check_cp "the registry holds label:v2" "curl -fsS http://registry.ckad:5000/v2/label/tags/list | grep -q '\"v2\"'"
   check_cp "Deployment label runs registry.ckad:5000/label:v2 and is ready" \
-    "kubectl -n k2-image get deploy label -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -qx registry.ckad:5000/label:v2 && kubectl -n k2-image rollout status deploy label --timeout=60s"
-  check_cp "the pod answers 'label v2' on 8080" "kubectl -n k2-image exec deploy/label -- wget -qO- localhost:8080 | grep -qx 'label v2'"
+    "kubectl -n k2-image get deploy label -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -qx registry.ckad:5000/label:v2 && kubectl -n k2-image rollout status deploy label --timeout=10s"
+  check_cp "the pod answers 'label v2' on 8080" "kubectl -n k2-image exec --pod-running-timeout=5s deploy/label -- wget -qO- localhost:8080 | grep -qx 'label v2'"
 }
 solve_m14() {
   cp_sh "cd /opt/ckad/m2/14 && sed -i 's|COPY src/serve.sh|COPY app/serve.sh|' Dockerfile
@@ -551,7 +551,7 @@ spec:
 EOF
 }
 score_m15() {
-  check_cp "Deployment mailer has a ready pod" "kubectl -n k2-cfg rollout status deploy mailer --timeout=60s"
+  check_cp "Deployment mailer has a ready pod" "kubectl -n k2-cfg rollout status deploy mailer --timeout=10s"
   check_cp "it logs 'sending as mailer via smtp.k2.local'" "for i in \$(seq 1 10); do kubectl -n k2-cfg logs deploy/mailer 2>/dev/null | grep -q 'sending as mailer via smtp.k2.local' && exit 0; sleep 2; done; exit 1"
   check_cp "the Secret and the ConfigMap are unchanged" "kubectl -n k2-cfg get secret smtp -o jsonpath='{.data.username}' | base64 -d | grep -qx mailer && kubectl -n k2-cfg get cm mail-settings -o jsonpath='{.data.SMTP_HOST}' | grep -qx smtp.k2.local"
 }

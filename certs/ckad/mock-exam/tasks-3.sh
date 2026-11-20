@@ -34,7 +34,7 @@ score_m1() {
   check_cp "the registry holds pricing:2.4.0 and pricing:stable with the same digest" \
     "a=\$(curl -fsSI -H 'Accept: application/vnd.oci.image.manifest.v1+json' -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' http://registry.ckad:5000/v2/pricing/manifests/2.4.0 | grep -i docker-content-digest); b=\$(curl -fsSI -H 'Accept: application/vnd.oci.image.manifest.v1+json' -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' http://registry.ckad:5000/v2/pricing/manifests/stable | grep -i docker-content-digest); [ -n \"\$a\" ] && [ \"\$a\" = \"\$b\" ]"
   check_cp "Deployment pricing runs pricing:2.4.0 with 2 ready pods that answer 'version 2.4.0'" \
-    "kubectl -n k3-build get deploy pricing -o jsonpath='{.spec.template.spec.containers[0].image} {.status.readyReplicas}' | grep -qx 'registry.ckad:5000/pricing:2.4.0 2' && kubectl -n k3-build exec deploy/pricing -c pricing -- wget -qO- localhost:8080 | grep -qx 'version 2.4.0'"
+    "kubectl -n k3-build get deploy pricing -o jsonpath='{.spec.template.spec.containers[0].image} {.status.readyReplicas}' | grep -qx 'registry.ckad:5000/pricing:2.4.0 2' && kubectl -n k3-build exec --pod-running-timeout=5s deploy/pricing -c pricing -- wget -qO- localhost:8080 | grep -qx 'version 2.4.0'"
   check_cp "its pods have an init container wait-dns that waits for the cluster DNS" \
     "kubectl -n k3-build get deploy pricing -o jsonpath='{.spec.template.spec.initContainers[0].name}' | grep -qx wait-dns"
   check_cp "/opt/ckad/m3/1/pricing.tar is an OCI archive of the image" "tar -tf /opt/ckad/m3/1/pricing.tar | grep -q '^index.json\$'"
@@ -178,7 +178,7 @@ score_m5() {
   check_json "proxy has a readiness probe on 9090, app a liveness probe that runs cat /conf/app.conf" "kubectl -n k3-pod get pod gateway -o json" \
     's=p["spec"]; str(s["initContainers"][1]["readinessProbe"]["httpGet"]["port"])=="9090" and s["containers"][0]["livenessProbe"]["exec"]["command"]==["cat","/conf/app.conf"]'
   check_cp "the pod is Ready and the proxy serves app.conf on 9090" \
-    "kubectl -n k3-pod wait pod gateway --for=condition=Ready --timeout=60s && kubectl -n k3-pod exec gateway -c app -- wget -qO- localhost:9090/app.conf | grep -q 'mode=gateway'"
+    "kubectl -n k3-pod wait pod gateway --for=condition=Ready --timeout=10s && kubectl -n k3-pod exec gateway -c app -- wget -qO- localhost:9090/app.conf | grep -q 'mode=gateway'"
 }
 solve_m5() {
   cp_sh "kubectl apply -f - <<'EOF'
@@ -399,7 +399,7 @@ score_m10() {
   check_cp "pod edge sees /etc/tls/ciphers, /etc/tls/port and /etc/tls/server.key in one volume" \
     "kubectl -n k3-proj exec edge -- cat /etc/tls/ciphers | grep -qx modern && kubectl -n k3-proj exec edge -- cat /etc/tls/port | grep -qx 8443 && kubectl -n k3-proj exec edge -- cat /etc/tls/server.key | grep -qx not-a-real-key"
   check_json "the volume is one projected volume" "kubectl -n k3-proj get pod edge -o json" \
-    'v=[x for x in p["spec"]["volumes"] if any("configMap" in y for y in x.get("projected",{}).get("sources",[]))]; len(v)==1 and any("secret" in y for y in v[0]["projected"]["sources"])'
+    'v=[x for x in p["spec"]["volumes"] if any(y.get("configMap",{}).get("name")=="tls-settings" for y in x.get("projected",{}).get("sources",[]))]; len(v)==1 and any(y.get("secret",{}).get("name")=="tls-key" for y in v[0]["projected"]["sources"])'
   check_cp "server.key has mode 0400" "kubectl -n k3-proj exec edge -- stat -L -c %a /etc/tls/server.key | grep -qx 400"
 }
 solve_m10() {
@@ -432,7 +432,7 @@ setup_m11() {
 }
 score_m11() {
   check_cp "pod loader-debug exists and runs sleep 1d in container loader" \
-    "kubectl -n k3-debug get pod loader-debug -o jsonpath='{.spec.containers[0].name} {.spec.containers[0].command}{.spec.containers[0].args}' | grep -q '^loader .*sleep' && kubectl -n k3-debug wait pod loader-debug --for=condition=Ready --timeout=30s"
+    "kubectl -n k3-debug get pod loader-debug -o jsonpath='{.spec.containers[0].name} {.spec.containers[0].command}{.spec.containers[0].args}' | grep -q '^loader .*sleep' && kubectl -n k3-debug wait pod loader-debug --for=condition=Ready --timeout=10s"
   check_cp "the original pod loader is untouched" "kubectl -n k3-debug get pod loader -o jsonpath='{.spec.containers[0].args}' | grep -q 'exit 9'"
   check_cp "/opt/ckad/m3/11/missing.txt names the missing path" "grep -qx /etc/loader/conf /opt/ckad/m3/11/missing.txt"
 }
@@ -562,7 +562,7 @@ score_m14() {
   check_json "its pods carry the index as JOB_COMPLETION_INDEX: completion mode Indexed" "kubectl -n k3-jobs get job thumbnails -o json" \
     'p["spec"]["completionMode"]=="Indexed"'
   check_cp "it completed, and pod 3 logged 'thumbnail 3 done'" \
-    "kubectl -n k3-jobs wait job thumbnails --for=condition=Complete --timeout=90s && kubectl -n k3-jobs logs -l batch.kubernetes.io/job-completion-index=3 | grep -qx 'thumbnail 3 done'"
+    "kubectl -n k3-jobs wait job thumbnails --for=condition=Complete --timeout=10s && kubectl -n k3-jobs logs -l batch.kubernetes.io/job-completion-index=3 | grep -qx 'thumbnail 3 done'"
 }
 solve_m14() {
   cp_sh "kubectl apply -f - <<'EOF'
@@ -608,7 +608,7 @@ solve_m15() {
 setup_m16() { ns_new k3-cap; }
 score_m16() {
   check_cp "pod web80 runs as uid 101 and answers on port 80" \
-    "kubectl -n k3-cap wait pod web80 --for=condition=Ready --timeout=60s && kubectl -n k3-cap exec web80 -- id -u | grep -qx 101 && kubectl -n k3-cap exec web80 -- wget -qO- localhost:80 | grep -qx web80"
+    "kubectl -n k3-cap wait pod web80 --for=condition=Ready --timeout=10s && kubectl -n k3-cap exec web80 -- id -u | grep -qx 101 && kubectl -n k3-cap exec web80 -- wget -qO- localhost:80 | grep -qx web80"
   check_json "it drops all capabilities and adds back only NET_BIND_SERVICE" "kubectl -n k3-cap get pod web80 -o json" \
     'c=p["spec"]["containers"][0]["securityContext"]["capabilities"]; c["drop"]==["ALL"] and c["add"]==["NET_BIND_SERVICE"]'
   check_json "no privilege escalation, a read-only root file system" "kubectl -n k3-cap get pod web80 -o json" \
