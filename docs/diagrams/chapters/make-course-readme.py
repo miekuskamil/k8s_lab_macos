@@ -39,7 +39,7 @@ def routes():
     c.line([(x0 + 30, y0), (x0 + 40, y0)], SLATE, 5)
     c.line([(x0 + 40, 200), (x0 + 40, 780)], SLATE, 5)
     stop(x0, y0, 0, SLATE, 30)
-    ist = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 30, 31]
+    ist = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 30, 31, 45]
     lane(200, BLUE, ist, "Istio", "", gap=56)
     # module 32 branches off after 14, the AI route after the core
     x14 = 420 + ist.index(14) * 56
@@ -62,7 +62,7 @@ def routes():
     c.text(1256, 496, "commands", 17, SOFT)
     stop(1390, 490, 10, SLATE)
     c.text(1426, 496, "eBPF, Cilium", 17, SOFT)
-    c.text(420, 150, "29 ties the core together after 7", 16, SOFT)
+    c.text(420, 150, "29 ties the core together after 7, and 45 follows it outward", 16, SOFT)
     c.save(OUT, "readme-course-routes")
 
 

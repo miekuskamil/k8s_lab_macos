@@ -20,6 +20,8 @@ Time: about 75 minutes. Adds almost nothing: one small nginx and a client.
 
 ![The life of a request](../../docs/diagrams/life-of-a-request.svg)
 
+[Module 45](../3-advanced/45-life-of-an-outbound-request.md) follows the opposite direction, a call from a pod out to the internet, through every NAT step on the way.
+
 For the long read, [docs/life-of-a-request.md](../../docs/life-of-a-request.md) walks the same path in more depth, with four detailed diagrams, packet captures, the Layer 2 and 3 plumbing, and the real output of every command, while this module is the hands-on version.
 
 The diagram also exists in [Excalidraw format](../../docs/diagrams/life-of-a-request.excalidraw), which you open at [excalidraw.com](https://excalidraw.com) to zoom, move and annotate, and `docs/diagrams/make-life-of-a-request.py` generates both files.

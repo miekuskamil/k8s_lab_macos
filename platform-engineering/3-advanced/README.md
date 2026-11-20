@@ -29,6 +29,7 @@ Modules 14 and 21 upgrade the lab one way, so you rebuild it afterwards. Module 
 - [Module 30: Sidecar mode in depth](30-sidecar-in-depth.md)
 - [Module 31: Debugging Envoy with istioctl](31-debugging-envoy.md)
 - [Module 32: Installing Istio with istioctl](32-installing-istio.md)
+- [Module 45: The life of an outbound request](45-life-of-an-outbound-request.md)
 
 ## Timed practice exams
 

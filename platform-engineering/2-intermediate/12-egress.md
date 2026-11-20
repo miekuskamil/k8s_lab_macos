@@ -27,6 +27,8 @@ An IP address and a port are all the mesh records, with no hostname, no HTTP met
 
 For most teams this is the first uncomfortable surprise, because the honest answer to "which of our services call the internet, and where to?" turns out to be "we don't know".
 
+[Module 45](../3-advanced/45-life-of-an-outbound-request.md) follows such a call below the mesh, through every interface and NAT step from the pod to your router, and shows what changes when a waypoint makes the call instead.
+
 ## Concept: how a ServiceEntry gives the mesh a name to work with
 
 To control a call, the mesh first needs a name for the place it goes, and a ServiceEntry gives it one. It adds an external host to the mesh's service registry, the same list that holds your Kubernetes Services, so the mesh then routes, secures and measures its traffic like any other service.

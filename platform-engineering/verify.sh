@@ -827,10 +827,10 @@ module_27() {
   expect "Qdrant installs with a volume" "$("${H[@]}" install qdrant qdrant/qdrant --version 1.20.0 -n course-rag --create-namespace -f "$M/27-qdrant-values.yaml" --wait --timeout 5m 2>&1 | grep -c 'STATUS: deployed') $("${K[@]}" -n course-rag get pvc -o jsonpath='{.items[0].status.phase}')" '^1 Bound$'
   docker build -q -t k8s-lab/rag:1.2.0 "$ROOT/apps/rag" >/dev/null 2>&1
   k3d image import k8s-lab/rag:1.2.0 -c "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
-  # The course Markdown: README, start-here and glossary, plus the lab modules 0 to 32. Modules 33
-  # to 44 stay out, because with them the ConfigMap passes its 1 MiB limit.
+  # The course Markdown: README, start-here and glossary, plus the lab modules 0 to 32 and 45.
+  # Modules 33 to 44 stay out, because with them the ConfigMap passes its 1 MiB limit.
   local docs=() f
-  for f in "$ROOT"/platform-engineering/{README,glossary,start-here}.md "$ROOT"/platform-engineering/*/[0-2][0-9]-*.md "$ROOT"/platform-engineering/*/3[0-2]-*.md; do docs+=(--from-file="$f"); done
+  for f in "$ROOT"/platform-engineering/{README,glossary,start-here}.md "$ROOT"/platform-engineering/*/[0-2][0-9]-*.md "$ROOT"/platform-engineering/*/3[0-2]-*.md "$ROOT"/platform-engineering/*/45-*.md; do docs+=(--from-file="$f"); done
   "${K[@]}" -n course-rag create configmap course-docs "${docs[@]}" >/dev/null
   "${K[@]}" apply -f "$M/27-rag-app.yaml" >/dev/null
   expect "the rag app starts" "$("${K[@]}" -n course-rag rollout status deploy/rag --timeout=120s 2>&1 | grep -c 'successfully rolled out')" '^1$'
@@ -1168,6 +1168,102 @@ module_32() {
   expect "k8s-lab still has its 3 proxies" "$("${I[@]}" version 2>/dev/null | grep -o '([0-9]* proxies)')" '^\(3 proxies\)$'
 }
 
+module_45() {
+  section "45: the life of an outbound request"
+  baseline
+  local N="k3d-${CLUSTER_NAME:-k8s-lab}-server-0" net="k3d-${CLUSTER_NAME:-k8s-lab}"
+  in_out() { "${K[@]}" -n course-outbound exec deploy/client -- "$@" 2>/dev/null || true; }
+  ctr_pid() {
+    local cid; cid="$(docker exec "$N" crictl ps --label "io.kubernetes.pod.namespace=$1" --name "$2" -q 2>/dev/null | head -1)"
+    docker exec "$N" crictl inspect --output go-template --template '{{.info.pid}}' "$cid" 2>/dev/null
+  }
+  # dump <net mode> <filter>: the first six handshake packets seen in that network namespace
+  dump() {
+    docker run --rm --net "$1" --cap-add NET_ADMIN --cap-add NET_RAW alpine:3.20 \
+      sh -c "apk add -q tcpdump >/dev/null 2>&1 && timeout 40 tcpdump -tnni any -c 6 '$2' 2>/dev/null | cut -d, -f1" 2>/dev/null
+  }
+  "${K[@]}" apply -f "$M/45-outbound-client.yaml" >/dev/null
+  "${K[@]}" -n course-outbound rollout status deploy/client --timeout=120s >/dev/null 2>&1
+  local podip nodeip gw ip4
+  podip="$("${K[@]}" -n course-outbound get pod -l app=client -o jsonpath='{.items[0].status.podIP}')"
+  nodeip="$("${K[@]}" get node "$N" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')"
+  gw="$(docker network inspect "$net" -f '{{(index .IPAM.Config 0).Gateway}}' 2>/dev/null)"
+  expect "1. the client pod gets an address from the pod network" "$podip" '^10\.42\.'
+  expect "1. a pod in the mesh reaches example.com" "$(in_out curl -4 -s -o /dev/null -m 15 -w '%{http_code}' https://example.com)" '^200$'
+  # 2. DNS: pod, then CoreDNS, then Docker's DNS in the node container
+  ip4="$(in_out nslookup -type=a example.com | awk '/^Address: / {print $2}' | tail -1)"
+  expect "2. the pod resolves example.com" "$ip4" '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'
+  expect "2. CoreDNS forwards to its resolv.conf" "$("${K[@]}" -n kube-system get configmap coredns -o jsonpath='{.data.Corefile}' | grep -c 'forward \. /etc/resolv.conf')" '^1$'
+  expect "2. CoreDNS's resolv.conf names the Docker gateway" "$(docker exec "$N" cat "/proc/$(ctr_pid kube-system coredns)/root/etc/resolv.conf" 2>/dev/null | awk '/^nameserver/ {print $2}')" "^${gw//./\\.}$"
+  expect "2. the node DNATs the gateway's port 53 to Docker's DNS" "$(docker exec "$N" iptables -t nat -S DOCKER_OUTPUT 2>/dev/null | grep -c 'DNAT --to-destination 127.0.0.11')" '^[1-9]'
+  # 3. inside the pod: the redirect and ztunnel's second connection
+  local pid; pid="$(ctr_pid course-outbound curl)"
+  expect "3. istio-cni redirects outgoing TCP to ztunnel" "$(docker exec "$N" nsenter -t "$pid" -n iptables -t nat -S ISTIO_OUTPUT 2>/dev/null | grep -c 'REDIRECT --to-ports 15001')" '^1$'
+  (sleep 25 | "${K[@]}" -n course-outbound exec -i deploy/client -- curl -s "telnet://$ip4:443" >/dev/null 2>&1) & local holder=$!; disown "$holder"
+  local podct=""
+  for _ in $(seq 1 10); do
+    podct="$(docker exec "$N" nsenter -t "$pid" -n conntrack -L -p tcp --dport 443 2>/dev/null | grep ESTABLISHED | grep "dst=$ip4 ")"
+    [[ $(echo "$podct" | grep -c .) -ge 2 ]] && break; settle 1
+  done
+  expect "3. the app's connection goes to ztunnel's port 15001" "$(echo "$podct" | grep -c 'sport=15001')" '^[1-9]'
+  expect "3. ztunnel opens a second connection to the real server" "$(echo "$podct" | grep "src=$ip4 dst=$podip" | grep -c 'sport=443')" '^[1-9]'
+  expect "5. the node masquerades the pod's connection to its own address" "$(docker exec "$N" conntrack -L -p tcp --dport 443 -s "$podip" 2>/dev/null | grep ESTABLISHED | grep "dst=$ip4 " | grep -c "dst=$nodeip ")" '^[1-9]'
+  local vmct; vmct="$(docker run --rm --net host --privileged alpine:3.20 sh -c 'apk add -q conntrack-tools >/dev/null 2>&1; conntrack -L -p tcp --dport 443 2>/dev/null' 2>/dev/null | grep "src=$nodeip dst=$ip4 " | grep -v CLOSE)"
+  expect "7. the VM masquerades the node's address to its own" "$(echo "$vmct" | grep -c "dst=$nodeip " )" '^0$'
+  expect "7. and conntrack in the VM records the swap" "$(echo "$vmct" | grep -c .)" '^[1-9]'
+  expect "8. on the Mac, the OrbStack app holds the outside connection" "$(lsof -nP "-iTCP@$ip4:443" -sTCP:ESTABLISHED 2>/dev/null | awk 'NR>1 {print $1}' | sort -u)" 'OrbStack'
+  # ztunnel logs a connection when it closes, after the 25 seconds of the hold
+  local zlog=0
+  for _ in $(seq 1 12); do
+    zlog="$("${K[@]}" -n istio-system logs ds/ztunnel --since=2m 2>/dev/null | grep 'src.namespace="course-outbound"' | grep "dst.addr=$ip4:443" | grep -vc 'dst.identity')"
+    [[ $zlog =~ ^[1-9] ]] && break; settle 5
+  done
+  expect "3. ztunnel logs the passthrough by IP only" "$zlog" '^[1-9]'
+  # 4. veth, bridge, routes
+  local idx; idx="$(in_out cat /sys/class/net/eth0/iflink | tr -d '\r')"
+  expect "4. the pod's veth peer plugs into cni0" "$(docker exec "$N" ip -o link show 2>/dev/null | grep "^$idx:" | grep -c 'master cni0')" '^1$'
+  expect "4. the node's default route points at the Docker gateway" "$(docker exec "$N" ip route 2>/dev/null | awk '/^default/ {print $3}')" "^${gw//./\\.}$"
+  # 5. the masquerade rule and its counter
+  local rule='-s 10.42.0.0/16 ! -d 224.0.0.0/4 -m comment --comment "flanneld masq" -j MASQUERADE --random-fully'
+  expect "5. flannel's rule masquerades pod traffic to the outside" "$(docker exec "$N" iptables -t nat -S FLANNEL-POSTRTG 2>/dev/null | grep -cF -- "$rule")" '^1$'
+  expect "5. kube-proxy's chain returns for unmarked packets" "$(docker exec "$N" iptables -t nat -S KUBE-POSTROUTING 2>/dev/null | grep -c 'mark ! --mark 0x4000/0x4000 -j RETURN')" '^1$'
+  masq() { docker exec "$N" iptables -t nat -L FLANNEL-POSTRTG -v -n -x 2>/dev/null | awk '/MASQUERADE/ && /!224.0.0.0\/4/ {print $1}'; }
+  local before after; before="$(masq)"
+  in_out curl -4 -s -o /dev/null -m 15 https://example.com
+  after="$(masq)"
+  between "5. one curl adds at least one masqueraded connection" "$(( after - before ))" 1 50
+  # 6 and 7. tcpdump in the node and in the VM: the source before and after each masquerade
+  local f="host $ip4 and tcp[tcpflags] & tcp-syn != 0" log; log="$(mktemp)"
+  dump "container:$N" "$f" > "$log" & local dumper=$!
+  settle 8; in_out curl -4 -s -o /dev/null -m 15 --resolve "example.com:443:$ip4" https://example.com; wait "$dumper" 2>/dev/null
+  expect "6. tcpdump sees the pod's address on the veth" "$(grep -c "^veth.* IP $podip\." "$log")" '^[1-9]'
+  expect "6. and the node's address on eth0" "$(grep -c "^eth0  Out IP $nodeip\." "$log")" '^[1-9]'
+  local br; br="br-$(docker network inspect "$net" -f '{{.Id}}' 2>/dev/null | cut -c1-12)"
+  dump host "$f" > "$log" & dumper=$!
+  settle 8; in_out curl -4 -s -o /dev/null -m 15 --resolve "example.com:443:$ip4" https://example.com; wait "$dumper" 2>/dev/null
+  expect "7. tcpdump in the VM sees the node's address on the Docker bridge" "$(grep -c "^$br In  IP $nodeip\." "$log")" '^[1-9]'
+  expect "7. and another address on the VM's eth0" "$(grep "^eth0  Out IP" "$log" | grep -vc "IP $nodeip\.")" '^[1-9]'
+  rm -f "$log"
+  local origin; origin="$(in_out curl -s -m 15 https://httpbin.org/ip | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')"
+  expect "8. httpbin sees a public address, not a private one" "$origin" '^[0-9]'
+  expect "8. which is none of the lab's private addresses" "$(echo "$origin" | grep -cE '^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)')" '^0$'
+  # 9. controlled egress: the waypoint opens the outside connection
+  "${K[@]}" apply -f "$M/45-egress-waypoint.yaml" >/dev/null
+  local wp=""
+  for _ in $(seq 1 36); do
+    wp="$("${K[@]}" -n course-outbound get pod -l gateway.networking.k8s.io/gateway-name=waypoint -o jsonpath='{.items[0].status.podIP}' 2>/dev/null)"
+    [[ -n $wp ]] && "${K[@]}" -n course-outbound rollout status deploy/waypoint --timeout=5s >/dev/null 2>&1 && break; settle 5
+  done
+  settle 5
+  expect "9. DNS answers httpbin.org with a virtual address" "$(in_out nslookup -type=a httpbin.org | awk '/^Address: / {print $2}' | tail -1)" '^240\.240\.'
+  expect "9. the waypoint adds TLS (httpbin sees https)" "$(in_out curl -s -m 15 http://httpbin.org/get | grep '"url"')" 'https://httpbin.org/get'
+  settle 2
+  expect "9. ztunnel tunnels the call to the waypoint" "$("${K[@]}" -n istio-system logs ds/ztunnel --since=1m 2>/dev/null | grep 'src.namespace="course-outbound"' | grep 'dst.service="httpbin.org"' | grep -c "dst.addr=$wp:15008")" '^[1-9]'
+  expect "9. the node masquerades the waypoint's connection, not the client's" "$(docker exec "$N" conntrack -L -p tcp --dport 443 -s "$wp" 2>/dev/null | grep -c "dst=$nodeip ")" '^[1-9]'
+  baseline
+  expect "after the reset course-outbound is gone" "$("${K[@]}" get ns course-outbound 2>&1 | grep -c NotFound)" '^1$'
+}
+
 # Module 21 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 21
 module_21() {
   section "21: k3s certificates, backups and upgrades (the upgrade is one-way)"
@@ -1276,7 +1372,7 @@ module_14() {
 }
 
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16 20 22 23 24 25 26 28 29 30 31); fi
+if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16 20 22 23 24 25 26 28 29 30 31 45); fi
 # Start from the Git baseline, in case an exercise is still applied.
 printf 'Restoring the baseline before the checks\n'
 "$ROOT/platform-engineering/reset.sh" >/dev/null 2>&1

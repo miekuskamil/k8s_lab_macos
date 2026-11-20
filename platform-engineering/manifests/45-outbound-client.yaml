@@ -1,0 +1,38 @@
+# Module 45: a curl pod in its own ambient namespace, to follow one call from the pod
+# out to the internet. The namespace label puts the pod in the ambient mesh, so
+# istio-cni adds its redirect rules inside the pod and ztunnel handles its traffic.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-outbound
+  labels:
+    istio.io/dataplane-mode: ambient
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+  namespace: course-outbound
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: client}
+  template:
+    metadata:
+      labels: {app: client}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: curl
+          image: curlimages/curl:8.11.1
+          command: ["sleep", "infinity"]
+          resources:
+            requests: {cpu: 5m, memory: 16Mi}
+            limits: {cpu: 100m, memory: 64Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]

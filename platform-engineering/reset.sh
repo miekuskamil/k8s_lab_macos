@@ -11,6 +11,8 @@ echo "Removing course rules from the shop namespace"
 "${K[@]}" -n shop delete telemetry waypoint-access-logs --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy backend-allow-course-client --ignore-not-found >/dev/null
 "${K[@]}" -n course-sidecar delete virtualservice,destinationrule,peerauthentication --all --ignore-not-found >/dev/null 2>&1 || true
+# Module 45: the outbound client, its waypoint, the ServiceEntry and DestinationRule
+"${K[@]}" delete namespace course-outbound --ignore-not-found >/dev/null
 # Module 31: the debugging namespace, with its access logs, routes and break files inside
 "${K[@]}" delete namespace course-debug --ignore-not-found >/dev/null
 # Module 30: the sidecar and ambient test namespaces, with the Sidecar resource and patches.

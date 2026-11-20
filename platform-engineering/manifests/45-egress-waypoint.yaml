@@ -1,0 +1,45 @@
+# Module 45: controlled egress for course-outbound. A waypoint of its own, and a
+# ServiceEntry that names httpbin.org and sends its traffic through that waypoint,
+# which opens TLS to the real server (TLS origination, as in module 12).
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: waypoint
+  namespace: course-outbound
+  labels:
+    istio.io/waypoint-for: service
+spec:
+  gatewayClassName: istio-waypoint
+  listeners:
+    - name: mesh
+      port: 15008
+      protocol: HBONE
+---
+apiVersion: networking.istio.io/v1
+kind: ServiceEntry
+metadata:
+  name: httpbin-org
+  namespace: course-outbound
+  labels:
+    istio.io/use-waypoint: waypoint
+spec:
+  hosts:
+    - httpbin.org
+  location: MESH_EXTERNAL
+  resolution: DNS
+  ports:
+    - number: 80
+      name: http
+      protocol: HTTP
+      targetPort: 443
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: httpbin-org-tls
+  namespace: course-outbound
+spec:
+  host: httpbin.org
+  trafficPolicy:
+    tls:
+      mode: SIMPLE
