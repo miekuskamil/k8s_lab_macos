@@ -35,8 +35,8 @@ score_m1() {
     "a=\$(curl -fsSI -H 'Accept: application/vnd.oci.image.manifest.v1+json' -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' http://registry.ckad:5000/v2/pricing/manifests/2.4.0 | grep -i docker-content-digest); b=\$(curl -fsSI -H 'Accept: application/vnd.oci.image.manifest.v1+json' -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' http://registry.ckad:5000/v2/pricing/manifests/stable | grep -i docker-content-digest); [ -n \"\$a\" ] && [ \"\$a\" = \"\$b\" ]"
   check_cp "Deployment pricing runs pricing:2.4.0 with 2 ready pods that answer 'version 2.4.0'" \
     "kubectl -n k3-build get deploy pricing -o jsonpath='{.spec.template.spec.containers[0].image} {.status.readyReplicas}' | grep -qx 'registry.ckad:5000/pricing:2.4.0 2' && kubectl -n k3-build exec deploy/pricing -c pricing -- wget -qO- localhost:8080 | grep -qx 'version 2.4.0'"
-  check_cp "its pods have an init container wait-registry that checks the registry" \
-    "kubectl -n k3-build get deploy pricing -o jsonpath='{.spec.template.spec.initContainers[0].name}' | grep -qx wait-registry"
+  check_cp "its pods have an init container wait-dns that waits for the cluster DNS" \
+    "kubectl -n k3-build get deploy pricing -o jsonpath='{.spec.template.spec.initContainers[0].name}' | grep -qx wait-dns"
   check_cp "/opt/ckad/m3/1/pricing.tar is an OCI archive of the image" "tar -tf /opt/ckad/m3/1/pricing.tar | grep -q '^index.json\$'"
 }
 solve_m1() {
@@ -54,9 +54,9 @@ spec:
     metadata: {labels: {app: pricing}}
     spec:
       initContainers:
-      - name: wait-registry
+      - name: wait-dns
         image: busybox:1.36
-        command: [sh, -c, 'until wget -qO- http://registry.ckad:5000/v2/ >/dev/null; do sleep 2; done']
+        command: [sh, -c, 'until nslookup kubernetes.default.svc.cluster.local; do sleep 2; done']
       containers:
       - name: pricing
         image: registry.ckad:5000/pricing:2.4.0
@@ -300,12 +300,11 @@ setup_m8() {
   cp_sh 'kubectl -n k3-tiers expose pod api --port=80 --target-port=8080 >/dev/null; kubectl -n k3-tiers expose pod db --port=5432 >/dev/null; kubectl -n k3-tiers expose pod web --port=80 --target-port=8080 >/dev/null'
 }
 score_m8() {
+  check_cp "intruder does not reach api or db" "! kubectl -n k3-tiers exec intruder -- wget -qO- -T 3 http://api && ! kubectl -n k3-tiers exec intruder -- wget -qO- -T 3 http://db:5432"
   check_cp "web reaches api by name, api reaches db by name" \
     "kubectl -n k3-tiers exec web -- wget -qO- -T 3 http://api | grep -qx api && kubectl -n k3-tiers exec api -- wget -qO- -T 3 http://db:5432 | grep -qx db"
-  check_cp "web does not reach db, and nothing reaches web from intruder except port 8080" \
-    "! kubectl -n k3-tiers exec web -- wget -qO- -T 3 http://db:5432 && kubectl -n k3-tiers exec intruder -- wget -qO- -T 3 http://web | grep -qx web"
-  check_cp "intruder does not reach api or db" "! kubectl -n k3-tiers exec intruder -- wget -qO- -T 3 http://api && ! kubectl -n k3-tiers exec intruder -- wget -qO- -T 3 http://db:5432"
-  check_cp "db reaches nothing outside the namespace" "! kubectl -n k3-tiers exec db -- wget -qO- -T 3 https://kubernetes.default"
+  check_cp "web does not reach db" "! kubectl -n k3-tiers exec web -- wget -qO- -T 3 http://db:5432"
+  check_cp "db reaches nothing, not even web" "! kubectl -n k3-tiers exec db -- wget -qO- -T 3 http://web"
 }
 solve_m8() {
   cp_sh "kubectl apply -f - <<'EOF'
@@ -377,13 +376,15 @@ EOF
   cp_sh "kubectl -n k3-limits create deploy indexer --image=busybox:1.36 --replicas=4 -- sleep 1d >/dev/null"
 }
 score_m9() {
-  check_cp "Deployment indexer runs 4 ready pods" "kubectl -n k3-limits rollout status deploy indexer --timeout=60s && kubectl -n k3-limits get deploy indexer -o jsonpath='{.status.readyReplicas}' | grep -qx 4"
+  check_cp "Deployment indexer runs 4 ready pods" "kubectl -n k3-limits get deploy indexer -o jsonpath='{.spec.replicas} {.status.readyReplicas}' | grep -qx '4 4'"
   check_cp "the quota and the LimitRange are unchanged" "kubectl -n k3-limits get quota budget -o jsonpath='{.spec.hard.requests\.cpu}' | grep -qx 600m && kubectl -n k3-limits get limitrange bounds -o jsonpath='{.spec.limits[0].max.cpu}' | grep -qx 300m"
   check_json "each container sets requests and limits within the LimitRange" "kubectl -n k3-limits get deploy indexer -o json" \
     'r=p["spec"]["template"]["spec"]["containers"][0]["resources"]; all(k in r.get("requests",{}) and k in r.get("limits",{}) for k in ("cpu","memory"))'
 }
 solve_m9() {
-  cp_sh "kubectl -n k3-limits set resources deploy indexer --requests=cpu=100m,memory=64Mi --limits=cpu=200m,memory=128Mi
+  cp_sh "kubectl -n k3-limits scale deploy indexer --replicas=0
+    kubectl -n k3-limits set resources deploy indexer --requests=cpu=100m,memory=64Mi --limits=cpu=200m,memory=128Mi
+    kubectl -n k3-limits scale deploy indexer --replicas=4
     kubectl -n k3-limits rollout status deploy indexer --timeout=120s"
 }
 
@@ -396,9 +397,9 @@ setup_m10() {
 }
 score_m10() {
   check_cp "pod edge sees /etc/tls/ciphers, /etc/tls/port and /etc/tls/server.key in one volume" \
-    "kubectl -n k3-proj exec edge -- sh -c 'cat /etc/tls/ciphers /etc/tls/port /etc/tls/server.key' | tr '\n' ' ' | grep -q 'modern 8443 not-a-real-key'"
+    "kubectl -n k3-proj exec edge -- cat /etc/tls/ciphers | grep -qx modern && kubectl -n k3-proj exec edge -- cat /etc/tls/port | grep -qx 8443 && kubectl -n k3-proj exec edge -- cat /etc/tls/server.key | grep -qx not-a-real-key"
   check_json "the volume is one projected volume" "kubectl -n k3-proj get pod edge -o json" \
-    'v=[x for x in p["spec"]["volumes"] if "projected" in x]; len(v)==1 and len(v[0]["projected"]["sources"])>=2'
+    'v=[x for x in p["spec"]["volumes"] if any("configMap" in y for y in x.get("projected",{}).get("sources",[]))]; len(v)==1 and any("secret" in y for y in v[0]["projected"]["sources"])'
   check_cp "server.key has mode 0400" "kubectl -n k3-proj exec edge -- stat -L -c %a /etc/tls/server.key | grep -qx 400"
 }
 solve_m10() {

@@ -42,7 +42,7 @@ Task files sit in `/opt/ckad/m3/N` on `cks-cp`.
 > `/opt/ckad/m3/1/Dockerfile` takes a build argument `VERSION`.
 > 1. Build it with `VERSION=2.4.0` as `registry.ckad:5000/pricing:2.4.0`, tag the same image also as `registry.ckad:5000/pricing:stable`, and push both tags.
 > 2. Save the image as an OCI archive to `/opt/ckad/m3/1/pricing.tar`.
-> 3. In namespace `k3-build`, run Deployment `pricing` with 2 replicas of `pricing:2.4.0` in a container named `pricing`, with an init container `wait-registry` (image `busybox:1.36`) that waits until `http://registry.ckad:5000/v2/` answers.
+> 3. In namespace `k3-build`, run Deployment `pricing` with 2 replicas of `pricing:2.4.0` in a container named `pricing`, with an init container `wait-dns` (image `busybox:1.36`) that waits until `nslookup kubernetes.default.svc.cluster.local` succeeds.
 
 <details>
 <summary>Solution</summary>
@@ -58,15 +58,15 @@ podman save --format oci-archive -o pricing.tar registry.ckad:5000/pricing:2.4.0
 ```yaml
     spec:
       initContainers:
-      - name: wait-registry
+      - name: wait-dns
         image: busybox:1.36
-        command: [sh, -c, 'until wget -qO- http://registry.ckad:5000/v2/ >/dev/null; do sleep 2; done']
+        command: [sh, -c, 'until nslookup kubernetes.default.svc.cluster.local; do sleep 2; done']
       containers:
       - name: pricing
         image: registry.ckad:5000/pricing:2.4.0
 ```
 
-`podman tag` adds a second name to the same image, so both tags push the same manifest and share its digest. `podman save` writes Docker's archive format by default; `--format oci-archive` writes the OCI layout with an `index.json`.
+The first version of this task waited for `http://registry.ckad:5000/v2/` instead, and its pods hung in `Init:0/1` in the test run: the name `registry.ckad` lives in the nodes' `/etc/hosts`, which containerd reads, while pods ask the cluster's DNS, which has never heard of it. `podman tag` adds a second name to the same image, so both tags push the same manifest and share its digest. `podman save` writes Docker's archive format by default; `--format oci-archive` writes the OCI layout with an `index.json`.
 
 </details>
 
@@ -238,7 +238,7 @@ k get certificates -A --sort-by=.spec.days -o jsonpath='{.items[0].spec.domain}'
 
 ### Task 8: Three tiers, three policies (7 points)
 
-> Namespace `k3-tiers` runs pods `web` (`tier=web`), `api` (`tier=api`) and `db` (`tier=db`), each behind a Service of the same name, and an `intruder`. Allow exactly this: anyone reaches `web` on 8080, `web` reaches `api` on 8080, `api` reaches `db` on 5432, and every pod resolves DNS. Block everything else.
+> Namespace `k3-tiers` runs pods `web` (`tier=web`), `api` (`tier=api`) and `db` (`tier=db`), each behind a Service of the same name, and an `intruder`. Allow exactly this: `web` accepts connections on 8080 from anywhere, `web` reaches `api` on 8080, `api` reaches `db` on 5432, and every pod resolves DNS. Block everything else.
 
 <details>
 <summary>Solution</summary>
@@ -291,7 +291,7 @@ spec:
     ports: [{protocol: TCP, port: 5432}]
 ```
 
-An ingress rule with `ports` and no `from` allows that port from anywhere, which is what "anyone reaches web" needs.
+An ingress rule with `ports` and no `from` allows that port from any source. A pod in this namespace still needs its own egress rule to use it, which `intruder` doesn't get, so in the test run `intruder` reached nothing at all.
 
 </details>
 
@@ -302,13 +302,15 @@ An ingress rule with `ports` and no `from` allows that port from anywhere, which
 <details>
 <summary>Solution</summary>
 
-`k -n k3-limits describe quota,limitrange` shows the numbers: at most 600m and 600Mi of requests and 1 CPU and 1Gi of limits for the namespace, and between 50m and 300m CPU and 32Mi and 256Mi memory per container. Four pods with 100m and 64Mi requests and 200m and 128Mi limits fit both:
+`k -n k3-limits describe quota,limitrange` shows the numbers: at most 600m and 600Mi of requests and 1 CPU and 1Gi of limits for the namespace, and between 50m and 300m CPU and 32Mi and 256Mi memory per container. Four pods with 100m and 64Mi requests and 200m and 128Mi limits fit both.
+
+The trap sits in the LimitRange: it names only `min` and `max`, and a LimitRange without `default` uses its `max` as the default. So each pod without numbers got 300m and 256Mi, two pods filled the 600m quota, and the other two got refused. A plain `set resources` then hangs, as it did in the test run, because the new pods find no room while the old ones hold the whole quota, and the old ones only go once new ones are ready. Scale to 0 first:
 
 ```bash
+k -n k3-limits scale deploy indexer --replicas=0
 k -n k3-limits set resources deploy indexer --requests=cpu=100m,memory=64Mi --limits=cpu=200m,memory=128Mi
+k -n k3-limits scale deploy indexer --replicas=4
 ```
-
-The LimitRange here sets only `min` and `max`, no defaults, so it fills nothing in, and the quota refuses every pod that names no numbers.
 
 </details>
 
@@ -487,7 +489,7 @@ spec:
     emptyDir: {}
 ```
 
-CAP16
+busybox's `httpd` binds port 80 as user 101 here, but not because of the capability. In the test run, the process had no effective capabilities at all, `CapEff: 0000000000000000` in `/proc/1/status`, because Linux gives added capabilities to a non-root process only through ambient capabilities, which Kubernetes doesn't set. Port 80 worked anyway, because containerd 2 sets `net.ipv4.ip_unprivileged_port_start=0` in every pod, so any user may bind any port. The `add` still matters for the exam's check, and on a runtime without that setting, the image itself would need the file capability on its binary, set with `setcap` at build time.
 
 </details>
 
