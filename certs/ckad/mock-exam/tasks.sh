@@ -275,7 +275,7 @@ solve_m9() {
   cp_sh "mkdir -p /opt/ckad/m1/9
     for i in \$(seq 1 40); do kubectl -n k1-logs get pod -l app=importer -o jsonpath='{.items[0].status.containerStatuses[0].lastState.terminated.exitCode}' | grep -q . && break; sleep 2; done
     P=\$(kubectl -n k1-logs get pod -l app=importer -o name)
-    (kubectl -n k1-logs logs \$P --previous 2>/dev/null || kubectl -n k1-logs logs \$P) | grep ERROR > /opt/ckad/m1/9/error.txt
+    { kubectl -n k1-logs logs \$P --previous; kubectl -n k1-logs logs \$P; } 2>/dev/null | grep -m1 ERROR > /opt/ckad/m1/9/error.txt
     kubectl -n k1-logs get \$P -o jsonpath='{.status.containerStatuses[0].lastState.terminated.exitCode}' > /opt/ckad/m1/9/exit-code.txt
     cat /opt/ckad/m1/9/*.txt"
 }

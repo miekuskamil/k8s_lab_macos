@@ -8,7 +8,7 @@ The real exam gives you 2 hours for 15 to 20 tasks, and this mock gives you 2 ho
 
 ## Rules
 
-1. Start from a clean cluster with `./certs/ckad/cluster/reset.sh`, then run `./certs/ckad/mock-exam/setup.sh`. SETUP_TIME
+1. Start from a clean cluster with `./certs/ckad/cluster/reset.sh`, then run `./certs/ckad/mock-exam/setup.sh`. In the test run, the reset took 45 seconds and the setup 27 seconds, because the nodes already had the images; on a new cluster the first run also downloads them.
 2. The clock starts when `setup.sh` ends, because it writes the start time, and `score.sh` prints the minutes since then and flags a run over 120 minutes.
 3. Work only on `cks-cp`, in a root shell from `orb -m cks-cp` and `sudo -i`, and use only the documentation the exam allows: kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
 4. Don't open the solutions while the timer runs, because the score only means something when you worked without them.
@@ -403,4 +403,6 @@ A default deny for the whole namespace would also stop `batch` from reaching `fr
 
 ## Scoring
 
-SCORING
+`score.sh` runs two to four checks per task and splits the task's points evenly over them, rounded down, then prints each check, the points per task and the total. A task scores only when its first check, the main change, passes, so checks such as "the key is not an environment variable" earn nothing on an untouched cluster, where they pass by themselves.
+
+In the test run, on a cluster fresh from `reset.sh` and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` After `./certs/ckad/mock-exam/solve.sh`, which applies every solution above and took 62 seconds, it was `TOTAL: 100 of 100 points (100%).` The first full run scored 95, because the reference solution of task 9 read the log with `--previous` while the pod sat in `Error`, the trap that [domain 03](03-application-observability-and-maintenance.md#concept-logs-events-and-metrics) describes; the solution now reads both logs, and the fixed task scored 5 of 5.
