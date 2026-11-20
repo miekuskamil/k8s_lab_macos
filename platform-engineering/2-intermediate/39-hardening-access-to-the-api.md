@@ -139,9 +139,9 @@ That design has two consequences that the exam tests:
 When you investigate a permission, you want to know what a caller may do without logging in as that caller. `kubectl auth can-i` gives exactly that answer, because it asks the API server's own authorizers on the caller's behalf. Two forms help in an investigation:
 
 ```console
-root@cks-cp:~# k auth can-i get secrets -n kube-system --as=system:serviceaccount:apps:cleaner   # one verb, one caller
+root@practice-control-plane:~# k auth can-i get secrets -n kube-system --as=system:serviceaccount:apps:cleaner   # one verb, one caller
 yes
-root@cks-cp:~# k auth can-i --list -n apps --as=system:serviceaccount:apps:viewer                 # everything one caller may do
+root@practice-control-plane:~# k auth can-i --list -n apps --as=system:serviceaccount:apps:viewer                 # everything one caller may do
 Resources                                       Non-Resource URLs                      Resource Names   Verbs
 selfsubjectreviews.authentication.k8s.io        []                                     []               [create]
 selfsubjectaccessreviews.authorization.k8s.io   []                                     []               [create]
@@ -216,7 +216,7 @@ This design explains how control plane repair works. When the API server is down
 
 1. `crictl ps -a --name kube-apiserver` lists the containers, the exited ones too. A container that keeps exiting points to a bad flag or a missing file.
 2. `crictl logs <container id>` prints that container's last words. They name the problem almost every time.
-3. `/var/log/pods/kube-system_kube-apiserver-cks-cp_<uid>/kube-apiserver/` holds the same logs as files, which survive the container's removal.
+3. `/var/log/pods/kube-system_kube-apiserver-practice-control-plane_<uid>/kube-apiserver/` holds the same logs as files, which survive the container's removal.
 4. `journalctl -u kubelet` shows what the kubelet thinks: a manifest it fails to parse never becomes a container, and only the kubelet's log mentions it.
 
 The test run met each case. A misspelled admission plugin made the API server exit with `enable-admission-plugins plugin "AlwaysPullImage" is unknown`, a wrong certificate path made etcd exit with `open /etc/kubernetes/pki/etcd/server.cert: no such file or directory`, and a misspelled flag made the controller manager exit with `unknown flag: --cluster-signing-keyfile`. When etcd is down, the API server fails as well, and its log says `dial tcp 127.0.0.1:2379: connect: connection refused`. So always fix the lowest broken layer first: etcd, then the API server, then the scheduler and controller manager.
@@ -285,7 +285,7 @@ Real platform teams rarely hand out client certificates to people, because a cer
 
 ## Task 1: Trim an over-broad Role
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 39.1
@@ -308,18 +308,18 @@ rolebinding.rbac.authorization.k8s.io/reporter-binding created
 `kubectl create role ... --dry-run=client -o yaml | kubectl replace -f -` rewrites the existing Role in one line, so you never open an editor:
 
 ```console
-root@cks-cp:~# k -n finance create role reporter-role --verb=get,list,watch --resource=pods $do | k replace -f -
+root@practice-control-plane:~# k -n finance create role reporter-role --verb=get,list,watch --resource=pods $do | k replace -f -
 role.rbac.authorization.k8s.io/reporter-role replaced
-root@cks-cp:~# k -n finance create role secret-reader --verb=get --resource=secrets --resource-name=report-key
+root@practice-control-plane:~# k -n finance create role secret-reader --verb=get --resource=secrets --resource-name=report-key
 role.rbac.authorization.k8s.io/secret-reader created
-root@cks-cp:~# k -n finance create rolebinding secret-reader --role=secret-reader --serviceaccount=finance:reporter
+root@practice-control-plane:~# k -n finance create rolebinding secret-reader --role=secret-reader --serviceaccount=finance:reporter
 rolebinding.rbac.authorization.k8s.io/secret-reader created
 ```
 
 Then ask the API server, as the account, whether each right is now present or gone:
 
 ```console
-root@cks-cp:~# for q in "list pods" "delete pods" "get secret/report-key" "get secret/db-password" "list secrets"; do
+root@practice-control-plane:~# for q in "list pods" "delete pods" "get secret/report-key" "get secret/db-password" "list secrets"; do
   echo "$q: $(k auth can-i $q --as=system:serviceaccount:finance:reporter -n finance)"
 done
 list pods: yes
@@ -350,7 +350,7 @@ In the test run, the setup's Role failed three of the seven checks, because it a
 
 ## Task 2: Service account tokens
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 39.2
@@ -369,19 +369,19 @@ deployment "checkout" successfully rolled out
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# k -n payments patch sa default -p '{"automountServiceAccountToken": false}'
+root@practice-control-plane:~# k -n payments patch sa default -p '{"automountServiceAccountToken": false}'
 serviceaccount/default patched
-root@cks-cp:~# k -n payments create sa checkout
+root@practice-control-plane:~# k -n payments create sa checkout
 serviceaccount/checkout created
-root@cks-cp:~# k -n payments patch sa checkout -p '{"automountServiceAccountToken": false}'
+root@practice-control-plane:~# k -n payments patch sa checkout -p '{"automountServiceAccountToken": false}'
 serviceaccount/checkout patched
-root@cks-cp:~# k -n payments set serviceaccount deploy checkout checkout
+root@practice-control-plane:~# k -n payments set serviceaccount deploy checkout checkout
 deployment.apps/checkout serviceaccount updated
-root@cks-cp:~# k -n payments rollout status deploy checkout
+root@practice-control-plane:~# k -n payments rollout status deploy checkout
 Waiting for deployment "checkout" rollout to finish: 1 old replicas are pending termination...
 Waiting for deployment "checkout" rollout to finish: 1 old replicas are pending termination...
 deployment "checkout" successfully rolled out
-root@cks-cp:~# k -n payments exec deploy/checkout -- ls /var/run/secrets/kubernetes.io/serviceaccount/
+root@practice-control-plane:~# k -n payments exec deploy/checkout -- ls /var/run/secrets/kubernetes.io/serviceaccount/
 ls: /var/run/secrets/kubernetes.io/serviceaccount/: No such file or directory
 command terminated with exit code 1
 ```
@@ -402,7 +402,7 @@ $ ./platform-engineering/task.sh check 39.2
 
 ## Task 3: Restrict anonymous access to the API
 
-**Time budget:** 8 minutes. **Host:** `cks-cp`.
+**Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 39.3
@@ -425,17 +425,17 @@ The setup creates a binding and prints what an anonymous caller gets, which in t
 Start by finding and deleting the binding that opened the door:
 
 ```console
-root@cks-cp:~# k get clusterrolebinding -o wide | grep system:anonymous
+root@practice-control-plane:~# k get clusterrolebinding -o wide | grep system:anonymous
 anonymous-view                                                          ClusterRole/view                                                                    1s      system:anonymous                                                                   
-root@cks-cp:~# k delete clusterrolebinding anonymous-view
+root@practice-control-plane:~# k delete clusterrolebinding anonymous-view
 clusterrolebinding.rbac.authorization.k8s.io "anonymous-view" deleted
 ```
 
 Then write the configuration that keeps anonymous access for the health endpoints only:
 
 ```console
-root@cks-cp:~# mkdir -p /etc/kubernetes/auth
-root@cks-cp:~# vim /etc/kubernetes/auth/auth-config.yaml
+root@practice-control-plane:~# mkdir -p /etc/kubernetes/auth
+root@practice-control-plane:~# vim /etc/kubernetes/auth/auth-config.yaml
 ```
 
 The transcript leaves out the editor session.
@@ -475,13 +475,13 @@ Don't also set `--anonymous-auth`, because with both the API server exits at onc
 Wait for the API server to come back, then test with curl, which sends no credentials and so arrives as an anonymous caller:
 
 ```console
-root@cks-cp:~# watch crictl ps --name kube-apiserver
+root@practice-control-plane:~# watch crictl ps --name kube-apiserver
 CONTAINER           IMAGE               CREATED             STATE               NAME                ATTEMPT             POD ID              POD                     NAMESPACE
-45dc14a403141       98d6e75e244ec       3 seconds ago       Running             kube-apiserver      0                   4bce357ebe11e       kube-apiserver-cks-cp   kube-system
-root@cks-cp:~# IP=$(hostname -I | cut -d' ' -f1)
-root@cks-cp:~# curl -sk -o /dev/null -w '%{http_code}\n' https://$IP:6443/api/v1/namespaces/default/pods   # 401
+45dc14a403141       98d6e75e244ec       3 seconds ago       Running             kube-apiserver      0                   4bce357ebe11e       kube-apiserver-practice-control-plane   kube-system
+root@practice-control-plane:~# IP=$(hostname -I | cut -d' ' -f1)
+root@practice-control-plane:~# curl -sk -o /dev/null -w '%{http_code}\n' https://$IP:6443/api/v1/namespaces/default/pods   # 401
 401
-root@cks-cp:~# curl -sk -o /dev/null -w '%{http_code}\n' https://$IP:6443/livez                            # 200
+root@practice-control-plane:~# curl -sk -o /dev/null -w '%{http_code}\n' https://$IP:6443/livez                            # 200
 200
 ```
 
@@ -506,14 +506,14 @@ $ ./platform-engineering/task.sh check 39.3
 
 ## Task 4: Upgrade the cluster with kubeadm
 
-**Time budget:** 12 minutes. **Hosts:** `cks-cp`, then `cks-w1`.
+**Time budget:** 12 minutes. **Hosts:** `practice-control-plane`, then `practice-worker`.
 
 ```console
 $ ./platform-engineering/task.sh setup 39.4     # prints the node versions; both must say v1.37.1
 == setup task 39.4
 NAME     STATUS   ROLES           AGE     VERSION
-cks-cp   Ready    control-plane   2m12s   v1.37.1
-cks-w1   Ready    <none>          77s     v1.37.1
+practice-control-plane   Ready    control-plane   2m12s   v1.37.1
+practice-worker   Ready    <none>          77s     v1.37.1
   the cluster must run v1.37.1 for this task; ./platform-engineering/practice/cluster/reset.sh puts it back there
 ```
 
@@ -522,12 +522,12 @@ cks-w1   Ready    <none>          77s     v1.37.1
 <details>
 <summary>Solution</summary>
 
-Start on `cks-cp`, which carries the control plane and therefore goes first:
+Start on `practice-control-plane`, which carries the control plane and therefore goes first:
 
 ```console
-root@cks-cp:~# apt-mark unhold kubeadm
+root@practice-control-plane:~# apt-mark unhold kubeadm
 Canceled hold on kubeadm.
-root@cks-cp:~# apt-get update && apt-get install -y kubeadm=1.37.2-1.1
+root@practice-control-plane:~# apt-get update && apt-get install -y kubeadm=1.37.2-1.1
 Hit:1 http://ports.ubuntu.com/ubuntu-ports noble InRelease
 Hit:2 http://ports.ubuntu.com/ubuntu-ports noble-updates InRelease
 Hit:4 http://ports.ubuntu.com/ubuntu-ports noble-security InRelease
@@ -540,9 +540,9 @@ The following packages will be upgraded:
 ...
 Unpacking kubeadm (1.37.2-1.1) over (1.37.1-1.1)…
 Setting up kubeadm (1.37.2-1.1)…
-root@cks-cp:~# apt-mark hold kubeadm
+root@practice-control-plane:~# apt-mark hold kubeadm
 kubeadm set on hold.
-root@cks-cp:~# kubeadm upgrade plan v1.37.2
+root@practice-control-plane:~# kubeadm upgrade plan v1.37.2
 ...
 [upgrade] Running cluster health checks
 [upgrade] Fetching available versions to upgrade to
@@ -553,24 +553,24 @@ root@cks-cp:~# kubeadm upgrade plan v1.37.2
 ...
 Components that must be upgraded manually after you have upgraded the control plane with 'kubeadm upgrade apply':
 COMPONENT   NODE      CURRENT   TARGET
-kubelet     cks-cp    v1.37.1   v1.37.2
-kubelet     cks-w1    v1.37.1   v1.37.2
+kubelet     practice-control-plane    v1.37.1   v1.37.2
+kubelet     practice-worker    v1.37.1   v1.37.2
 
 Upgrade to the latest version in the v1.37 series:
 
 COMPONENT                 NODE      CURRENT   TARGET
-kube-apiserver            cks-cp    v1.37.1   v1.37.2
-kube-controller-manager   cks-cp    v1.37.1   v1.37.2
-kube-scheduler            cks-cp    v1.37.1   v1.37.2
+kube-apiserver            practice-control-plane    v1.37.1   v1.37.2
+kube-controller-manager   practice-control-plane    v1.37.1   v1.37.2
+kube-scheduler            practice-control-plane    v1.37.1   v1.37.2
 kube-proxy                          1.37.1    v1.37.2
 CoreDNS                             v1.14.6   v1.14.6
-etcd                      cks-cp    3.7.0-0   3.7.0-0
+etcd                      practice-control-plane    3.7.0-0   3.7.0-0
 
 You can now apply the upgrade by executing the following command:
 
 	kubeadm upgrade apply v1.37.2
 ...
-root@cks-cp:~# kubeadm upgrade apply v1.37.2 -y
+root@practice-control-plane:~# kubeadm upgrade apply v1.37.2 -y
 [upgrade] Reading configuration from the "kubeadm-config" ConfigMap in namespace "kube-system"...
 [upgrade] Use 'kubeadm init phase upload-config kubeadm --config your-config-file' to re-upload it.
 ...
@@ -595,8 +595,8 @@ root@cks-cp:~# kubeadm upgrade apply v1.37.2 -y
 [upgrade] SUCCESS! A control plane node of your cluster was upgraded to "v1.37.2".
 ...
 [upgrade] Now please proceed with upgrading the rest of the nodes by following the right order.
-root@cks-cp:~# k drain cks-cp --ignore-daemonsets --delete-emptydir-data
-node/cks-cp cordoned
+root@practice-control-plane:~# k drain practice-control-plane --ignore-daemonsets --delete-emptydir-data
+node/practice-control-plane cordoned
 Warning: ignoring DaemonSet-managed Pods: kube-system/calico-node-j6xqr, kube-system/kube-proxy-qltk8
 evicting pod kube-system/coredns-559f6c778d-t5mx4
 evicting pod kube-system/calico-kube-controllers-7dd56c9f7-xl84h
@@ -604,11 +604,11 @@ evicting pod kube-system/coredns-559f6c778d-p78fz
 pod/calico-kube-controllers-7dd56c9f7-xl84h evicted
 pod/coredns-559f6c778d-t5mx4 evicted
 pod/coredns-559f6c778d-p78fz evicted
-node/cks-cp drained
-root@cks-cp:~# apt-mark unhold kubelet kubectl
+node/practice-control-plane drained
+root@practice-control-plane:~# apt-mark unhold kubelet kubectl
 Canceled hold on kubelet.
 Canceled hold on kubectl.
-root@cks-cp:~# apt-get install -y kubelet=1.37.2-1.1 kubectl=1.37.2-1.1
+root@practice-control-plane:~# apt-get install -y kubelet=1.37.2-1.1 kubectl=1.37.2-1.1
 ...
 The following packages will be upgraded:
   kubectl kubelet
@@ -620,14 +620,14 @@ Unpacking kubectl (1.37.2-1.1) over (1.37.1-1.1)…
 Unpacking kubelet (1.37.2-1.1) over (1.37.1-1.1)…
 Setting up kubectl (1.37.2-1.1)…
 Setting up kubelet (1.37.2-1.1)…
-root@cks-cp:~# apt-mark hold kubelet kubectl
+root@practice-control-plane:~# apt-mark hold kubelet kubectl
 kubelet set on hold.
 kubectl set on hold.
-root@cks-cp:~# systemctl daemon-reload && systemctl restart kubelet
-root@cks-cp:~# k uncordon cks-cp
-node/cks-cp uncordoned
-root@cks-cp:~# k drain cks-w1 --ignore-daemonsets --delete-emptydir-data --force
-node/cks-w1 cordoned
+root@practice-control-plane:~# systemctl daemon-reload && systemctl restart kubelet
+root@practice-control-plane:~# k uncordon practice-control-plane
+node/practice-control-plane uncordoned
+root@practice-control-plane:~# k drain practice-worker --ignore-daemonsets --delete-emptydir-data --force
+node/practice-worker cordoned
 Warning: ignoring DaemonSet-managed Pods: kube-system/calico-node-hfg7l, kube-system/kube-proxy-l5p8f
 evicting pod kube-system/coredns-559f6c778d-sg722
 evicting pod kube-system/calico-kube-controllers-7dd56c9f7-69xkx
@@ -637,17 +637,17 @@ pod/calico-kube-controllers-7dd56c9f7-69xkx evicted
 pod/coredns-559f6c778d-sg722 evicted
 pod/coredns-559f6c778d-dlj47 evicted
 pod/ingress-nginx-controller-8464654b6c-fdnh8 evicted
-node/cks-w1 drained
+node/practice-worker drained
 ```
 
-`--force` lets the drain delete bare pods that no controller owns, such as the ones earlier tasks created. Then upgrade the worker on `cks-w1`:
+`--force` lets the drain delete bare pods that no controller owns, such as the ones earlier tasks created. Then upgrade the worker on `practice-worker`:
 
 ```console
-root@cks-w1:~# apt-mark unhold kubeadm kubelet kubectl
+root@practice-worker:~# apt-mark unhold kubeadm kubelet kubectl
 Canceled hold on kubeadm.
 Canceled hold on kubelet.
 Canceled hold on kubectl.
-root@cks-w1:~# apt-get update && apt-get install -y kubeadm=1.37.2-1.1
+root@practice-worker:~# apt-get update && apt-get install -y kubeadm=1.37.2-1.1
 Hit:2 http://ports.ubuntu.com/ubuntu-ports noble InRelease
 Hit:4 http://ports.ubuntu.com/ubuntu-ports noble-updates InRelease
 Hit:1 https://d20hasrqv82i0q.cloudfront.net/packages/deb stable InRelease
@@ -663,7 +663,7 @@ The following packages will be upgraded:
 ...
 Unpacking kubeadm (1.37.2-1.1) over (1.37.1-1.1)…
 Setting up kubeadm (1.37.2-1.1)…
-root@cks-w1:~# kubeadm upgrade node
+root@practice-worker:~# kubeadm upgrade node
 [upgrade] Reading configuration from the "kubeadm-config" ConfigMap in namespace "kube-system"...
 [upgrade] Use 'kubeadm init phase upload-config kubeadm --config your-config-file' to re-upload it.
 [upgrade/preflight] Running pre-flight checks
@@ -671,7 +671,7 @@ root@cks-w1:~# kubeadm upgrade node
 [upgrade/kubelet-config] The kubelet configuration for this node was successfully upgraded!
 [upgrade/addon] Skipping the addon/coredns phase. Not a control plane node.
 [upgrade/addon] Skipping the addon/kube-proxy phase. Not a control plane node.
-root@cks-w1:~# apt-get install -y kubelet=1.37.2-1.1 kubectl=1.37.2-1.1
+root@practice-worker:~# apt-get install -y kubelet=1.37.2-1.1 kubectl=1.37.2-1.1
 ...
 The following packages were automatically installed and are no longer required:
 ...
@@ -685,14 +685,14 @@ Unpacking kubectl (1.37.2-1.1) over (1.37.1-1.1)…
 Unpacking kubelet (1.37.2-1.1) over (1.37.1-1.1)…
 Setting up kubectl (1.37.2-1.1)…
 Setting up kubelet (1.37.2-1.1)…
-root@cks-w1:~# apt-mark hold kubeadm kubelet kubectl
+root@practice-worker:~# apt-mark hold kubeadm kubelet kubectl
 kubeadm set on hold.
 kubelet set on hold.
 kubectl set on hold.
-root@cks-w1:~# systemctl daemon-reload && systemctl restart kubelet
+root@practice-worker:~# systemctl daemon-reload && systemctl restart kubelet
 ```
 
-Finally, back on `cks-cp`, run `k uncordon cks-w1` so the worker accepts pods again, then `k get nodes`.
+Finally, back on `practice-control-plane`, run `k uncordon practice-worker` so the worker accepts pods again, then `k get nodes`.
 
 `apt-cache madison kubeadm` lists the exact package versions when you don't know the `-1.1` suffix. In the test run, the whole upgrade took 2 minutes 39 seconds, and `kubeadm` left backups of the old manifests and etcd data in `/etc/kubernetes/tmp/`.
 
@@ -701,17 +701,17 @@ Finally, back on `cks-cp`, run `k uncordon cks-w1` so the worker accepts pods ag
 ```console
 $ ./platform-engineering/task.sh check 39.4
 == check task 39.4
-  PASS  cks-cp kubelet reports v1.37.2
-  PASS  cks-w1 kubelet reports v1.37.2
+  PASS  practice-control-plane kubelet reports v1.37.2
+  PASS  practice-worker kubelet reports v1.37.2
   PASS  the API server runs image v1.37.2
   PASS  both nodes are schedulable
-  PASS  kubeadm, kubelet and kubectl stay on hold on cks-w1
+  PASS  kubeadm, kubelet and kubectl stay on hold on practice-worker
 == task 39.4: 5 passed, 0 failed
 ```
 
 ## Task 5: Aggregated ClusterRoles
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 39.5
@@ -735,7 +735,7 @@ clusterrolebinding.rbac.authorization.k8s.io/prom created
 Read how the aggregated role collects its rules, because the fix depends on where each rule comes from:
 
 ```console
-root@cks-cp:~# k get clusterrole monitoring-reader -o yaml | grep -A4 aggregationRule
+root@practice-control-plane:~# k get clusterrole monitoring-reader -o yaml | grep -A4 aggregationRule
 aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
@@ -747,7 +747,7 @@ apiVersion: rbac.authorization.k8s.io/v1
   name: monitoring-reader
   resourceVersion: "1633"
   uid: 40dad1a7-ffa0-464c-9b5f-462b77b5ec68
-root@cks-cp:~# k get clusterrole -l rbac.cks.io/aggregate-to-monitoring=true
+root@practice-control-plane:~# k get clusterrole -l rbac.cks.io/aggregate-to-monitoring=true
 NAME              CREATED AT
 monitoring-pods   2026-11-14T23:38:49Z
 ```
@@ -755,9 +755,9 @@ monitoring-pods   2026-11-14T23:38:49Z
 Create the new role with the same label, so the controller copies its rules into the aggregated role:
 
 ```console
-root@cks-cp:~# k create clusterrole monitoring-endpoints --verb=get,list,watch --resource=endpoints,services $do > me.yaml
-root@cks-cp:~# vim me.yaml        # add the label under metadata
-root@cks-cp:~# k apply -f me.yaml
+root@practice-control-plane:~# k create clusterrole monitoring-endpoints --verb=get,list,watch --resource=endpoints,services $do > me.yaml
+root@practice-control-plane:~# vim me.yaml        # add the label under metadata
+root@practice-control-plane:~# k apply -f me.yaml
 clusterrole.rbac.authorization.k8s.io/monitoring-endpoints created
 ```
 
@@ -773,9 +773,9 @@ metadata:
 The `pods/exec` rule comes from the labelled role `monitoring-pods`, so remove it there with `k edit clusterrole monitoring-pods`. Editing `monitoring-reader` instead would last only until the controller copies the rules again.
 
 ```console
-root@cks-cp:~# k auth can-i list endpoints -A --as=system:serviceaccount:monitoring:prom      # yes
+root@practice-control-plane:~# k auth can-i list endpoints -A --as=system:serviceaccount:monitoring:prom      # yes
 yes
-root@cks-cp:~# k auth can-i create pods --subresource=exec -A --as=system:serviceaccount:monitoring:prom    # no
+root@practice-control-plane:~# k auth can-i create pods --subresource=exec -A --as=system:serviceaccount:monitoring:prom    # no
 no
 ```
 
@@ -797,7 +797,7 @@ In the test run, the check failed four of six items before the solution.
 
 ## Task 6: Who may read the Secrets?
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 39.6
@@ -827,19 +827,19 @@ clusterrolebinding.rbac.authorization.k8s.io/log-cleanup created
 Ask the API server once per account, because `can-i` answers for one caller at a time:
 
 ```console
-root@cks-cp:~# for sa in builder deployer viewer cleaner; do
+root@practice-control-plane:~# for sa in builder deployer viewer cleaner; do
   echo "$sa: $(k auth can-i get secrets -n kube-system --as=system:serviceaccount:apps:$sa)"
 done
 builder: no
 deployer: no
 viewer: no
 cleaner: yes
-root@cks-cp:~# echo cleaner > /root/cks/secret-reader.txt
-root@cks-cp:~# k get rolebinding,clusterrolebinding -A -o wide | grep apps/cleaner
+root@practice-control-plane:~# echo cleaner > /root/cks/secret-reader.txt
+root@practice-control-plane:~# k get rolebinding,clusterrolebinding -A -o wide | grep apps/cleaner
             clusterrolebinding.rbac.authorization.k8s.io/log-cleanup                                                             ClusterRole/log-cleanup                                                             1s                                                                                         apps/cleaner
-root@cks-cp:~# k delete clusterrolebinding log-cleanup
+root@practice-control-plane:~# k delete clusterrolebinding log-cleanup
 clusterrolebinding.rbac.authorization.k8s.io "log-cleanup" deleted
-root@cks-cp:~# k auth can-i --list -n apps --as=system:serviceaccount:apps:viewer > /root/cks/viewer-perms.txt
+root@practice-control-plane:~# k auth can-i --list -n apps --as=system:serviceaccount:apps:viewer > /root/cks/viewer-perms.txt
 ```
 
 The right came from a ClusterRoleBinding named `log-cleanup`, a harmless name for a role that may get, list and delete every Secret in the cluster. In the test run, `viewer-perms.txt` held these lines among the default ones every account has:
@@ -865,7 +865,7 @@ $ ./platform-engineering/task.sh check 39.6
 
 ## Task 7: A bound token for another audience
 
-**Time budget:** 7 minutes. **Host:** `cks-cp`.
+**Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 39.7
@@ -882,7 +882,7 @@ serviceaccount/vault-auth created
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# k -n vault-client create token vault-auth --audience=vault --duration=2h > /root/cks/vault-token.txt
+root@practice-control-plane:~# k -n vault-client create token vault-auth --audience=vault --duration=2h > /root/cks/vault-token.txt
 ```
 
 The pod asks for its Vault token with a projected volume, as in the theory:
@@ -915,7 +915,7 @@ spec:
 `automountServiceAccountToken: false` stops only the default token, so a projected `serviceAccountToken` that you spell out still arrives. To read a token's claims, decode its middle part, which is plain base64-encoded JSON:
 
 ```console
-root@cks-cp:~# cut -d. -f2 /root/cks/vault-token.txt | tr '_-' '/+' | base64 -d 2>/dev/null; echo
+root@practice-control-plane:~# cut -d. -f2 /root/cks/vault-token.txt | tr '_-' '/+' | base64 -d 2>/dev/null; echo
 {"aud":["vault"],"exp":1794705542,"iat":1794698342,"iss":"https://kubernetes.default.svc.cluster.local","jti":"5f257a59-860e-4cae-be2f-d51fc14230a4","kubernetes.io":{"namespace":"vault-client","serviceaccount":{"name":"vault-auth","uid":"cc64eef3-41e6-43c0-a53f-b0daf18e0e8a"}},"nbf":1794698342,"sub":"system:serviceaccount:vault-client:vault-auth"}
 ```
 
@@ -934,7 +934,7 @@ $ ./platform-engineering/task.sh check 39.7
 
 ## Task 8: Clean up legacy token Secrets
 
-**Time budget:** 4 minutes. **Host:** `cks-cp`.
+**Time budget:** 4 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 39.8
@@ -958,11 +958,11 @@ The setup creates two legacy token Secrets and uses one of them, and in the test
 A field selector finds Secrets by their type, and the same selector deletes them:
 
 ```console
-root@cks-cp:~# k get secrets -A --field-selector type=kubernetes.io/service-account-token
+root@practice-control-plane:~# k get secrets -A --field-selector type=kubernetes.io/service-account-token
 NAMESPACE   NAME              TYPE                                  DATA   AGE
 legacy      old-batch-token   kubernetes.io/service-account-token   3      63s
 legacy      old-ci-token      kubernetes.io/service-account-token   3      63s
-root@cks-cp:~# k -n legacy delete secret --field-selector type=kubernetes.io/service-account-token
+root@practice-control-plane:~# k -n legacy delete secret --field-selector type=kubernetes.io/service-account-token
 secret "old-batch-token" deleted from legacy namespace
 secret "old-ci-token" deleted from legacy namespace
 ```
@@ -982,7 +982,7 @@ $ ./platform-engineering/task.sh check 39.8
 
 ## Task 9: Repair the API server
 
-**Time budget:** 8 minutes. **Host:** `cks-cp`.
+**Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 39.9
@@ -998,10 +998,10 @@ $ ./platform-engineering/task.sh setup 39.9
 `kubectl` fails while the API server is down, so look on the node, as the theory describes:
 
 ```console
-root@cks-cp:~# crictl ps -a --name kube-apiserver
+root@practice-control-plane:~# crictl ps -a --name kube-apiserver
 CONTAINER           IMAGE               CREATED             STATE               NAME                ATTEMPT             POD ID              POD                     NAMESPACE
-02b4d931b9b58       a6d02e64d4827       11 seconds ago      Exited              kube-apiserver      2                   317638bcd0558       kube-apiserver-cks-cp   kube-system
-root@cks-cp:~# crictl logs <id of the newest exited container>
+02b4d931b9b58       a6d02e64d4827       11 seconds ago      Exited              kube-apiserver      2                   317638bcd0558       kube-apiserver-practice-control-plane   kube-system
+root@practice-control-plane:~# crictl logs <id of the newest exited container>
 ...
 E1114 23:39:49.860527       1 run.go:72] "command failed" err="enable-admission-plugins plugin \"AlwaysPullImage\" is unknown"
 ```
@@ -1032,7 +1032,7 @@ Fix both lines in `/etc/kubernetes/manifests/kube-apiserver.yaml`:
 Then `watch crictl ps --name kube-apiserver` until a container stays up, and run `k get nodes`. AlwaysPullImages sets `imagePullPolicy: Always` on every new pod, so a pod on a shared node never starts from an image that somebody else pulled with their own credentials:
 
 ```console
-root@cks-cp:~# k run pull-test --image=busybox:1.36 --image-pull-policy=IfNotPresent --dry-run=server -o yaml -- sleep 1 | grep imagePullPolicy
+root@practice-control-plane:~# k run pull-test --image=busybox:1.36 --image-pull-policy=IfNotPresent --dry-run=server -o yaml -- sleep 1 | grep imagePullPolicy
     imagePullPolicy: Always
 ```
 
@@ -1050,7 +1050,7 @@ $ ./platform-engineering/task.sh check 39.9
 
 ## Task 10: Repair etcd
 
-**Time budget:** 8 minutes. **Host:** `cks-cp`.
+**Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 39.10
@@ -1067,10 +1067,10 @@ configmap/cks-canary created
 Start at the bottom layer, because the API server depends on etcd and fails whenever etcd fails:
 
 ```console
-root@cks-cp:~# crictl ps -a --name etcd
+root@practice-control-plane:~# crictl ps -a --name etcd
 CONTAINER           IMAGE               CREATED             STATE               NAME                ATTEMPT             POD ID              POD                 NAMESPACE
-692ac1801f589       c2e426bbd1cd6       20 seconds ago      Exited              etcd                2                   a097efbb04db6       etcd-cks-cp         kube-system
-root@cks-cp:~# crictl logs <id of the newest etcd container>
+692ac1801f589       c2e426bbd1cd6       20 seconds ago      Exited              etcd                2                   a097efbb04db6       etcd-practice-control-plane         kube-system
+root@practice-control-plane:~# crictl logs <id of the newest etcd container>
 ...
 {"level":"fatal","ts":"2026-11-14T23:42:58.103816Z","caller":"etcdmain/etcd.go:172","msg":"listener failed","error":"open /etc/kubernetes/pki/etcd/server.cert: no such file or directory","stacktrace":"go.etcd.io/etcd/server/v3/etcdmain.startEtcdOrProxyV2\n\tgo.etcd.io/etcd/server/v3/etcdmain/etcd.go:172\ngo.etcd.io/etcd/server/v3/etcdmain.Main\n\tgo.etcd.io/etcd/server/v3/etcdmain/main.go:40\nmain.main\n\tgo.etcd.io/etcd/server/v3/main.go:31\nruntime.main\n\truntime/proc.go:290"}
 ```
@@ -1088,13 +1088,13 @@ Error while dialing: dial tcp 127.0.0.1:2379: connect: connection refused
 The API server talks to etcd at `https://127.0.0.1:2379`, the value of its `--etcd-servers` flag, so compare that address with etcd's own flags:
 
 ```console
-root@cks-cp:~# grep etcd-servers /etc/kubernetes/manifests/kube-apiserver.yaml
+root@practice-control-plane:~# grep etcd-servers /etc/kubernetes/manifests/kube-apiserver.yaml
     - --etcd-servers=https://127.0.0.1:2379
-root@cks-cp:~# grep -E 'listen-client-urls|advertise-client-urls' /etc/kubernetes/manifests/etcd.yaml
+root@practice-control-plane:~# grep -E 'listen-client-urls|advertise-client-urls' /etc/kubernetes/manifests/etcd.yaml
     kubeadm.kubernetes.io/etcd.advertise-client-urls: https://192.168.139.194:2379
     - --advertise-client-urls=https://192.168.139.194:2379
     - --listen-client-urls=https://127.0.0.1:2378,https://192.168.139.194:2379
-root@cks-cp:~# ss -tlnp | grep etcd
+root@practice-control-plane:~# ss -tlnp | grep etcd
 LISTEN 0      4096   192.168.139.194:2380       0.0.0.0:*    users:(("etcd",pid=84124,fd=4))           
 LISTEN 0      4096   192.168.139.194:2379       0.0.0.0:*    users:(("etcd",pid=84124,fd=8))           
 LISTEN 0      4096         127.0.0.1:2378       0.0.0.0:*    users:(("etcd",pid=84124,fd=7))           
@@ -1120,7 +1120,7 @@ $ ./platform-engineering/task.sh check 39.10
 
 ## Task 11: No pods for a new Deployment
 
-**Time budget:** 7 minutes. **Host:** `cks-cp`.
+**Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 39.11
@@ -1134,24 +1134,24 @@ deployment.apps/canary created
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# k get deploy,rs,pods -l app=canary      # a Deployment, no ReplicaSet: the controller manager
+root@practice-control-plane:~# k get deploy,rs,pods -l app=canary      # a Deployment, no ReplicaSet: the controller manager
 NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
 deployment.apps/canary   0/1     0            0           2m50s
-root@cks-cp:~# k -n kube-system get pods -l tier=control-plane
+root@practice-control-plane:~# k -n kube-system get pods -l tier=control-plane
 NAME                             READY   STATUS             RESTARTS        AGE
-etcd-cks-cp                      1/1     Running            0               20m
-kube-apiserver-cks-cp            1/1     Running            4 (3m44s ago)   7m8s
-kube-controller-manager-cks-cp   0/1     CrashLoopBackOff   5 (18s ago)     3m
-kube-scheduler-cks-cp            0/1     CrashLoopBackOff   4 (87s ago)     3m1s
+etcd-practice-control-plane                      1/1     Running            0               20m
+kube-apiserver-practice-control-plane            1/1     Running            4 (3m44s ago)   7m8s
+kube-controller-manager-practice-control-plane   0/1     CrashLoopBackOff   5 (18s ago)     3m
+kube-scheduler-practice-control-plane            0/1     CrashLoopBackOff   4 (87s ago)     3m1s
 ```
 
-In the test run, both `kube-controller-manager-cks-cp` and `kube-scheduler-cks-cp` showed `CrashLoopBackOff`. The API server runs, so `k logs` works here:
+In the test run, both `kube-controller-manager-practice-control-plane` and `kube-scheduler-practice-control-plane` showed `CrashLoopBackOff`. The API server runs, so `k logs` works here:
 
 ```console
-root@cks-cp:~# k -n kube-system logs kube-scheduler-cks-cp
+root@practice-control-plane:~# k -n kube-system logs kube-scheduler-practice-control-plane
 I1114 23:26:39.133846       1 serving.go:411] Generated self-signed cert in-memory
 E1114 23:26:39.133939       1 run.go:72] "command failed" err="stat /etc/kubernetes/scheduler.config: no such file or directory"
-root@cks-cp:~# k -n kube-system logs kube-controller-manager-cks-cp
+root@practice-control-plane:~# k -n kube-system logs kube-controller-manager-practice-control-plane
 ...
 Error: unknown flag: --cluster-signing-keyfile
 ```
@@ -1172,7 +1172,7 @@ $ ./platform-engineering/task.sh check 39.11
 
 ## Task 12: An API server that allows everything
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 39.12
@@ -1188,7 +1188,7 @@ The setup prints what the cluster allows now, which in the test run was `may the
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# grep authorization-mode /etc/kubernetes/manifests/kube-apiserver.yaml     # AlwaysAllow
+root@practice-control-plane:~# grep authorization-mode /etc/kubernetes/manifests/kube-apiserver.yaml     # AlwaysAllow
     - --authorization-mode=AlwaysAllow
 ```
 
@@ -1202,7 +1202,7 @@ Node comes first, so a kubelet's requests get the Node authorizer's narrow answe
 
 The setup's message shows the danger, because every ServiceAccount token, and so every pod, may read every Secret. Anonymous callers are the one group the mode doesn't open up. In the test run, an anonymous request under `AlwaysAllow` got `401`, because the API server turns anonymous access off by itself when `AlwaysAllow` is the only authorizer. After the fix, the same request got `403`, the normal answer for an anonymous caller without a binding.
 
-The same switch has a side effect that shows within minutes. kubeadm's health probes for the API server send no credentials, so under `AlwaysAllow` they get `401` too. In the test run, `k -n kube-system describe pod kube-apiserver-cks-cp` showed `Startup probe failed: HTTP probe failed with statuscode: 401`, the pod stayed `0/1`, and the kubelet restarted the API server after its 24 failed probes, the same loop the theory describes for anonymous access. An API server that keeps restarting is therefore a hint to read its authorization flags.
+The same switch has a side effect that shows within minutes. kubeadm's health probes for the API server send no credentials, so under `AlwaysAllow` they get `401` too. In the test run, `k -n kube-system describe pod kube-apiserver-practice-control-plane` showed `Startup probe failed: HTTP probe failed with statuscode: 401`, the pod stayed `0/1`, and the kubelet restarted the API server after its 24 failed probes, the same loop the theory describes for anonymous access. An API server that keeps restarting is therefore a hint to read its authorization flags.
 
 </details>
 

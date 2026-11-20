@@ -26,6 +26,14 @@ Usage: ./lab.sh <command> [arguments]
               removes the course namespaces)
   down        delete the cluster and everything in it (asks first, --yes skips)
   help        show this list
+
+The practice cluster for modules 33 to 43 (two kubeadm nodes in Docker, built with kind):
+  practice up              build it (about 3 minutes the first time, 2 after that)
+  practice reset           build it again from scratch, to start a module clean
+  practice down            delete it (asks first, --yes skips)
+  practice shell [node]    open a root shell on the control plane, or on "worker"
+  task setup|check|solve|list ID     the timed tasks, for example: ./lab.sh task setup 38.3
+  exam setup|score|solve N [task]    the six practice exams, for example: ./lab.sh exam setup 4
 HELP
 }
 
@@ -50,6 +58,33 @@ status() {
   echo "${pods:-none}"
 }
 
+# ./lab.sh practice up|reset|down|shell [node]
+practice() {
+  local cluster="$ROOT/platform-engineering/practice/cluster" sub="${1:-}"
+  [[ $# -gt 0 ]] && shift
+  case "$sub" in
+    up)    exec "$cluster/create.sh" "$@" ;;
+    reset) exec "$cluster/reset.sh" "$@" ;;
+    down)  exec "$cluster/destroy.sh" "$@" ;;
+    shell)
+      # shellcheck source=/dev/null
+      . "$cluster/platform.sh"
+      local node="$CP"
+      case "${1:-}" in
+        ""|cp|control-plane) node="$CP" ;;
+        w1|worker) node="$W1" ;;
+        *) node="$1" ;;
+      esac
+      case "$PRACTICE_PLATFORM" in
+        kind) exec docker exec -it -w /root "$node" bash ;;
+        orbstack) exec orb -m "$node" -u root bash -c 'cd /root && exec bash -i' ;;
+        vms) local h="$PRACTICE_CP_HOST"; [[ "$node" == "$W1" ]] && h="$PRACTICE_W1_HOST"
+             exec ssh -t -i "$PRACTICE_SSH_KEY" $PRACTICE_SSH_OPTS "$PRACTICE_SSH_USER@$h" sudo -i ;;
+      esac ;;
+    *) echo "Usage: ./lab.sh practice up|reset|down|shell [worker]" >&2; exit 1 ;;
+  esac
+}
+
 command="${1:-help}"
 [[ $# -gt 0 ]] && shift
 
@@ -70,6 +105,9 @@ case "$command" in
     ;;
   reset)  exec "$ROOT/platform-engineering/reset.sh" "$@" ;;
   down)   exec "$ROOT/scripts/teardown.sh" "$@" ;;
+  practice) practice "$@" ;;
+  task)   exec "$ROOT/platform-engineering/task.sh" "$@" ;;
+  exam)   exec "$ROOT/platform-engineering/practice-exam.sh" "$@" ;;
   help|-h|--help) usage ;;
   *)
     echo "Unknown command: ${command}" >&2

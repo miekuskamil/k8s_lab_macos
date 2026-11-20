@@ -48,7 +48,7 @@ score_m1() {
   check_cp "Deployment m3-app/shop scaled to 4 has 4 ready pods" \
     "kubectl -n m3-app scale deploy shop --replicas=4 >/dev/null && kubectl -n m3-app rollout status deploy shop --timeout=90s"
   check_cp "kube-scheduler and kube-controller-manager are Ready" \
-    "kubectl -n kube-system wait pod kube-scheduler-cks-cp kube-controller-manager-cks-cp --for=condition=Ready --timeout=30s"
+    "kubectl -n kube-system wait pod kube-scheduler-$CP kube-controller-manager-$CP --for=condition=Ready --timeout=30s"
   check_cp "the controller manager uses /etc/kubernetes/pki/ca.crt" "grep -q -- '--root-ca-file=/etc/kubernetes/pki/ca.crt\$' /etc/kubernetes/manifests/kube-controller-manager.yaml"
 }
 solve_m1() {
@@ -295,7 +295,7 @@ score_m9() {
 }
 solve_m9() { w1_sh "sed -i 's/ yes\$/ no/' /etc/ssh/sshd_config.d/05-vendor.conf && sshd -t && systemctl restart ssh"; }
 
-# ---- 10. Kernel modules nobody needs (4, Lima, or cks-w1 on VMs) ----------------------------------------------------------------------
+# ---- 10. Kernel modules nobody needs (4, Lima, or the worker on VMs) ----------------------------------------------------------------------
 setup_m10() { kern_sh 'rm -f /etc/modprobe.d/m3*.conf; modprobe udf; modprobe dccp; true'; }
 score_m10() {
   check_kern "udf and dccp are not loaded" "! lsmod | grep -qE '^(udf|dccp) '"
@@ -358,13 +358,13 @@ setup_m12() { mk_ns m3-sbx; }
 score_m12() {
   check_cp "RuntimeClass sandbox uses runsc and nodeSelector runtime=gvisor" \
     "kubectl get runtimeclass sandbox -o jsonpath='{.handler}/{.scheduling.nodeSelector.runtime}' | grep -qx runsc/gvisor"
-  check_cp "cks-w1 carries runtime=gvisor" "kubectl get node cks-w1 -o jsonpath='{.metadata.labels.runtime}' | grep -qx gvisor"
+  check_cp "$W1 carries runtime=gvisor" "kubectl get node $W1 -o jsonpath='{.metadata.labels.runtime}' | grep -qx gvisor"
   check_cp "pod m3-sbx/scan runs under gVisor" \
     "kubectl -n m3-sbx wait pod scan --for=condition=Ready --timeout=60s && kubectl -n m3-sbx exec scan -- dmesg | grep -q gVisor"
 }
 solve_m12() {
   oncp <<'EOF'
-kubectl label node cks-w1 runtime=gvisor --overwrite
+kubectl label node $W1 runtime=gvisor --overwrite
 kubectl apply -f - <<'YAML'
 apiVersion: node.k8s.io/v1
 kind: RuntimeClass
@@ -554,18 +554,18 @@ setup_m17() {
 score_m17() {
   check_cp "pod locked uses the Localhost profile m3.json and a read-only root file system" \
     "kubectl -n m3-sec get pod locked -o json | python3 -c 'import json,sys; s=json.load(sys.stdin)[\"spec\"]; c=s[\"containers\"][0].get(\"securityContext\",{}); sp=c.get(\"seccompProfile\") or s.get(\"securityContext\",{}).get(\"seccompProfile\") or {}; sys.exit(0 if sp.get(\"type\")==\"Localhost\" and sp.get(\"localhostProfile\")==\"m3.json\" and c.get(\"readOnlyRootFilesystem\") else 1)'"
-  check_cp "locked runs on cks-w1; mkdir fails in /data, a file write there works" \
+  check_cp "locked runs on $W1; mkdir fails in /data, a file write there works" \
     "kubectl -n m3-sec wait pod locked --for=condition=Ready --timeout=60s && ! kubectl -n m3-sec exec locked -- mkdir /data/d && kubectl -n m3-sec exec locked -- sh -c 'echo ok > /data/f'"
 }
 solve_m17() {
   w1_sh 'mkdir -p /var/lib/kubelet/seccomp && cp /root/mock/no-mkdir.json /var/lib/kubelet/seccomp/m3.json'
   oncp <<'EOF'
-kubectl apply -f - <<'YAML'
+kubectl apply -f - <<YAML
 apiVersion: v1
 kind: Pod
 metadata: {name: locked, namespace: m3-sec}
 spec:
-  nodeName: cks-w1
+  nodeName: $W1
   containers:
   - name: c
     image: busybox:1.36

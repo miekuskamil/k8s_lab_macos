@@ -48,7 +48,7 @@ A NodePort opens one port per Service on every node, which quickly becomes a lon
 
 That entry point is an [Ingress controller](../glossary.md#ingress-controller), a reverse proxy in a pod, here ingress-nginx, which itself sits behind a NodePort Service on port 30080. An [Ingress](../glossary.md#ingress) object holds the routing rules: for host `shop.ckad.local`, path `/api` goes to Service `api` on port 80, and everything else to Service `web`. The controller watches every Ingress whose `ingressClassName` names its class, and rewrites its own configuration from them.
 
-![A request from curl with the Host header shop.ckad.local reaches NodePort 30080 on cks-w1, kube-proxy hands it to the ingress-nginx pod, nginx matches the Ingress rules and sends it to an endpoint of Service api, the pod that serves /api/orders](../../docs/diagrams/chapters/ckad-ingress-path.svg)
+![A request from curl with the Host header shop.ckad.local reaches NodePort 30080 on practice-worker, kube-proxy hands it to the ingress-nginx pod, nginx matches the Ingress rules and sends it to an endpoint of Service api, the pod that serves /api/orders](../../docs/diagrams/chapters/ckad-ingress-path.svg)
 
 The figure follows one request through four steps:
 
@@ -106,7 +106,7 @@ NetworkPolicies only allow and never deny because allow-lists add up safely: a n
 
 ## Task 1: A ClusterIP Service
 
-**Time budget:** 3 minutes. **Host:** `cks-cp`.
+**Time budget:** 3 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 37.1
@@ -129,15 +129,15 @@ pod/client                     1/1     Running   0          1s
 `kubectl expose` copies the Deployment's selector into the Service, which saves typing and avoids a selector typo:
 
 ```console
-root@cks-cp:~# k -n svc-basic expose deploy catalog --port=80 --target-port=8080
+root@practice-control-plane:~# k -n svc-basic expose deploy catalog --port=80 --target-port=8080
 service/catalog exposed
-root@cks-cp:~# k -n svc-basic get svc,endpointslice
+root@practice-control-plane:~# k -n svc-basic get svc,endpointslice
 NAME              TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
 service/catalog   ClusterIP   10.97.72.222   <none>        80/TCP    0s
 
 NAME                                           ADDRESSTYPE   PORTS   ENDPOINTS                                      AGE
 endpointslice.discovery.k8s.io/catalog-wsnrm   IPv4          8080    10.244.135.159,10.244.135.161,10.244.135.160   0s
-root@cks-cp:~# k -n svc-basic exec client -- wget -qO- http://catalog.svc-basic.svc.cluster.local
+root@practice-control-plane:~# k -n svc-basic exec client -- wget -qO- http://catalog.svc-basic.svc.cluster.local
 catalog
 ```
 
@@ -156,7 +156,7 @@ $ ./platform-engineering/task.sh check 37.1
 
 ## Task 2: A NodePort Service
 
-**Time budget:** 4 minutes. **Host:** `cks-cp`.
+**Time budget:** 4 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 37.2
@@ -174,8 +174,8 @@ deployment "web" successfully rolled out
 `kubectl expose` has no flag for the node port, and `kubectl create service nodeport` has one but guesses the selector from the Service's name. So generate with `create service`, then fix the selector in the file:
 
 ```console
-root@cks-cp:~# k -n svc-nodeport create service nodeport web-np --tcp=80:80 --node-port=30100 $do > /opt/ckad/5.2-svc.yaml
-root@cks-cp:~# grep -A2 selector /opt/ckad/5.2-svc.yaml
+root@practice-control-plane:~# k -n svc-nodeport create service nodeport web-np --tcp=80:80 --node-port=30100 $do > /opt/apps/5.2-svc.yaml
+root@practice-control-plane:~# grep -A2 selector /opt/apps/5.2-svc.yaml
   selector:
     app: web-np
   type: NodePort
@@ -184,15 +184,15 @@ root@cks-cp:~# grep -A2 selector /opt/ckad/5.2-svc.yaml
 Change `app: web-np` to `app: web` with `vim`, then apply:
 
 ```console
-root@cks-cp:~# k apply -f /opt/ckad/5.2-svc.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/5.2-svc.yaml
 service/web-np created
-root@cks-cp:~# k -n svc-nodeport get svc web-np
+root@practice-control-plane:~# k -n svc-nodeport get svc web-np
 NAME     TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
 web-np   NodePort   10.103.181.158   <none>        80:30100/TCP   0s
-root@cks-cp:~# k -n svc-nodeport get endpointslice
+root@practice-control-plane:~# k -n svc-nodeport get endpointslice
 NAME           ADDRESSTYPE   PORTS   ENDPOINTS                       AGE
 web-np-tkbhx   IPv4          80      10.244.135.135,10.244.135.147   0s
-root@cks-cp:~# curl -s http://$(k get node cks-w1 -o jsonpath='{.status.addresses[0].address}'):30100 | grep title
+root@practice-control-plane:~# curl -s http://$(k get node practice-worker -o jsonpath='{.status.addresses[0].address}'):30100 | grep title
 <title>Welcome to nginx!</title>
 ```
 
@@ -204,13 +204,13 @@ root@cks-cp:~# curl -s http://$(k get node cks-w1 -o jsonpath='{.status.addresse
 $ ./platform-engineering/task.sh check 37.2
 == check task 37.2
   PASS  Service web-np is a NodePort on 30100, port 80
-  PASS  nginx answers on cks-w1's address, port 30100
+  PASS  nginx answers on practice-worker's address, port 30100
 == task 37.2: 2 passed, 0 failed
 ```
 
 ## Task 3: One Service, two named ports
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 > Deployment `shop` in namespace `svc-ports` serves the shop on a container port named `http` (8080) and metrics on one named `metrics` (9090). Create a Service `shop` with a port `http` on 80 and a port `metrics` on 9090, both pointing at the container ports by name. Pod `client` must get the shop from `http://shop` and the metrics from `http://shop:9090`.
 
@@ -238,16 +238,16 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k -n svc-ports get deploy shop -o jsonpath='{.spec.template.spec.containers[0].ports}{"\n"}'
+root@practice-control-plane:~# k -n svc-ports get deploy shop -o jsonpath='{.spec.template.spec.containers[0].ports}{"\n"}'
 [{"containerPort":8080,"name":"http","protocol":"TCP"},{"containerPort":9090,"name":"metrics","protocol":"TCP"}]
-root@cks-cp:~# k apply -f /opt/ckad/5.3/svc.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/5.3/svc.yaml
 service/shop created
-root@cks-cp:~# k -n svc-ports get endpointslice
+root@practice-control-plane:~# k -n svc-ports get endpointslice
 NAME         ADDRESSTYPE   PORTS       ENDPOINTS                       AGE
 shop-lbkpk   IPv4          8080,9090   10.244.135.165,10.244.135.166   0s
-root@cks-cp:~# k -n svc-ports exec client -- wget -qO- http://shop
+root@practice-control-plane:~# k -n svc-ports exec client -- wget -qO- http://shop
 shop
-root@cks-cp:~# k -n svc-ports exec client -- wget -qO- http://shop:9090
+root@practice-control-plane:~# k -n svc-ports exec client -- wget -qO- http://shop:9090
 orders_total 42
 ```
 
@@ -266,7 +266,7 @@ $ ./platform-engineering/task.sh check 37.3
 
 ## Task 4: An Ingress with two paths
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 37.4
@@ -285,9 +285,9 @@ ingress-nginx-controller   NodePort   10.105.118.132   <none>        80:30080/TC
 `kubectl create ingress` writes the rules in one line each, and the `*` at the end of a path makes it a `Prefix` match:
 
 ```console
-root@cks-cp:~# k -n ing-shop create ingress shop --class=nginx --rule='shop.ckad.local/*=web:80' --rule='shop.ckad.local/api*=api:80'
+root@practice-control-plane:~# k -n ing-shop create ingress shop --class=nginx --rule='shop.ckad.local/*=web:80' --rule='shop.ckad.local/api*=api:80'
 ingress.networking.k8s.io/shop created
-root@cks-cp:~# k -n ing-shop get ingress shop -o yaml | grep -A20 '^spec:'
+root@practice-control-plane:~# k -n ing-shop get ingress shop -o yaml | grep -A20 '^spec:'
 spec:
   ingressClassName: nginx
   rules:
@@ -309,9 +309,9 @@ spec:
         path: /api
         pathType: Prefix
 status:
-root@cks-cp:~# curl -s -H 'Host: shop.ckad.local' http://$(k get node cks-w1 -o jsonpath='{.status.addresses[0].address}'):30080/
+root@practice-control-plane:~# curl -s -H 'Host: shop.ckad.local' http://$(k get node practice-worker -o jsonpath='{.status.addresses[0].address}'):30080/
 web
-root@cks-cp:~# curl -s -H 'Host: shop.ckad.local' http://$(k get node cks-w1 -o jsonpath='{.status.addresses[0].address}'):30080/api/orders
+root@practice-control-plane:~# curl -s -H 'Host: shop.ckad.local' http://$(k get node practice-worker -o jsonpath='{.status.addresses[0].address}'):30080/api/orders
 orders
 ```
 
@@ -331,7 +331,7 @@ $ ./platform-engineering/task.sh check 37.4
 
 ## Task 5: Repair an Ingress for two hosts
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 37.5
@@ -352,10 +352,10 @@ service/docs   ClusterIP   10.107.8.188    <none>        8000/TCP   1s
 Compare the Ingress with what exists: the class it names, and the ports of the Services it points to:
 
 ```console
-root@cks-cp:~# k get ingressclass
+root@practice-control-plane:~# k get ingressclass
 NAME    CONTROLLER             PARAMETERS   AGE
 nginx   k8s.io/ingress-nginx   <none>       28m
-root@cks-cp:~# k -n ing-hosts describe ingress sites | grep -A6 Rules
+root@practice-control-plane:~# k -n ing-hosts describe ingress sites | grep -A6 Rules
 Rules:
   Host             Path  Backends
   ----             ----  --------
@@ -368,9 +368,9 @@ Rules:
 The class `nginx-internal` doesn't exist, and `docs:http ()` shows a backend without endpoints, because Service `docs` names its port `web`, not `http`. One JSON patch fixes both:
 
 ```console
-root@cks-cp:~# k -n ing-hosts patch ingress sites --type=json -p '[{"op":"replace","path":"/spec/ingressClassName","value":"nginx"},{"op":"replace","path":"/spec/rules/1/http/paths/0/backend/service/port","value":{"name":"web"}}]'
+root@practice-control-plane:~# k -n ing-hosts patch ingress sites --type=json -p '[{"op":"replace","path":"/spec/ingressClassName","value":"nginx"},{"op":"replace","path":"/spec/rules/1/http/paths/0/backend/service/port","value":{"name":"web"}}]'
 ingress.networking.k8s.io/sites patched
-root@cks-cp:~# k -n ing-hosts describe ingress sites | grep -A6 Rules
+root@practice-control-plane:~# k -n ing-hosts describe ingress sites | grep -A6 Rules
 Rules:
   Host             Path  Backends
   ----             ----  --------
@@ -378,7 +378,7 @@ Rules:
                    /   blog:80 (10.244.135.170:8080)
   docs.ckad.local  
                    /   docs:web (10.244.135.171:8080)
-root@cks-cp:~# curl -s -H 'Host: docs.ckad.local' http://$(k get node cks-w1 -o jsonpath='{.status.addresses[0].address}'):30080/
+root@practice-control-plane:~# curl -s -H 'Host: docs.ckad.local' http://$(k get node practice-worker -o jsonpath='{.status.addresses[0].address}'):30080/
 docs
 ```
 
@@ -397,15 +397,15 @@ $ ./platform-engineering/task.sh check 37.5
 
 ## Task 6: Deny by default, then allow one path
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 37.6
 == setup task 37.6
 NAME       READY   STATUS    RESTARTS   AGE   IP               NODE     NOMINATED NODE   READINESS GATES   LABELS
-backend    1/1     Running   0          1s    10.244.135.173   cks-w1   <none>           <none>            app=backend
-frontend   1/1     Running   0          1s    10.244.135.174   cks-w1   <none>           <none>            role=frontend
-other      1/1     Running   0          1s    10.244.135.175   cks-w1   <none>           <none>            role=other
+backend    1/1     Running   0          1s    10.244.135.173   practice-worker   <none>           <none>            app=backend
+frontend   1/1     Running   0          1s    10.244.135.174   practice-worker   <none>           <none>            role=frontend
+other      1/1     Running   0          1s    10.244.135.175   practice-worker   <none>           <none>            role=other
 ```
 
 > In namespace `np-app`:
@@ -450,13 +450,13 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k apply -f /opt/ckad/5.6/netpol.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/5.6/netpol.yaml
 networkpolicy.networking.k8s.io/default-deny-ingress created
 networkpolicy.networking.k8s.io/backend-allow-frontend created
-root@cks-cp:~# BACKEND=$(k -n np-app get pod backend -o jsonpath='{.status.podIP}')
-root@cks-cp:~# k -n np-app exec frontend -- wget -qO- -T 3 http://$BACKEND:8080
+root@practice-control-plane:~# BACKEND=$(k -n np-app get pod backend -o jsonpath='{.status.podIP}')
+root@practice-control-plane:~# k -n np-app exec frontend -- wget -qO- -T 3 http://$BACKEND:8080
 backend
-root@cks-cp:~# k -n np-app exec other -- wget -qO- -T 3 http://$BACKEND:8080
+root@practice-control-plane:~# k -n np-app exec other -- wget -qO- -T 3 http://$BACKEND:8080
 wget: download timed out
 command terminated with exit code 1
 ```
@@ -477,7 +477,7 @@ $ ./platform-engineering/task.sh check 37.6
 
 ## Task 7: Egress only to the database and DNS
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 > In namespace `np-egress`, pod `app` (label `app=app`) may open connections only to the pods labelled `app=db` on TCP port 5432, which it reaches through Service `db`, and to DNS. Create a NetworkPolicy `app-egress` for that. Everything else, such as `partner.np-egress-other` or the API server, must stay out of its reach.
 
@@ -514,11 +514,11 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k apply -f /opt/ckad/5.7/netpol.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/5.7/netpol.yaml
 networkpolicy.networking.k8s.io/app-egress created
-root@cks-cp:~# k -n np-egress exec app -- wget -qO- -T 3 http://db:5432
+root@practice-control-plane:~# k -n np-egress exec app -- wget -qO- -T 3 http://db:5432
 db
-root@cks-cp:~# k -n np-egress exec app -- wget -qO- -T 3 http://partner.np-egress-other
+root@practice-control-plane:~# k -n np-egress exec app -- wget -qO- -T 3 http://partner.np-egress-other
 wget: download timed out
 command terminated with exit code 1
 ```
@@ -539,14 +539,14 @@ $ ./platform-engineering/task.sh check 37.7
 
 ## Task 8: Traffic from one namespace, one kind of pod
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 37.8
 == setup task 37.8
 NAME            STATUS   AGE   LABELS
-np-dev          Active   2s    ckad=task,kubernetes.io/metadata.name=np-dev,team=dev
-np-monitoring   Active   2s    ckad=task,kubernetes.io/metadata.name=np-monitoring,team=monitoring
+np-dev          Active   2s    practice=task,kubernetes.io/metadata.name=np-dev,team=dev
+np-monitoring   Active   2s    practice=task,kubernetes.io/metadata.name=np-monitoring,team=monitoring
 ```
 
 > Pod `exporter` in namespace `np-metrics` serves metrics on port 9100. Create a NetworkPolicy `allow-prometheus` so that only pods labelled `app=prometheus` in namespaces labelled `team=monitoring` reach it. Grafana in `np-monitoring` and the prometheus pod in `np-dev` must not.
@@ -577,15 +577,15 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k apply -f /opt/ckad/5.8/netpol.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/5.8/netpol.yaml
 networkpolicy.networking.k8s.io/allow-prometheus created
-root@cks-cp:~# EXPORTER=$(k -n np-metrics get pod exporter -o jsonpath='{.status.podIP}')
-root@cks-cp:~# k -n np-monitoring exec prometheus -- wget -qO- -T 3 http://$EXPORTER:9100
+root@practice-control-plane:~# EXPORTER=$(k -n np-metrics get pod exporter -o jsonpath='{.status.podIP}')
+root@practice-control-plane:~# k -n np-monitoring exec prometheus -- wget -qO- -T 3 http://$EXPORTER:9100
 exporter
-root@cks-cp:~# k -n np-monitoring exec grafana -- wget -qO- -T 3 http://$EXPORTER:9100
+root@practice-control-plane:~# k -n np-monitoring exec grafana -- wget -qO- -T 3 http://$EXPORTER:9100
 wget: download timed out
 command terminated with exit code 1
-root@cks-cp:~# k -n np-dev exec prometheus -- wget -qO- -T 3 http://$EXPORTER:9100
+root@practice-control-plane:~# k -n np-dev exec prometheus -- wget -qO- -T 3 http://$EXPORTER:9100
 wget: download timed out
 command terminated with exit code 1
 ```
@@ -606,7 +606,7 @@ $ ./platform-engineering/task.sh check 37.8
 
 ## Task 9: Fit a pod to policies you may not change
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 37.9
@@ -625,10 +625,10 @@ payments-ingress   app=payments           0s
 Read what each policy wants from a client. The egress policy needs `role=payments-client` on the sender, and the ingress policy on `payments` needs both `role=payments-client` and `env=prod`:
 
 ```console
-root@cks-cp:~# k -n np-labels exec checkout -- wget -qO- -T 3 http://payments
+root@practice-control-plane:~# k -n np-labels exec checkout -- wget -qO- -T 3 http://payments
 wget: download timed out
 command terminated with exit code 1
-root@cks-cp:~# k -n np-labels describe netpol payments-clients payments-ingress | grep -A2 -E 'PodSelector|From|To'
+root@practice-control-plane:~# k -n np-labels describe netpol payments-clients payments-ingress | grep -A2 -E 'PodSelector|From|To'
   PodSelector:     role=payments-client
   Not affecting ingress traffic
   Allowing egress traffic:
@@ -645,9 +645,9 @@ root@cks-cp:~# k -n np-labels describe netpol payments-clients payments-ingress 
       PodSelector: env=prod,role=payments-client
   Not affecting egress traffic
   Policy Types: Ingress
-root@cks-cp:~# k -n np-labels label pod checkout role=payments-client env=prod
+root@practice-control-plane:~# k -n np-labels label pod checkout role=payments-client env=prod
 pod/checkout labeled
-root@cks-cp:~# k -n np-labels exec checkout -- wget -qO- -T 3 http://payments
+root@practice-control-plane:~# k -n np-labels exec checkout -- wget -qO- -T 3 http://payments
 payments
 ```
 
@@ -667,7 +667,7 @@ $ ./platform-engineering/task.sh check 37.9
 
 ## Task 10: A StatefulSet behind a headless Service
 
-**Time budget:** 7 minutes. **Host:** `cks-cp`.
+**Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 > In namespace `stateful`, create a headless Service `db` on port 8080 and a StatefulSet `db` with 2 replicas (image `busybox:1.36`) that serve their own host name over HTTP on 8080, for example with `sh -c 'mkdir -p /www && hostname > /www/index.html && exec httpd -f -p 8080 -h /www'`. Pod `client` must reach each replica by its own name, `db-0.db` and `db-1.db`.
 
@@ -714,14 +714,14 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k apply -f /opt/ckad/5.10/db.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/5.10/db.yaml
 service/db created
 statefulset.apps/db created
-root@cks-cp:~# k -n stateful rollout status sts db
+root@practice-control-plane:~# k -n stateful rollout status sts db
 Waiting for 2 pods to be ready...
 Waiting for 1 pods to be ready...
 partitioned roll out complete: 2 new pods have been updated...
-root@cks-cp:~# k -n stateful exec client -- nslookup db.stateful.svc.cluster.local
+root@practice-control-plane:~# k -n stateful exec client -- nslookup db.stateful.svc.cluster.local
 Server:		10.96.0.10
 Address:	10.96.0.10:53
 
@@ -730,7 +730,7 @@ Address: 10.244.135.188
 Name:	db.stateful.svc.cluster.local
 Address: 10.244.135.189
 
-root@cks-cp:~# k -n stateful exec client -- wget -qO- http://db-1.db:8080
+root@practice-control-plane:~# k -n stateful exec client -- wget -qO- http://db-1.db:8080
 db-1
 ```
 

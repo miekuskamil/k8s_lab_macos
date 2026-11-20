@@ -19,7 +19,7 @@ check_3_1() {
   check_cp "both pods are ready" "kubectl -n probes rollout status deploy api --timeout=90s && kubectl -n probes get deploy api -o jsonpath='{.status.readyReplicas}' | grep -qx 2"
 }
 solve_3_1() {
-  put_file /opt/ckad/3.1/probes.yaml <<'EOF'
+  put_file /opt/apps/3.1/probes.yaml <<'EOF'
 spec:
   template:
     spec:
@@ -43,7 +43,7 @@ spec:
           failureThreshold: 3
 EOF
   shown <<'EOF'
-k -n probes patch deploy api --patch-file /opt/ckad/3.1/probes.yaml
+k -n probes patch deploy api --patch-file /opt/apps/3.1/probes.yaml
 k -n probes rollout status deploy api
 k -n probes describe pod -l app=api | grep -E 'Liveness|Readiness|Startup' | sort -u
 EOF
@@ -105,12 +105,12 @@ EOF
 # ---- Task 3: logs of a container that crashed -------------------------------------------------
 setup_3_3() {
   ns_fresh logs
-  cp_sh 'rm -rf /opt/ckad/3.3; mkdir -p /opt/ckad/3.3
+  cp_sh 'rm -rf /opt/apps/3.3; mkdir -p /opt/apps/3.3
     kubectl -n logs create deploy billing --image=busybox:1.36 -- sh -c "echo starting billing; sleep 12; if [ -z \"\$DB_URL\" ]; then echo FATAL: environment variable DB_URL is not set; exit 1; fi; echo connected to \$DB_URL; exec sleep 1d" >/dev/null
     sleep 30; kubectl -n logs get pods'
 }
 check_3_3() {
-  check_cp "/opt/ckad/3.3/crash.log holds the crash message" "grep -q 'FATAL: environment variable DB_URL is not set' /opt/ckad/3.3/crash.log"
+  check_cp "/opt/apps/3.3/crash.log holds the crash message" "grep -q 'FATAL: environment variable DB_URL is not set' /opt/apps/3.3/crash.log"
   check_cp "billing's pod is ready and logs 'connected to postgres://db.logs:5432/billing'" \
     "kubectl -n logs rollout status deploy billing --timeout=90s && for i in \$(seq 1 15); do kubectl -n logs logs deploy/billing 2>/dev/null | grep -q 'connected to postgres://db.logs:5432/billing' && exit 0; sleep 2; done; exit 1"
 }
@@ -120,7 +120,7 @@ solve_3_3() {
   shown <<'EOF'
 k -n logs get pods
 k -n logs logs deploy/billing --previous
-k -n logs logs deploy/billing --previous > /opt/ckad/3.3/crash.log
+k -n logs logs deploy/billing --previous > /opt/apps/3.3/crash.log
 k -n logs set env deploy/billing DB_URL=postgres://db.logs:5432/billing
 k -n logs rollout status deploy billing
 EOF
@@ -135,7 +135,7 @@ EOF
 setup_3_4() {
   ns_fresh metrics-load
   need_metrics
-  cp_sh 'rm -rf /opt/ckad/3.4; mkdir -p /opt/ckad/3.4
+  cp_sh 'rm -rf /opt/apps/3.4; mkdir -p /opt/apps/3.4
     kubectl -n metrics-load run calc-a --image=busybox:1.36 -- sleep 1d >/dev/null
     kubectl -n metrics-load run calc-b --image=busybox:1.36 --overrides='"'"'{"spec":{"containers":[{"name":"calc-b","image":"busybox:1.36","command":["sh","-c","while true; do :; done"],"resources":{"limits":{"cpu":"150m"}}}]}}'"'"' >/dev/null
     kubectl -n metrics-load run calc-c --image=busybox:1.36 --overrides='"'"'{"spec":{"containers":[{"name":"calc-c","image":"busybox:1.36","command":["sh","-c","while true; do :; done"],"resources":{"limits":{"cpu":"40m"}}}]}}'"'"' >/dev/null
@@ -144,22 +144,22 @@ setup_3_4() {
     kubectl -n metrics-load get pods'
 }
 check_3_4() {
-  check_cp "/opt/ckad/3.4/top-pod.txt names calc-b" "grep -qx calc-b /opt/ckad/3.4/top-pod.txt"
-  check_cp "/opt/ckad/3.4/top.sh lists the pods of metrics-load, busiest first" \
-    "grep -q 'top pod' /opt/ckad/3.4/top.sh && bash /opt/ckad/3.4/top.sh | grep -v NAME | head -1 | grep -q '^calc-b '"
+  check_cp "/opt/apps/3.4/top-pod.txt names calc-b" "grep -qx calc-b /opt/apps/3.4/top-pod.txt"
+  check_cp "/opt/apps/3.4/top.sh lists the pods of metrics-load, busiest first" \
+    "grep -q 'top pod' /opt/apps/3.4/top.sh && bash /opt/apps/3.4/top.sh | grep -v NAME | head -1 | grep -q '^calc-b '"
 }
 solve_3_4() {
   shown <<'EOF'
-echo 'kubectl -n metrics-load top pod --sort-by=cpu' > /opt/ckad/3.4/top.sh
-bash /opt/ckad/3.4/top.sh
-echo calc-b > /opt/ckad/3.4/top-pod.txt
+echo 'kubectl -n metrics-load top pod --sort-by=cpu' > /opt/apps/3.4/top.sh
+bash /opt/apps/3.4/top.sh
+echo calc-b > /opt/apps/3.4/top-pod.txt
 EOF
 }
 
 # ---- Task 5: debug a container that has no shell -------------------------------------------------
 setup_3_5() {
   ns_fresh debugging
-  cp_sh 'rm -rf /opt/ckad/3.5; mkdir -p /opt/ckad/3.5
+  cp_sh 'rm -rf /opt/apps/3.5; mkdir -p /opt/apps/3.5
     kubectl -n debugging run vault --image=registry.k8s.io/pause:3.10.1 --overrides='"'"'{"spec":{"containers":[{"name":"app","image":"registry.k8s.io/pause:3.10.1"}]}}'"'"' >/dev/null
     kubectl -n debugging wait pod vault --for=condition=Ready --timeout=60s >/dev/null
     kubectl -n debugging exec vault -c app -- sh -c true 2>&1 | tail -1'
@@ -167,7 +167,7 @@ setup_3_5() {
 check_3_5() {
   check_json "pod vault has an ephemeral container debugger (busybox:1.36) that targets app" "kubectl -n debugging get pod vault -o json" \
     'any(e["name"]=="debugger" and e["image"]=="busybox:1.36" and e.get("targetContainerName")=="app" for e in p["spec"].get("ephemeralContainers",[]))'
-  check_cp "/opt/ckad/3.5/process.txt holds the command of app's process" "grep -q '/pause' /opt/ckad/3.5/process.txt"
+  check_cp "/opt/apps/3.5/process.txt holds the command of app's process" "grep -q '/pause' /opt/apps/3.5/process.txt"
   check_cp "pod vault was not restarted or replaced" "kubectl -n debugging get pod vault -o jsonpath='{.status.containerStatuses[0].restartCount}' | grep -qx 0"
 }
 solve_3_5() {
@@ -175,15 +175,15 @@ solve_3_5() {
 k -n debugging debug vault --image=busybox:1.36 --target=app -c debugger -- sleep 1d
 k -n debugging wait pod vault --for=jsonpath='{.status.ephemeralContainerStatuses[0].state.running}' --timeout=60s
 k -n debugging exec vault -c debugger -- ps
-k -n debugging exec vault -c debugger -- ps -o args | grep -v -E 'ps|sleep|COMMAND' > /opt/ckad/3.5/process.txt
-cat /opt/ckad/3.5/process.txt
+k -n debugging exec vault -c debugger -- ps -o args | grep -v -E 'ps|sleep|COMMAND' > /opt/apps/3.5/process.txt
+cat /opt/apps/3.5/process.txt
 EOF
 }
 
 # ---- Task 6: pods that stay Pending -----------------------------------------------------------
 setup_3_6() {
   ns_fresh pending
-  cp_sh 'kubectl label node cks-w1 ckad-disk- >/dev/null 2>&1; true'
+  cp_sh 'kubectl label node $W1 practice-disk- >/dev/null 2>&1; true'
   cp_sh "kubectl apply -f - >/dev/null" <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
@@ -199,7 +199,7 @@ spec:
       labels: {app: report}
     spec:
       nodeSelector:
-        ckad-disk: ssd
+        practice-disk: ssd
       containers:
       - name: report
         image: busybox:1.36
@@ -212,18 +212,18 @@ EOF
   cp_sh 'sleep 3; kubectl -n pending get pods'
 }
 check_3_6() {
-  check_cp "node cks-w1 carries the label ckad-disk=ssd" "kubectl get node cks-w1 -o jsonpath='{.metadata.labels.ckad-disk}' | grep -qx ssd"
+  check_cp "node $W1 carries the label practice-disk=ssd" "kubectl get node $W1 -o jsonpath='{.metadata.labels.practice-disk}' | grep -qx ssd"
   check_json "the nodeSelector stays, and each pod requests 100m CPU" "kubectl -n pending get deploy report -o json" \
-    't=p["spec"]["template"]["spec"]; t.get("nodeSelector")=={"ckad-disk":"ssd"} and t["containers"][0]["resources"]["requests"]["cpu"]=="100m"'
-  check_cp "both pods run on cks-w1" \
-    "kubectl -n pending rollout status deploy report --timeout=90s && [ \"\$(kubectl -n pending get pods -l app=report --field-selector=status.phase=Running -o jsonpath='{.items[*].spec.nodeName}')\" = 'cks-w1 cks-w1' ]"
+    't=p["spec"]["template"]["spec"]; t.get("nodeSelector")=={"practice-disk":"ssd"} and t["containers"][0]["resources"]["requests"]["cpu"]=="100m"'
+  check_cp "both pods run on $W1" \
+    "kubectl -n pending rollout status deploy report --timeout=90s && [ \"\$(kubectl -n pending get pods -l app=report --field-selector=status.phase=Running -o jsonpath='{.items[*].spec.nodeName}')\" = '$W1 $W1' ]"
 }
 solve_3_6() {
   shown <<'EOF'
 k -n pending get pods
 k -n pending events --types=Warning | tail -1
-k get nodes -L ckad-disk
-k label node cks-w1 ckad-disk=ssd
+k get nodes -L practice-disk
+k label node $W1 practice-disk=ssd
 k -n pending set resources deploy report --requests=cpu=100m,memory=64Mi
 k -n pending rollout status deploy report
 k -n pending get pods -o wide
@@ -233,7 +233,7 @@ EOF
 # ---- Task 7: manifests written for APIs that no longer exist ------------------------------------------
 setup_3_7() {
   ns_fresh upgrade
-  put_file /opt/ckad/3.7/legacy.yaml <<'EOF'
+  put_file /opt/apps/3.7/legacy.yaml <<'EOF'
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -282,19 +282,19 @@ spec:
       name: cpu
       targetAverageUtilization: 70
 EOF
-  cp_sh 'kubectl apply -f /opt/ckad/3.7/legacy.yaml 2>&1 | grep -o "no matches for kind .*" | sort -u'
+  cp_sh 'kubectl apply -f /opt/apps/3.7/legacy.yaml 2>&1 | grep -o "no matches for kind .*" | sort -u'
 }
 check_3_7() {
-  check_cp "/opt/ckad/3.7/current.yaml uses apps/v1, policy/v1 and autoscaling/v2 only" \
-    "grep -q 'apiVersion: apps/v1' /opt/ckad/3.7/current.yaml && grep -q 'apiVersion: policy/v1\$' /opt/ckad/3.7/current.yaml && grep -q 'apiVersion: autoscaling/v2\$' /opt/ckad/3.7/current.yaml && ! grep -q 'v1beta\\|v2beta' /opt/ckad/3.7/current.yaml"
-  check_cp "the file applies cleanly (server dry run)" "kubectl apply -f /opt/ckad/3.7/current.yaml --dry-run=server"
+  check_cp "/opt/apps/3.7/current.yaml uses apps/v1, policy/v1 and autoscaling/v2 only" \
+    "grep -q 'apiVersion: apps/v1' /opt/apps/3.7/current.yaml && grep -q 'apiVersion: policy/v1\$' /opt/apps/3.7/current.yaml && grep -q 'apiVersion: autoscaling/v2\$' /opt/apps/3.7/current.yaml && ! grep -q 'v1beta\\|v2beta' /opt/apps/3.7/current.yaml"
+  check_cp "the file applies cleanly (server dry run)" "kubectl apply -f /opt/apps/3.7/current.yaml --dry-run=server"
   check_cp "Deployment catalog runs 2 ready pods in upgrade" "kubectl -n upgrade rollout status deploy catalog --timeout=90s && kubectl -n upgrade get deploy catalog -o jsonpath='{.status.readyReplicas}' | grep -qx 2"
   check_json "the HPA targets Deployment catalog at 70% CPU, 2 to 5 replicas" "kubectl -n upgrade get hpa catalog -o json" \
     's=p["spec"]; s["scaleTargetRef"]["name"]=="catalog" and s["scaleTargetRef"]["apiVersion"]=="apps/v1" and s["minReplicas"]==2 and s["maxReplicas"]==5 and s["metrics"][0]["resource"]["target"]=={"type":"Utilization","averageUtilization":70}'
   check_cp "the PodDisruptionBudget keeps 1 pod of catalog" "kubectl -n upgrade get pdb catalog -o jsonpath='{.spec.minAvailable}' | grep -qx 1"
 }
 solve_3_7() {
-  put_file /opt/ckad/3.7/current.yaml <<'EOF'
+  put_file /opt/apps/3.7/current.yaml <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -350,9 +350,9 @@ spec:
 EOF
   shown <<'EOF'
 k api-resources | grep -E '^(deployments|poddisruptionbudgets|horizontalpodautoscalers) '
-k convert -f /opt/ckad/3.7/legacy.yaml
+k convert -f /opt/apps/3.7/legacy.yaml
 k explain hpa.spec.metrics.resource.target --api-version=autoscaling/v2 | grep -E '^ +[a-zA-Z]+\s+<'
-k apply -f /opt/ckad/3.7/current.yaml
+k apply -f /opt/apps/3.7/current.yaml
 k -n upgrade rollout status deploy catalog
 k -n upgrade get deploy,pdb,hpa
 EOF

@@ -12,8 +12,8 @@ Practice exam 4 checks that you know each topic, while this one checks that you 
 
    ```console
    $ ./platform-engineering/practice/cluster/reset.sh && ./platform-engineering/practice/cluster/lima.sh reset
-   === wiping cks-w1
-   === wiping cks-cp
+   === wiping practice-worker
+   === wiping practice-control-plane
    ...
    === 1/7 machines
    ...
@@ -37,48 +37,48 @@ Practice exam 4 checks that you know each topic, while this one checks that you 
    In the final test run, the OrbStack reset took 4 minutes 59 seconds, the Lima reset 1 minute 24 seconds, and the setup 2 minutes 11 seconds. The setup breaks the API server in its last step, so it doesn't wait for any pods to start.
 
 2. The clock starts when `setup.sh` ends, because it writes the start time, and `score.sh` prints the minutes since then and says when you went over 120.
-3. Work only on the nodes, through `orb -m cks-cp`, `orb -m cks-w1` and `./platform-engineering/practice/cluster/lima.sh shell`, and use only the documentation the exam allows.
+3. Work only on the nodes, through `orb -m practice-control-plane`, `orb -m practice-worker` and `./platform-engineering/practice/cluster/lima.sh shell`, and use only the documentation the exam allows.
 4. Don't open the solutions while the clock runs, because the score only means something when you worked without them.
 5. Score from your Mac with `./platform-engineering/practice-exam.sh score 5`, or score single tasks with `./platform-engineering/practice-exam.sh score 5 3 9`.
 
-Each task names its host, and `kubectl` runs on `cks-cp` for the OrbStack cluster and on `cks-lima` for the tasks marked Lima.
+Each task names its host, and `kubectl` runs on `practice-control-plane` for the OrbStack cluster and on `cks-lima` for the tasks marked Lima.
 
 ## Tasks
 
 | # | Task | Points | Module | Host |
 |---|---|---|---|---|
-| 1 | The API server is down | 8 | 39 | cks-cp |
-| 2 | Lock down the payments namespace | 6 | 38 | cks-cp |
+| 1 | The API server is down | 8 | 39 | practice-control-plane |
+| 2 | Lock down the payments namespace | 6 | 38 | practice-control-plane |
 | 3 | HTTP rules with Cilium | 6 | 38 | cks-lima |
-| 4 | Harden the worker's kubelet | 6 | 38 | cks-w1 |
-| 5 | TLS 1.3 only | 5 | 38 | cks-cp |
-| 6 | Who may exec into pods? | 6 | 39 | cks-cp |
-| 7 | A token for the vault | 5 | 39 | cks-cp |
-| 8 | A backdoor on the worker | 4 | 40 | cks-w1 |
+| 4 | Harden the worker's kubelet | 6 | 38 | practice-worker |
+| 5 | TLS 1.3 only | 5 | 38 | practice-control-plane |
+| 6 | Who may exec into pods? | 6 | 39 | practice-control-plane |
+| 7 | A token for the vault | 5 | 39 | practice-control-plane |
+| 8 | A backdoor on the worker | 4 | 40 | practice-worker |
 | 9 | AppArmor for the web Deployment | 7 | 43 | cks-lima |
-| 10 | Read a Secret from etcd | 5 | 41 | cks-cp |
-| 11 | Pod Security for every namespace | 7 | 41 | cks-cp |
-| 12 | Pods with host access | 4 | 41 | cks-cp |
-| 13 | The image policy fails open | 7 | 42 | cks-cp |
-| 14 | Pin by digest | 4 | 42 | cks-cp |
-| 15 | Catch package managers with Falco | 8 | 43 | cks-w1, cks-cp |
-| 16 | Who deleted the Secret? | 6 | 43 | cks-cp |
-| 17 | Immutable nginx | 6 | 43 | cks-cp |
+| 10 | Read a Secret from etcd | 5 | 41 | practice-control-plane |
+| 11 | Pod Security for every namespace | 7 | 41 | practice-control-plane |
+| 12 | Pods with host access | 4 | 41 | practice-control-plane |
+| 13 | The image policy fails open | 7 | 42 | practice-control-plane |
+| 14 | Pin by digest | 4 | 42 | practice-control-plane |
+| 15 | Catch package managers with Falco | 8 | 43 | practice-worker, practice-control-plane |
+| 16 | Who deleted the Secret? | 6 | 43 | practice-control-plane |
+| 17 | Immutable nginx | 6 | 43 | practice-control-plane |
 
 ### Task 1: The API server is down (8 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
-> The API server on `cks-cp` doesn't answer. Somebody edited its manifest. Get it running again without changing what it did before the edit.
+> The API server on `practice-control-plane` doesn't answer. Somebody edited its manifest. Get it running again without changing what it did before the edit.
 
 <details>
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# crictl ps -a --name kube-apiserver
+root@practice-control-plane:~# crictl ps -a --name kube-apiserver
 CONTAINER           IMAGE               CREATED             STATE               NAME                ATTEMPT             POD ID              POD                     NAMESPACE
-7d5d0af53edf6       98d6e75e244ec       20 seconds ago      Exited              kube-apiserver      4                   dee2b9a849738       kube-apiserver-cks-cp   kube-system
-root@cks-cp:~# crictl logs <id of the newest exited container>
+7d5d0af53edf6       98d6e75e244ec       20 seconds ago      Exited              kube-apiserver      4                   dee2b9a849738       kube-apiserver-practice-control-plane   kube-system
+root@practice-control-plane:~# crictl logs <id of the newest exited container>
 I1115 20:48:41.870434       1 options.go:261] external host was not specified, using 192.168.139.194
 I1115 20:48:41.872447       1 server.go:151] Version: v1.37.1
 I1115 20:48:41.872476       1 server.go:153] "Golang settings" GOGC="" GOMAXPROCS="" GOTRACEBACK=""
@@ -90,9 +90,9 @@ The transcript ran `crictl logs` with the ID of the newest exited container.
 The last log line names the file the API server misses, and `ls /etc/kubernetes/pki/` shows `apiserver.key`. Fix that line, wait, and read the newest container's log again, which shows that the API server now starts but fails to reach etcd. Compare its `--etcd-servers` with etcd's own flags, as [module 39, task 10](../2-intermediate/39-hardening-access-to-the-api.md#task-10-repair-etcd) does:
 
 ```console
-root@cks-cp:~# grep etcd-servers /etc/kubernetes/manifests/kube-apiserver.yaml
+root@practice-control-plane:~# grep etcd-servers /etc/kubernetes/manifests/kube-apiserver.yaml
     - --etcd-servers=https://127.0.0.1:2380
-root@cks-cp:~# grep listen-client-urls /etc/kubernetes/manifests/etcd.yaml
+root@practice-control-plane:~# grep listen-client-urls /etc/kubernetes/manifests/etcd.yaml
     - --listen-client-urls=https://127.0.0.1:2379,https://192.168.139.194:2379
 ```
 
@@ -102,7 +102,7 @@ Two lines changed: `--tls-private-key-file` points to `apiserver.pem` instead of
 
 ### Task 2: Lock down the payments namespace (6 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > In namespace `m2-pay`:
 >
@@ -179,9 +179,9 @@ Each item under `http` is one allowed kind of request, and a request passes when
 
 ### Task 4: Harden the worker's kubelet (6 points)
 
-**Host:** `cks-w1`.
+**Host:** `practice-worker`.
 
-> The kubelet on `cks-w1` accepts anonymous requests, allows every authenticated caller everything, and serves the read-only port. Fix all three in its config file. The node stays Ready.
+> The kubelet on `practice-worker` accepts anonymous requests, allows every authenticated caller everything, and serves the read-only port. Fix all three in its config file. The node stays Ready.
 
 <details>
 <summary>Solution</summary>
@@ -192,7 +192,7 @@ Set `authentication.anonymous.enabled: false`, `authorization.mode: Webhook` and
 
 ### Task 5: TLS 1.3 only (5 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > The API server must refuse every TLS version older than 1.3.
 
@@ -209,7 +209,7 @@ Test with `echo | openssl s_client -connect 127.0.0.1:6443 -tls1_2 2>/dev/null |
 
 ### Task 6: Who may exec into pods? (6 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > 1. One ServiceAccount in namespace `m2-team` may exec into pods in every namespace. Write its name to `/root/mock/exec-sa.txt` and remove that right. Keep the account.
 > 2. That account still needs to restart Deployment `web` in `m2-team`. Create a Role `restart-web` and a RoleBinding `restart-web` that allow `get` and `patch` on that one Deployment only.
@@ -218,18 +218,18 @@ Test with `echo | openssl s_client -connect 127.0.0.1:6443 -tls1_2 2>/dev/null |
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# for sa in ci docs ops; do echo "$sa $(k auth can-i create pods --subresource=exec -A --as=system:serviceaccount:m2-team:$sa)"; done
+root@practice-control-plane:~# for sa in ci docs ops; do echo "$sa $(k auth can-i create pods --subresource=exec -A --as=system:serviceaccount:m2-team:$sa)"; done
 ci no
 docs yes
 ops no
-root@cks-cp:~# echo docs > /root/mock/exec-sa.txt
-root@cks-cp:~# k get clusterrolebinding -o wide | grep m2-team/docs
+root@practice-control-plane:~# echo docs > /root/mock/exec-sa.txt
+root@practice-control-plane:~# k get clusterrolebinding -o wide | grep m2-team/docs
 debug-helper                                                            ClusterRole/debug-helper                                                            6m9s                                                                                       m2-team/docs
-root@cks-cp:~# k delete clusterrolebinding debug-helper
+root@practice-control-plane:~# k delete clusterrolebinding debug-helper
 clusterrolebinding.rbac.authorization.k8s.io "debug-helper" deleted
-root@cks-cp:~# k -n m2-team create role restart-web --verb=get,patch --resource=deployments.apps --resource-name=web
+root@practice-control-plane:~# k -n m2-team create role restart-web --verb=get,patch --resource=deployments.apps --resource-name=web
 role.rbac.authorization.k8s.io/restart-web created
-root@cks-cp:~# k -n m2-team create rolebinding restart-web --role=restart-web --serviceaccount=m2-team:docs
+root@practice-control-plane:~# k -n m2-team create rolebinding restart-web --role=restart-web --serviceaccount=m2-team:docs
 rolebinding.rbac.authorization.k8s.io/restart-web created
 ```
 
@@ -239,7 +239,7 @@ rolebinding.rbac.authorization.k8s.io/restart-web created
 
 ### Task 7: A token for the vault (5 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Create pod `agent` in namespace `m2-vault`, image `busybox:1.36`, command `sleep 1d`, running as ServiceAccount `reader`. It gets no default API token, and it gets a token for the audience `vault.m2`, valid for 1800 seconds, at `/var/run/secrets/tokens/vault-token`.
 
@@ -252,19 +252,19 @@ Set `automountServiceAccountToken: false` in the pod spec, and add a projected v
 
 ### Task 8: A backdoor on the worker (4 points)
 
-**Host:** `cks-w1`.
+**Host:** `practice-worker`.
 
-> Something listens on TCP port 5555 on `cks-w1`. Remove it for good: the process, what starts it, and its binary.
+> Something listens on TCP port 5555 on `practice-worker`. Remove it for good: the process, what starts it, and its binary.
 
 <details>
 <summary>Solution</summary>
 
 ```console
-root@cks-w1:~# ss -tlnp | grep ':5555 '
+root@practice-worker:~# ss -tlnp | grep ':5555 '
 LISTEN 0      5                  *:5555             *:*    users:(("nel",pid=106964,fd=5))        
-root@cks-w1:~# systemctl status <pid> | head -1          # node-exporter-lite.service
+root@practice-worker:~# systemctl status <pid> | head -1          # node-exporter-lite.service
 ● node-exporter-lite.service - Node exporter (lite)
-root@cks-w1:~# systemctl cat node-exporter-lite          # ExecStart=/opt/.cache/nel ... EXEC:/bin/bash
+root@practice-worker:~# systemctl cat node-exporter-lite          # ExecStart=/opt/.cache/nel ... EXEC:/bin/bash
 # /etc/systemd/system/node-exporter-lite.service
 [Unit]
 Description=Node exporter (lite)
@@ -272,10 +272,10 @@ Description=Node exporter (lite)
 ExecStart=/opt/.cache/nel TCP-LISTEN:5555,fork,reuseaddr EXEC:/bin/bash
 Restart=always
 ...
-root@cks-w1:~# systemctl disable --now node-exporter-lite
+root@practice-worker:~# systemctl disable --now node-exporter-lite
 Removed "/etc/systemd/system/multi-user.target.wants/node-exporter-lite.service".
-root@cks-w1:~# rm /etc/systemd/system/node-exporter-lite.service /opt/.cache/nel
-root@cks-w1:~# systemctl daemon-reload
+root@practice-worker:~# rm /etc/systemd/system/node-exporter-lite.service /opt/.cache/nel
+root@practice-worker:~# systemctl daemon-reload
 ```
 
 The transcript ran `systemctl status` with the PID that `ss` printed.
@@ -320,7 +320,7 @@ The first draft of this task's profile denied writes to everything under `/etc/n
 
 ### Task 10: Read a Secret from etcd (5 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Read Secret `root-cred` in namespace `m2-etcd` straight from etcd with `etcdctl`. Write its etcd key to `/root/mock/root-cred-key.txt` and the value of its `password` field to `/root/mock/root-cred.txt`.
 
@@ -328,20 +328,20 @@ The first draft of this task's profile denied writes to everything under `/etc/n
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# echo /registry/secrets/m2-etcd/root-cred > /root/mock/root-cred-key.txt
-root@cks-cp:~# etcdctl --endpoints=https://127.0.0.1:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+root@practice-control-plane:~# echo /registry/secrets/m2-etcd/root-cred > /root/mock/root-cred-key.txt
+root@practice-control-plane:~# etcdctl --endpoints=https://127.0.0.1:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt \
   --cert=/etc/kubernetes/pki/apiserver-etcd-client.crt --key=/etc/kubernetes/pki/apiserver-etcd-client.key \
   get /registry/secrets/m2-etcd/root-cred --print-value-only | tr -cs '[:print:]' '\n' | grep -A1 -x password | tail -1 | tee /root/mock/root-cred.txt
 VWVdGs0ADxi6ev1R
 ```
 
-Secrets sit under `/registry/secrets/<namespace>/<name>`, and without encryption the value is protobuf with the plain password inside. `tr` turns every run of unprintable bytes into one line break, so the field name `password` lands on one line and its value on the next, and `tail -1 | tee` writes that value to the file while it shows it. `strings` does the same job where binutils is installed, but `cks-cp` lacks it. Search for the exact line `password`, because the object's `managedFields` also contain the text `f:password`, earlier in the value. That this works at all is the reason for [module 41, task 2](41-hardening-workloads.md#task-2-encrypt-secrets-at-rest).
+Secrets sit under `/registry/secrets/<namespace>/<name>`, and without encryption the value is protobuf with the plain password inside. `tr` turns every run of unprintable bytes into one line break, so the field name `password` lands on one line and its value on the next, and `tail -1 | tee` writes that value to the file while it shows it. `strings` does the same job where binutils is installed, but `practice-control-plane` lacks it. Search for the exact line `password`, because the object's `managedFields` also contain the text `f:password`, earlier in the value. That this works at all is the reason for [module 41, task 2](41-hardening-workloads.md#task-2-encrypt-secrets-at-rest).
 
 </details>
 
 ### Task 11: Pod Security for every namespace (7 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Make every namespace without Pod Security labels enforce `baseline` and warn and audit at `restricted`, with the newest rules. Exempt the namespaces `kube-system` and `m2-agents`. The API server already reads the admission configuration `/etc/kubernetes/admission/config.yaml`; put the new configuration there too.
 
@@ -365,7 +365,7 @@ Then restart the API server by moving its manifest out and back. The flag `--adm
 
 ### Task 12: Pods with host access (4 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Delete every pod in namespace `m2-legacy` that shares a host namespace, mounts a `hostPath` volume, or has any privileged container.
 
@@ -378,7 +378,7 @@ Use the `jsonpath` from [module 41, task 8](41-hardening-workloads.md#task-8-pod
 
 ### Task 13: The image policy fails open (7 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > ImagePolicyWebhook is on, but pods from any registry get in. Make the API server refuse new pods whenever the back end doesn't answer, and bring the back end `image-policy` back, also after a reboot.
 
@@ -391,7 +391,7 @@ The setup left `defaultAllow: true` in `/etc/kubernetes/admission/config.yaml` a
 
 ### Task 14: Pin by digest (4 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Deployment `worker` in namespace `m2-pin` runs `busybox:1.36`. Make it name the exact image it runs now by digest.
 
@@ -399,9 +399,9 @@ The setup left `defaultAllow: true` in `/etc/kubernetes/admission/config.yaml` a
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# k -n m2-pin get pod -l app=worker -o jsonpath='{.items[0].status.containerStatuses[0].imageID}'; echo
+root@practice-control-plane:~# k -n m2-pin get pod -l app=worker -o jsonpath='{.items[0].status.containerStatuses[0].imageID}'; echo
 docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
-root@cks-cp:~# k -n m2-pin set image deploy/worker busybox=busybox@sha256:<digest>
+root@practice-control-plane:~# k -n m2-pin set image deploy/worker busybox=busybox@sha256:<digest>
 Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "busybox" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "busybox" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "busybox" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "busybox" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
 deployment.apps/worker image updated
 ```
@@ -412,10 +412,10 @@ The transcript ran the second command with the digest that the first command pri
 
 ### Task 15: Catch package managers with Falco (8 points)
 
-**Hosts:** `cks-w1`, then `cks-cp`.
+**Hosts:** `practice-worker`, then `practice-control-plane`.
 
-> 1. In `/etc/falco/rules.d/m2.yaml` on `cks-w1`, write a list `m2_pkg` (`apk`, `apt`, `apt-get`, `pip`, `npm`), a macro `m2_k8s` that matches processes in a Kubernetes pod, and a rule `Package manager in container (mock)` with priority `CRITICAL` and the output `pkg (ns=%k8s.ns.name pod=%k8s.pod.name cmd=%proc.cmdline)`.
-> 2. One Deployment in namespace `m2-run` runs a package manager over and over. Find it with your rule, write its name to `/root/mock/pkg-deploy.txt` on `cks-cp`, and scale it to 0.
+> 1. In `/etc/falco/rules.d/m2.yaml` on `practice-worker`, write a list `m2_pkg` (`apk`, `apt`, `apt-get`, `pip`, `npm`), a macro `m2_k8s` that matches processes in a Kubernetes pod, and a rule `Package manager in container (mock)` with priority `CRITICAL` and the output `pkg (ns=%k8s.ns.name pod=%k8s.pod.name cmd=%proc.cmdline)`.
+> 2. One Deployment in namespace `m2-run` runs a package manager over and over. Find it with your rule, write its name to `/root/mock/pkg-deploy.txt` on `practice-control-plane`, and scale it to 0.
 
 <details>
 <summary>Solution</summary>
@@ -423,20 +423,20 @@ The transcript ran the second command with the digest that the first command pri
 The rules file follows [module 43, task 7](43-runtime-security-and-auditing.md#task-7-a-falco-rule-with-a-list-and-a-macro). Once Falco has reloaded it, search the journal for the new alert:
 
 ```console
-root@cks-w1:~# journalctl -u falco-modern-bpf --since -2min | grep 'Critical pkg (ns=m2-run'
-Nov 15 20:53:01 cks-w1 falco[100721]: 20:53:01.700568680: Critical pkg (ns=m2-run pod=updater-564c95db65-s8km4 cmd=apk info) container_id=2ca2f179f12d container_name=nginx container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=updater-564c95db65-s8km4 k8s_ns_name=m2-run
-Nov 15 20:53:11 cks-w1 falco[100721]: 20:53:11.716044499: Critical pkg (ns=m2-run pod=updater-564c95db65-s8km4 cmd=apk info) container_id=2ca2f179f12d container_name=nginx container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=updater-564c95db65-s8km4 k8s_ns_name=m2-run
-Nov 15 20:53:21 cks-w1 falco[100721]: 20:53:21.727186484: Critical pkg (ns=m2-run pod=updater-564c95db65-s8km4 cmd=apk info) container_id=2ca2f179f12d container_name=nginx container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=updater-564c95db65-s8km4 k8s_ns_name=m2-run
-Nov 15 20:53:31 cks-w1 falco[100721]: 20:53:31.742812428: Critical pkg (ns=m2-run pod=updater-564c95db65-s8km4 cmd=apk info) container_id=2ca2f179f12d container_name=nginx container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=updater-564c95db65-s8km4 k8s_ns_name=m2-run
-Nov 15 20:53:41 cks-w1 falco[100721]: 20:53:41.755952372: Critical pkg (ns=m2-run pod=updater-564c95db65-s8km4 cmd=apk info) container_id=2ca2f179f12d container_name=nginx container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=updater-564c95db65-s8km4 k8s_ns_name=m2-run
-Nov 15 20:53:51 cks-w1 falco[100721]: 20:53:51.763119148: Critical pkg (ns=m2-run pod=updater-564c95db65-s8km4 cmd=apk info) container_id=2ca2f179f12d container_name=nginx container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=updater-564c95db65-s8km4 k8s_ns_name=m2-run
+root@practice-worker:~# journalctl -u falco-modern-bpf --since -2min | grep 'Critical pkg (ns=m2-run'
+Nov 15 20:53:01 practice-worker falco[100721]: 20:53:01.700568680: Critical pkg (ns=m2-run pod=updater-564c95db65-s8km4 cmd=apk info) container_id=2ca2f179f12d container_name=nginx container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=updater-564c95db65-s8km4 k8s_ns_name=m2-run
+Nov 15 20:53:11 practice-worker falco[100721]: 20:53:11.716044499: Critical pkg (ns=m2-run pod=updater-564c95db65-s8km4 cmd=apk info) container_id=2ca2f179f12d container_name=nginx container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=updater-564c95db65-s8km4 k8s_ns_name=m2-run
+Nov 15 20:53:21 practice-worker falco[100721]: 20:53:21.727186484: Critical pkg (ns=m2-run pod=updater-564c95db65-s8km4 cmd=apk info) container_id=2ca2f179f12d container_name=nginx container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=updater-564c95db65-s8km4 k8s_ns_name=m2-run
+Nov 15 20:53:31 practice-worker falco[100721]: 20:53:31.742812428: Critical pkg (ns=m2-run pod=updater-564c95db65-s8km4 cmd=apk info) container_id=2ca2f179f12d container_name=nginx container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=updater-564c95db65-s8km4 k8s_ns_name=m2-run
+Nov 15 20:53:41 practice-worker falco[100721]: 20:53:41.755952372: Critical pkg (ns=m2-run pod=updater-564c95db65-s8km4 cmd=apk info) container_id=2ca2f179f12d container_name=nginx container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=updater-564c95db65-s8km4 k8s_ns_name=m2-run
+Nov 15 20:53:51 practice-worker falco[100721]: 20:53:51.763119148: Critical pkg (ns=m2-run pod=updater-564c95db65-s8km4 cmd=apk info) container_id=2ca2f179f12d container_name=nginx container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=updater-564c95db65-s8km4 k8s_ns_name=m2-run
 ```
 
 Ignore the lines with `cmd=apk --version` if you tested your rule by hand. The pod name starts with its Deployment's name, and `k -n m2-run get pod <pod> --show-labels` confirms it:
 
 ```console
-root@cks-cp:~# echo updater > /root/mock/pkg-deploy.txt
-root@cks-cp:~# k -n m2-run scale deploy updater --replicas=0
+root@practice-control-plane:~# echo updater > /root/mock/pkg-deploy.txt
+root@practice-control-plane:~# k -n m2-run scale deploy updater --replicas=0
 deployment.apps/updater scaled
 ```
 
@@ -444,7 +444,7 @@ deployment.apps/updater scaled
 
 ### Task 16: Who deleted the Secret? (6 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Secret `api-keys` in namespace `m2-audit` is gone. Find the user who deleted it in the audit log `/var/log/kubernetes/audit/audit.log`, write the name to `/root/mock/deleter.txt`, and remove that user's RoleBinding in `m2-audit`.
 
@@ -452,10 +452,10 @@ deployment.apps/updater scaled
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# grep '"verb":"delete"' /var/log/kubernetes/audit/audit.log | grep '"name":"api-keys"' | grep ResponseComplete | grep -o '"username":"[^"]*"'
+root@practice-control-plane:~# grep '"verb":"delete"' /var/log/kubernetes/audit/audit.log | grep '"name":"api-keys"' | grep ResponseComplete | grep -o '"username":"[^"]*"'
 "username":"erin"
-root@cks-cp:~# echo erin > /root/mock/deleter.txt
-root@cks-cp:~# k -n m2-audit delete rolebinding erin
+root@practice-control-plane:~# echo erin > /root/mock/deleter.txt
+root@practice-control-plane:~# k -n m2-audit delete rolebinding erin
 rolebinding.rbac.authorization.k8s.io "erin" deleted from m2-audit namespace
 ```
 
@@ -465,7 +465,7 @@ rolebinding.rbac.authorization.k8s.io "erin" deleted from m2-audit namespace
 
 ### Task 17: Immutable nginx (6 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Deployment `web` in namespace `m2-hard` runs nginx. Make its root file system read-only, forbid privilege escalation, and give it the runtime's default seccomp profile. nginx keeps serving.
 

@@ -32,7 +32,7 @@ In the test run on the live clusters, every task's check failed after its setup 
 
 Every command except `task.sh`, `practice-exam.sh` and the cluster scripts runs on a node, in a root shell. `orb -m cks-cp` or `orb -m cks-w1` opens a shell on a practice cluster node, and `sudo -i` then makes you root. `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell on the Lima VM that [module 44](kernel-and-host/README.md) needs. On your own VMs, `ssh` to the node and `sudo -i` instead.
 
-The course files sit in your Mac's home folder, and OrbStack and Lima both show that folder at the same path inside the machines, so `cd` to the repo inside the node and the paths in the text work there too. The tasks themselves need no repo files on the nodes. The application tasks keep their files under `/opt/ckad` on `cks-cp`, the way many teams keep a task's files under a folder like `/opt/course`.
+The course files sit in your Mac's home folder, and OrbStack and Lima both show that folder at the same path inside the machines, so `cd` to the repo inside the node and the paths in the text work there too. The tasks themselves need no repo files on the nodes. The application tasks keep their files under `/opt/apps` on `cks-cp`, the way many teams keep a task's files under a folder like `/opt/course`.
 
 The command blocks are terminal transcripts, where each prompt line holds a command and the lines under it hold the real output of the test run. The prompt says where to type: `$` is your Mac, in the repo folder, while `root@cks-cp:~#`, `root@cks-w1:~#` and `root@cks-lima:~#` are root shells on the nodes. A line with only `...` marks output the transcript leaves out, and pod names, IP addresses, container IDs, ages, digests and keys differ on your run.
 

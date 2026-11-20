@@ -10,11 +10,11 @@ This practice exam is the hardest of the three, harder than most real exam tasks
 
 1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./platform-engineering/practice-exam.sh setup 3`. In the test run, the reset took 46 seconds and the setup 57 seconds, most of it for the two Helm releases of task 3.
 2. The clock starts when `setup.sh` ends, and `./platform-engineering/practice-exam.sh score 3` prints the minutes since then.
-3. Work only on `cks-cp`, and use only kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
+3. Work only on `practice-control-plane`, and use only kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
 4. Don't open the solutions while the timer runs.
 5. Score from your Mac with `./platform-engineering/practice-exam.sh score 3`.
 
-Task files sit in `/opt/ckad/m3/N` on `cks-cp`.
+Task files sit in `/opt/apps/m3/N` on `practice-control-plane`.
 
 ## Tasks
 
@@ -39,20 +39,20 @@ Task files sit in `/opt/ckad/m3/N` on `cks-cp`.
 
 ### Task 1: Image with a build argument (8 points)
 
-> `/opt/ckad/m3/1/Dockerfile` takes a build argument `VERSION`.
-> 1. Build it with `VERSION=2.4.0` as `registry.ckad:5000/pricing:2.4.0`, tag the same image also as `registry.ckad:5000/pricing:stable`, and push both tags.
-> 2. Save the image as an OCI archive to `/opt/ckad/m3/1/pricing.tar`.
+> `/opt/apps/m3/1/Dockerfile` takes a build argument `VERSION`.
+> 1. Build it with `VERSION=2.4.0` as `registry.practice:5000/pricing:2.4.0`, tag the same image also as `registry.practice:5000/pricing:stable`, and push both tags.
+> 2. Save the image as an OCI archive to `/opt/apps/m3/1/pricing.tar`.
 > 3. In namespace `k3-build`, run Deployment `pricing` with 2 replicas of `pricing:2.4.0` in a container named `pricing`, with an init container `wait-dns` (image `busybox:1.36`) that waits until `nslookup kubernetes.default.svc.cluster.local` succeeds.
 
 <details>
 <summary>Solution</summary>
 
 ```bash
-cd /opt/ckad/m3/1
-podman build --build-arg VERSION=2.4.0 -t registry.ckad:5000/pricing:2.4.0 .
-podman tag registry.ckad:5000/pricing:2.4.0 registry.ckad:5000/pricing:stable
-podman push registry.ckad:5000/pricing:2.4.0 && podman push registry.ckad:5000/pricing:stable
-podman save --format oci-archive -o pricing.tar registry.ckad:5000/pricing:2.4.0
+cd /opt/apps/m3/1
+podman build --build-arg VERSION=2.4.0 -t registry.practice:5000/pricing:2.4.0 .
+podman tag registry.practice:5000/pricing:2.4.0 registry.practice:5000/pricing:stable
+podman push registry.practice:5000/pricing:2.4.0 && podman push registry.practice:5000/pricing:stable
+podman save --format oci-archive -o pricing.tar registry.practice:5000/pricing:2.4.0
 ```
 
 ```yaml
@@ -63,10 +63,10 @@ podman save --format oci-archive -o pricing.tar registry.ckad:5000/pricing:2.4.0
         command: [sh, -c, 'until nslookup kubernetes.default.svc.cluster.local; do sleep 2; done']
       containers:
       - name: pricing
-        image: registry.ckad:5000/pricing:2.4.0
+        image: registry.practice:5000/pricing:2.4.0
 ```
 
-The first version of this task waited for `http://registry.ckad:5000/v2/` instead, and its pods hung in `Init:0/1` in the test run: the name `registry.ckad` lives in the nodes' `/etc/hosts`, which containerd reads, while pods ask the cluster's DNS, which has never heard of it. `podman tag` adds a second name to the same image, so both tags push the same manifest and share its digest. `podman save` writes Docker's archive format by default; `--format oci-archive` writes the OCI layout with an `index.json`.
+The first version of this task waited for `http://registry.practice:5000/v2/` instead, and its pods hung in `Init:0/1` in the test run: the name `registry.practice` lives in the nodes' `/etc/hosts`, which containerd reads, while pods ask the cluster's DNS, which has never heard of it. `podman tag` adds a second name to the same image, so both tags push the same manifest and share its digest. `podman save` writes Docker's archive format by default; `--format oci-archive` writes the OCI layout with an `index.json`.
 
 </details>
 
@@ -103,7 +103,7 @@ Here the switch happens in the Ingress, not in a Service selector, so each color
 ### Task 3: Helm: values, failure, rollback (7 points)
 
 > In namespace `k3-helm`:
-> 1. Save the user values of revision 2 of release `shop` to `/opt/ckad/m3/3/values-rev2.yaml`.
+> 1. Save the user values of revision 2 of release `shop` to `/opt/apps/m3/3/values-rev2.yaml`.
 > 2. The latest upgrade of `shop` failed. Roll the release back to revision 2.
 > 3. Release `admin` never worked. Remove it.
 
@@ -112,8 +112,8 @@ Here the switch happens in the Ingress, not in a Service selector, so each color
 
 ```bash
 helm -n k3-helm history shop
-mkdir -p /opt/ckad/m3/3
-helm -n k3-helm get values shop --revision 2 > /opt/ckad/m3/3/values-rev2.yaml
+mkdir -p /opt/apps/m3/3
+helm -n k3-helm get values shop --revision 2 > /opt/apps/m3/3/values-rev2.yaml
 helm -n k3-helm rollback shop 2 --wait
 helm -n k3-helm list --failed
 helm -n k3-helm uninstall admin
@@ -217,7 +217,7 @@ A RoleBinding that grants a ClusterRole keeps the rights inside the RoleBinding'
 
 ### Task 7: Custom resources by the numbers (4 points)
 
-> Create a Certificate `wiki` in namespace `k3-certs` for the domain `wiki.k3.local`, valid for 60 days. Then write the domain of the Certificate with the fewest days, across all namespaces, to `/opt/ckad/m3/7/expiring.txt`.
+> Create a Certificate `wiki` in namespace `k3-certs` for the domain `wiki.k3.local`, valid for 60 days. Then write the domain of the Certificate with the fewest days, across all namespaces, to `/opt/apps/m3/7/expiring.txt`.
 
 <details>
 <summary>Solution</summary>
@@ -231,7 +231,7 @@ spec: {domain: wiki.k3.local, days: 60}
 
 ```bash
 k get certificates -A --sort-by=.spec.days
-k get certificates -A --sort-by=.spec.days -o jsonpath='{.items[0].spec.domain}' > /opt/ckad/m3/7/expiring.txt
+k get certificates -A --sort-by=.spec.days -o jsonpath='{.items[0].spec.domain}' > /opt/apps/m3/7/expiring.txt
 ```
 
 </details>
@@ -338,7 +338,7 @@ A [projected volume](https://kubernetes.io/docs/concepts/storage/projected-volum
 
 ### Task 11: Debug a copy of a crashing pod (6 points)
 
-> Pod `loader` in namespace `k3-debug` crashes right after it starts. Without changing it, create a copy `loader-debug` whose container `loader` runs `sleep 1d` instead, find which path the app misses, and write that path to `/opt/ckad/m3/11/missing.txt`.
+> Pod `loader` in namespace `k3-debug` crashes right after it starts. Without changing it, create a copy `loader-debug` whose container `loader` runs `sleep 1d` instead, find which path the app misses, and write that path to `/opt/apps/m3/11/missing.txt`.
 
 <details>
 <summary>Solution</summary>
@@ -347,7 +347,7 @@ A [projected volume](https://kubernetes.io/docs/concepts/storage/projected-volum
 k -n k3-debug get pod loader -o jsonpath='{.spec.containers[0].args}'
 k -n k3-debug debug loader --copy-to=loader-debug --container=loader --image=busybox:1.36 -- sleep 1d
 k -n k3-debug exec loader-debug -- ls /etc/loader
-mkdir -p /opt/ckad/m3/11 && echo /etc/loader/conf > /opt/ckad/m3/11/missing.txt
+mkdir -p /opt/apps/m3/11 && echo /etc/loader/conf > /opt/apps/m3/11/missing.txt
 ```
 
 `--copy-to` creates a new pod from the old one's spec, with the changes you ask for, so you inspect the same image and volumes while the original stays as it is.
@@ -356,14 +356,14 @@ mkdir -p /opt/ckad/m3/11 && echo /etc/loader/conf > /opt/ckad/m3/11/missing.txt
 
 ### Task 12: A history to read (6 points)
 
-> Deployment `portal` in namespace `k3-hist` has three revisions with change causes. Write the revision number of `feature x` to `/opt/ckad/m3/12/revision.txt`, then roll the Deployment back to the revision with the cause `nginx 1.28`, and keep at most 2 old ReplicaSets from now on.
+> Deployment `portal` in namespace `k3-hist` has three revisions with change causes. Write the revision number of `feature x` to `/opt/apps/m3/12/revision.txt`, then roll the Deployment back to the revision with the cause `nginx 1.28`, and keep at most 2 old ReplicaSets from now on.
 
 <details>
 <summary>Solution</summary>
 
 ```bash
 k -n k3-hist rollout history deploy portal
-mkdir -p /opt/ckad/m3/12 && echo 3 > /opt/ckad/m3/12/revision.txt
+mkdir -p /opt/apps/m3/12 && echo 3 > /opt/apps/m3/12/revision.txt
 k -n k3-hist rollout undo deploy portal --to-revision=2
 k -n k3-hist patch deploy portal -p '{"spec":{"revisionHistoryLimit":2}}'
 ```
@@ -374,7 +374,7 @@ Write the number down before the undo, because the undo renumbers revision 2 as 
 
 ### Task 13: Two overlays from one base (7 points)
 
-> `/opt/ckad/m3/13/base` holds Deployment `search` and a generated ConfigMap `search-config` with `LOG=info`. Without changing the base, create overlays `dev` and `prod` in `/opt/ckad/m3/13/overlays/`: dev deploys to `k3-dev` with `LOG=debug`; prod deploys to `k3-prod` with `LOG=warn`, 3 replicas and a memory limit of 128Mi. Apply both.
+> `/opt/apps/m3/13/base` holds Deployment `search` and a generated ConfigMap `search-config` with `LOG=info`. Without changing the base, create overlays `dev` and `prod` in `/opt/apps/m3/13/overlays/`: dev deploys to `k3-dev` with `LOG=debug`; prod deploys to `k3-prod` with `LOG=warn`, 3 replicas and a memory limit of 128Mi. Apply both.
 
 <details>
 <summary>Solution</summary>

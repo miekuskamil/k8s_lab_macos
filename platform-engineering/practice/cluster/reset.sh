@@ -53,7 +53,7 @@ for m in "$W1" "$CP"; do
     rm -rf /etc/systemd/system/sysmon.service /etc/systemd/system/node-exporter-lite.service /usr/local/lib/.sysmon /opt/.cache/nel /var/backups/k8s; systemctl daemon-reload
     DEBIAN_FRONTEND=noninteractive apt-get purge -y -qq vsftpd lighttpd >/dev/null 2>&1 || true
     '"$SSH_UNDO"'
-    rm -rf /opt/cks /opt/cks-check /root/cks /root/mock
+    rm -rf /opt/security /opt/security-check /opt/cks /opt/cks-check /root/cks /root/mock
   '
 done
 

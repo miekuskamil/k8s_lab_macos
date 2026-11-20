@@ -10,11 +10,11 @@ Most tasks in this practice exam start from something broken: a pod that never s
 
 1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./platform-engineering/practice-exam.sh setup 2`. In the test run, the reset took 45 seconds and the setup 40 seconds, most of it for the Helm release of task 7.
 2. The clock starts when `setup.sh` ends, and `./platform-engineering/practice-exam.sh score 2` prints the minutes since then.
-3. Work only on `cks-cp`, and use only kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
+3. Work only on `practice-control-plane`, and use only kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
 4. Don't open the solutions while the timer runs.
 5. Score from your Mac with `./platform-engineering/practice-exam.sh score 2`, or single tasks with `./platform-engineering/practice-exam.sh score 2 4 9`.
 
-Task files sit in `/opt/ckad/m2/N` on `cks-cp`. A task that says "fix" means: change as little as possible, and leave everything the task doesn't mention as it is.
+Task files sit in `/opt/apps/m2/N` on `practice-control-plane`. A task that says "fix" means: change as little as possible, and leave everything the task doesn't mention as it is.
 
 ## Tasks
 
@@ -39,7 +39,7 @@ Task files sit in `/opt/ckad/m2/N` on `cks-cp`. A task that says "fix" means: ch
 
 ### Task 1: Pending pods (5 points)
 
-> The pods of Deployment `render` in namespace `k2-sched` stay `Pending`. Fix the Deployment so both pods run on `cks-w1`, each requesting 64Mi of memory.
+> The pods of Deployment `render` in namespace `k2-sched` stay `Pending`. Fix the Deployment so both pods run on `practice-worker`, each requesting 64Mi of memory.
 
 <details>
 <summary>Solution</summary>
@@ -47,7 +47,7 @@ Task files sit in `/opt/ckad/m2/N` on `cks-cp`. A task that says "fix" means: ch
 `k -n k2-sched events --types=Warning` names the node selector first: `kubernetes.io/hostname: cks-w2` matches no node. After that fix, the next event names `Insufficient memory`, because the request says `64Gi`. Fix both in one edit:
 
 ```bash
-k -n k2-sched edit deploy render    # nodeSelector: kubernetes.io/hostname: cks-w1, requests.memory: 64Mi
+k -n k2-sched edit deploy render    # nodeSelector: kubernetes.io/hostname: practice-worker, requests.memory: 64Mi
 k -n k2-sched get pods -o wide
 ```
 
@@ -55,15 +55,15 @@ k -n k2-sched get pods -o wide
 
 ### Task 2: A container that exits (6 points)
 
-> The pod of Deployment `poller` in namespace `k2-crash` restarts over and over. Write the reason the kubelet gives for its last termination, with the exit code, to `/opt/ckad/m2/2/reason.txt`. Then change its command so that it prints `polling` every 10 seconds forever.
+> The pod of Deployment `poller` in namespace `k2-crash` restarts over and over. Write the reason the kubelet gives for its last termination, with the exit code, to `/opt/apps/m2/2/reason.txt`. Then change its command so that it prints `polling` every 10 seconds forever.
 
 <details>
 <summary>Solution</summary>
 
 ```bash
 k -n k2-crash describe pod -l app=poller | grep -A3 'Last State'
-mkdir -p /opt/ckad/m2/2
-k -n k2-crash get pod -l app=poller -o jsonpath='{.items[0].status.containerStatuses[0].lastState.terminated.reason} exit code {.items[0].status.containerStatuses[0].lastState.terminated.exitCode}' > /opt/ckad/m2/2/reason.txt
+mkdir -p /opt/apps/m2/2
+k -n k2-crash get pod -l app=poller -o jsonpath='{.items[0].status.containerStatuses[0].lastState.terminated.reason} exit code {.items[0].status.containerStatuses[0].lastState.terminated.exitCode}' > /opt/apps/m2/2/reason.txt
 ```
 
 The reason is `Completed` with exit code 0: nothing failed, the command simply ended, and a Deployment's pods always restart. The fix is a loop:
@@ -94,7 +94,7 @@ The pods carry `tier=api`, not `tier=backend`, and their web server listens on 9
 
 ### Task 4: Ingress answers 503 (6 points)
 
-> `curl -H 'Host: wiki.k2.local' http://<cks-w1>:30080/` should return the wiki from Deployment `wiki` in namespace `k2-ing`. Fix Ingress `wiki` so it does, and keep Service `wiki` as it is.
+> `curl -H 'Host: wiki.k2.local' http://<practice-worker>:30080/` should return the wiki from Deployment `wiki` in namespace `k2-ing`. Fix Ingress `wiki` so it does, and keep Service `wiki` as it is.
 
 <details>
 <summary>Solution</summary>
@@ -165,7 +165,7 @@ The ReplicaSet retries on its own with growing pauses, and the restart only spee
 
 ### Task 7: A Helm upgrade gone wrong (7 points)
 
-> The last upgrade of release `portal` in namespace `k2-helm`, to chart `webapp` 0.2.0, failed. Write the number of the failed revision to `/opt/ckad/m2/7/failed.txt`. Then upgrade the release again to chart 0.2.0 with the chart's own image and 2 replicas, so that the newest revision shows the status deployed.
+> The last upgrade of release `portal` in namespace `k2-helm`, to chart `webapp` 0.2.0, failed. Write the number of the failed revision to `/opt/apps/m2/7/failed.txt`. Then upgrade the release again to chart 0.2.0 with the chart's own image and 2 replicas, so that the newest revision shows the status deployed.
 
 <details>
 <summary>Solution</summary>
@@ -173,8 +173,8 @@ The ReplicaSet retries on its own with growing pauses, and the restart only spee
 ```bash
 helm -n k2-helm history portal
 helm -n k2-helm get values portal --revision 2
-mkdir -p /opt/ckad/m2/7 && echo 2 > /opt/ckad/m2/7/failed.txt
-helm -n k2-helm upgrade portal oci://registry.ckad:5000/charts/webapp --version 0.2.0 --plain-http --set replicaCount=2
+mkdir -p /opt/apps/m2/7 && echo 2 > /opt/apps/m2/7/failed.txt
+helm -n k2-helm upgrade portal oci://registry.practice:5000/charts/webapp --version 0.2.0 --plain-http --set replicaCount=2
 k -n k2-helm rollout status deploy portal-webapp
 ```
 
@@ -184,7 +184,7 @@ Revision 2 set `image.repository=docker.io/library/ngnix`, a typo. An upgrade wi
 
 ### Task 8: An overlay that won't build (6 points)
 
-> `kubectl apply -k /opt/ckad/m2/8/overlays/live` fails. Fix the overlay so it deploys the base into namespace `k2-kust` with the suffix `-live` and 2 replicas.
+> `kubectl apply -k /opt/apps/m2/8/overlays/live` fails. Fix the overlay so it deploys the base into namespace `k2-kust` with the suffix `-live` and 2 replicas.
 
 <details>
 <summary>Solution</summary>
@@ -205,7 +205,7 @@ replicas:
 
 ### Task 9: Old API versions (5 points)
 
-> `/opt/ckad/m2/9/old.yaml` holds a CronJob and an Ingress for namespace `k2-api` in API versions that no longer exist. Write a working version to `/opt/ckad/m2/9/new.yaml`, with the Ingress using class `nginx` and `pathType: Prefix`, and apply it.
+> `/opt/apps/m2/9/old.yaml` holds a CronJob and an Ingress for namespace `k2-api` in API versions that no longer exist. Write a working version to `/opt/apps/m2/9/new.yaml`, with the Ingress using class `nginx` and `pathType: Prefix`, and apply it.
 
 <details>
 <summary>Solution</summary>
@@ -315,7 +315,7 @@ spec:
 
 ### Task 14: A Dockerfile that won't build (7 points)
 
-> `podman build` fails on `/opt/ckad/m2/14/Dockerfile`. Fix it, build and push `registry.ckad:5000/label:v2`, and roll Deployment `label` in namespace `k2-image` out to that image.
+> `podman build` fails on `/opt/apps/m2/14/Dockerfile`. Fix it, build and push `registry.practice:5000/label:v2`, and roll Deployment `label` in namespace `k2-image` out to that image.
 
 <details>
 <summary>Solution</summary>
@@ -323,10 +323,10 @@ spec:
 The build stops at `COPY src/serve.sh`, because the script lives in `app/`:
 
 ```bash
-cd /opt/ckad/m2/14
+cd /opt/apps/m2/14
 sed -i 's|COPY src/serve.sh|COPY app/serve.sh|' Dockerfile
-podman build -t registry.ckad:5000/label:v2 . && podman push registry.ckad:5000/label:v2
-k -n k2-image set image deploy/label label=registry.ckad:5000/label:v2
+podman build -t registry.practice:5000/label:v2 . && podman push registry.practice:5000/label:v2
+k -n k2-image set image deploy/label label=registry.practice:5000/label:v2
 ```
 
 </details>
@@ -354,15 +354,15 @@ Keys are case-sensitive, so `smtp_host` misses `SMTP_HOST`.
 
 ### Task 16: From image to Ingress (8 points)
 
-> Build `/opt/ckad/m2/16/Dockerfile` as `registry.ckad:5000/status:1` and push it. In namespace `k2-chain`, run it as Deployment `status` with 2 replicas and a readiness probe on `/` port 8080, expose it as Service `status` on port 80, and publish it through an Ingress with class `nginx` for `status.k2.local`.
+> Build `/opt/apps/m2/16/Dockerfile` as `registry.practice:5000/status:1` and push it. In namespace `k2-chain`, run it as Deployment `status` with 2 replicas and a readiness probe on `/` port 8080, expose it as Service `status` on port 80, and publish it through an Ingress with class `nginx` for `status.k2.local`.
 
 <details>
 <summary>Solution</summary>
 
 ```bash
-cd /opt/ckad/m2/16
-podman build -t registry.ckad:5000/status:1 . && podman push registry.ckad:5000/status:1
-k -n k2-chain create deploy status --image=registry.ckad:5000/status:1 --replicas=2 --port=8080 $do > status.yaml
+cd /opt/apps/m2/16
+podman build -t registry.practice:5000/status:1 . && podman push registry.practice:5000/status:1
+k -n k2-chain create deploy status --image=registry.practice:5000/status:1 --replicas=2 --port=8080 $do > status.yaml
 # add under the container: readinessProbe: {httpGet: {path: /, port: 8080}}
 k apply -f status.yaml
 k -n k2-chain expose deploy status --port=80 --target-port=8080

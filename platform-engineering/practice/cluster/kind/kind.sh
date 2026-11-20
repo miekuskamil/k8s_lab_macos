@@ -58,12 +58,9 @@ create() {
   KIND="$(kind_bin)"
 
   say "1/6 node image $NODE_IMAGE"
-  if docker image inspect "$NODE_IMAGE" >/dev/null 2>&1; then
-    echo "already built"
-  else
-    # The first build downloads the tools once (about 1 GB) and takes a few minutes.
-    docker build -t "$NODE_IMAGE" --build-arg K8S_VERSION="$K8S_VERSION" -f "$HERE/Dockerfile" "$CLUSTER_DIR"
-  fi
+  # The first build downloads the tools once (about 1 GB) and takes a few minutes. After that,
+  # Docker's build cache answers in seconds and rebuilds only what changed in the Dockerfile.
+  docker build -q -t "$NODE_IMAGE" --build-arg K8S_VERSION="$K8S_VERSION" -f "$HERE/Dockerfile" "$CLUSTER_DIR"
 
   say "2/6 kind cluster $NAME: $CP and $W1"
   if cluster_exists; then
@@ -97,8 +94,11 @@ create() {
 
   say "5/6 registry $PRACTICE_REGISTRY (container $REGISTRY_CONTAINER on the kind network)"
   if ! docker container inspect "$REGISTRY_CONTAINER" >/dev/null 2>&1; then
-    docker run -d --restart=always --name "$REGISTRY_CONTAINER" --network kind \
-      --network-alias "${PRACTICE_REGISTRY%:*}" -e REGISTRY_STORAGE_DELETE_ENABLED=true "$REGISTRY_IMAGE" >/dev/null
+    # The name registry.practice reaches the container from both nodes and from every pod.
+    docker create --restart=always --name "$REGISTRY_CONTAINER" --network kind \
+      --network-alias "${PRACTICE_REGISTRY%:*}" "$REGISTRY_IMAGE" >/dev/null
+    docker cp "$HERE/registry.yml" "$REGISTRY_CONTAINER:/etc/distribution/config.yml"
+    docker start "$REGISTRY_CONTAINER" >/dev/null
   else
     docker start "$REGISTRY_CONTAINER" >/dev/null
     docker network connect --alias "${PRACTICE_REGISTRY%:*}" kind "$REGISTRY_CONTAINER" 2>/dev/null || true

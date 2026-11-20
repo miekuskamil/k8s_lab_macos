@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs as root inside one node of the practice cluster; extras.sh sends it there.
-#   extras-node.sh cp <cp-ip>   helm, kubectl-convert, podman and a local image registry on cks-cp
-#   extras-node.sh w1 <cp-ip>   only the registry's name and the containerd setting on cks-w1
+#   extras-node.sh cp <cp-ip>   helm, kubectl-convert, podman and a local image registry on the control plane
+#   extras-node.sh w1 <cp-ip>   only the registry's name and the containerd setting on the worker
 # Safe to run again: every step checks what is already there.
 set -euo pipefail
 
@@ -10,14 +10,14 @@ CP_IP="${2:?the control plane IP}"
 HELM_VERSION="${HELM_VERSION:-4.3.1}"
 REGISTRY_VERSION="${REGISTRY_VERSION:-3.1.2}"
 K8S_VERSION="${K8S_VERSION:-1.37.1}"
-REG=registry.ckad:5000
+REG=registry.practice:5000
 ARCH="$(dpkg --print-architecture)"   # arm64 on a Mac, amd64 on most VMs
 export DEBIAN_FRONTEND=noninteractive
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 
-echo "--- the name registry.ckad points to cks-cp ($CP_IP)"
+echo "--- the name registry.practice points to $CP ($CP_IP)"
 sed -i '/ registry\.ckad$/d' /etc/hosts
-echo "$CP_IP registry.ckad" >> /etc/hosts
+echo "$CP_IP registry.practice" >> /etc/hosts
 
 echo "--- containerd pulls from $REG over plain HTTP"
 # containerd 2.x reads per-registry settings from the folder that config_path names.
@@ -53,7 +53,7 @@ fi
 echo "--- podman (Ubuntu's package) to build and push images"
 command -v podman >/dev/null || apt-get install -y -qq podman >/dev/null
 mkdir -p /etc/containers/registries.conf.d
-cat > /etc/containers/registries.conf.d/50-ckad.conf <<EOF
+cat > /etc/containers/registries.conf.d/50-practice.conf <<EOF
 unqualified-search-registries = ["docker.io"]
 
 [[registry]]
@@ -61,39 +61,39 @@ location = "$REG"
 insecure = true
 EOF
 
-echo "--- registry $REGISTRY_VERSION on port 5000, as the systemd service ckad-registry"
+echo "--- registry $REGISTRY_VERSION on port 5000, as the systemd service practice-registry"
 if ! /usr/local/bin/registry --version 2>/dev/null | grep -q "v$REGISTRY_VERSION"; then
   curl -fsSL "https://github.com/distribution/distribution/releases/download/v${REGISTRY_VERSION}/registry_${REGISTRY_VERSION}_linux_${ARCH}.tar.gz" | tar -xz -C "$tmp"
   install -m 755 "$tmp/registry" /usr/local/bin/registry
 fi
-mkdir -p /etc/ckad-registry /var/lib/ckad-registry
-cat > /etc/ckad-registry/config.yml <<'EOF'
+mkdir -p /etc/practice-registry /var/lib/practice-registry
+cat > /etc/practice-registry/config.yml <<'EOF'
 version: 0.1
 log:
   level: warn
 storage:
   filesystem:
-    rootdirectory: /var/lib/ckad-registry
+    rootdirectory: /var/lib/practice-registry
   delete:
     enabled: true
 http:
   addr: :5000
 EOF
-cat > /etc/systemd/system/ckad-registry.service <<'EOF'
+cat > /etc/systemd/system/practice-registry.service <<'EOF'
 [Unit]
-Description=Local image registry for the CKAD track (registry.ckad:5000)
+Description=Local image registry for the practice cluster (registry.practice:5000)
 After=network-online.target
 
 [Service]
-ExecStart=/usr/local/bin/registry serve /etc/ckad-registry/config.yml
+ExecStart=/usr/local/bin/registry serve /etc/practice-registry/config.yml
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
-systemctl enable --now ckad-registry >/dev/null 2>&1
-systemctl restart ckad-registry
+systemctl enable --now practice-registry >/dev/null 2>&1
+systemctl restart practice-registry
 for i in $(seq 1 20); do curl -fsS "http://$REG/v2/" >/dev/null 2>&1 && break; sleep 1; done
 
 echo "--- done on $(hostname): $(helm version --short), $(podman --version), registry $(registry --version | awk '{print $3}'), kubectl-convert $(test -x /usr/local/bin/kubectl-convert && echo present)"

@@ -56,8 +56,8 @@ Two settings in `platform-engineering/practice/cluster/kubeadm-config.yaml` exis
 
 The application modules 33 to 37 run on the same two machines as the security modules, but building and shipping an app needs a few tools that hardening a cluster doesn't. So a small script adds them on top:
 
-1. On `cks-cp`: helm 4.3.1 to install charts, podman to build and push images, `kubectl-convert` for API version changes, and a local image registry at `registry.ckad:5000`, which runs as the systemd service `ckad-registry` outside Kubernetes.
-2. On both nodes: the name `registry.ckad`, and a containerd setting that lets the kubelet pull images from that registry over plain HTTP.
+1. On `cks-cp`: helm 4.3.1 to install charts, podman to build and push images, `kubectl-convert` for API version changes, and a local image registry at `registry.practice:5000`, which runs as the systemd service `practice-registry` outside Kubernetes.
+2. On both nodes: the name `registry.practice`, and a containerd setting that lets the kubelet pull images from that registry over plain HTTP.
 3. In the cluster: metrics-server 0.9.1, so that `kubectl top` works.
 
 ```bash
@@ -70,7 +70,7 @@ orb stop cks-cp cks-w1                                # frees the memory; "orb s
 
 In the test run, `extras.sh` took 51 seconds the first time and 31 seconds when run again. The extras follow the cluster scripts' platform setting, so with `CKS_PLATFORM=vms` they install on [your own VMs](#the-practice-cluster-on-your-own-vms-proxmox-or-any-ssh-reachable-ubuntu) the same way, and every download picks the node's CPU type from `dpkg --print-architecture`.
 
-The application and security modules share one cluster, so each keeps out of the other's way. Every namespace an application task creates carries the label `ckad=task`, and every practice exam namespace `ckad=mock`, so `reset.sh` finds and deletes them all. Cluster-wide objects that the tasks create start with `ckad-`, and Custom Resource Definitions sit in the `ckad.io` group, so the reset finds those too. The reset also removes metrics-server, which the security modules don't use, and the tasks that need it install it again. It does that last, after the namespaces are gone, because a namespace only finishes deleting while every API group answers, and the metrics API stops answering when metrics-server goes. In one test run the opposite order held the namespaces in `Terminating` for about a minute. The tools on `cks-cp` stay, because nothing in Kubernetes sees them, and in the test run the reset took between 43 and 56 seconds, with 16 to 55 namespaces to delete.
+The application and security modules share one cluster, so each keeps out of the other's way. Every namespace an application task creates carries the label `practice=task`, and every practice exam namespace `practice=mock`, so `reset.sh` finds and deletes them all. Cluster-wide objects that the tasks create start with `ckad-`, and Custom Resource Definitions sit in the `ckad.io` group, so the reset finds those too. The reset also removes metrics-server, which the security modules don't use, and the tasks that need it install it again. It does that last, after the namespaces are gone, because a namespace only finishes deleting while every API group answers, and the metrics API stops answering when metrics-server goes. In one test run the opposite order held the namespaces in `Terminating` for about a minute. The tools on `cks-cp` stay, because nothing in Kubernetes sees them, and in the test run the reset took between 43 and 56 seconds, with 16 to 55 namespaces to delete.
 
 `./platform-engineering/practice/cluster/reset.sh` rebuilds the cluster from scratch, which also rewrites containerd's settings, so run `extras.sh` again after it.
 

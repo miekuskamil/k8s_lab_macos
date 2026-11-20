@@ -185,7 +185,7 @@ score_m4() {
     "curl -sk -m 3 -o /dev/null -w '%{http_code}' https://127.0.0.1:10250/pods | grep -qx 401"
   check_w1 "nothing answers on the read-only port 10255" "! curl -s -m 3 -o /dev/null http://127.0.0.1:10255/pods"
   check_w1 "the kubelet config sets authorization mode Webhook" "grep -A1 '^authorization:' /var/lib/kubelet/config.yaml | grep -q 'mode: Webhook'"
-  check_cp "cks-w1 is Ready" "kubectl wait node cks-w1 --for=condition=Ready --timeout=60s"
+  check_cp "$W1 is Ready" "kubectl wait node $W1 --for=condition=Ready --timeout=60s"
 }
 solve_m4() { solve_1_13; }
 
@@ -288,7 +288,7 @@ score_m8() {
 }
 solve_m8() { w1_sh 'systemctl disable --now node-exporter-lite; rm -f /etc/systemd/system/node-exporter-lite.service /opt/.cache/nel; systemctl daemon-reload'; }
 
-# ---- 9. AppArmor for the web Deployment (7, Lima, or cks-w1 on VMs) ---------------------------------------------------------------
+# ---- 9. AppArmor for the web Deployment (7, Lima, or the worker on VMs) ---------------------------------------------------------------
 setup_m9() {
   mk_ns_kern m2-aa
   onkern <<'EOF'

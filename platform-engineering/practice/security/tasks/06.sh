@@ -161,19 +161,19 @@ check_6_4() {
     "test -f /var/lib/kubelet/seccomp/profiles/no-chmod.json"
   check_cp "pod locked in seccomp uses the Localhost profile profiles/no-chmod.json" \
     "kubectl -n seccomp get pod locked -o jsonpath='{.spec.securityContext.seccompProfile.type}/{.spec.securityContext.seccompProfile.localhostProfile}' | grep -qx Localhost/profiles/no-chmod.json"
-  check_cp "pod locked runs on cks-w1" "kubectl -n seccomp get pod locked -o jsonpath='{.status.phase}/{.spec.nodeName}' | grep -qx Running/cks-w1"
+  check_cp "pod locked runs on $W1" "kubectl -n seccomp get pod locked -o jsonpath='{.status.phase}/{.spec.nodeName}' | grep -qx Running/$W1"
   check_cp "chmod fails inside pod locked" "kubectl -n seccomp get pod locked && ! kubectl -n seccomp exec locked -- sh -c 'touch /tmp/f && chmod 600 /tmp/f'"
   check_cp "other writes still work inside pod locked" "kubectl -n seccomp exec locked -- sh -c 'echo ok > /tmp/g'"
 }
 solve_6_4() {
   w1_sh 'mkdir -p /var/lib/kubelet/seccomp/profiles && cp /root/cks/no-chmod.json /var/lib/kubelet/seccomp/profiles/'
   oncp <<'EOF'
-kubectl apply -f - <<'YAML'
+kubectl apply -f - <<YAML
 apiVersion: v1
 kind: Pod
 metadata: {name: locked, namespace: seccomp}
 spec:
-  nodeName: cks-w1
+  nodeName: $W1
   securityContext:
     seccompProfile:
       type: Localhost
@@ -188,7 +188,7 @@ kubectl -n seccomp exec locked -- sh -c 'touch /tmp/f && chmod 600 /tmp/f'
 EOF
 }
 
-# ---- Task 5: an AppArmor profile (Lima, or cks-w1 on VMs) ----------------------------------------------------
+# ---- Task 5: an AppArmor profile (Lima, or the worker on VMs) ----------------------------------------------------
 setup_6_5() {
   need_kernel || return 1
   onkern <<'EOF'
@@ -430,9 +430,9 @@ EOF
 }
 
 # ---- Users with client certificates, for the audit tasks ---------------------------------------
-# cks_users alice bob: writes /opt/cks-check/users/<name>.kubeconfig on cks-cp, signed by the cluster CA.
+# cks_users alice bob: writes /opt/security-check/users/<name>.kubeconfig on the control plane, signed by the cluster CA.
 cks_users() {
-  cp_sh "mkdir -p /opt/cks-check/users && cd /opt/cks-check/users
+  cp_sh "mkdir -p /opt/security-check/users && cd /opt/security-check/users
     SERVER=\$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
     for u in $*; do
       [ -f \$u.kubeconfig ] && continue
@@ -444,7 +444,7 @@ cks_users() {
       kubectl config use-context default --kubeconfig=\$u.kubeconfig >/dev/null
     done"
 }
-as_user() { local u="$1"; shift; cp_sh "kubectl --kubeconfig=/opt/cks-check/users/$u.kubeconfig $*"; }
+as_user() { local u="$1"; shift; cp_sh "kubectl --kubeconfig=/opt/security-check/users/$u.kubeconfig $*"; }
 
 # ---- Task 10: read the audit log like a detective -----------------------------------------------
 setup_6_10() {
@@ -562,7 +562,7 @@ YAML"
   restart_apiserver
 }
 
-# ---- Task 12: AppArmor for a Deployment (Lima, or cks-w1 on VMs) ----------------------------------------------------
+# ---- Task 12: AppArmor for a Deployment (Lima, or the worker on VMs) ----------------------------------------------------
 setup_6_12() {
   need_kernel || return 1
   onkern <<'EOF'

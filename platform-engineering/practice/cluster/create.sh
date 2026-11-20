@@ -23,7 +23,7 @@ say "1/7 machines"
 for m in "$CP" "$W1"; do
   if [ "$PRACTICE_PLATFORM" = vms ]; then
     # The VMs exist already. Each needs SSH, passwordless sudo and the node's name as hostname,
-    # because kubeadm names a node after its host and the tasks expect $CP and $W1.
+    # because kubeadm names a node after its host and the tasks use the names in $CP and $W1.
     on "$m" true </dev/null || { echo "no SSH to $m as $PRACTICE_SSH_USER with passwordless sudo: $(node_shell_hint "$m")"; exit 1; }
     on "$m" "command -v cloud-init >/dev/null && cloud-init status --wait >/dev/null 2>&1
       if [ \"\$(hostname)\" != $m ]; then

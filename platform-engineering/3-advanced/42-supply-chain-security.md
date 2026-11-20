@@ -165,7 +165,7 @@ When the webhook goes wrong, the symptoms depend on which file is wrong, and eac
 | the webhook kubeconfig's `certificate-authority` doesn't sign the back end's certificate | the API server runs, and every new pod fails with an `x509` error, because the call fails and `defaultAllow: false` refuses |
 | the back end is down, with `defaultAllow: true` | everything works, including images the policy forbids. Nobody notices |
 
-The practice cluster runs a small back end on `cks-cp` at `https://localhost:8443/review`, from `platform-engineering/practice/cluster/image-policy/`. It allows images from the prefixes in `/etc/image-policy/allowed-registries`, refuses `latest` and untagged images, and logs each verdict to `journalctl -u image-policy`.
+The practice cluster runs a small back end on `practice-control-plane` at `https://localhost:8443/review`, from `platform-engineering/practice/cluster/image-policy/`. It allows images from the prefixes in `/etc/image-policy/allowed-registries`, refuses `latest` and untagged images, and logs each verdict to `journalctl -u image-policy`.
 
 **What this stops.** An admission rule stops images from unknown registries, and `latest` tags, from running in the cluster, whoever deploys them and whatever CI they skipped.
 
@@ -207,7 +207,7 @@ The industry calls the goal **provenance**, a verifiable record of where every a
 
 ## Task 1: Shrink a Dockerfile
 
-**Time budget:** 4 minutes. **Host:** `cks-cp`.
+**Time budget:** 4 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 42.1
@@ -253,7 +253,7 @@ $ ./platform-engineering/task.sh check 42.1
 
 ## Task 2: Find and remove vulnerable images
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 42.2
@@ -274,18 +274,18 @@ pod/web condition met
 List the images first, then scan each one:
 
 ```console
-root@cks-cp:~# k -n scan get pods -o custom-columns=POD:.metadata.name,IMAGE:.spec.containers[0].image
+root@practice-control-plane:~# k -n scan get pods -o custom-columns=POD:.metadata.name,IMAGE:.spec.containers[0].image
 POD     IMAGE
 cache   redis:6.0.5
 tools   busybox:1.36
 web     nginx:1.19.0
-root@cks-cp:~# trivy image --severity CRITICAL --quiet nginx:1.19.0 | grep Total
+root@practice-control-plane:~# trivy image --severity CRITICAL --quiet nginx:1.19.0 | grep Total
 Total: 44 (CRITICAL: 44)
-root@cks-cp:~# trivy image --severity CRITICAL --quiet redis:6.0.5 | grep Total
+root@practice-control-plane:~# trivy image --severity CRITICAL --quiet redis:6.0.5 | grep Total
 Total: 17 (CRITICAL: 17)
 Total: 5 (CRITICAL: 5)
-root@cks-cp:~# trivy image --severity CRITICAL --quiet busybox:1.36 | grep Total
-root@cks-cp:~# k -n scan delete pod web cache
+root@practice-control-plane:~# trivy image --severity CRITICAL --quiet busybox:1.36 | grep Total
+root@practice-control-plane:~# k -n scan delete pod web cache
 pod "web" deleted from scan namespace
 pod "cache" deleted from scan namespace
 ```
@@ -305,7 +305,7 @@ $ ./platform-engineering/task.sh check 42.2
 
 ## Task 3: Write an SBOM
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 42.3
@@ -323,19 +323,19 @@ $ ./platform-engineering/task.sh setup 42.3
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# cd /root/cks
-root@cks-cp:~/cks# bom generate --image registry.k8s.io/kube-proxy:v1.37.1 --format json --output kube-proxy.spdx.json
+root@practice-control-plane:~# cd /root/cks
+root@practice-control-plane:~/cks# bom generate --image registry.k8s.io/kube-proxy:v1.37.1 --format json --output kube-proxy.spdx.json
 level=info msg="bom v0.8.0: Generating SPDX Bill of Materials"
 level=info msg="Package SPDXRef-Package-registry.k8s.io-kube-proxy-v1.37.1 has 4 relationships defined"
 ...
-root@cks-cp:~/cks# trivy image --format cyclonedx --output kube-proxy.cdx.json registry.k8s.io/kube-proxy:v1.37.1
+root@practice-control-plane:~/cks# trivy image --format cyclonedx --output kube-proxy.cdx.json registry.k8s.io/kube-proxy:v1.37.1
 2026-11-15T15:05:20Z	INFO	"--format cyclonedx" disables security scanning. Specify "--scanners vuln" explicitly if you want to include vulnerabilities in the "cyclonedx" report.
 2026-11-15T15:05:21Z	INFO	Detected OS	family="debian" version="12.15"
 2026-11-15T15:05:21Z	INFO	Number of language-specific files	num=3
 ...
-root@cks-cp:~/cks# grep -A3 '"name": "iptables"' kube-proxy.spdx.json | grep -m1 versionInfo
+root@practice-control-plane:~/cks# grep -A3 '"name": "iptables"' kube-proxy.spdx.json | grep -m1 versionInfo
       "versionInfo": "1.8.9-2",
-root@cks-cp:~/cks# echo 1.8.9-2 > iptables-version.txt
+root@practice-control-plane:~/cks# echo 1.8.9-2 > iptables-version.txt
 ```
 
 bom 0.8.0 writes JSON by default, and `--format tag-value` gives the older text format. Older bom versions defaulted to tag-value, so pass `--format json` anyway. In the test run, bom took 4 seconds and listed 266 packages, trivy listed 172 components, and `iptables` had version `1.8.9-2`. The two tools count differently, because bom also lists every Go module inside the Kubernetes binaries.
@@ -355,7 +355,7 @@ $ ./platform-engineering/task.sh check 42.3
 
 ## Task 4: Static analysis with kubesec
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 42.4
@@ -371,7 +371,7 @@ The setup prints kubesec's verdict on the manifest, which in the test run was `s
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# kubesec scan /root/cks/report.yaml | less
+root@practice-control-plane:~# kubesec scan /root/cks/report.yaml | less
 [
   {
     "object": "Pod/report.reports",
@@ -431,10 +431,10 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# kubesec scan /root/cks/report.yaml | grep -E '"score"|"message"'
+root@practice-control-plane:~# kubesec scan /root/cks/report.yaml | grep -E '"score"|"message"'
     "message": "Passed with a score of 10 points",
     "score": 10,
-root@cks-cp:~# k apply -f /root/cks/report.yaml
+root@practice-control-plane:~# k apply -f /root/cks/report.yaml
 pod/report unchanged
 ```
 
@@ -453,7 +453,7 @@ $ ./platform-engineering/task.sh check 42.4
 
 ## Task 5: Allow only approved registries
 
-**Time budget:** 10 minutes. **Host:** `cks-cp`.
+**Time budget:** 10 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 42.5
@@ -503,16 +503,16 @@ The API server reads two folders it doesn't mount yet, `/etc/kubernetes/admissio
 When the API server answers again, test one image the policy must refuse and one it must allow:
 
 ```console
-root@cks-cp:~# k run t1 --image=nginx:latest --dry-run=server
+root@practice-control-plane:~# k run t1 --image=nginx:latest --dry-run=server
 Error from server (Forbidden): pods "t1" is forbidden: image policy webhook backend denied one or more images: image docker.io/library/nginx:latest has no tag or uses latest
-root@cks-cp:~# k run t2 --image=busybox:1.36 --dry-run=server -- sleep 1
+root@practice-control-plane:~# k run t2 --image=busybox:1.36 --dry-run=server -- sleep 1
 pod/t2 created (server dry run)
-root@cks-cp:~# journalctl -u image-policy -n 5
-Nov 15 15:04:40 cks-cp systemd[1]: image-policy.service: Deactivated successfully.
-Nov 15 15:04:40 cks-cp systemd[1]: Stopped image-policy.service - ImagePolicyWebhook back end for the CKS practice cluster.
-Nov 15 15:04:40 cks-cp systemd[1]: Started image-policy.service - ImagePolicyWebhook back end for the CKS practice cluster.
-Nov 15 15:06:08 cks-cp python3[32970]: DENY  ['nginx:latest'] image docker.io/library/nginx:latest has no tag or uses latest
-Nov 15 15:06:09 cks-cp python3[32970]: ALLOW ['busybox:1.36']
+root@practice-control-plane:~# journalctl -u image-policy -n 5
+Nov 15 15:04:40 practice-control-plane systemd[1]: image-policy.service: Deactivated successfully.
+Nov 15 15:04:40 practice-control-plane systemd[1]: Stopped image-policy.service - ImagePolicyWebhook back end for the CKS practice cluster.
+Nov 15 15:04:40 practice-control-plane systemd[1]: Started image-policy.service - ImagePolicyWebhook back end for the CKS practice cluster.
+Nov 15 15:06:08 practice-control-plane python3[32970]: DENY  ['nginx:latest'] image docker.io/library/nginx:latest has no tag or uses latest
+Nov 15 15:06:09 practice-control-plane python3[32970]: ALLOW ['busybox:1.36']
 ```
 
 In the test run, the first command failed with `image policy webhook backend denied one or more images: image docker.io/library/nginx:latest has no tag or uses latest`, and the second printed `pod/t2 created (server dry run)`. The back end expands short names the way container runtimes do, so `busybox:1.36` counts as `docker.io/library/busybox:1.36`.
@@ -532,7 +532,7 @@ $ ./platform-engineering/task.sh check 42.5
 
 ## Task 6: The webhook's files are wrong
 
-**Time budget:** 8 minutes. **Host:** `cks-cp`.
+**Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 42.6
@@ -548,10 +548,10 @@ $ ./platform-engineering/task.sh setup 42.6
 `kubectl` fails while the API server is down, so read the API server's last words on the node:
 
 ```console
-root@cks-cp:~# crictl ps -a --name kube-apiserver
+root@practice-control-plane:~# crictl ps -a --name kube-apiserver
 CONTAINER           IMAGE               CREATED             STATE               NAME                ATTEMPT             POD ID              POD                     NAMESPACE
-7cf2701fac743       98d6e75e244ec       8 seconds ago       Exited              kube-apiserver      2                   deb178f6957eb       kube-apiserver-cks-cp   kube-system
-root@cks-cp:~# crictl logs <id of the newest exited container>
+7cf2701fac743       98d6e75e244ec       8 seconds ago       Exited              kube-apiserver      2                   deb178f6957eb       kube-apiserver-practice-control-plane   kube-system
+root@practice-control-plane:~# crictl logs <id of the newest exited container>
 ...
 E1115 15:06:51.929151       1 run.go:72] "command failed" err="failed to apply admission: couldn't init admission plugin \"ImagePolicyWebhook\": stat /etc/kubernetes/webhook/kubeconfig.yaml: no such file or directory"
 ```
@@ -567,7 +567,7 @@ Error from server (Forbidden): pods "x509" is forbidden: Post "https://localhost
 The kubeconfig's `certificate-authority` points to the cluster's CA, `/etc/kubernetes/pki/ca.crt`, which never signed the back end's certificate, so set it to `/etc/kubernetes/policy-webhook/ca.crt`. The API server reads the kubeconfig only at start, and the manifest didn't change, so restart it the way [module 41, task 5](41-hardening-workloads.md#task-5-rotate-the-encryption-key) does, by moving the manifest out of the folder and back. Then test:
 
 ```console
-root@cks-cp:~# k run t --image=quay.io/evil/miner:1 --dry-run=server
+root@practice-control-plane:~# k run t --image=quay.io/evil/miner:1 --dry-run=server
 Error from server (Forbidden): pods "t" is forbidden: image policy webhook backend denied one or more images: image quay.io/evil/miner:1 is not from an allowed registry
 ```
 
@@ -587,7 +587,7 @@ $ ./platform-engineering/task.sh check 42.6
 
 ## Task 7: The back end is down and nobody noticed
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 42.7
@@ -605,32 +605,32 @@ The setup shows the hole, which in the test run read `quay.io/evil/miner:1 today
 Two things are wrong, and both have to change, because fixing either one alone leaves the cluster broken in a different way:
 
 ```console
-root@cks-cp:~# grep defaultAllow /etc/kubernetes/admission/admission-config.yaml     # defaultAllow: true
+root@practice-control-plane:~# grep defaultAllow /etc/kubernetes/admission/admission-config.yaml     # defaultAllow: true
       defaultAllow: true
-root@cks-cp:~# systemctl status image-policy                                         # inactive, disabled
+root@practice-control-plane:~# systemctl status image-policy                                         # inactive, disabled
 ○ image-policy.service - ImagePolicyWebhook back end for the CKS practice cluster
      Loaded: loaded (/etc/systemd/system/image-policy.service; disabled; preset: enabled)
     Drop-In: /run/systemd/system/service.d
              └─zzz-lxc-service.conf
      Active: inactive (dead)
 ...
-root@cks-cp:~# journalctl -u image-policy -n 2
-Nov 15 15:08:45 cks-cp systemd[1]: image-policy.service: Deactivated successfully.
-Nov 15 15:08:45 cks-cp systemd[1]: Stopped image-policy.service - ImagePolicyWebhook back end for the CKS practice cluster.
+root@practice-control-plane:~# journalctl -u image-policy -n 2
+Nov 15 15:08:45 practice-control-plane systemd[1]: image-policy.service: Deactivated successfully.
+Nov 15 15:08:45 practice-control-plane systemd[1]: Stopped image-policy.service - ImagePolicyWebhook back end for the CKS practice cluster.
 ```
 
 ```console
-root@cks-cp:~# sed -i 's/defaultAllow: true/defaultAllow: false/' /etc/kubernetes/admission/admission-config.yaml
-root@cks-cp:~# systemctl enable --now image-policy
+root@practice-control-plane:~# sed -i 's/defaultAllow: true/defaultAllow: false/' /etc/kubernetes/admission/admission-config.yaml
+root@practice-control-plane:~# systemctl enable --now image-policy
 Created symlink /etc/systemd/system/multi-user.target.wants/image-policy.service → /etc/systemd/system/image-policy.service.
 ```
 
 Restart the API server by moving its manifest out and back, as in task 6, and test both sides:
 
 ```console
-root@cks-cp:~# k run ok --image=busybox:1.36 --dry-run=server -- sleep 1         # created
+root@practice-control-plane:~# k run ok --image=busybox:1.36 --dry-run=server -- sleep 1         # created
 pod/ok created (server dry run)
-root@cks-cp:~# k run bad --image=quay.io/evil/miner:1 --dry-run=server           # denied
+root@practice-control-plane:~# k run bad --image=quay.io/evil/miner:1 --dry-run=server           # denied
 Error from server (Forbidden): pods "bad" is forbidden: image policy webhook backend denied one or more images: image quay.io/evil/miner:1 is not from an allowed registry
 ```
 
@@ -650,7 +650,7 @@ $ ./platform-engineering/task.sh check 42.7
 
 ## Task 8: Pin an image by digest
 
-**Time budget:** 4 minutes. **Host:** `cks-cp`.
+**Time budget:** 4 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 42.8
@@ -668,11 +668,11 @@ deployment "web" successfully rolled out
 Read the digest from the running pod, then set it on the Deployment:
 
 ```console
-root@cks-cp:~# k -n pinned get pod -l app=web -o jsonpath='{.items[0].status.containerStatuses[0].imageID}'; echo
+root@practice-control-plane:~# k -n pinned get pod -l app=web -o jsonpath='{.items[0].status.containerStatuses[0].imageID}'; echo
 docker.io/library/nginx@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
-root@cks-cp:~# k -n pinned set image deploy/web nginx=nginx@sha256:<the digest>
+root@practice-control-plane:~# k -n pinned set image deploy/web nginx=nginx@sha256:<the digest>
 deployment.apps/web image updated
-root@cks-cp:~# k -n pinned rollout status deploy web
+root@practice-control-plane:~# k -n pinned rollout status deploy web
 Waiting for deployment "web" rollout to finish: 1 old replicas are pending termination...
 Waiting for deployment "web" rollout to finish: 1 old replicas are pending termination...
 deployment "web" successfully rolled out
@@ -695,7 +695,7 @@ $ ./platform-engineering/task.sh check 42.8
 
 ## Task 9: Scan what the cluster runs
 
-**Time budget:** 7 minutes. **Host:** `cks-cp`.
+**Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 42.9
@@ -714,25 +714,25 @@ deployment.apps/pause created
 List the images per Deployment, then scan each distinct image once:
 
 ```console
-root@cks-cp:~# k get deploy -n prod-a -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[*].image
+root@practice-control-plane:~# k get deploy -n prod-a -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[*].image
 NAME    IMAGE
 tools   busybox:1.36
 web     nginx:1.19.0
-root@cks-cp:~# k get deploy -n prod-b -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[*].image
+root@practice-control-plane:~# k get deploy -n prod-b -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[*].image
 NAME    IMAGE
 cache   redis:6.0.5
 pause   registry.k8s.io/pause:3.10
-root@cks-cp:~# for img in nginx:1.19.0 busybox:1.36 redis:6.0.5 registry.k8s.io/pause:3.10; do
+root@practice-control-plane:~# for img in nginx:1.19.0 busybox:1.36 redis:6.0.5 registry.k8s.io/pause:3.10; do
   echo "$img $(trivy image --quiet --severity CRITICAL $img | grep -m1 Total)"
 done
 nginx:1.19.0 Total: 44 (CRITICAL: 44)
 busybox:1.36 
 redis:6.0.5 Total: 17 (CRITICAL: 17)
 registry.k8s.io/pause:3.10 
-root@cks-cp:~# printf 'nginx:1.19.0\nredis:6.0.5\n' > /root/cks/critical-images.txt
-root@cks-cp:~# k -n prod-a scale deploy web --replicas=0
+root@practice-control-plane:~# printf 'nginx:1.19.0\nredis:6.0.5\n' > /root/cks/critical-images.txt
+root@practice-control-plane:~# k -n prod-a scale deploy web --replicas=0
 deployment.apps/web scaled
-root@cks-cp:~# k -n prod-b scale deploy cache --replicas=0
+root@practice-control-plane:~# k -n prod-b scale deploy cache --replicas=0
 deployment.apps/cache scaled
 ```
 
@@ -751,7 +751,7 @@ $ ./platform-engineering/task.sh check 42.9
 
 ## Task 10: Which SBOM carries the risk?
 
-**Time budget:** 4 minutes. **Host:** `cks-cp`.
+**Time budget:** 4 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 42.10
@@ -769,12 +769,12 @@ app-3.cdx.json
 `trivy sbom` reads the package list from the file and checks it against the database, with no image to pull:
 
 ```console
-root@cks-cp:~# cd /root/cks/sboms
-root@cks-cp:~/cks/sboms# for f in app-*.cdx.json; do echo "$f: $(trivy sbom --quiet --severity CRITICAL $f | grep -m1 Total)"; done
+root@practice-control-plane:~# cd /root/cks/sboms
+root@practice-control-plane:~/cks/sboms# for f in app-*.cdx.json; do echo "$f: $(trivy sbom --quiet --severity CRITICAL $f | grep -m1 Total)"; done
 app-1.cdx.json: 
 app-2.cdx.json: Total: 44 (CRITICAL: 44)
 app-3.cdx.json: 
-root@cks-cp:~/cks/sboms# echo app-2.cdx.json > /root/cks/risky-sboms.txt
+root@practice-control-plane:~/cks/sboms# echo app-2.cdx.json > /root/cks/risky-sboms.txt
 ```
 
 In the test run, `app-2.cdx.json` showed `Total: 44 (CRITICAL: 44)`, and the other two printed nothing. That is the point of an SBOM, because the scan took under a second per file and needed no registry. `--exit-code 1` makes trivy fail when it finds something, which suits a loop or a CI step.

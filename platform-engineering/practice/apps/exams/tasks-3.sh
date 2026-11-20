@@ -22,7 +22,7 @@ mock_title() {
 # ---- 1. Image with a build argument (8) -----------------------------------------------------------
 setup_m1() {
   ns_new k3-build
-  put_file /opt/ckad/m3/1/Dockerfile <<'EOF'
+  put_file /opt/apps/m3/1/Dockerfile <<'EOF'
 FROM docker.io/library/busybox:1.36
 ARG VERSION=dev
 ENV APP_VERSION=$VERSION
@@ -32,17 +32,17 @@ EOF
 }
 score_m1() {
   check_cp "the registry holds pricing:2.4.0 and pricing:stable with the same digest" \
-    "a=\$(curl -fsSI -H 'Accept: application/vnd.oci.image.manifest.v1+json' -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' http://registry.ckad:5000/v2/pricing/manifests/2.4.0 | grep -i docker-content-digest); b=\$(curl -fsSI -H 'Accept: application/vnd.oci.image.manifest.v1+json' -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' http://registry.ckad:5000/v2/pricing/manifests/stable | grep -i docker-content-digest); [ -n \"\$a\" ] && [ \"\$a\" = \"\$b\" ]"
+    "a=\$(curl -fsSI -H 'Accept: application/vnd.oci.image.manifest.v1+json' -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' http://registry.practice:5000/v2/pricing/manifests/2.4.0 | grep -i docker-content-digest); b=\$(curl -fsSI -H 'Accept: application/vnd.oci.image.manifest.v1+json' -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' http://registry.practice:5000/v2/pricing/manifests/stable | grep -i docker-content-digest); [ -n \"\$a\" ] && [ \"\$a\" = \"\$b\" ]"
   check_cp "Deployment pricing runs pricing:2.4.0 with 2 ready pods that answer 'version 2.4.0'" \
-    "kubectl -n k3-build get deploy pricing -o jsonpath='{.spec.template.spec.containers[0].image} {.status.readyReplicas}' | grep -qx 'registry.ckad:5000/pricing:2.4.0 2' && kubectl -n k3-build exec --pod-running-timeout=5s deploy/pricing -c pricing -- wget -qO- localhost:8080 | grep -qx 'version 2.4.0'"
+    "kubectl -n k3-build get deploy pricing -o jsonpath='{.spec.template.spec.containers[0].image} {.status.readyReplicas}' | grep -qx 'registry.practice:5000/pricing:2.4.0 2' && kubectl -n k3-build exec --pod-running-timeout=5s deploy/pricing -c pricing -- wget -qO- localhost:8080 | grep -qx 'version 2.4.0'"
   check_cp "its pods have an init container wait-dns that waits for the cluster DNS" \
     "kubectl -n k3-build get deploy pricing -o jsonpath='{.spec.template.spec.initContainers[0].name}' | grep -qx wait-dns"
-  check_cp "/opt/ckad/m3/1/pricing.tar is an OCI archive of the image" "tar -tf /opt/ckad/m3/1/pricing.tar | grep -q '^index.json\$'"
+  check_cp "/opt/apps/m3/1/pricing.tar is an OCI archive of the image" "tar -tf /opt/apps/m3/1/pricing.tar | grep -q '^index.json\$'"
 }
 solve_m1() {
-  cp_sh "cd /opt/ckad/m3/1 && podman build -q --build-arg VERSION=2.4.0 -t registry.ckad:5000/pricing:2.4.0 . && podman tag registry.ckad:5000/pricing:2.4.0 registry.ckad:5000/pricing:stable
-    podman push -q registry.ckad:5000/pricing:2.4.0 && podman push -q registry.ckad:5000/pricing:stable
-    podman save -q --format oci-archive -o pricing.tar registry.ckad:5000/pricing:2.4.0
+  cp_sh "cd /opt/apps/m3/1 && podman build -q --build-arg VERSION=2.4.0 -t registry.practice:5000/pricing:2.4.0 . && podman tag registry.practice:5000/pricing:2.4.0 registry.practice:5000/pricing:stable
+    podman push -q registry.practice:5000/pricing:2.4.0 && podman push -q registry.practice:5000/pricing:stable
+    podman save -q --format oci-archive -o pricing.tar registry.practice:5000/pricing:2.4.0
     kubectl apply -f - <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
@@ -59,7 +59,7 @@ spec:
         command: [sh, -c, 'until nslookup kubernetes.default.svc.cluster.local; do sleep 2; done']
       containers:
       - name: pricing
-        image: registry.ckad:5000/pricing:2.4.0
+        image: registry.practice:5000/pricing:2.4.0
 EOF
     kubectl -n k3-build rollout status deploy pricing --timeout=120s"
 }
@@ -89,21 +89,21 @@ solve_m2() {
 setup_m3() {
   charts_ready || return 1
   ns_new k3-helm
-  cp_sh "helm -n k3-helm install shop oci://registry.ckad:5000/charts/webapp --version 0.1.0 --plain-http --set replicaCount=2 --wait --timeout 120s >/dev/null 2>&1
-    helm -n k3-helm upgrade shop oci://registry.ckad:5000/charts/webapp --version 0.2.0 --plain-http --reuse-values --set replicaCount=3 --wait --timeout 120s >/dev/null 2>&1
-    helm -n k3-helm upgrade shop oci://registry.ckad:5000/charts/webapp --version 0.2.0 --plain-http --reuse-values --set resources.requests.memory=64Gi --wait --timeout 10s >/dev/null 2>&1
-    helm -n k3-helm install admin oci://registry.ckad:5000/charts/webapp --version 0.1.0 --plain-http --set image.tag=gone --wait --timeout 10s >/dev/null 2>&1; true"
+  cp_sh "helm -n k3-helm install shop oci://registry.practice:5000/charts/webapp --version 0.1.0 --plain-http --set replicaCount=2 --wait --timeout 120s >/dev/null 2>&1
+    helm -n k3-helm upgrade shop oci://registry.practice:5000/charts/webapp --version 0.2.0 --plain-http --reuse-values --set replicaCount=3 --wait --timeout 120s >/dev/null 2>&1
+    helm -n k3-helm upgrade shop oci://registry.practice:5000/charts/webapp --version 0.2.0 --plain-http --reuse-values --set resources.requests.memory=64Gi --wait --timeout 10s >/dev/null 2>&1
+    helm -n k3-helm install admin oci://registry.practice:5000/charts/webapp --version 0.1.0 --plain-http --set image.tag=gone --wait --timeout 10s >/dev/null 2>&1; true"
 }
 score_m3() {
   check_cp "release shop is back on the values of revision 2: chart 0.2.0, 3 replicas, no 64Gi request" \
     "helm -n k3-helm status shop | grep -q 'STATUS: deployed' && kubectl -n k3-helm get deploy shop-webapp -o jsonpath='{.status.readyReplicas}' | grep -qx 3 && ! kubectl -n k3-helm get deploy shop-webapp -o yaml | grep -q 64Gi"
   check_cp "shop's history shows a rollback to 2" "helm -n k3-helm history shop | grep -q 'Rollback to 2'"
   check_cp "release admin is gone" "! helm -n k3-helm status admin"
-  check_cp "/opt/ckad/m3/3/values-rev2.yaml holds revision 2's user values" "grep -q 'replicaCount: 3' /opt/ckad/m3/3/values-rev2.yaml"
+  check_cp "/opt/apps/m3/3/values-rev2.yaml holds revision 2's user values" "grep -q 'replicaCount: 3' /opt/apps/m3/3/values-rev2.yaml"
 }
 solve_m3() {
-  cp_sh "mkdir -p /opt/ckad/m3/3
-    helm -n k3-helm get values shop --revision 2 > /opt/ckad/m3/3/values-rev2.yaml
+  cp_sh "mkdir -p /opt/apps/m3/3
+    helm -n k3-helm get values shop --revision 2 > /opt/apps/m3/3/values-rev2.yaml
     helm -n k3-helm rollback shop 2 --wait --timeout 120s
     helm -n k3-helm uninstall admin
     helm -n k3-helm history shop"
@@ -276,18 +276,18 @@ EOF
 score_m7() {
   check_cp "Certificate wiki in k3-certs: domain wiki.k3.local, 60 days" \
     "kubectl -n k3-certs get certificate wiki -o jsonpath='{.spec.domain} {.spec.days}' | grep -qx 'wiki.k3.local 60'"
-  check_cp "/opt/ckad/m3/7/expiring.txt lists the domain with the fewest days" "grep -qx api.k3.local /opt/ckad/m3/7/expiring.txt"
+  check_cp "/opt/apps/m3/7/expiring.txt lists the domain with the fewest days" "grep -qx api.k3.local /opt/apps/m3/7/expiring.txt"
 }
 solve_m7() {
-  cp_sh "mkdir -p /opt/ckad/m3/7
+  cp_sh "mkdir -p /opt/apps/m3/7
     kubectl apply -f - <<'EOF'
 apiVersion: k3.ckad.io/v1
 kind: Certificate
 metadata: {name: wiki, namespace: k3-certs}
 spec: {domain: wiki.k3.local, days: 60}
 EOF
-    kubectl get certificates -A --sort-by=.spec.days -o jsonpath='{.items[0].spec.domain}' > /opt/ckad/m3/7/expiring.txt; echo >> /opt/ckad/m3/7/expiring.txt
-    cat /opt/ckad/m3/7/expiring.txt"
+    kubectl get certificates -A --sort-by=.spec.days -o jsonpath='{.items[0].spec.domain}' > /opt/apps/m3/7/expiring.txt; echo >> /opt/apps/m3/7/expiring.txt
+    cat /opt/apps/m3/7/expiring.txt"
 }
 
 # ---- 8. Three tiers, three policies (7) -----------------------------------------------------------------------
@@ -434,14 +434,14 @@ score_m11() {
   check_cp "pod loader-debug exists and runs sleep 1d in container loader" \
     "kubectl -n k3-debug get pod loader-debug -o jsonpath='{.spec.containers[0].name} {.spec.containers[0].command}{.spec.containers[0].args}' | grep -q '^loader .*sleep' && kubectl -n k3-debug wait pod loader-debug --for=condition=Ready --timeout=10s"
   check_cp "the original pod loader is untouched" "kubectl -n k3-debug get pod loader -o jsonpath='{.spec.containers[0].args}' | grep -q 'exit 9'"
-  check_cp "/opt/ckad/m3/11/missing.txt names the missing path" "grep -qx /etc/loader/conf /opt/ckad/m3/11/missing.txt"
+  check_cp "/opt/apps/m3/11/missing.txt names the missing path" "grep -qx /etc/loader/conf /opt/apps/m3/11/missing.txt"
 }
 solve_m11() {
-  cp_sh "mkdir -p /opt/ckad/m3/11
+  cp_sh "mkdir -p /opt/apps/m3/11
     kubectl -n k3-debug debug loader --copy-to=loader-debug --container=loader --image=busybox:1.36 -- sleep 1d
     kubectl -n k3-debug wait pod loader-debug --for=condition=Ready --timeout=60s
     kubectl -n k3-debug exec loader-debug -- ls /etc/loader 2>&1 | head -1
-    echo /etc/loader/conf > /opt/ckad/m3/11/missing.txt"
+    echo /etc/loader/conf > /opt/apps/m3/11/missing.txt"
 }
 
 # ---- 12. A history to read (6) ---------------------------------------------------------------------------------
@@ -461,12 +461,12 @@ score_m12() {
   check_cp "portal runs the template of 'nginx 1.28': nginx 1.28 without FEATURE_X" \
     "kubectl -n k3-hist get deploy portal -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -qx nginx:1.28-alpine && ! kubectl -n k3-hist get deploy portal -o yaml | grep -q FEATURE_X"
   check_cp "the history keeps at most 2 old ReplicaSets" "kubectl -n k3-hist get deploy portal -o jsonpath='{.spec.revisionHistoryLimit}' | grep -qx 2"
-  check_cp "/opt/ckad/m3/12/revision.txt holds the revision number of 'feature x'" "grep -qx 3 /opt/ckad/m3/12/revision.txt"
+  check_cp "/opt/apps/m3/12/revision.txt holds the revision number of 'feature x'" "grep -qx 3 /opt/apps/m3/12/revision.txt"
 }
 solve_m12() {
-  cp_sh "mkdir -p /opt/ckad/m3/12
+  cp_sh "mkdir -p /opt/apps/m3/12
     kubectl -n k3-hist rollout history deploy portal
-    kubectl -n k3-hist rollout history deploy portal | awk '/feature x/{print \$1}' > /opt/ckad/m3/12/revision.txt
+    kubectl -n k3-hist rollout history deploy portal | awk '/feature x/{print \$1}' > /opt/apps/m3/12/revision.txt
     kubectl -n k3-hist rollout undo deploy portal --to-revision=2
     kubectl -n k3-hist patch deploy portal -p '{\"spec\":{\"revisionHistoryLimit\":2}}'
     kubectl -n k3-hist rollout status deploy portal --timeout=120s"
@@ -475,7 +475,7 @@ solve_m12() {
 # ---- 13. Two overlays from one base (7) ------------------------------------------------------------------------------
 setup_m13() {
   ns_new k3-dev k3-prod
-  put_file /opt/ckad/m3/13/base/kustomization.yaml <<'EOF'
+  put_file /opt/apps/m3/13/base/kustomization.yaml <<'EOF'
 resources:
 - deployment.yaml
 configMapGenerator:
@@ -483,7 +483,7 @@ configMapGenerator:
   literals:
   - LOG=info
 EOF
-  put_file /opt/ckad/m3/13/base/deployment.yaml <<'EOF'
+  put_file /opt/apps/m3/13/base/deployment.yaml <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -509,11 +509,11 @@ score_m13() {
     "kubectl -n k3-dev get deploy search -o jsonpath='{.status.readyReplicas}' | grep -qx 1 && kubectl -n k3-dev logs deploy/search | grep -qx log=debug"
   check_cp "k3-prod runs search with LOG=warn, 3 replicas, and a 128Mi memory limit" \
     "kubectl -n k3-prod get deploy search -o jsonpath='{.status.readyReplicas} {.spec.template.spec.containers[0].resources.limits.memory}' | grep -qx '3 128Mi' && kubectl -n k3-prod logs deploy/search | grep -qx log=warn"
-  check_cp "the overlays live in /opt/ckad/m3/13/overlays/dev and prod, and the base is unchanged" \
-    "test -f /opt/ckad/m3/13/overlays/dev/kustomization.yaml && test -f /opt/ckad/m3/13/overlays/prod/kustomization.yaml && grep -q 'LOG=info' /opt/ckad/m3/13/base/kustomization.yaml"
+  check_cp "the overlays live in /opt/apps/m3/13/overlays/dev and prod, and the base is unchanged" \
+    "test -f /opt/apps/m3/13/overlays/dev/kustomization.yaml && test -f /opt/apps/m3/13/overlays/prod/kustomization.yaml && grep -q 'LOG=info' /opt/apps/m3/13/base/kustomization.yaml"
 }
 solve_m13() {
-  put_file /opt/ckad/m3/13/overlays/dev/kustomization.yaml <<'EOF'
+  put_file /opt/apps/m3/13/overlays/dev/kustomization.yaml <<'EOF'
 resources:
 - ../../base
 namespace: k3-dev
@@ -523,7 +523,7 @@ configMapGenerator:
   literals:
   - LOG=debug
 EOF
-  put_file /opt/ckad/m3/13/overlays/prod/kustomization.yaml <<'EOF'
+  put_file /opt/apps/m3/13/overlays/prod/kustomization.yaml <<'EOF'
 resources:
 - ../../base
 namespace: k3-prod
@@ -550,7 +550,7 @@ patches:
               limits:
                 memory: 128Mi
 EOF
-  cp_sh 'kubectl apply -k /opt/ckad/m3/13/overlays/dev && kubectl apply -k /opt/ckad/m3/13/overlays/prod
+  cp_sh 'kubectl apply -k /opt/apps/m3/13/overlays/dev && kubectl apply -k /opt/apps/m3/13/overlays/prod
     kubectl -n k3-dev rollout status deploy search --timeout=120s; kubectl -n k3-prod rollout status deploy search --timeout=120s'
 }
 

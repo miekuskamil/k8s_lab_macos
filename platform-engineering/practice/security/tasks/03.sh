@@ -63,11 +63,11 @@ check_3_3() {
     "grep -- '--enable-admission-plugins=' /etc/kubernetes/manifests/kube-apiserver.yaml | grep -q NodeRestriction"
   check_cp "the API server no longer enables AlwaysAdmit" \
     "! grep -- '--enable-admission-plugins=' /etc/kubernetes/manifests/kube-apiserver.yaml | grep -q AlwaysAdmit"
-  check "cks-w1's kubelet may not label node cks-cp (the Node authorizer already blocks this)" bash -c "! w1_sh kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node cks-cp cks-test=1 --overwrite"
-  check "cks-w1's kubelet may not set a node-restriction label on itself" \
-    bash -c "! w1_sh kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node cks-w1 node-restriction.kubernetes.io/cks=1 --overwrite"
-  k label node cks-cp cks-test- >/dev/null 2>&1
-  k label node cks-w1 node-restriction.kubernetes.io/cks- >/dev/null 2>&1
+  check "$W1's kubelet may not label node $CP (the Node authorizer already blocks this)" bash -c "! w1_sh kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node $CP practice-test=1 --overwrite"
+  check "$W1's kubelet may not set a node-restriction label on itself" \
+    bash -c "! w1_sh kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node $W1 node-restriction.kubernetes.io/practice=1 --overwrite"
+  k label node $CP practice-test- >/dev/null 2>&1
+  k label node $W1 node-restriction.kubernetes.io/practice- >/dev/null 2>&1
 }
 solve_3_3() {
   cp_sh "sed -i 's/--enable-admission-plugins=AlwaysAdmit\$/--enable-admission-plugins=NodeRestriction/' /etc/kubernetes/manifests/kube-apiserver.yaml"
@@ -151,13 +151,13 @@ cat > /home/cks-ops/.kube/config
 cp /home/cks-ops/.kube/config /var/backups/k8s/admin.conf.bak
 chown -R cks-ops:cks-ops /home/cks-ops/.kube
 chmod 644 /home/cks-ops/.kube/config /var/backups/k8s/admin.conf.bak /etc/kubernetes/kubelet.conf
-echo "  kubectl auth can-i \"*\" \"*\" as cks-ops on cks-w1: $(sudo -u cks-ops kubectl auth can-i "*" "*" 2>&1)"'
+echo "  kubectl auth can-i \"*\" \"*\" as cks-ops on $W1: $(sudo -u cks-ops kubectl auth can-i "*" "*" 2>&1)"'
 }
 # The first 60 characters of the admin client certificate identify every copy of admin.conf.
 admin_fp() { cp_sh "grep client-certificate-data /etc/kubernetes/admin.conf | awk '{print \$2}' | cut -c1-60"; }
 check_3_6() {
   local fp; fp="$(admin_fp)"
-  check_w1 "no file on cks-w1 holds the admin client certificate any more" \
+  check_w1 "no file on $W1 holds the admin client certificate any more" \
     "! grep -rlsF '$fp' /home /root /var/backups /tmp /etc 2>/dev/null | grep -q ."
   check_w1 "user cks-ops still exists" "id cks-ops"
   check_w1 "/etc/kubernetes/kubelet.conf is 600 and owned by root" "stat -c '%a %U' /etc/kubernetes/kubelet.conf | grep -qx '600 root'"
@@ -171,7 +171,7 @@ chown root:root /etc/kubernetes/kubelet.conf
 EOF
 }
 
-# ---- Task 7: keep a kernel module out (Lima, or cks-w1 on VMs) -----------------------------------------------
+# ---- Task 7: keep a kernel module out (Lima, or the worker on VMs) -----------------------------------------------
 setup_3_7() {
   need_kernel || return 1
   onkern <<'EOF'

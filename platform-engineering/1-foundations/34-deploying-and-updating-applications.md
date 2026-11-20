@@ -60,11 +60,11 @@ An application from someone else, such as a database or a monitoring stack, come
 
 Helm stores each revision as a Secret in the release's namespace, named like `sh.helm.release.v1.blog.v4`, which holds the rendered manifests and the values. That storage gives Helm its two most useful commands. `helm history` lists the revisions with their status, chart version and description, and `helm rollback blog 1` applies the manifests of revision 1 again as a new revision. Task 6 does both on a release whose last upgrade set a wrong image tag.
 
-Charts come from a [chart repository](../glossary.md#chart-repository), which you add with `helm repo add NAME URL`, or from an OCI registry, the same kind of registry that stores images. The practice cluster keeps its chart `webapp` at `oci://registry.ckad:5000/charts/webapp`, so a full reference names the chart and its version, and `--plain-http` allows the registry's plain HTTP:
+Charts come from a [chart repository](../glossary.md#chart-repository), which you add with `helm repo add NAME URL`, or from an OCI registry, the same kind of registry that stores images. The practice cluster keeps its chart `webapp` at `oci://registry.practice:5000/charts/webapp`, so a full reference names the chart and its version, and `--plain-http` allows the registry's plain HTTP:
 
 ```bash
-helm show values oci://registry.ckad:5000/charts/webapp --version 0.1.0 --plain-http
-helm -n helm-shop install shop oci://registry.ckad:5000/charts/webapp --version 0.1.0 --plain-http --set replicaCount=2
+helm show values oci://registry.practice:5000/charts/webapp --version 0.1.0 --plain-http
+helm -n helm-shop install shop oci://registry.practice:5000/charts/webapp --version 0.1.0 --plain-http --set replicaCount=2
 ```
 
 With a repository, the same install reads `helm install shop myrepo/webapp --version 0.1.0`. The commands the exam asks for are few:
@@ -125,7 +125,7 @@ Helm and Kustomize both exist because they suit different owners. A vendor ships
 
 ## Task 1: Roll back a broken update
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 34.1
@@ -148,24 +148,24 @@ web-66bcf8cdf5-tgch9   0/1     ErrImagePull   0          8s
 The history shows three revisions without causes, and `--revision=2` shows the template of one revision, so you find the working one without guessing:
 
 ```console
-root@cks-cp:~# k -n rollout rollout history deploy web
+root@practice-control-plane:~# k -n rollout rollout history deploy web
 deployment.apps/web 
 REVISION  CHANGE-CAUSE
 1         <none>
 2         <none>
 3         <none>
 
-root@cks-cp:~# k -n rollout rollout history deploy web --revision=2 | grep Image
+root@practice-control-plane:~# k -n rollout rollout history deploy web --revision=2 | grep Image
     Image:	nginx:1.28-alpine
-root@cks-cp:~# k -n rollout rollout undo deploy web --to-revision=2
+root@practice-control-plane:~# k -n rollout rollout undo deploy web --to-revision=2
 deployment.apps/web rolled back
-root@cks-cp:~# k -n rollout patch deploy web -p '{"spec":{"strategy":{"rollingUpdate":{"maxSurge":1,"maxUnavailable":0}}}}'
+root@practice-control-plane:~# k -n rollout patch deploy web -p '{"spec":{"strategy":{"rollingUpdate":{"maxSurge":1,"maxUnavailable":0}}}}'
 deployment.apps/web patched
-root@cks-cp:~# k -n rollout annotate deploy web kubernetes.io/change-cause='rollback to 1.28-alpine'
+root@practice-control-plane:~# k -n rollout annotate deploy web kubernetes.io/change-cause='rollback to 1.28-alpine'
 deployment.apps/web annotated
-root@cks-cp:~# k -n rollout rollout status deploy web
+root@practice-control-plane:~# k -n rollout rollout status deploy web
 deployment "web" successfully rolled out
-root@cks-cp:~# k -n rollout rollout history deploy web
+root@practice-control-plane:~# k -n rollout rollout history deploy web
 deployment.apps/web 
 REVISION  CHANGE-CAUSE
 1         <none>
@@ -190,7 +190,7 @@ $ ./platform-engineering/task.sh check 34.1
 
 ## Task 2: Recreate instead of a rolling update
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 > Deployment `worker` in namespace `strategy` must never run two versions at once. Change its strategy to `Recreate`, run 4 replicas, keep only 2 old ReplicaSets, and count a new pod as available only after it has been ready for 5 seconds. Then roll out a new version by setting the environment variable `VERSION=2`.
 
@@ -200,17 +200,17 @@ $ ./platform-engineering/task.sh check 34.1
 One merge patch sets all four fields. The `rollingUpdate` block must go when the type becomes `Recreate`, and `null` in a merge patch deletes it, because the API server refuses a `Recreate` Deployment that still has one:
 
 ```console
-root@cks-cp:~# k -n strategy patch deploy worker -p '{"spec":{"strategy":{"type":"Recreate","rollingUpdate":null},"replicas":4,"revisionHistoryLimit":2,"minReadySeconds":5}}'
+root@practice-control-plane:~# k -n strategy patch deploy worker -p '{"spec":{"strategy":{"type":"Recreate","rollingUpdate":null},"replicas":4,"revisionHistoryLimit":2,"minReadySeconds":5}}'
 deployment.apps/worker patched
-root@cks-cp:~# k -n strategy set env deploy/worker VERSION=2
+root@practice-control-plane:~# k -n strategy set env deploy/worker VERSION=2
 deployment.apps/worker env updated
-root@cks-cp:~# k -n strategy get pods
+root@practice-control-plane:~# k -n strategy get pods
 NAME                      READY   STATUS        RESTARTS   AGE
 worker-84fb7df9d5-9bvhb   0/1     Terminating   0          0s
 worker-84fb7df9d5-frv4t   0/1     Terminating   0          0s
 worker-84fb7df9d5-h5njt   1/1     Terminating   0          1s
 worker-84fb7df9d5-nmndc   1/1     Terminating   0          1s
-root@cks-cp:~# k -n strategy rollout status deploy worker
+root@practice-control-plane:~# k -n strategy rollout status deploy worker
 Waiting for deployment "worker" rollout to finish: 0 out of 4 new replicas have been updated...
 ...
 Waiting for deployment "worker" rollout to finish: 0 of 4 updated replicas are available...
@@ -233,7 +233,7 @@ $ ./platform-engineering/task.sh check 34.2
 
 ## Task 3: Blue-green
 
-**Time budget:** 8 minutes. **Host:** `cks-cp`.
+**Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 34.3
@@ -253,28 +253,28 @@ service/shop   ClusterIP   10.104.27.246   <none>        80/TCP    1s
 <details>
 <summary>Solution</summary>
 
-Copy the blue Deployment with `k -n bluegreen get deploy shop-blue -o yaml > /opt/ckad/2.3/green.yaml`, delete the `status` block and the server fields `uid`, `resourceVersion`, `creationTimestamp` and the revision annotation, and change four places: the name, the label in the selector, the label in the template, and the word in the command:
+Copy the blue Deployment with `k -n bluegreen get deploy shop-blue -o yaml > /opt/apps/2.3/green.yaml`, delete the `status` block and the server fields `uid`, `resourceVersion`, `creationTimestamp` and the revision annotation, and change four places: the name, the label in the selector, the label in the template, and the word in the command:
 
 ```console
-root@cks-cp:~# grep -n -E 'name: shop|version|echo' /opt/ckad/2.3/green.yaml
+root@practice-control-plane:~# grep -n -E 'name: shop|version|echo' /opt/apps/2.3/green.yaml
 4:  name: shop-green
 13:      version: green
 23:        version: green
 29:        - mkdir -p /www && echo green > /www/index.html && exec httpd -f -p 8080 -h
-root@cks-cp:~# k apply -f /opt/ckad/2.3/green.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/2.3/green.yaml
 deployment.apps/shop-green created
-root@cks-cp:~# k -n bluegreen rollout status deploy shop-green
+root@practice-control-plane:~# k -n bluegreen rollout status deploy shop-green
 Waiting for deployment "shop-green" rollout to finish: 0 of 3 updated replicas are available...
 Waiting for deployment "shop-green" rollout to finish: 1 of 3 updated replicas are available...
 Waiting for deployment "shop-green" rollout to finish: 2 of 3 updated replicas are available...
 deployment "shop-green" successfully rolled out
-root@cks-cp:~# k -n bluegreen patch svc shop -p '{"spec":{"selector":{"version":"green"}}}'
+root@practice-control-plane:~# k -n bluegreen patch svc shop -p '{"spec":{"selector":{"version":"green"}}}'
 service/shop patched
-root@cks-cp:~# k -n bluegreen exec client -- wget -qO- http://shop
+root@practice-control-plane:~# k -n bluegreen exec client -- wget -qO- http://shop
 green
-root@cks-cp:~# k -n bluegreen scale deploy shop-blue --replicas=0
+root@practice-control-plane:~# k -n bluegreen scale deploy shop-blue --replicas=0
 deployment.apps/shop-blue scaled
-root@cks-cp:~# k -n bluegreen get deploy
+root@practice-control-plane:~# k -n bluegreen get deploy
 NAME         READY   UP-TO-DATE   AVAILABLE   AGE
 shop-blue    0/0     0            0           4s
 shop-green   3/3     3            3           1s
@@ -295,7 +295,7 @@ $ ./platform-engineering/task.sh check 34.3
 
 ## Task 4: A canary with a fifth of the traffic
 
-**Time budget:** 7 minutes. **Host:** `cks-cp`.
+**Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 34.4
@@ -315,27 +315,27 @@ service/front   ClusterIP   10.96.46.198   <none>        80/TCP    1s    app=fro
 The Service selects only `app=front`, so a fifth pod with that label joins its endpoints. Copy `front-v1` as in task 3, set `replicas: 1`, change `track` to `canary` in the selector and the template, and change the answer:
 
 ```console
-root@cks-cp:~# k -n canary get svc front -o jsonpath='{.spec.selector}{"\n"}'
+root@practice-control-plane:~# k -n canary get svc front -o jsonpath='{.spec.selector}{"\n"}'
 {"app":"front"}
-root@cks-cp:~# grep -n -E 'name: front|replicas|track|echo' /opt/ckad/2.4/canary.yaml
+root@practice-control-plane:~# grep -n -E 'name: front|replicas|track|echo' /opt/apps/2.4/canary.yaml
 4:  name: front-v2
 8:  replicas: 1
 13:      track: canary
 23:        track: canary
 29:        - mkdir -p /www && echo v2 > /www/index.html && exec httpd -f -p 8080 -h /www
-root@cks-cp:~# k apply -f /opt/ckad/2.4/canary.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/2.4/canary.yaml
 deployment.apps/front-v2 created
-root@cks-cp:~# k -n canary rollout status deploy front-v2
+root@practice-control-plane:~# k -n canary rollout status deploy front-v2
 Waiting for deployment "front-v2" rollout to finish: 0 of 1 updated replicas are available...
 deployment "front-v2" successfully rolled out
-root@cks-cp:~# k -n canary get pods -l app=front -L track
+root@practice-control-plane:~# k -n canary get pods -l app=front -L track
 NAME                        READY   STATUS    RESTARTS   AGE   TRACK
 front-v1-7947b7697b-68d26   1/1     Running   0          5s    stable
 front-v1-7947b7697b-mmz9f   1/1     Running   0          5s    stable
 front-v1-7947b7697b-wsdwf   1/1     Running   0          5s    stable
 front-v1-7947b7697b-zptth   1/1     Running   0          5s    stable
 front-v2-5979d6fffb-jc79k   1/1     Running   0          1s    canary
-root@cks-cp:~# for i in $(seq 1 20); do k -n canary exec client -- wget -qO- http://front; done | sort | uniq -c
+root@practice-control-plane:~# for i in $(seq 1 20); do k -n canary exec client -- wget -qO- http://front; done | sort | uniq -c
      16 v1
       4 v2
 ```
@@ -356,12 +356,12 @@ $ ./platform-engineering/task.sh check 34.4
 
 ## Task 5: Install a Helm chart from a registry
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 34.5
 == setup task 34.5
-Pulled: registry.ckad:5000/charts/webapp:0.1.0
+Pulled: registry.practice:5000/charts/webapp:0.1.0
 Digest: sha256:c3e28adbe840a3d0a19966f3ca79ada291977947ad625d5e7886c4cc4bd8e984
 apiVersion: v2
 appVersion: 1.27-alpine
@@ -371,7 +371,7 @@ type: application
 version: 0.1.0
 ```
 
-> Install the chart `oci://registry.ckad:5000/charts/webapp`, version 0.1.0, as release `shop` in namespace `helm-shop`, with 2 replicas and a Service of type NodePort. The registry speaks plain HTTP.
+> Install the chart `oci://registry.practice:5000/charts/webapp`, version 0.1.0, as release `shop` in namespace `helm-shop`, with 2 replicas and a Service of type NodePort. The registry speaks plain HTTP.
 
 <details>
 <summary>Solution</summary>
@@ -379,12 +379,12 @@ version: 0.1.0
 Read the chart's defaults first, because the names to set come from its `values.yaml`, and every chart names them differently:
 
 ```console
-root@cks-cp:~# helm show values oci://registry.ckad:5000/charts/webapp --version 0.1.0 --plain-http 2>/dev/null | grep -E '^replicaCount|^  type:|^  port:'
+root@practice-control-plane:~# helm show values oci://registry.practice:5000/charts/webapp --version 0.1.0 --plain-http 2>/dev/null | grep -E '^replicaCount|^  type:|^  port:'
 replicaCount: 1
   type: ClusterIP
   port: 80
-root@cks-cp:~# helm -n helm-shop install shop oci://registry.ckad:5000/charts/webapp --version 0.1.0 --plain-http --set replicaCount=2 --set service.type=NodePort
-Pulled: registry.ckad:5000/charts/webapp:0.1.0
+root@practice-control-plane:~# helm -n helm-shop install shop oci://registry.practice:5000/charts/webapp --version 0.1.0 --plain-http --set replicaCount=2 --set service.type=NodePort
+Pulled: registry.practice:5000/charts/webapp:0.1.0
 Digest: sha256:c3e28adbe840a3d0a19966f3ca79ada291977947ad625d5e7886c4cc4bd8e984
 NAME: shop
 LAST DEPLOYED: Fri Nov 20 10:56:07 2026
@@ -393,10 +393,10 @@ STATUS: deployed
 REVISION: 1
 DESCRIPTION: Install complete
 ...
-root@cks-cp:~# helm -n helm-shop list
+root@practice-control-plane:~# helm -n helm-shop list
 NAME	NAMESPACE	REVISION	UPDATED                                	STATUS  	CHART       	APP VERSION
 shop	helm-shop	1       	2026-11-20 10:56:07.101458693 +0000 UTC	deployed	webapp-0.1.0	1.27-alpine
-root@cks-cp:~# k -n helm-shop get deploy,svc
+root@practice-control-plane:~# k -n helm-shop get deploy,svc
 NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
 deployment.apps/shop-webapp   2/2     2            2           1s
 
@@ -419,7 +419,7 @@ $ ./platform-engineering/task.sh check 34.5
 
 ## Task 6: Roll a release back, then upgrade it
 
-**Time budget:** 7 minutes. **Host:** `cks-cp`.
+**Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 34.6
@@ -437,18 +437,18 @@ blog-webapp-777cbcdb9d-rkhg4   0/1     ErrImagePull   0          5s
 `helm get values` shows what an upgrade set, which tells you what went wrong:
 
 ```console
-root@cks-cp:~# helm -n helm-blog history blog
+root@practice-control-plane:~# helm -n helm-blog history blog
 REVISION	UPDATED                 	STATUS    	CHART       	APP VERSION	DESCRIPTION
 1       	Fri Nov 20 10:45:31 2026	superseded	webapp-0.1.0	1.27-alpine	Install complete
 2       	Fri Nov 20 10:45:32 2026	deployed  	webapp-0.1.0	1.27-alpine	Upgrade complete
-root@cks-cp:~# helm -n helm-blog get values blog --revision 2
+root@practice-control-plane:~# helm -n helm-blog get values blog --revision 2
 USER-SUPPLIED VALUES:
 image:
   tag: 1.27-alpne
-root@cks-cp:~# helm -n helm-blog rollback blog 1
+root@practice-control-plane:~# helm -n helm-blog rollback blog 1
 Rollback was a success! Happy Helming!
-root@cks-cp:~# helm -n helm-blog upgrade blog oci://registry.ckad:5000/charts/webapp --version 0.2.0 --plain-http --reuse-values --set replicaCount=3
-Pulled: registry.ckad:5000/charts/webapp:0.2.0
+root@practice-control-plane:~# helm -n helm-blog upgrade blog oci://registry.practice:5000/charts/webapp --version 0.2.0 --plain-http --reuse-values --set replicaCount=3
+Pulled: registry.practice:5000/charts/webapp:0.2.0
 Digest: sha256:e429001804a82b1c104e38c12e0cf294e94dc110037ff63fec6d5c56285b3e6c
 Release "blog" has been upgraded. Happy Helming!
 NAME: blog
@@ -458,10 +458,10 @@ STATUS: deployed
 REVISION: 4
 DESCRIPTION: Upgrade complete
 ...
-root@cks-cp:~# k -n helm-blog rollout status deploy blog-webapp
+root@practice-control-plane:~# k -n helm-blog rollout status deploy blog-webapp
 ...
 deployment "blog-webapp" successfully rolled out
-root@cks-cp:~# helm -n helm-blog history blog
+root@practice-control-plane:~# helm -n helm-blog history blog
 REVISION	UPDATED                 	STATUS    	CHART       	APP VERSION	DESCRIPTION
 1       	Fri Nov 20 10:45:31 2026	superseded	webapp-0.1.0	1.27-alpine	Install complete
 2       	Fri Nov 20 10:45:32 2026	superseded	webapp-0.1.0	1.27-alpine	Upgrade complete
@@ -485,7 +485,7 @@ $ ./platform-engineering/task.sh check 34.6
 
 ## Task 7: Helm housekeeping
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 34.7
@@ -499,7 +499,7 @@ reports	helm-ops 	1       	2026-11-20 10:52:26.217139703 +0000 UTC	deployed	weba
 > In namespace `helm-ops`:
 > 1. Uninstall release `old-api`.
 > 2. Find the release in the `failed` state and uninstall it.
-> 3. Install chart `webapp` version 0.2.0 from `oci://registry.ckad:5000/charts` as release `metrics-ui`, with the values in `/opt/ckad/2.7/values.yaml`.
+> 3. Install chart `webapp` version 0.2.0 from `oci://registry.practice:5000/charts` as release `metrics-ui`, with the values in `/opt/apps/2.7/values.yaml`.
 >
 > Leave release `reports` alone.
 
@@ -507,15 +507,15 @@ reports	helm-ops 	1       	2026-11-20 10:52:26.217139703 +0000 UTC	deployed	weba
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# helm -n helm-ops uninstall old-api
+root@practice-control-plane:~# helm -n helm-ops uninstall old-api
 release "old-api" uninstalled
-root@cks-cp:~# helm -n helm-ops list --failed
+root@practice-control-plane:~# helm -n helm-ops list --failed
 NAME 	NAMESPACE	REVISION	UPDATED                                	STATUS	CHART       	APP VERSION
 cache	helm-ops 	1       	2026-11-20 10:52:26.363165592 +0000 UTC	failed	webapp-0.1.0	1.27-alpine
-root@cks-cp:~# helm -n helm-ops uninstall cache
+root@practice-control-plane:~# helm -n helm-ops uninstall cache
 release "cache" uninstalled
-root@cks-cp:~# helm -n helm-ops install metrics-ui oci://registry.ckad:5000/charts/webapp --version 0.2.0 --plain-http -f /opt/ckad/2.7/values.yaml
-Pulled: registry.ckad:5000/charts/webapp:0.2.0
+root@practice-control-plane:~# helm -n helm-ops install metrics-ui oci://registry.practice:5000/charts/webapp --version 0.2.0 --plain-http -f /opt/apps/2.7/values.yaml
+Pulled: registry.practice:5000/charts/webapp:0.2.0
 Digest: sha256:e429001804a82b1c104e38c12e0cf294e94dc110037ff63fec6d5c56285b3e6c
 NAME: metrics-ui
 LAST DEPLOYED: Fri Nov 20 10:52:42 2026
@@ -524,10 +524,10 @@ STATUS: deployed
 REVISION: 1
 DESCRIPTION: Install complete
 ...
-root@cks-cp:~# k -n helm-ops rollout status deploy metrics-ui-webapp
+root@practice-control-plane:~# k -n helm-ops rollout status deploy metrics-ui-webapp
 ...
 deployment "metrics-ui-webapp" successfully rolled out
-root@cks-cp:~# helm -n helm-ops list
+root@practice-control-plane:~# helm -n helm-ops list
 NAME      	NAMESPACE	REVISION	UPDATED                                	STATUS  	CHART       	APP VERSION
 metrics-ui	helm-ops 	1       	2026-11-20 10:52:42.168351479 +0000 UTC	deployed	webapp-0.2.0	1.28-alpine
 reports   	helm-ops 	1       	2026-11-20 10:52:26.217139703 +0000 UTC	deployed	webapp-0.1.0	1.27-alpine
@@ -550,17 +550,17 @@ $ ./platform-engineering/task.sh check 34.7
 
 ## Task 8: A Kustomize overlay for production
 
-**Time budget:** 8 minutes. **Host:** `cks-cp`.
+**Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 34.8
 == setup task 34.8
-/opt/ckad/2.8/base/deployment.yaml
-/opt/ckad/2.8/base/service.yaml
-/opt/ckad/2.8/base/kustomization.yaml
+/opt/apps/2.8/base/deployment.yaml
+/opt/apps/2.8/base/service.yaml
+/opt/apps/2.8/base/kustomization.yaml
 ```
 
-> `/opt/ckad/2.8/base` holds a Deployment and a Service named `web` with nginx `1.27-alpine` and one replica. Without changing the base, create an overlay in `/opt/ckad/2.8/overlays/prod` that deploys them into namespace `kust-prod` with the name prefix `prod-`, 3 replicas, nginx `1.28-alpine`, and the label `env=prod` on the objects and on the pods. Apply it.
+> `/opt/apps/2.8/base` holds a Deployment and a Service named `web` with nginx `1.27-alpine` and one replica. Without changing the base, create an overlay in `/opt/apps/2.8/overlays/prod` that deploys them into namespace `kust-prod` with the name prefix `prod-`, 3 replicas, nginx `1.28-alpine`, and the label `env=prod` on the objects and on the pods. Apply it.
 
 <details>
 <summary>Solution</summary>
@@ -568,8 +568,8 @@ $ ./platform-engineering/task.sh setup 34.8
 The overlay is the `kustomization.yaml` from the concept section. `includeTemplates: true` puts the label into the pod template as well, while plain `labels` without it touch only the objects' own metadata. Render it first and read the result, then apply:
 
 ```console
-root@cks-cp:~# cd /opt/ckad/2.8/overlays/prod
-root@cks-cp:~# k kustomize . | grep -E 'name:|namespace:|env:|replicas:|image:'
+root@practice-control-plane:~# cd /opt/apps/2.8/overlays/prod
+root@practice-control-plane:~# k kustomize . | grep -E 'name:|namespace:|env:|replicas:|image:'
     env: prod
   name: prod-web
   namespace: kust-prod
@@ -580,13 +580,13 @@ root@cks-cp:~# k kustomize . | grep -E 'name:|namespace:|env:|replicas:|image:'
         env: prod
       - image: nginx:1.28-alpine
         name: nginx
-root@cks-cp:~# k apply -k .
+root@practice-control-plane:~# k apply -k .
 service/prod-web created
 deployment.apps/prod-web created
-root@cks-cp:~# k -n kust-prod rollout status deploy prod-web
+root@practice-control-plane:~# k -n kust-prod rollout status deploy prod-web
 ...
 deployment "prod-web" successfully rolled out
-root@cks-cp:~# k -n kust-prod get deploy,svc --show-labels
+root@practice-control-plane:~# k -n kust-prod get deploy,svc --show-labels
 NAME                       READY   UP-TO-DATE   AVAILABLE   AGE   LABELS
 deployment.apps/prod-web   3/3     3            3           1s    env=prod
 
@@ -604,13 +604,13 @@ $ ./platform-engineering/task.sh check 34.8
   PASS  Deployment prod-web runs in kust-prod with 3 ready replicas
   PASS  it runs nginx:1.28-alpine
   PASS  the Deployment, its pods and Service prod-web carry env=prod
-  PASS  the overlay lives in /opt/ckad/2.8/overlays/prod and the base is unchanged
+  PASS  the overlay lives in /opt/apps/2.8/overlays/prod and the base is unchanged
 == task 34.8: 4 passed, 0 failed
 ```
 
 ## Task 9: Repair a Kustomize overlay
 
-**Time budget:** 8 minutes. **Host:** `cks-cp`.
+**Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 34.9
@@ -618,7 +618,7 @@ $ ./platform-engineering/task.sh setup 34.9
 error: merging from generator &{0x318ba94db790 <nil>}: id resid.ResId{Gvk:resid.Gvk{Group:"", Version:"v1", Kind:"ConfigMap", isClusterScoped:false}, Name:"api-config", Namespace:""} exists; can not use behavior: 'unspecified', behavior must be merge or replace
 ```
 
-> The overlay `/opt/ckad/2.9/overlays/staging` fails to build. Repair it so that Deployment `staging-api` in namespace `kust-staging` gets a memory limit of 64Mi from the overlay's patch and runs with `MODE=staging` from the generated ConfigMap. Save the rendered overlay to `/opt/ckad/2.9/staging.yaml` and apply it.
+> The overlay `/opt/apps/2.9/overlays/staging` fails to build. Repair it so that Deployment `staging-api` in namespace `kust-staging` gets a memory limit of 64Mi from the overlay's patch and runs with `MODE=staging` from the generated ConfigMap. Save the rendered overlay to `/opt/apps/2.9/staging.yaml` and apply it.
 
 <details>
 <summary>Solution</summary>
@@ -626,10 +626,10 @@ error: merging from generator &{0x318ba94db790 <nil>}: id resid.ResId{Gvk:resid.
 The build stops at the first error, so expect two rounds. The first error names the generator: the base already generates `api-config`, so the overlay's generator must say how to combine the two. The second, which appears after that fix, would be the patch: its `metadata.name` is `api-server`, and the base has only `api`:
 
 ```console
-root@cks-cp:~# cd /opt/ckad/2.9/overlays/staging
-root@cks-cp:~# sed -i 's/name: api-server/name: api/' limits.yaml
-root@cks-cp:~# sed -i '/^configMapGenerator:/,/MODE=staging/s/  literals:/  behavior: merge\n  literals:/' kustomization.yaml
-root@cks-cp:~# cat kustomization.yaml
+root@practice-control-plane:~# cd /opt/apps/2.9/overlays/staging
+root@practice-control-plane:~# sed -i 's/name: api-server/name: api/' limits.yaml
+root@practice-control-plane:~# sed -i '/^configMapGenerator:/,/MODE=staging/s/  literals:/  behavior: merge\n  literals:/' kustomization.yaml
+root@practice-control-plane:~# cat kustomization.yaml
 resources:
 - ../../base
 namespace: kust-staging
@@ -641,18 +641,18 @@ configMapGenerator:
   - MODE=staging
 patches:
 - path: limits.yaml
-root@cks-cp:~# k kustomize . > /opt/ckad/2.9/staging.yaml
-root@cks-cp:~# grep -E 'MODE|name: staging|memory' /opt/ckad/2.9/staging.yaml
+root@practice-control-plane:~# k kustomize . > /opt/apps/2.9/staging.yaml
+root@practice-control-plane:~# grep -E 'MODE|name: staging|memory' /opt/apps/2.9/staging.yaml
   MODE: staging
   name: staging-api-config-7t6ch9d7dd
   name: staging-api
         - echo mode=$MODE; sleep 1d
             name: staging-api-config-7t6ch9d7dd
             memory: 64Mi
-root@cks-cp:~# k apply -k .
+root@practice-control-plane:~# k apply -k .
 configmap/staging-api-config-7t6ch9d7dd created
 deployment.apps/staging-api created
-root@cks-cp:~# k -n kust-staging logs deploy/staging-api
+root@practice-control-plane:~# k -n kust-staging logs deploy/staging-api
 mode=staging
 ```
 
@@ -665,13 +665,13 @@ $ ./platform-engineering/task.sh check 34.9
 == check task 34.9
   PASS  Deployment staging-api in kust-staging has a limit of 64Mi memory
   PASS  its pod logs mode=staging
-  PASS  /opt/ckad/2.9/staging.yaml holds the rendered overlay
+  PASS  /opt/apps/2.9/staging.yaml holds the rendered overlay
 == task 34.9: 3 passed, 0 failed
 ```
 
 ## Task 10: Three changes, one new revision
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 34.10
@@ -688,31 +688,31 @@ api-776fc4695b   2         2         2       1s
 Pause first, then change, then resume. While the Deployment stays paused, the template changes and no ReplicaSet appears:
 
 ```console
-root@cks-cp:~# k -n paused rollout pause deploy api
+root@practice-control-plane:~# k -n paused rollout pause deploy api
 deployment.apps/api paused
-root@cks-cp:~# k -n paused set image deploy/api nginx=nginx:1.28-alpine
+root@practice-control-plane:~# k -n paused set image deploy/api nginx=nginx:1.28-alpine
 deployment.apps/api image updated
-root@cks-cp:~# k -n paused set env deploy/api TIER=backend
+root@practice-control-plane:~# k -n paused set env deploy/api TIER=backend
 deployment.apps/api env updated
-root@cks-cp:~# k -n paused set resources deploy/api --limits=memory=128Mi
+root@practice-control-plane:~# k -n paused set resources deploy/api --limits=memory=128Mi
 deployment.apps/api resource requirements updated
-root@cks-cp:~# k -n paused annotate deploy api kubernetes.io/change-cause='nginx 1.28, tier and limit'
+root@practice-control-plane:~# k -n paused annotate deploy api kubernetes.io/change-cause='nginx 1.28, tier and limit'
 deployment.apps/api annotated
-root@cks-cp:~# k -n paused get rs
+root@practice-control-plane:~# k -n paused get rs
 NAME             DESIRED   CURRENT   READY   AGE
 api-776fc4695b   2         2         2       1s
-root@cks-cp:~# k -n paused rollout resume deploy api
+root@practice-control-plane:~# k -n paused rollout resume deploy api
 deployment.apps/api resumed
-root@cks-cp:~# k -n paused rollout status deploy api
+root@practice-control-plane:~# k -n paused rollout status deploy api
 ...
 deployment "api" successfully rolled out
-root@cks-cp:~# k -n paused rollout history deploy api
+root@practice-control-plane:~# k -n paused rollout history deploy api
 deployment.apps/api 
 REVISION  CHANGE-CAUSE
 1         <none>
 2         nginx 1.28, tier and limit
 
-root@cks-cp:~# k -n paused get rs
+root@practice-control-plane:~# k -n paused get rs
 NAME             DESIRED   CURRENT   READY   AGE
 api-776fc4695b   0         0         0       3s
 api-c95d5bd89    2         2         2       2s
