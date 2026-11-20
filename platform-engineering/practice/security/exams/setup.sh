@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Seeds the starting state of all 17 tasks of a mock exam and starts its 2-hour clock.
+# Seeds the starting state of all 17 tasks of a practice exam and starts its 2-hour clock.
 # Run it on your Mac, on a fresh cluster:
-#   ./certs/cks/cluster/reset.sh && ./certs/cks/mock-exam/setup.sh            mock exam 1
-#   ./certs/cks/cluster/reset.sh && ./certs/cks/cluster/lima.sh reset && MOCK=2 ./certs/cks/mock-exam/setup.sh
+#   ./platform-engineering/practice/cluster/reset.sh && ./platform-engineering/practice-exam.sh setup 4          practice exam 4
+#   ./platform-engineering/practice/cluster/reset.sh && ./platform-engineering/practice/cluster/lima.sh reset && ./platform-engineering/practice-exam.sh setup 5
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 MOCK="${MOCK:-1}"
@@ -13,8 +13,8 @@ for f in "$HERE"/../tasks/0*.sh; do . "$f"; done      # mocks 2 and 3 reuse help
 
 v="$(k get node cks-cp -o jsonpath='{.status.nodeInfo.kubeletVersion}' 2>/dev/null)"
 if [ "$v" != v1.37.1 ]; then
-  echo "cks-cp runs '$v', and the mock exam needs a fresh cluster at v1.37.1."
-  echo "Run ./certs/cks/cluster/reset.sh first."
+  echo "cks-cp runs '$v', and the practice exam needs a fresh cluster at v1.37.1."
+  echo "Run ./platform-engineering/practice/cluster/reset.sh first."
   exit 1
 fi
 if [ "${MOCK_NEEDS_LIMA:-no}" = yes ] && ! need_lima; then exit 1; fi
@@ -31,5 +31,5 @@ if [ -z "${MOCK_SETUP_ORDER:-}" ]; then
 fi
 date +%s > "$HERE/.started-$MOCK"
 echo
-echo "Ready. The clock runs from now: 2 hours. Open certs/cks/$( [ "$MOCK" = 1 ] && echo mock-exam.md || echo mock-exam-$MOCK.md )."
-echo "Score yourself at any time with MOCK=$MOCK ./certs/cks/mock-exam/score.sh"
+echo "Ready. The clock runs from now: 2 hours. Open platform-engineering/3-advanced/practice-exam-$((MOCK + 3)).md."
+echo "Score yourself at any time with ./platform-engineering/practice-exam.sh score $((MOCK + 3))"

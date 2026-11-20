@@ -1,4 +1,4 @@
-# CKAD mock exam 3: killer.sh difficulty, several objects per task.
+# Practice exam 3: the hardest, several objects per task.
 # setup_mN seeds task N, score_mN checks it, solve_mN is the reference solution.
 
 MOCK_TASKS="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16"

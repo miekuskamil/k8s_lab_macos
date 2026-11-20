@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# Takes the CKAD tasks and mock exams off the practice cluster and leaves it where the CKS
-# track expects it. Faster than ./certs/cks/cluster/reset.sh, because the cluster stays up:
+# Takes the application tasks and practice exams off the practice cluster and leaves it where the security
+# modules expect it. Faster than ./platform-engineering/practice/cluster/reset.sh, because the cluster stays up:
 #   - deletes every namespace labelled ckad (the tasks and mocks label theirs)
 #   - deletes the cluster-wide objects the tasks create: CRDs in the ckad.io group, and
 #     ClusterRoles, ClusterRoleBindings, PersistentVolumes, StorageClasses, PriorityClasses
 #     and IngressClasses whose names start with ckad-
-#   - removes metrics-server, which the CKS cluster doesn't run (tasks that need it add it back)
+#   - removes metrics-server, which the plain practice cluster doesn't run (tasks that need it add it back)
 #   - empties /opt/ckad, podman's images and the local registry on the nodes
 # helm, podman, kubectl-convert and the registry service stay installed; they don't touch Kubernetes.
-# Usage: ./certs/ckad/cluster/reset.sh
+# Usage: ./platform-engineering/practice/app-extras/reset.sh
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-. "$HERE/../../cks/cluster/platform.sh"
+. "$HERE/../cluster/platform.sh"
 METRICS_SERVER_VERSION="${METRICS_SERVER_VERSION:-0.9.1}"
 
 if [ "$CKS_PLATFORM" = orbstack ]; then

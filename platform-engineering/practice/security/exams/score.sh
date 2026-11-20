@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Scores a mock exam from the cluster's state and shows the time since setup.sh. Run it on your Mac:
-#   ./certs/cks/mock-exam/score.sh              mock exam 1, all tasks
-#   MOCK=2 ./certs/cks/mock-exam/score.sh 4 9   mock exam 2, only tasks 4 and 9
+# Scores a practice exam from the cluster's state and shows the time since setup.sh. Run it on your Mac:
+#   ./platform-engineering/practice-exam.sh score 4            practice exam 4, all tasks
+#   ./platform-engineering/practice-exam.sh score 5 4 9   practice exam 5, only tasks 4 and 9
 # A task whose first check (its main change) passes gets its points split evenly over
 # its checks, rounded down, like partial credit. Otherwise it gets 0.
 set -uo pipefail

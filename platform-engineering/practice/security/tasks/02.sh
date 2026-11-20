@@ -107,7 +107,7 @@ EOF
 # ---- Task 4: upgrade the cluster with kubeadm ----------------------------------------
 setup_2_4() {
   k get nodes
-  echo "  the cluster must run v1.37.1 for this task; ./certs/cks/cluster/reset.sh puts it back there"
+  echo "  the cluster must run v1.37.1 for this task; ./platform-engineering/practice/cluster/reset.sh puts it back there"
 }
 check_2_4() {
   check_cp "cks-cp kubelet reports v1.37.2" "kubectl get node cks-cp -o jsonpath='{.status.nodeInfo.kubeletVersion}' | grep -qx v1.37.2"

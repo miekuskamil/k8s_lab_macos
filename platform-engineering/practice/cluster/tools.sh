@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs as root inside one node. Installs the security tools the CKS tasks use.
+# Runs as root inside one node. Installs the security tools the security tasks use.
 #   tools.sh cp   etcdctl, trivy, kube-bench, kubesec, bom and the image policy back end on the control plane
 #   tools.sh w1   gVisor (runsc) and Falco on the worker, where the workloads run
 set -euo pipefail

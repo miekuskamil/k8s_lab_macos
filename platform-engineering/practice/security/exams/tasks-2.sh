@@ -1,4 +1,4 @@
-# CKS mock exam 2: setup_mN seeds task N, score_mN checks it, solve_mN is the reference
+# Practice exam 5: setup_mN seeds task N, score_mN checks it, solve_mN is the reference
 # solution. Sourced by setup.sh, score.sh and solve.sh with MOCK=2, after tasks/lib.sh,
 # the domain task files (for helpers such as cks_users and restart_apiserver) and tasks.sh.
 

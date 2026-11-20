@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Applies the reference solution of every task of a mock exam, the same commands as the
+# Applies the reference solution of every task of a practice exam, the same commands as the
 # <details> blocks in its file. It exists to test score.sh: after setup.sh, score.sh
 # gives 0; after this script, it gives 100. Don't run it before you've tried the exam.
-#   ./certs/cks/mock-exam/solve.sh            mock exam 1, every task in its solve order
-#   MOCK=3 ./certs/cks/mock-exam/solve.sh 12  mock exam 3, one task
+#   ./platform-engineering/practice-exam.sh solve 4          practice exam 4, every task in its solve order
+#   ./platform-engineering/practice-exam.sh solve 6 12  practice exam 6, one task
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 MOCK="${MOCK:-1}"

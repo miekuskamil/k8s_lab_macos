@@ -1,4 +1,4 @@
-# CKAD mock exam 2: things that are broken, and tasks that build on each other.
+# Practice exam 2: things that are broken, and tasks that build on each other.
 # setup_mN seeds task N, score_mN checks it, solve_mN is the reference solution.
 
 MOCK_TASKS="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16"

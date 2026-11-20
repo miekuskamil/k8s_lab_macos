@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# Adds what the CKAD track needs on top of the CKS practice cluster. Run it on your Mac after
-# ./certs/cks/cluster/create.sh, and again after every ./certs/cks/cluster/reset.sh.
+# Adds what the application modules need on top of the practice cluster. Run it on your Mac after
+# ./platform-engineering/practice/cluster/create.sh, and again after every ./platform-engineering/practice/cluster/reset.sh.
 #   cks-cp  helm, kubectl-convert, podman, and a local registry at registry.ckad:5000
 #   cks-w1  the registry's name, and containerd set to pull from it over plain HTTP
 #   cluster metrics-server, so that "kubectl top" works
 # Safe to run again. Works on OrbStack and, with CKS_PLATFORM=vms, on your own VMs.
-# Usage: ./certs/ckad/cluster/extras.sh            everything
-#        ./certs/ckad/cluster/extras.sh metrics    only metrics-server (the tasks call this)
+# Usage: ./platform-engineering/practice/app-extras/extras.sh            everything
+#        ./platform-engineering/practice/app-extras/extras.sh metrics    only metrics-server (the tasks call this)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-. "$HERE/../../cks/cluster/platform.sh"
+. "$HERE/../cluster/platform.sh"
 METRICS_SERVER_VERSION="${METRICS_SERVER_VERSION:-0.9.1}"
 
 say() { printf '\n=== %s\n' "$*"; }
@@ -31,7 +31,7 @@ if [ "${1:-}" = metrics ]; then metrics; exit 0; fi
 if [ "$CKS_PLATFORM" = orbstack ]; then
   for m in "$CKS_CP" "$CKS_W1"; do orb start "$m" >/dev/null 2>&1 || true; done
 fi
-node_sh "$CKS_CP" "test -f /etc/kubernetes/admin.conf" || { echo "no cluster on $CKS_CP: run ./certs/cks/cluster/create.sh first"; exit 1; }
+node_sh "$CKS_CP" "test -f /etc/kubernetes/admin.conf" || { echo "no cluster on $CKS_CP: run ./platform-engineering/practice/cluster/create.sh first"; exit 1; }
 CP_IP="$(node_sh "$CKS_CP" "kubectl get node $CKS_CP -o jsonpath='{.status.addresses[?(@.type==\"InternalIP\")].address}'")"
 
 say "1/3 $CKS_CP: helm, kubectl-convert, podman, registry"

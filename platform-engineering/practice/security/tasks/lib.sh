@@ -1,9 +1,9 @@
-# Helpers for the CKS task scripts. Sourced by task.sh and mock-exam/*.sh; runs on your machine
+# Helpers for the security task scripts. Sourced by task.sh and exams/*.sh; runs on your machine
 # (bash 3.2 is fine). Everything on the cluster goes through cluster/platform.sh: "orb -m <node>
 # -u root" on OrbStack, ssh and sudo with CKS_PLATFORM=vms.
 
 CKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-. "$CKS_DIR/cluster/platform.sh"
+. "$CKS_DIR/../cluster/platform.sh"
 
 # Run a script from stdin as root on a node: oncp <<'EOF' ... EOF
 oncp() { node_script "$CKS_CP" "$@"; }
@@ -25,7 +25,7 @@ kl() { limactl shell --workdir / "$CKS_LIMA" sudo kubectl "$@"; }
 # Stop early with a clear message when a Lima task runs while the VM is down.
 need_lima() {
   if [ "$(limactl list --format '{{.Status}}' "$CKS_LIMA" 2>/dev/null)" != Running ]; then
-    echo "  this task runs on the Lima VM $CKS_LIMA: ./certs/cks/cluster/lima.sh start (or create)"
+    echo "  this task runs on the Lima VM $CKS_LIMA: ./platform-engineering/practice/cluster/lima.sh start (or create)"
     return 1
   fi
 }

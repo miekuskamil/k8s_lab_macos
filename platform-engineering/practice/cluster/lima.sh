@@ -2,12 +2,12 @@
 # The third practice machine: a Lima virtual machine "cks-lima" with its own Ubuntu kernel,
 # for the tasks the OrbStack machines can't run. It holds a one-node kubeadm cluster with
 # Cilium as the CNI, and its kernel has AppArmor. macOS only.
-#   ./certs/cks/cluster/lima.sh create    builds the VM and the cluster; safe to run again
-#   ./certs/cks/cluster/lima.sh start     starts a stopped VM and waits for the cluster
-#   ./certs/cks/cluster/lima.sh stop      stops the VM and frees its memory
-#   ./certs/cks/cluster/lima.sh reset     back to a fresh cluster, VM and downloads kept
-#   ./certs/cks/cluster/lima.sh destroy   deletes the VM
-#   ./certs/cks/cluster/lima.sh shell     a root shell on the node, like "ssh cks-lima" in the exam
+#   ./platform-engineering/practice/cluster/lima.sh create    builds the VM and the cluster; safe to run again
+#   ./platform-engineering/practice/cluster/lima.sh start     starts a stopped VM and waits for the cluster
+#   ./platform-engineering/practice/cluster/lima.sh stop      stops the VM and frees its memory
+#   ./platform-engineering/practice/cluster/lima.sh reset     back to a fresh cluster, VM and downloads kept
+#   ./platform-engineering/practice/cluster/lima.sh destroy   deletes the VM
+#   ./platform-engineering/practice/cluster/lima.sh shell     a root shell on the node, like "ssh cks-lima" in the exam
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -96,7 +96,7 @@ case "${1:-}" in
     cat <<EOF
 
 Work on the node the way the exam does:
-  ./certs/cks/cluster/lima.sh shell     # or: limactl shell $VM sudo -i
+  ./platform-engineering/practice/cluster/lima.sh shell     # or: limactl shell $VM sudo -i
 EOF
     ;;
   start)

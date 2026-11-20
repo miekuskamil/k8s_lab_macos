@@ -2,8 +2,8 @@
 # OrbStack: deletes the two practice machines and everything in them. Nothing else on OrbStack changes.
 # VMs (CKS_PLATFORM=vms): wipes the cluster from both VMs with kubeadm reset and keeps the VMs,
 # because they belong to you and their hypervisor. Delete them there when you want them gone.
-# Usage: ./certs/cks/cluster/destroy.sh            (asks first)
-#        ./certs/cks/cluster/destroy.sh --yes
+# Usage: ./platform-engineering/practice/cluster/destroy.sh            (asks first)
+#        ./platform-engineering/practice/cluster/destroy.sh --yes
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"

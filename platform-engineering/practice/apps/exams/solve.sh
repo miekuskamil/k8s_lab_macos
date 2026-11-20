@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Applies the reference solution of every task of a CKAD mock exam, the same commands as the
+# Applies the reference solution of every task of an application practice exam, the same commands as the
 # <details> blocks in its file. It exists to test score.sh: after setup.sh, score.sh
 # gives 0; after this script, it gives 100. Don't run it before you've tried the exam.
-#   ./certs/ckad/mock-exam/solve.sh            mock exam 1, every task
-#   MOCK=3 ./certs/ckad/mock-exam/solve.sh 12  mock exam 3, one task
+#   ./platform-engineering/practice-exam.sh solve 1          practice exam 1, every task
+#   ./platform-engineering/practice-exam.sh solve 3 12  practice exam 3, one task
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 MOCK="${MOCK:-1}"

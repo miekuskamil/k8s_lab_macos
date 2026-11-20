@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Prepares and checks the CKS track's tasks. Run it on your Mac, from the repo.
-#   ./certs/cks/task.sh setup 1.3    seeds the starting state for task 3 of domain 01
-#   ./certs/cks/task.sh check 1.3    prints PASS or FAIL for each thing the task asks
-#   ./certs/cks/task.sh solve 1.3    applies the reference solution (the one in the <details> block)
-#   ./certs/cks/task.sh list         lists every task
+# Prepares and checks the security modules' timed tasks under their original ids.
+# Run ./platform-engineering/task.sh instead: it takes the module ids (38.3) the chapters show,
+# finds the task here, and passes its id as TASK_LABEL so the output shows the module id.
+#   task.sh setup|check|solve 1.3    task 3 of this folder's tasks/01.sh
+#   task.sh list                     every task, by its id here
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 . "$HERE/tasks/lib.sh"
@@ -15,15 +15,15 @@ case "$action" in
     declare -F | awk '{print $3}' | grep '^check_[0-9]' | sed 's/^check_//; s/_/./' | sort -t. -k1,1n -k2,2n
     exit 0 ;;
   setup|check|solve) ;;
-  *) sed -n '2,6p' "$0"; exit 1 ;;
+  *) sed -n '2,7p' "$0"; exit 1 ;;
 esac
 fn="${action}_${id/./_}"
 if ! declare -F "$fn" >/dev/null; then
   echo "no task $id (try: $0 list)"; exit 1
 fi
-echo "== $action task $id"
+echo "== $action task ${TASK_LABEL:-$id}"
 "$fn"
 if [ "$action" = check ]; then
-  echo "== task $id: $PASSES passed, $FAILS failed"
+  echo "== task ${TASK_LABEL:-$id}: $PASSES passed, $FAILS failed"
   [ "$FAILS" -eq 0 ]
 fi

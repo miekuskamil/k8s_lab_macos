@@ -1,12 +1,12 @@
-# Helpers for the CKAD task scripts. Sourced by task.sh and mock-exam/*.sh; runs on your Mac
-# (bash 3.2 is fine). It builds on the CKS helpers, so every node command goes through
-# certs/cks/cluster/platform.sh: "orb -m <node> -u root" on OrbStack, ssh and sudo with CKS_PLATFORM=vms.
+# Helpers for the application task scripts. Sourced by task.sh and exams/*.sh; runs on your Mac
+# (bash 3.2 is fine). It builds on the security helpers, so every node command goes through
+# platform-engineering/practice/cluster/platform.sh: "orb -m <node> -u root" on OrbStack, ssh and sudo with CKS_PLATFORM=vms.
 
 CKAD_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-. "$CKAD_DIR/../cks/tasks/lib.sh"
+. "$CKAD_DIR/../security/tasks/lib.sh"
 
-# Every namespace a CKAD task creates carries the label ckad=task (or ckad=mock), so the
-# CKAD reset finds them all: ns_new web-team shop
+# Every namespace an application task creates carries the label ckad=task (or ckad=mock), so the
+# application reset finds them all: ns_new web-team shop
 NS_LABEL="${NS_LABEL:-task}"
 ns_new() {
   local n
@@ -50,13 +50,13 @@ settled() {
 # Write a file on cks-cp from stdin: put_file /opt/ckad/1.3/pod.yaml <<'EOF' ... EOF
 put_file() { cp_sh "mkdir -p \$(dirname $1) && cat > $1" ; }
 
-# The tasks that use "kubectl top" need metrics-server; the CKAD reset removes it again.
-need_metrics() { "$CKAD_DIR/cluster/extras.sh" metrics >/dev/null; }
+# The tasks that use "kubectl top" need metrics-server; the application reset removes it again.
+need_metrics() { "$CKAD_DIR/../app-extras/extras.sh" metrics >/dev/null; }
 
 # The tasks that use helm, podman or the registry need extras.sh first.
 need_extras() {
   if ! cp_sh 'command -v helm && command -v podman && curl -fsS http://registry.ckad:5000/v2/' >/dev/null 2>&1; then
-    echo "  this task needs the CKAD extras: ./certs/ckad/cluster/extras.sh"
+    echo "  this task needs the application extras: ./platform-engineering/practice/app-extras/extras.sh"
     return 1
   fi
 }

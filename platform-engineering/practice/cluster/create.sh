@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Builds the CKS practice cluster on two nodes, OrbStack machines by default:
+# Builds the practice cluster on two nodes, OrbStack machines by default:
 #   cks-cp  control plane (kubeadm, etcd, Calico), plus etcdctl, trivy, kube-bench, kubesec
 #   cks-w1  worker, plus gVisor (runsc) and Falco
 # Safe to run again: every step skips what is already done.
-# Usage: ./certs/cks/cluster/create.sh
-#        CKS_PLATFORM=vms ./certs/cks/cluster/create.sh   on two Ubuntu 24.04 VMs over SSH (see platform.sh)
+# Usage: ./platform-engineering/practice/cluster/create.sh
+#        CKS_PLATFORM=vms ./platform-engineering/practice/cluster/create.sh   on two Ubuntu 24.04 VMs over SSH (see platform.sh)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"

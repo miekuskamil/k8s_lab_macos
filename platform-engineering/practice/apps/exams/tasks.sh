@@ -1,4 +1,4 @@
-# CKAD mock exam 1: one topic per task. setup_mN seeds task N, score_mN checks it, solve_mN
+# Practice exam 1: one topic per task. setup_mN seeds task N, score_mN checks it, solve_mN
 # is the reference solution. Sourced by setup.sh, score.sh and solve.sh after tasks/lib.sh.
 
 MOCK_TASKS="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16"

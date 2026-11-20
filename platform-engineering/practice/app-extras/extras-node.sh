@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs as root inside one node of the CKS practice cluster; extras.sh sends it there.
+# Runs as root inside one node of the practice cluster; extras.sh sends it there.
 #   extras-node.sh cp <cp-ip>   helm, kubectl-convert, podman and a local image registry on cks-cp
 #   extras-node.sh w1 <cp-ip>   only the registry's name and the containerd setting on cks-w1
 # Safe to run again: every step checks what is already there.

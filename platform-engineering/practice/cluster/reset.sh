@@ -3,8 +3,8 @@
 # kubeadm reset wipes /etc/kubernetes (manifests, audit policy, admission configs),
 # node-prep.sh puts the packages back at the starting version (it undoes an upgrade),
 # and create.sh builds the cluster again. Takes about 4 minutes in the test run.
-# Usage: ./certs/cks/cluster/reset.sh
-#        ./certs/cks/cluster/reset.sh --wipe-only   wipes the nodes and stops there (destroy.sh uses it on VMs)
+# Usage: ./platform-engineering/practice/cluster/reset.sh
+#        ./platform-engineering/practice/cluster/reset.sh --wipe-only   wipes the nodes and stops there (destroy.sh uses it on VMs)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A tiny ImagePolicyWebhook back end for the CKS practice cluster.
+"""A tiny ImagePolicyWebhook back end for the practice cluster.
 
 The API server POSTs an ImageReview for every new pod. This server allows the pod
 only if every image comes from an allowed registry prefix and has a tag other than
