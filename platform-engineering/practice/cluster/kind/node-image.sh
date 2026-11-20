@@ -23,7 +23,7 @@ echo "--- Debian packages the tasks and their checks use"
 apt-get update -qq
 apt-get install -y -qq --no-install-recommends \
   python3 vim less procps psmisc iproute2 iputils-ping netcat-openbsd dnsutils openssl ca-certificates \
-  curl gpg bzip2 jq bash-completion sudo file passwd login podman >/dev/null
+  curl gpg bzip2 jq bash-completion sudo file passwd login socat conntrack ethtool podman >/dev/null
 
 echo "--- kubeadm, kubelet and kubectl $K8S_VERSION from pkgs.k8s.io, held like on a kubeadm node"
 # The kind image carries v1.37.0 binaries without a package manager entry. The packages replace

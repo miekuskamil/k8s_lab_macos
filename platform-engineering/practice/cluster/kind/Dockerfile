@@ -20,5 +20,8 @@ RUN K8S_VERSION=$K8S_VERSION ETCD_VERSION=$ETCD_VERSION TRIVY_VERSION=$TRIVY_VER
     GVISOR_RELEASE=$GVISOR_RELEASE FALCO_VERSION=$FALCO_VERSION HELM_VERSION=$HELM_VERSION \
     bash /tmp/node-image.sh && rm /tmp/node-image.sh
 
+# apt runs without questions in a node shell, as on a server image.
+ENV DEBIAN_FRONTEND=noninteractive
+
 # The image policy back end for module 42; create.sh starts it on the control plane.
 COPY image-policy /opt/practice/image-policy
