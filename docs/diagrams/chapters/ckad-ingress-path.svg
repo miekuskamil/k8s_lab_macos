@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="820" viewBox="0 0 1600 820" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="820" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">One request <tspan fill="#7c3aed">through Ingress</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">The Host header and the path pick a Service. The Service picks a ready pod.</text>
+<rect x="40.0" y="150.0" width="300.0" height="220.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="57.5,181.0 76.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">cks-cp, or your browser</text>
+<rect x="65.0" y="220.0" width="250.0" height="100.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="190.0" y="262.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">curl</text>
+<text x="190.0" y="283.3" font-size="17.0" fill="#475569" text-anchor="middle">Host: shop.ckad.local</text>
+<rect x="380.0" y="150.0" width="1180.0" height="640.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<text x="1542.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">Node cks-w1</text>
+<rect x="420.0" y="220.0" width="240.0" height="100.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="540.0" y="262.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">NodePort 30080</text>
+<text x="540.0" y="283.3" font-size="17.0" fill="#475569" text-anchor="middle">kube-proxy</text>
+<rect x="720.0" y="190.0" width="380.0" height="280.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="747.0,205.0 755.5,209.5 755.5,219.0 747.0,223.5 738.5,219.0 738.5,209.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="738.5,209.5 747.0,214.0 755.5,209.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="747.0,214.0 747.0,223.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="766.0" y="220.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">pod ingress-nginx-controller</text>
+<rect x="745.0" y="240.0" width="330.0" height="100.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="910.0" y="282.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">nginx</text>
+<text x="910.0" y="303.3" font-size="17.0" fill="#475569" text-anchor="middle">rules from Ingress</text>
+<rect x="745.0" y="360.0" width="330.0" height="80.0" rx="10.0" fill="#fdecf4" stroke="#db2777" stroke-width="1.8"/>
+<text x="910.0" y="392.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">Ingress shop</text>
+<text x="910.0" y="410.5" font-size="17.0" fill="#475569" text-anchor="middle">/ to web, /api to api</text>
+<polyline points="910.0,360.0 910.0,349.5" fill="none" stroke="#db2777" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="910.0,340.0 915.8,351.5 904.2,351.5" fill="#db2777" stroke="#db2777" stroke-width="1" stroke-linejoin="round"/>
+<rect x="1160.0" y="220.0" width="360.0" height="100.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="1340.0" y="262.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">EndpointSlice api</text>
+<text x="1340.0" y="283.3" font-size="17.0" fill="#475569" text-anchor="middle">ready pod IPs</text>
+<rect x="1160.0" y="520.0" width="360.0" height="220.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="1187.0,535.0 1195.5,539.5 1195.5,549.0 1187.0,553.5 1178.5,549.0 1178.5,539.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="1178.5,539.5 1187.0,544.0 1195.5,539.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1187.0,544.0 1187.0,553.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1206.0" y="550.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">pod api</text>
+<rect x="1185.0" y="580.0" width="310.0" height="100.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1340.0" y="622.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">httpd :8080</text>
+<text x="1340.0" y="643.3" font-size="17.0" fill="#475569" text-anchor="middle">/api/orders</text>
+<polyline points="315.0,270.0 410.5,270.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="420.0,270.0 408.5,275.8 408.5,264.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="360.0" cy="270.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="360.0" cy="270.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="360.0" y="276.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<polyline points="660.0,280.0 735.5,280.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="745.0,280.0 733.5,285.8 733.5,274.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="702.5" cy="280.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="702.5" cy="280.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="702.5" y="286.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<polyline points="1075.0,280.0 1150.5,280.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1160.0,280.0 1148.5,285.8 1148.5,274.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1117.5" cy="280.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1117.5" cy="280.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1117.5" y="286.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<text x="1117.5" y="254.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">looks up</text>
+<polyline points="1340.0,320.0 1340.0,570.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1340.0,580.0 1334.2,568.5 1345.8,568.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1340.0" cy="450.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1340.0" cy="450.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1340.0" y="456.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<text x="1366.0" y="456.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">to pod IP</text>
+</svg>

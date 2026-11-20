@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="900" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">The CKAD <tspan fill="#7c3aed">practice cluster</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">The CKS cluster, plus helm, podman, a registry and metrics-server.</text>
+<rect x="40.0" y="150.0" width="1520.0" height="720.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="57.5,181.0 76.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Your Mac</text>
+<rect x="70.0" y="220.0" width="200.0" height="110.0" rx="14.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<rect x="86.0" y="253.0" width="44.0" height="44.0" rx="10.0" fill="#475569" stroke="none"/>
+<rect x="95.8" y="264.8" width="24.3" height="20.5" rx="3.2" fill="none" stroke="#ffffff" stroke-width="1.536"/>
+<polyline points="100.3,271.2 104.2,275.0 100.3,278.8" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="106.7,279.5 113.1,279.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="144.0" y="268.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">terminal</text>
+<text x="144.0" y="294.0" font-size="17.0" fill="#475569" text-anchor="start">task.sh, orb</text>
+<rect x="350.0" y="200.0" width="1180.0" height="640.0" rx="16.0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="368.5" y="217.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="368.5,221.5 385.5,221.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="396.0" y="230.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">OrbStack, or two VMs</text>
+<rect x="380.0" y="250.0" width="560.0" height="560.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<rect x="398.0" y="265.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="401.5" cy="267.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="407.0,267.5 412.5,267.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="398.0" y="271.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="401.5" cy="274.0" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="407.0,274.0 412.5,274.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="398.0" y="278.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="401.5" cy="280.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="407.0,280.5 412.5,280.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="426.0" y="280.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">cks-cp: control plane</text>
+<rect x="405.0" y="300.0" width="510.0" height="80.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="660.0" y="332.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">static pods</text>
+<text x="660.0" y="354.7" font-size="17.0" fill="#475569" text-anchor="middle">API server, etcd, scheduler</text>
+<rect x="405.0" y="410.0" width="510.0" height="230.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="423.0" y="440.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">added by extras.sh</text>
+<rect x="430.0" y="455.0" width="220.0" height="70.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="540.0" y="493.2" font-size="17.0" fill="#0f172a" font-weight="700" text-anchor="middle">helm 4.3.1</text>
+<rect x="670.0" y="455.0" width="220.0" height="70.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="780.0" y="482.2" font-size="17.0" fill="#0f172a" font-weight="700" text-anchor="middle">podman</text>
+<text x="780.0" y="501.9" font-size="17.0" fill="#475569" text-anchor="middle">build, push</text>
+<rect x="430.0" y="545.0" width="220.0" height="70.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="540.0" y="583.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">kubectl-convert</text>
+<rect x="405.0" y="670.0" width="510.0" height="110.0" rx="14.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<rect x="421.0" y="703.0" width="44.0" height="44.0" rx="10.0" fill="#ea580c" stroke="none"/>
+<ellipse cx="443.0" cy="717.3" rx="9.6" ry="3.8" fill="none" stroke="#ffffff" stroke-width="1.54"/>
+<polyline points="433.4,717.3 433.4,732.7" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="452.6,717.3 452.6,732.7" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="433.4,732.7 435.3,735.2 443.0,736.5 450.7,735.2 452.6,732.7" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="433.4,725.0 435.3,727.6 443.0,728.8 450.7,727.6 452.6,725.0" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="479.0" y="717.8" font-size="20.0" fill="#0f172a" font-weight="700" text-anchor="start">registry.ckad:5000</text>
+<text x="479.0" y="741.1" font-size="17.0" fill="#475569" text-anchor="start">systemd service, port 5000</text>
+<rect x="980.0" y="250.0" width="520.0" height="560.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<rect x="998.0" y="265.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="1001.5" cy="267.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="1007.0,267.5 1012.5,267.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="998.0" y="271.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="1001.5" cy="274.0" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="1007.0,274.0 1012.5,274.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="998.0" y="278.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="1001.5" cy="280.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="1007.0,280.5 1012.5,280.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1026.0" y="280.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">cks-w1: worker</text>
+<rect x="1005.0" y="300.0" width="470.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1240.0" y="337.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">your task pods</text>
+<text x="1240.0" y="359.7" font-size="17.0" fill="#475569" text-anchor="middle">every namespace ckad=task</text>
+<rect x="1005.0" y="420.0" width="225.0" height="80.0" rx="10.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<text x="1117.5" y="463.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">metrics-server</text>
+<rect x="1250.0" y="420.0" width="225.0" height="80.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="1362.5" y="452.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">ingress-nginx</text>
+<text x="1362.5" y="470.5" font-size="17.0" fill="#475569" text-anchor="middle">NodePort 30080</text>
+<rect x="1005.0" y="670.0" width="470.0" height="110.0" rx="14.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<rect x="1021.0" y="703.0" width="44.0" height="44.0" rx="10.0" fill="#0891b2" stroke="none"/>
+<rect x="1032.1" y="716.7" width="21.8" height="17.9" rx="2.6" fill="none" stroke="#ffffff" stroke-width="1.536"/>
+<polyline points="1032.1,721.8 1053.9,721.8" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1079.0" y="718.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">containerd</text>
+<text x="1079.0" y="744.0" font-size="17.0" fill="#475569" text-anchor="start">pulls over plain HTTP</text>
+<polyline points="270.0,275.0 370.5,275.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="380.0,275.0 368.5,280.8 368.5,269.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="325.0" y="265.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">orb -m cks-cp</text>
+<polyline points="1005.0,725.0 924.5,725.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="915.0,725.0 926.5,719.2 926.5,730.8" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="960.0" y="715.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">pull image</text>
+<polyline points="1240.0,670.0 1240.0,399.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1240.0,390.0 1245.8,401.5 1234.2,401.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="1250.0" y="606.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">start</text>
+</svg>

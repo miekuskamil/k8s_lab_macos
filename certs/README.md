@@ -1,12 +1,13 @@
 # Certification tracks
 
-> New to a term here, like kubeadm or static pod? The [glossary](../platform-engineering/glossary.md#cks-exam-track) explains every term the tracks use.
+> New to a term here, like kubeadm or static pod? The [glossary](../platform-engineering/glossary.md#cks-exam-track) explains every term the CKS track uses, and the [CKAD glossary](ckad/glossary.md) the terms of the CKAD track.
 
 The [course](../platform-engineering/README.md) teaches you how a platform works and why. A certification exam tests something narrower: whether you fix a given problem on a live cluster, from a terminal, against the clock. These tracks train that second skill. Each one covers an exam's official curriculum, links to the course wherever the course already explains a topic, and adds timed tasks and scored mock exams for the rest.
 
 | Track | Exam | Status |
 |---|---|---|
 | [CKS](cks/README.md) | Certified Kubernetes Security Specialist, Kubernetes v1.37 | ready |
+| [CKAD](ckad/README.md) | Certified Kubernetes Application Developer, Kubernetes v1.37 | ready |
 
 ## How a track differs from the course
 
@@ -57,6 +58,10 @@ OrbStack machines are not full virtual machines. They share one Linux kernel wit
 - Falco sees every system call on the shared kernel, including the ones from other OrbStack machines and Docker containers. Filter its output by `k8s.ns.name` or container name to see only your cluster.
 
 Two settings in `certs/cks/cluster/kubeadm-config.yaml` exist only because of OrbStack. kube-proxy doesn't set the kernel's connection tracking table size (`conntrack.maxPerCore: 0`), because a machine may not change a value the whole kernel shares. And the kubelet tolerates swap (`failSwapOn: false`), because OrbStack gives every machine the host's swap.
+
+### The CKAD track on the same cluster
+
+The CKAD track runs on these two machines too, so one cluster serves both tracks. A developer exam needs a few tools that a security exam doesn't: helm, podman to build images, a local image registry at `registry.ckad:5000`, and metrics-server for `kubectl top`. `./certs/ckad/cluster/extras.sh` adds them after `create.sh`, on OrbStack and on your own VMs alike, and `./certs/ckad/cluster/reset.sh` removes what the CKAD tasks created and leaves the cluster as the CKS track expects it. The [CKAD README](ckad/README.md#the-practice-cluster) has the details.
 
 ## The Lima VM for AppArmor and Cilium
 
