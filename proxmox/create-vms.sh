@@ -34,7 +34,7 @@ IMAGE="$IMAGE_STORAGE_DIR/noble-server-cloudimg-amd64.qcow2"
 VMS="
 cks    221 cks-cp 221 2 3072  30G
 cks    222 cks-w1 222 2 2560  30G
-course 231 pe-lab 231 4 10240 60G
+course 231 pe-lab 231 4 8192  60G
 "
 
 run() { if [ "${DRY_RUN:-0}" = 1 ]; then echo "+ $*"; else "$@"; fi; }

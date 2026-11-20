@@ -8,7 +8,7 @@ The lab and the course were written on macOS. This page covers what changes on U
 |---|---|
 | OS | Ubuntu 24.04, arm64, in an OrbStack Linux machine |
 | Container engine | Docker Engine 29.1.3 from Ubuntu's packages |
-| Tools | k3d 5.9.0, kubectl 1.31.5, helm 4.3.1, istioctl 1.24.2 |
+| Tools | k3d 5.9.0, kubectl 1.31.5, helm 4.3.1, istioctl 1.32.0 (client; the control plane runs 1.24.2) |
 | Result | `./scripts/provision.sh` from nothing in 163 seconds, then `./platform-engineering/verify.sh`: 230 of 232 checks passed in 40 minutes. The 2 failures were an `istioctl` command form in module 7, now fixed. A re-run of modules 7 and 22 passed 31 of 31. |
 
 ## Before you start
@@ -43,7 +43,7 @@ sudo install "linux-$ARCH/helm" /usr/local/bin/ && rm -r "linux-$ARCH"
 
 curl -fsSL https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.9.0 bash
 
-curl -fsSL "https://github.com/istio/istio/releases/download/1.24.2/istioctl-1.24.2-linux-$ARCH.tar.gz" | tar xz
+curl -fsSL "https://github.com/istio/istio/releases/download/1.32.0/istioctl-1.32.0-linux-$ARCH.tar.gz" | tar xz
 sudo install istioctl /usr/local/bin/ && rm istioctl
 ```
 
