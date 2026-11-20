@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="820" viewBox="0 0 1600 820" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="820" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Requests, limits <tspan fill="#7c3aed">and the namespace&#x27;s rules</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Admission fills in defaults, then checks the totals. The scheduler and the kernel use the numbers.</text>
+<rect x="40.0" y="150.0" width="300.0" height="200.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="57.5,181.0 76.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Your terminal</text>
+<rect x="65.0" y="215.0" width="250.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="190.0" y="252.2" font-size="17.0" fill="#0f172a" font-weight="700" text-anchor="middle">kubectl apply</text>
+<text x="190.0" y="271.9" font-size="17.0" fill="#475569" text-anchor="middle">pod, no resources</text>
+<rect x="380.0" y="150.0" width="760.0" height="380.0" rx="16.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.6"/>
+<rect x="398.0" y="165.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#5b21b6" stroke-width="1.1"/>
+<ellipse cx="401.5" cy="167.5" rx="0.8" ry="0.8" fill="#5b21b6" stroke="#5b21b6" stroke-width="0.50"/>
+<polyline points="407.0,167.5 412.5,167.5" fill="none" stroke="#5b21b6" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="398.0" y="171.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#5b21b6" stroke-width="1.1"/>
+<ellipse cx="401.5" cy="174.0" rx="0.8" ry="0.8" fill="#5b21b6" stroke="#5b21b6" stroke-width="0.50"/>
+<polyline points="407.0,174.0 412.5,174.0" fill="none" stroke="#5b21b6" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="398.0" y="178.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#5b21b6" stroke-width="1.1"/>
+<ellipse cx="401.5" cy="180.5" rx="0.8" ry="0.8" fill="#5b21b6" stroke="#5b21b6" stroke-width="0.50"/>
+<polyline points="407.0,180.5 412.5,180.5" fill="none" stroke="#5b21b6" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="426.0" y="180.0" font-size="18.0" fill="#5b21b6" font-weight="700" text-anchor="start">API server admission, namespace limits</text>
+<rect x="410.0" y="230.0" width="330.0" height="110.0" rx="10.0" fill="#fdecf4" stroke="#db2777" stroke-width="1.8"/>
+<text x="575.0" y="266.3" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">LimitRange</text>
+<text x="575.0" y="287.3" font-size="17.0" fill="#475569" text-anchor="middle">fills in defaults,</text>
+<text x="575.0" y="309.4" font-size="17.0" fill="#475569" text-anchor="middle">refuses above max</text>
+<rect x="780.0" y="230.0" width="330.0" height="110.0" rx="10.0" fill="#fdecf4" stroke="#db2777" stroke-width="1.8"/>
+<text x="945.0" y="266.3" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">ResourceQuota</text>
+<text x="945.0" y="287.3" font-size="17.0" fill="#475569" text-anchor="middle">adds to the totals,</text>
+<text x="945.0" y="309.4" font-size="17.0" fill="#475569" text-anchor="middle">refuses past hard</text>
+<polyline points="740.0,285.0 770.5,285.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="780.0,285.0 768.5,290.8 768.5,279.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="760.0" cy="285.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="760.0" cy="285.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="760.0" y="291.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<polyline points="315.0,260.0 400.5,260.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="410.0,260.0 398.5,265.8 398.5,254.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="360.0" cy="260.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="360.0" cy="260.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="360.0" y="266.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<rect x="780.0" y="400.0" width="330.0" height="90.0" rx="10.0" fill="#fdeeee" stroke="#dc2626" stroke-width="1.8"/>
+<text x="945.0" y="448.2" font-size="17.0" fill="#0f172a" font-weight="700" text-anchor="middle">403 exceeded quota</text>
+<polyline points="945.0,340.0 945.0,390.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="945.0,400.0 939.2,388.5 950.8,388.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="955.0" y="376.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">over</text>
+<rect x="1190.0" y="230.0" width="370.0" height="110.0" rx="14.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<rect x="1206.0" y="263.0" width="44.0" height="44.0" rx="10.0" fill="#7c3aed" stroke="none"/>
+<polyline points="1228.0,272.8 1228.0,277.3" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1228.0,292.7 1228.0,297.2" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1215.8,285.0 1220.3,285.0" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1235.7,285.0 1240.2,285.0" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1219.4,276.4 1222.6,279.6" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1233.4,290.4 1236.6,293.6" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1236.6,276.4 1233.4,279.6" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1219.4,293.6 1222.6,290.4" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<ellipse cx="1228.0" cy="285.0" rx="7.7" ry="7.7" fill="#7c3aed" stroke="#ffffff" stroke-width="1.54"/>
+<ellipse cx="1228.0" cy="285.0" rx="2.9" ry="2.9" fill="none" stroke="#ffffff" stroke-width="1.54"/>
+<text x="1264.0" y="278.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">scheduler</text>
+<text x="1264.0" y="304.0" font-size="17.0" fill="#475569" text-anchor="start">fits requests to nodes</text>
+<polyline points="1110.0,285.0 1180.5,285.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1190.0,285.0 1178.5,290.8 1178.5,279.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1150.0" cy="285.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1150.0" cy="285.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1150.0" y="291.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<text x="1150.0" y="259.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">stored</text>
+<rect x="380.0" y="580.0" width="1180.0" height="200.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<text x="1542.0" y="610.0" font-size="17.0" fill="#475569" text-anchor="end">Node cks-w1</text>
+<rect x="420.0" y="640.0" width="420.0" height="100.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="630.0" y="682.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">container</text>
+<text x="630.0" y="703.3" font-size="17.0" fill="#475569" text-anchor="middle">requests 100m, limit 200m</text>
+<rect x="900.0" y="630.0" width="620.0" height="120.0" rx="14.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="920.0" y="687.0" font-size="18.0" fill="#047857" font-weight="700" text-anchor="start">kernel cgroups</text>
+<text x="920.0" y="711.0" font-size="15.0" fill="#475569" text-anchor="start">CPU above limit waits, memory above limit is killed</text>
+<polyline points="1375.0,340.0 1375.0,560.0 630.0,560.0 630.0,630.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="630.0,640.0 624.2,628.5 635.8,628.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1002.5" cy="560.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1002.5" cy="560.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1002.5" y="566.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<text x="1028.5" y="566.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">binds pod</text>
+<polyline points="840.0,690.0 890.5,690.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="900.0,690.0 888.5,695.8 888.5,684.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="870.0" cy="690.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="870.0" cy="690.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="870.0" y="696.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">5</text>
+</svg>

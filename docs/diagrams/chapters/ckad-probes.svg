@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="860" viewBox="0 0 1600 860" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="860" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Three probes, <tspan fill="#7c3aed">three reactions</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">The kubelet asks; a Service and the kubelet itself act on the answers.</text>
+<rect x="40.0" y="150.0" width="1060.0" height="680.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<text x="1082.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">Node cks-w1</text>
+<rect x="80.0" y="200.0" width="300.0" height="110.0" rx="14.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<rect x="96.0" y="233.0" width="44.0" height="44.0" rx="10.0" fill="#0891b2" stroke="none"/>
+<rect x="106.5" y="243.5" width="23.0" height="6.4" rx="1.9" fill="none" stroke="#ffffff" stroke-width="1.4080000000000001"/>
+<ellipse cx="111.0" cy="246.7" rx="1.0" ry="1.0" fill="#ffffff" stroke="#ffffff" stroke-width="0.64"/>
+<polyline points="118.0,246.7 125.0,246.7" fill="none" stroke="#ffffff" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="106.5" y="251.8" width="23.0" height="6.4" rx="1.9" fill="none" stroke="#ffffff" stroke-width="1.4080000000000001"/>
+<ellipse cx="111.0" cy="255.0" rx="1.0" ry="1.0" fill="#ffffff" stroke="#ffffff" stroke-width="0.64"/>
+<polyline points="118.0,255.0 125.0,255.0" fill="none" stroke="#ffffff" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="106.5" y="260.1" width="23.0" height="6.4" rx="1.9" fill="none" stroke="#ffffff" stroke-width="1.4080000000000001"/>
+<ellipse cx="111.0" cy="263.3" rx="1.0" ry="1.0" fill="#ffffff" stroke="#ffffff" stroke-width="0.64"/>
+<polyline points="118.0,263.3 125.0,263.3" fill="none" stroke="#ffffff" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="154.0" y="248.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">kubelet</text>
+<text x="154.0" y="274.0" font-size="17.0" fill="#475569" text-anchor="start">runs every probe</text>
+<rect x="470.0" y="200.0" width="590.0" height="320.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="497.0,215.0 505.5,219.5 505.5,229.0 497.0,233.5 488.5,229.0 488.5,219.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="488.5,219.5 497.0,224.0 505.5,219.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="497.0,224.0 497.0,233.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="516.0" y="230.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">pod api</text>
+<rect x="500.0" y="260.0" width="530.0" height="100.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="765.0" y="302.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">container</text>
+<text x="765.0" y="324.7" font-size="17.0" fill="#475569" text-anchor="middle">httpd on :8080</text>
+<rect x="500.0" y="400.0" width="160.0" height="80.0" rx="10.0" fill="#fdecf4" stroke="#db2777" stroke-width="1.8"/>
+<text x="580.0" y="432.2" font-size="17.0" fill="#0f172a" font-weight="700" text-anchor="middle">startup</text>
+<text x="580.0" y="451.9" font-size="17.0" fill="#475569" text-anchor="middle">/live</text>
+<rect x="685.0" y="400.0" width="160.0" height="80.0" rx="10.0" fill="#fdeeee" stroke="#dc2626" stroke-width="1.8"/>
+<text x="765.0" y="432.2" font-size="17.0" fill="#0f172a" font-weight="700" text-anchor="middle">liveness</text>
+<text x="765.0" y="451.9" font-size="17.0" fill="#475569" text-anchor="middle">TCP 8080</text>
+<rect x="870.0" y="400.0" width="160.0" height="80.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="950.0" y="432.2" font-size="17.0" fill="#0f172a" font-weight="700" text-anchor="middle">readiness</text>
+<text x="950.0" y="451.9" font-size="17.0" fill="#475569" text-anchor="middle">/ready</text>
+<ellipse cx="500.0" cy="400.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="500.0" cy="400.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="500.0" y="406.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<ellipse cx="870.0" cy="400.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="870.0" cy="400.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="870.0" y="406.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<ellipse cx="685.0" cy="400.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="685.0" cy="400.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="685.0" y="406.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<polyline points="380.0,255.0 440.0,255.0 440.0,310.0 490.5,310.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="500.0,310.0 488.5,315.8 488.5,304.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="410.0" y="245.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">asks</text>
+<rect x="700.0" y="620.0" width="300.0" height="100.0" rx="10.0" fill="#fdeeee" stroke="#dc2626" stroke-width="1.8"/>
+<text x="850.0" y="662.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">restart container</text>
+<text x="850.0" y="683.3" font-size="17.0" fill="#475569" text-anchor="middle">RESTARTS + 1</text>
+<polyline points="765.0,480.0 765.0,610.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="765.0,620.0 759.2,608.5 770.8,608.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="775.0" y="556.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">fails 3 times</text>
+<rect x="400.0" y="620.0" width="260.0" height="100.0" rx="10.0" fill="#fdecf4" stroke="#db2777" stroke-width="1.8"/>
+<text x="530.0" y="662.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">wait, then kill</text>
+<text x="530.0" y="683.3" font-size="17.0" fill="#475569" text-anchor="middle">after 30 x 2s</text>
+<polyline points="580.0,480.0 580.0,610.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="580.0,620.0 574.2,608.5 585.8,608.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="570.0" y="556.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="end">keeps failing</text>
+<rect x="1140.0" y="150.0" width="420.0" height="680.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="1158.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">control plane</text>
+<rect x="1170.0" y="380.0" width="360.0" height="110.0" rx="14.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<rect x="1186.0" y="413.0" width="44.0" height="44.0" rx="10.0" fill="#2563eb" stroke="none"/>
+<ellipse cx="1199.0" cy="428.0" rx="1.3" ry="1.3" fill="#ffffff" stroke="#ffffff" stroke-width="0.64"/>
+<polyline points="1203.5,428.0 1218.9,428.0" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<ellipse cx="1199.0" cy="435.0" rx="1.3" ry="1.3" fill="#ffffff" stroke="#ffffff" stroke-width="0.64"/>
+<polyline points="1203.5,435.0 1218.9,435.0" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<ellipse cx="1199.0" cy="442.0" rx="1.3" ry="1.3" fill="#ffffff" stroke="#ffffff" stroke-width="0.64"/>
+<polyline points="1203.5,442.0 1218.9,442.0" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1244.0" y="428.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">EndpointSlice</text>
+<text x="1244.0" y="454.0" font-size="17.0" fill="#475569" text-anchor="start">ready pods only</text>
+<rect x="1170.0" y="600.0" width="360.0" height="110.0" rx="14.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<rect x="1186.0" y="633.0" width="44.0" height="44.0" rx="10.0" fill="#2563eb" stroke="none"/>
+<rect x="1200.3" y="650.5" width="15.4" height="9.6" rx="3.2" fill="none" stroke="#ffffff" stroke-width="1.536"/>
+<polyline points="1204.2,644.1 1204.2,650.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1211.8,644.1 1211.8,650.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1208.0,660.1 1208.0,667.2" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1244.0" y="648.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Service api</text>
+<text x="1244.0" y="674.0" font-size="17.0" fill="#475569" text-anchor="start">routes to them</text>
+<polyline points="1030.0,440.0 1160.5,440.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1170.0,440.0 1158.5,445.8 1158.5,434.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="1100.0" y="430.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">in or out</text>
+<polyline points="1350.0,490.0 1350.0,590.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1350.0,600.0 1344.2,588.5 1355.8,588.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+</svg>

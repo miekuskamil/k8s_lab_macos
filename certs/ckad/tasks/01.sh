@@ -282,7 +282,7 @@ s=s.replace('  schedule: ', '  concurrencyPolicy: Forbid\n  successfulJobsHistor
 open(p,'w').write(s)
 PY"
   shown <<'EOF'
-grep -A5 '^spec:' /opt/ckad/1.6/cj.yaml
+grep -E 'concurrency|History|starting|schedule' /opt/ckad/1.6/cj.yaml
 k apply -f /opt/ckad/1.6/cj.yaml
 k -n batch-cron create job cleanup-now --from=cronjob/cleanup
 k -n batch-cron wait job cleanup-now --for=condition=Complete

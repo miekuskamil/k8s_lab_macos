@@ -83,7 +83,7 @@ setup_5_2() {
 check_5_2() {
   check_json "Service web-np is a NodePort on 30100, port 80" "kubectl -n svc-nodeport get svc web-np -o json" \
     's=p["spec"]; s["type"]=="NodePort" and s["ports"][0]["nodePort"]==30100 and s["ports"][0]["port"]==80'
-  check_cp "nginx answers on cks-w1's address, port 30100" "curl -s -m 3 http://$W1IP:30100 | grep -q 'Welcome to nginx'"
+  check_cp "nginx answers on cks-w1's address, port 30100" "for i in \$(seq 1 15); do curl -s -m 3 http://$W1IP:30100 | grep -q 'Welcome to nginx' && exit 0; sleep 2; done; exit 1"
 }
 solve_5_2() {
   shown <<'EOF'
@@ -94,6 +94,7 @@ EOF
   shown <<'EOF'
 k apply -f /opt/ckad/5.2-svc.yaml
 k -n svc-nodeport get svc web-np
+k -n svc-nodeport get endpointslice
 k get node cks-w1 -o wide
 curl -s http://$(k get node cks-w1 -o jsonpath='{.status.addresses[0].address}'):30100 | grep title
 EOF

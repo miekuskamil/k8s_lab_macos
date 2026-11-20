@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="820" viewBox="0 0 1600 820" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="820" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Several containers, <tspan fill="#7c3aed">one pod</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">They share the pod&#x27;s network and its volumes. The init list starts first, in order.</text>
+<rect x="40.0" y="150.0" width="1520.0" height="640.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<text x="1542.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">Node cks-w1</text>
+<rect x="80.0" y="190.0" width="1440.0" height="560.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="107.0,205.0 115.5,209.5 115.5,219.0 107.0,223.5 98.5,219.0 98.5,209.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="98.5,209.5 107.0,214.0 115.5,209.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="107.0,214.0 107.0,223.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="126.0" y="220.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">pod pipeline</text>
+<rect x="110.0" y="240.0" width="720.0" height="240.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="128.0" y="270.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">initContainers, in order</text>
+<rect x="140.0" y="290.0" width="280.0" height="150.0" rx="12.0" fill="#ffffff" stroke="#475569" stroke-width="1.8"/>
+<rect x="157.4" y="356.1" width="23.1" height="19.0" rx="2.7" fill="none" stroke="#475569" stroke-width="1.6320000000000001"/>
+<polyline points="157.4,361.6 180.5,361.6" fill="none" stroke="#475569" stroke-width="1.63" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="196.0" y="357.8" font-size="20.0" fill="#0f172a" font-weight="700" text-anchor="start">fetch</text>
+<text x="196.0" y="381.1" font-size="17.0" fill="#475569" text-anchor="start">runs, exits 0</text>
+<rect x="520.0" y="290.0" width="280.0" height="150.0" rx="12.0" fill="#ffffff" stroke="#2563eb" stroke-width="1.8"/>
+<rect x="537.4" y="356.1" width="23.1" height="19.0" rx="2.7" fill="none" stroke="#2563eb" stroke-width="1.6320000000000001"/>
+<polyline points="537.4,361.6 560.5,361.6" fill="none" stroke="#2563eb" stroke-width="1.63" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="576.0" y="357.8" font-size="20.0" fill="#0f172a" font-weight="700" text-anchor="start">exporter</text>
+<text x="576.0" y="381.1" font-size="17.0" fill="#475569" text-anchor="start">restartPolicy: Always</text>
+<rect x="890.0" y="240.0" width="600.0" height="240.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="908.0" y="270.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">containers</text>
+<rect x="980.0" y="290.0" width="420.0" height="150.0" rx="12.0" fill="#ffffff" stroke="#475569" stroke-width="1.8"/>
+<rect x="997.4" y="356.1" width="23.1" height="19.0" rx="2.7" fill="none" stroke="#475569" stroke-width="1.6320000000000001"/>
+<polyline points="997.4,361.6 1020.5,361.6" fill="none" stroke="#475569" stroke-width="1.63" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1036.0" y="357.8" font-size="20.0" fill="#0f172a" font-weight="700" text-anchor="start">transform</text>
+<text x="1036.0" y="381.1" font-size="17.0" fill="#475569" text-anchor="start">the app, writes output.txt</text>
+<ellipse cx="140.0" cy="290.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="140.0" cy="290.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="140.0" y="296.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<ellipse cx="520.0" cy="290.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="520.0" cy="290.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="520.0" y="296.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<ellipse cx="980.0" cy="290.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="980.0" cy="290.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="980.0" y="296.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<rect x="110.0" y="540.0" width="1380.0" height="70.0" rx="14.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="130.0" y="581.5" font-size="18.0" fill="#9a3412" font-weight="700" text-anchor="start">emptyDir volume work, mounted at /work in all three</text>
+<rect x="110.0" y="640.0" width="1380.0" height="70.0" rx="14.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="130.0" y="681.5" font-size="18.0" fill="#047857" font-weight="700" text-anchor="start">the pod&#x27;s network: one IP, localhost shared</text>
+<polyline points="420.0,365.0 510.5,365.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="520.0,365.0 508.5,370.8 508.5,359.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="470.0" y="355.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">then</text>
+<polyline points="800.0,365.0 970.5,365.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="980.0,365.0 968.5,370.8 968.5,359.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="890.0" y="355.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">then</text>
+<polyline points="280.0,440.0 280.0,540.0" fill="none" stroke="#ea580c" stroke-width="1.80" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polyline points="660.0,440.0 660.0,540.0" fill="none" stroke="#ea580c" stroke-width="1.80" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polyline points="1190.0,440.0 1190.0,540.0" fill="none" stroke="#ea580c" stroke-width="1.80" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polyline points="1316.0,440.0 1316.0,505.0 744.0,505.0 744.0,449.5" fill="none" stroke="#2563eb" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="744.0,440.0 749.8,451.5 738.2,451.5" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round"/>
+<text x="1030.0" y="527.0" font-size="18.0" fill="#1e40af" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">GET :8080</text>
+</svg>

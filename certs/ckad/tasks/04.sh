@@ -201,21 +201,21 @@ setup_4_6() {
     kubectl -n team-a create deploy filler --image=busybox:1.36 --replicas=2 -- sleep 1d >/dev/null
     kubectl -n team-a set resources deploy filler --requests=cpu=50m,memory=32Mi --limits=cpu=100m,memory=64Mi >/dev/null
     kubectl -n team-a rollout status deploy filler --timeout=120s'
+  settled team-a filler 2
 }
 check_4_6() {
   check_json "ResourceQuota team-a-quota: 5 pods, 1 CPU and 1Gi requested, 2 CPU and 2Gi limits, 4 Services" "kubectl -n team-a get quota team-a-quota -o json" \
     'h=p["spec"]["hard"]; h=={"pods":"5","requests.cpu":"1","requests.memory":"1Gi","limits.cpu":"2","limits.memory":"2Gi","services":"4"}'
   check_cp "Deployment filler asks for 6 replicas and runs 5" \
-    "kubectl -n team-a get deploy filler -o jsonpath='{.spec.replicas} {.status.readyReplicas}' | grep -qx '6 5'"
+    "for i in \$(seq 1 30); do kubectl -n team-a get deploy filler -o jsonpath='{.spec.replicas} {.status.readyReplicas}' | grep -qx '6 5' && exit 0; sleep 2; done; exit 1"
   check_cp "/opt/ckad/4.6/reason.txt holds the quota's refusal" "grep -q 'exceeded quota: team-a-quota' /opt/ckad/4.6/reason.txt"
 }
 solve_4_6() {
   shown <<'EOF'
 k -n team-a create quota team-a-quota --hard=pods=5,requests.cpu=1,requests.memory=1Gi,limits.cpu=2,limits.memory=2Gi,services=4
 k -n team-a scale deploy filler --replicas=6
-sleep 5
 k -n team-a get deploy filler
-k -n team-a describe rs -l app=filler | grep FailedCreate | tail -1 > /opt/ckad/4.6/reason.txt
+k -n team-a events --types=Warning | grep 'exceeded quota' | tail -1 > /opt/ckad/4.6/reason.txt
 cat /opt/ckad/4.6/reason.txt
 k -n team-a describe quota team-a-quota
 EOF
@@ -224,7 +224,7 @@ EOF
 # ---- Task 7: ServiceAccounts and their tokens -------------------------------------------------------------
 setup_4_7() {
   ns_fresh sa-apps
-  cp_sh 'rm -rf /opt/ckad/4.7; mkdir -p /opt/ckad/4.7
+  cp_sh 'rm -rf /opt/ckad/4.7; mkdir -p /opt/ckad/4.7; kubectl config delete-user ckad-reporter >/dev/null 2>&1
     kubectl -n sa-apps create deploy reporter --image=busybox:1.36 -- sleep 1d >/dev/null
     kubectl -n sa-apps create deploy static-site --image=nginx:1.27-alpine >/dev/null
     kubectl -n sa-apps rollout status deploy reporter --timeout=120s >/dev/null
@@ -238,8 +238,11 @@ check_4_7() {
     "kubectl -n sa-apps exec deploy/reporter -- cat /var/run/secrets/kubernetes.io/serviceaccount/token | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null | grep -q 'system:serviceaccount:sa-apps:reporter'"
   check_cp "static-site's pods mount no token" \
     "kubectl -n sa-apps rollout status deploy static-site --timeout=60s && ! kubectl -n sa-apps exec deploy/static-site -- ls /var/run/secrets/kubernetes.io/serviceaccount/token"
+  # A TokenReview asks the API server whose token this is.
   check_cp "/opt/ckad/4.7/token.txt authenticates as reporter" \
-    "kubectl --token=\$(cat /opt/ckad/4.7/token.txt) auth whoami -o jsonpath='{.status.userInfo.username}' | grep -qx system:serviceaccount:sa-apps:reporter"
+    "printf '{\"apiVersion\":\"authentication.k8s.io/v1\",\"kind\":\"TokenReview\",\"spec\":{\"token\":\"%s\"}}' \$(cat /opt/ckad/4.7/token.txt) | kubectl create -f - -o jsonpath='{.status.user.username}' | grep -qx system:serviceaccount:sa-apps:reporter"
+  check_cp "the kubeconfig has a user ckad-reporter with that token" \
+    "kubectl --user=ckad-reporter auth whoami -o jsonpath='{.status.userInfo.username}' | grep -qx system:serviceaccount:sa-apps:reporter"
 }
 solve_4_7() {
   shown <<'EOF'
@@ -247,7 +250,9 @@ k -n sa-apps create sa reporter
 k -n sa-apps set serviceaccount deploy reporter reporter
 k -n sa-apps patch deploy static-site -p '{"spec":{"template":{"spec":{"automountServiceAccountToken":false}}}}'
 k -n sa-apps create token reporter --duration=2h > /opt/ckad/4.7/token.txt
-k --token=$(cat /opt/ckad/4.7/token.txt) auth whoami
+k config set-credentials ckad-reporter --token=$(cat /opt/ckad/4.7/token.txt)
+k --user=ckad-reporter auth whoami
+k --user=ckad-reporter -n sa-apps get pods
 k -n sa-apps rollout status deploy reporter
 k -n sa-apps rollout status deploy static-site
 EOF
@@ -307,7 +312,7 @@ spec:
       T=/var/run/secrets/kubernetes.io/serviceaccount/token
       while true; do
         if wget -qO /tmp/pods --no-check-certificate --header \"Authorization: Bearer \$(cat \$T)\" https://kubernetes.default.svc/api/v1/namespaces/shop-front/pods 2>/tmp/err; then
-          echo \"\$(date +%T) listed \$(grep -o '\"phase\":\"Running\"' /tmp/pods | wc -l) running pods in shop-front\"
+          echo \"\$(date +%T) listed \$(grep -o '\"phase\": *\"Running\"' /tmp/pods | wc -l) running pods in shop-front\"
         else
           echo \"\$(date +%T) \$(cat /tmp/err)\"
         fi

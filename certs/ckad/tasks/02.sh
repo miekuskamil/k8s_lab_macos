@@ -202,7 +202,7 @@ check_2_5() {
 }
 solve_2_5() {
   shown <<'EOF'
-helm show values oci://registry.ckad:5000/charts/webapp --version 0.1.0 --plain-http | grep -E -A1 '^replicaCount|^service:'
+helm show values oci://registry.ckad:5000/charts/webapp --version 0.1.0 --plain-http 2>/dev/null | grep -E '^replicaCount|^  type:|^  port:'
 helm -n helm-shop install shop oci://registry.ckad:5000/charts/webapp --version 0.1.0 --plain-http --set replicaCount=2 --set service.type=NodePort
 helm -n helm-shop list
 k -n helm-shop rollout status deploy shop-webapp
@@ -252,7 +252,7 @@ EOF
   cp_sh "helm -n helm-ops install old-api $CHARTS/webapp --version 0.1.0 --plain-http >/dev/null 2>&1
     helm -n helm-ops install reports $CHARTS/webapp --version 0.1.0 --plain-http >/dev/null 2>&1
     helm -n helm-ops install cache $CHARTS/webapp --version 0.1.0 --plain-http --set image.tag=no-such-tag --wait --timeout 15s >/dev/null 2>&1
-    helm -n helm-ops list -a"
+    helm -n helm-ops list"
 }
 check_2_7() {
   check_cp "release old-api is gone" "! helm -n helm-ops status old-api"
@@ -264,13 +264,13 @@ check_2_7() {
 }
 solve_2_7() {
   shown <<'EOF'
-helm -n helm-ops list -a
+helm -n helm-ops list
 helm -n helm-ops uninstall old-api
 helm -n helm-ops list --failed
 helm -n helm-ops uninstall cache
 helm -n helm-ops install metrics-ui oci://registry.ckad:5000/charts/webapp --version 0.2.0 --plain-http -f /opt/ckad/2.7/values.yaml
 k -n helm-ops rollout status deploy metrics-ui-webapp
-helm -n helm-ops list -a
+helm -n helm-ops list
 EOF
 }
 

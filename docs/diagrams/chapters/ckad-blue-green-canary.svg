@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="860" viewBox="0 0 1600 860" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="860" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">One selector, <tspan fill="#7c3aed">two release patterns</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">A Service sends requests to every ready pod whose labels match its selector.</text>
+<rect x="40.0" y="150.0" width="740.0" height="680.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="58.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">blue-green: namespace bluegreen</text>
+<rect x="160.0" y="210.0" width="500.0" height="100.0" rx="14.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<rect x="176.0" y="238.0" width="44.0" height="44.0" rx="10.0" fill="#2563eb" stroke="none"/>
+<rect x="190.3" y="255.5" width="15.4" height="9.6" rx="3.2" fill="none" stroke="#ffffff" stroke-width="1.536"/>
+<polyline points="194.2,249.1 194.2,255.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="201.8,249.1 201.8,255.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="198.0,265.1 198.0,272.2" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="234.0" y="253.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Service shop</text>
+<text x="234.0" y="279.0" font-size="17.0" fill="#475569" text-anchor="start">version: blue, then green</text>
+<rect x="70.0" y="400.0" width="320.0" height="300.0" rx="16.0" fill="#ffffff" stroke="#475569" stroke-width="1.6"/>
+<text x="88.0" y="430.0" font-size="18.0" fill="#334155" font-weight="700" text-anchor="start">shop-blue</text>
+<rect x="430.0" y="400.0" width="320.0" height="300.0" rx="16.0" fill="#ffffff" stroke="#059669" stroke-width="1.6"/>
+<text x="448.0" y="430.0" font-size="18.0" fill="#047857" font-weight="700" text-anchor="start">shop-green</text>
+<rect x="95.0" y="450.0" width="270.0" height="62.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="230.0" y="484.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">version=blue</text>
+<rect x="455.0" y="450.0" width="270.0" height="62.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="590.0" y="484.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">version=green</text>
+<rect x="95.0" y="528.0" width="270.0" height="62.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="230.0" y="562.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">version=blue</text>
+<rect x="455.0" y="528.0" width="270.0" height="62.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="590.0" y="562.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">version=green</text>
+<rect x="95.0" y="606.0" width="270.0" height="62.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="230.0" y="640.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">version=blue</text>
+<rect x="455.0" y="606.0" width="270.0" height="62.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="590.0" y="640.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">version=green</text>
+<polyline points="260.0,310.0 260.0,355.0 230.0,355.0 230.0,390.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="230.0,400.0 224.2,388.5 235.8,388.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="260.0" cy="332.5" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="260.0" cy="332.5" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="260.0" y="339.0" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<text x="234.0" y="338.5" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="end">before</text>
+<polyline points="560.0,310.0 560.0,355.0 590.0,355.0 590.0,390.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="590.0,400.0 584.2,388.5 595.8,388.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="560.0" cy="332.5" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="560.0" cy="332.5" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="560.0" y="339.0" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<text x="586.0" y="338.5" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">after the switch</text>
+<rect x="820.0" y="150.0" width="740.0" height="680.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="838.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">canary: namespace canary</text>
+<rect x="940.0" y="210.0" width="500.0" height="100.0" rx="14.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<rect x="956.0" y="238.0" width="44.0" height="44.0" rx="10.0" fill="#2563eb" stroke="none"/>
+<rect x="970.3" y="255.5" width="15.4" height="9.6" rx="3.2" fill="none" stroke="#ffffff" stroke-width="1.536"/>
+<polyline points="974.2,249.1 974.2,255.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="981.8,249.1 981.8,255.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="978.0,265.1 978.0,272.2" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1014.0" y="253.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Service front</text>
+<text x="1014.0" y="279.0" font-size="17.0" fill="#475569" text-anchor="start">app: front</text>
+<rect x="850.0" y="400.0" width="400.0" height="400.0" rx="16.0" fill="#ffffff" stroke="#475569" stroke-width="1.6"/>
+<text x="868.0" y="430.0" font-size="18.0" fill="#334155" font-weight="700" text-anchor="start">front-v1: 4 pods</text>
+<rect x="1290.0" y="400.0" width="240.0" height="400.0" rx="16.0" fill="#ffffff" stroke="#ea580c" stroke-width="1.6"/>
+<text x="1308.0" y="430.0" font-size="18.0" fill="#9a3412" font-weight="700" text-anchor="start">front-v2: 1 pod</text>
+<rect x="875.0" y="450.0" width="350.0" height="64.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1050.0" y="485.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">app=front, v1</text>
+<rect x="875.0" y="532.0" width="350.0" height="64.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1050.0" y="567.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">app=front, v1</text>
+<rect x="875.0" y="614.0" width="350.0" height="64.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1050.0" y="649.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">app=front, v1</text>
+<rect x="875.0" y="696.0" width="350.0" height="64.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1050.0" y="731.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">app=front, v1</text>
+<rect x="1310.0" y="450.0" width="200.0" height="64.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="1410.0" y="485.0" font-size="16.0" fill="#0f172a" font-weight="700" text-anchor="middle">app=front, v2</text>
+<polyline points="1090.0,310.0 1090.0,355.0 1050.0,355.0 1050.0,390.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1050.0,400.0 1044.2,388.5 1055.8,388.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="1080.0" y="338.5" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="end">4 in 5</text>
+<polyline points="1365.0,310.0 1365.0,355.0 1410.0,355.0 1410.0,390.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1410.0,400.0 1404.2,388.5 1415.8,388.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="1375.0" y="338.5" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">1 in 5</text>
+</svg>

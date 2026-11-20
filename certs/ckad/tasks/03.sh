@@ -92,7 +92,7 @@ check_3_2() {
 solve_3_2() {
   shown <<'EOF'
 k -n probes-fix get pods
-k -n probes-fix describe pod -l app=shop | grep -E 'Warning|Killing' | sort -u | head -4
+k -n probes-fix events --types=Warning | tail -3
 k -n probes-fix patch deploy shop --type=json -p '[{"op":"replace","path":"/spec/template/spec/containers/0/livenessProbe/httpGet/port","value":80},{"op":"replace","path":"/spec/template/spec/containers/0/readinessProbe/httpGet/path","value":"/"}]'
 k -n probes-fix rollout status deploy shop
 EOF
@@ -106,8 +106,8 @@ EOF
 setup_3_3() {
   ns_fresh logs
   cp_sh 'rm -rf /opt/ckad/3.3; mkdir -p /opt/ckad/3.3
-    kubectl -n logs create deploy billing --image=busybox:1.36 -- sh -c "echo starting billing; sleep 2; if [ -z \"\$DB_URL\" ]; then echo FATAL: environment variable DB_URL is not set; exit 1; fi; echo connected to \$DB_URL; exec sleep 1d" >/dev/null
-    sleep 20; kubectl -n logs get pods'
+    kubectl -n logs create deploy billing --image=busybox:1.36 -- sh -c "echo starting billing; sleep 12; if [ -z \"\$DB_URL\" ]; then echo FATAL: environment variable DB_URL is not set; exit 1; fi; echo connected to \$DB_URL; exec sleep 1d" >/dev/null
+    sleep 30; kubectl -n logs get pods'
 }
 check_3_3() {
   check_cp "/opt/ckad/3.3/crash.log holds the crash message" "grep -q 'FATAL: environment variable DB_URL is not set' /opt/ckad/3.3/crash.log"
@@ -115,6 +115,8 @@ check_3_3() {
     "kubectl -n logs rollout status deploy billing --timeout=90s && for i in \$(seq 1 15); do kubectl -n logs logs deploy/billing 2>/dev/null | grep -q 'connected to postgres://db.logs:5432/billing' && exit 0; sleep 2; done; exit 1"
 }
 solve_3_3() {
+  # Wait until the container runs again after a crash, so that --previous names the crashed run.
+  cp_sh "for i in \$(seq 1 60); do kubectl -n logs get pod -l app=billing -o jsonpath='{.items[0].status.containerStatuses[0].restartCount} {.items[0].status.containerStatuses[0].state.running.startedAt}' | grep -qE '^[1-9][0-9]* .+' && exit 0; sleep 2; done"
   shown <<'EOF'
 k -n logs get pods
 k -n logs logs deploy/billing --previous
@@ -217,7 +219,7 @@ check_3_6() {
 solve_3_6() {
   shown <<'EOF'
 k -n pending get pods
-k -n pending describe pod -l app=report | grep -A3 Events: | tail -1
+k -n pending events --types=Warning | tail -1
 k get nodes -L ckad-disk
 k label node cks-w1 ckad-disk=ssd
 k -n pending set resources deploy report --requests=cpu=100m,memory=64Mi

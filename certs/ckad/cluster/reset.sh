@@ -46,6 +46,7 @@ node_sh "$CKS_CP" '
 echo "=== files, images and the registry on the nodes"
 node_sh "$CKS_CP" '
   rm -rf /opt/ckad /root/.config/helm /root/.cache/helm /root/ckad
+  for u in $(kubectl config get-users 2>/dev/null | grep "^ckad-"); do kubectl config delete-user "$u" >/dev/null; done
   if command -v podman >/dev/null; then podman rm -af >/dev/null 2>&1; podman rmi -af >/dev/null 2>&1; fi
   if systemctl is-active ckad-registry >/dev/null 2>&1; then
     systemctl stop ckad-registry; rm -rf /var/lib/ckad-registry/*; systemctl start ckad-registry

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="860" viewBox="0 0 1600 860" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="860" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">NetworkPolicy: <tspan fill="#7c3aed">who gets in</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">One from-entry with both selectors means AND. Two entries mean OR.</text>
+<rect x="40.0" y="150.0" width="700.0" height="340.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="58.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace np-monitoring, team=monitoring</text>
+<rect x="70.0" y="230.0" width="300.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="220.0" y="278.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">app=prometheus</text>
+<rect x="410.0" y="230.0" width="300.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="560.0" y="278.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">app=grafana</text>
+<rect x="40.0" y="530.0" width="700.0" height="300.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="58.0" y="560.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace np-dev, team=dev</text>
+<rect x="70.0" y="610.0" width="300.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="220.0" y="658.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">app=prometheus</text>
+<rect x="860.0" y="150.0" width="700.0" height="680.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="878.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace np-metrics</text>
+<rect x="890.0" y="220.0" width="640.0" height="150.0" rx="10.0" fill="#fdeeee" stroke="#dc2626" stroke-width="1.8"/>
+<text x="1210.0" y="276.3" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">allow-prometheus</text>
+<text x="1210.0" y="297.3" font-size="17.0" fill="#475569" text-anchor="middle">from: namespaceSelector team=monitoring</text>
+<text x="1210.0" y="319.4" font-size="17.0" fill="#475569" text-anchor="middle">      AND podSelector app=prometheus</text>
+<rect x="990.0" y="470.0" width="440.0" height="260.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="1017.0,485.0 1025.5,489.5 1025.5,499.0 1017.0,503.5 1008.5,499.0 1008.5,489.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="1008.5,489.5 1017.0,494.0 1025.5,489.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1017.0,494.0 1017.0,503.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1036.0" y="500.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">pod exporter</text>
+<rect x="1015.0" y="530.0" width="390.0" height="100.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1210.0" y="583.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">httpd :9100</text>
+<polyline points="220.0,320.0 220.0,400.0 960.0,400.0 960.0,555.0 1005.5,555.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1015.0,555.0 1003.5,560.8 1003.5,549.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="590.0" y="390.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">allowed</text>
+<polyline points="710.0,275.0 800.0,275.0" fill="none" stroke="#dc2626" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<ellipse cx="800.0" cy="275.0" rx="14.0" ry="14.0" fill="#dc2626" stroke="none"/>
+<polyline points="795.0,270.0 805.0,280.0" fill="none" stroke="#ffffff" stroke-width="2.60" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="805.0,270.0 795.0,280.0" fill="none" stroke="#ffffff" stroke-width="2.60" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="800.0" y="320.0" font-size="16.0" fill="#991b1b" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">wrong pod</text>
+<polyline points="370.0,655.0 800.0,655.0" fill="none" stroke="#dc2626" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<ellipse cx="800.0" cy="655.0" rx="14.0" ry="14.0" fill="#dc2626" stroke="none"/>
+<polyline points="795.0,650.0 805.0,660.0" fill="none" stroke="#ffffff" stroke-width="2.60" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="805.0,650.0 795.0,660.0" fill="none" stroke="#ffffff" stroke-width="2.60" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="800.0" y="700.0" font-size="16.0" fill="#991b1b" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">wrong namespace</text>
+</svg>
