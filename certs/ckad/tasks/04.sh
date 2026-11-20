@@ -150,7 +150,7 @@ check_4_4() {
 solve_4_4() {
   shown <<'EOF'
 k -n quota-team get deploy worker
-k -n quota-team describe rs -l app=worker | grep -m1 FailedCreate
+k -n quota-team events --types=Warning | tail -1
 k -n quota-team describe quota compute
 k -n quota-team set resources deploy worker --requests=cpu=100m,memory=64Mi --limits=cpu=200m,memory=128Mi
 k -n quota-team rollout status deploy worker

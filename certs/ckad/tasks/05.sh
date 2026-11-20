@@ -96,6 +96,9 @@ k apply -f /opt/ckad/5.2-svc.yaml
 k -n svc-nodeport get svc web-np
 k -n svc-nodeport get endpointslice
 k get node cks-w1 -o wide
+EOF
+  cp_sh "for i in \$(seq 1 15); do curl -s -m 3 http://$W1IP:30100 | grep -q title && exit 0; sleep 1; done"
+  shown <<'EOF'
 curl -s http://$(k get node cks-w1 -o jsonpath='{.status.addresses[0].address}'):30100 | grep title
 EOF
 }
@@ -197,7 +200,7 @@ check_5_4() {
 }
 solve_5_4() {
   shown <<'EOF'
-k -n ing-shop create ingress shop --class=nginx --rule='shop.ckad.local/=web:80' --rule='shop.ckad.local/api*=api:80'
+k -n ing-shop create ingress shop --class=nginx --rule='shop.ckad.local/*=web:80' --rule='shop.ckad.local/api*=api:80'
 k -n ing-shop get ingress shop -o yaml | grep -A20 '^spec:'
 sleep 10
 curl -s -H 'Host: shop.ckad.local' http://$(k get node cks-w1 -o jsonpath='{.status.addresses[0].address}'):30080/

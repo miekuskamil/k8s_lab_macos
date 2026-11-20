@@ -125,6 +125,7 @@ k -n logs set env deploy/billing DB_URL=postgres://db.logs:5432/billing
 k -n logs rollout status deploy billing
 EOF
   settled logs billing 1
+  cp_sh "for i in \$(seq 1 20); do kubectl -n logs logs deploy/billing | grep -q connected && exit 0; sleep 2; done"
   shown <<'EOF'
 k -n logs logs deploy/billing
 EOF
@@ -182,6 +183,7 @@ EOF
 # ---- Task 6: pods that stay Pending -----------------------------------------------------------
 setup_3_6() {
   ns_fresh pending
+  cp_sh 'kubectl label node cks-w1 ckad-disk- >/dev/null 2>&1; true'
   cp_sh "kubectl apply -f - >/dev/null" <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
