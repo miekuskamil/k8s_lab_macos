@@ -15,6 +15,8 @@ Every resource and term the course uses, in plain words. Each entry starts with 
 - [Around the mesh](#around-the-mesh)
 - [AI on Kubernetes](#ai-on-kubernetes)
 - [Kubernetes operations](#kubernetes-operations)
+- [Linux networking under Kubernetes](#linux-networking-under-kubernetes)
+- [Outbound traffic and NAT](#outbound-traffic-and-nat)
 - [The practice cluster and the security modules](#the-practice-cluster-and-the-security-modules)
 - [Applications on Kubernetes](#applications-on-kubernetes)
 
@@ -576,7 +578,7 @@ Members of `system:masters` skip RBAC. Module 29.
 
 **EndpointSlice.** An EndpointSlice is the list of ready pod IPs behind a Service. kube-proxy, CoreDNS and istiod all read it. Module 29.
 
-**DNAT and conntrack.** DNAT (destination network address translation) is a kernel rewrite of a packet's destination address, such as a Service IP to a pod IP. conntrack is the kernel's table of connections and their rewrites, like a notebook of every change it made. With it, replies get the original addresses back. Module 29.
+**DNAT and conntrack.** DNAT (destination network address translation) is a kernel rewrite of a packet's destination address, such as a Service IP to a pod IP. conntrack is the kernel's table of connections and their rewrites, like a notebook of every change it made. With it, replies get the original addresses back. Modules 29 and 45.
 
 **Watch cache.** The watch cache is the API server's in-memory copy of recent objects and changes. Watchers read from it, so a thousand controllers don't cause a thousand database reads. Module 29.
 
@@ -590,11 +592,11 @@ Members of `system:masters` skip RBAC. Module 29.
 
 ## Linux networking under Kubernetes
 
-**Network namespace.** A network namespace is a separate copy of the network stack, with its own interfaces, addresses, routes and iptables rules. Every pod has one, owned by its `pause` container. Module 29.
+**Network namespace.** A network namespace is a separate copy of the network stack, with its own interfaces, addresses, routes and iptables rules. Every pod has one, owned by its `pause` container. Modules 29 and 45.
 
-**veth pair.** A veth pair is a virtual network cable with two ends. One end is `eth0` inside the pod. The other end sits on the node, plugged into the bridge. Module 29.
+**veth pair.** A veth pair is a virtual network cable with two ends. One end is `eth0` inside the pod. The other end sits on the node, plugged into the bridge. Modules 29 and 45.
 
-**Bridge (cni0).** The bridge is a virtual network switch on the node that connects all the pods on that node. Every pod's veth plugs into it. The bridge holds the pods' gateway address, `10.42.0.1`. Module 29.
+**Bridge (cni0).** The bridge is a virtual network switch on the node that connects all the pods on that node. Every pod's veth plugs into it. The bridge holds the pods' gateway address, `10.42.0.1`. Modules 29 and 45.
 
 **ARP.** ARP (Address Resolution Protocol) is how a machine finds the MAC address for an IP on the same Layer 2 network. The node's `ip neigh` table shows what it learned. Module 29.
 
@@ -602,15 +604,39 @@ Members of `system:masters` skip RBAC. Module 29.
 
 **VXLAN.** VXLAN is a tunnel that wraps a Layer 2 frame in a UDP packet, like a letter inside an envelope. flannel uses it (device `flannel.1`, port 8472) to carry pod traffic between nodes. Its 50-byte header is why pods get MTU 1450. Module 29.
 
-**SNAT and masquerade.** SNAT (source network address translation) is a kernel rewrite of a packet's source address. Masquerade is SNAT to the address of the interface the packet leaves through. kube-proxy masquerades traffic that enters from outside the cluster, so replies come back through the same node. Module 29.
+**SNAT and masquerade.** SNAT (source network address translation) is a kernel rewrite of a packet's source address. Masquerade is SNAT to the address of the interface the packet leaves through. kube-proxy masquerades traffic that enters from outside the cluster, so replies come back through the same node. flannel masquerades pod traffic that leaves the cluster, and Docker masquerades it again in the OrbStack VM. Modules 29 and 45.
 
 **externalTrafficPolicy.** externalTrafficPolicy is a Service setting that decides which nodes accept outside traffic. `Cluster`, the default, lets any node accept the traffic and SNATs it, which hides the client's address. `Local` keeps the client's address, but only sends traffic to pods on the node that received it. Module 29.
 
 **Host port.** A host port is a container port bound to the node's own address. The CNI's portmap plugin implements it with a DNAT rule. k3s's svclb pods use one. Module 29.
 
-**kube-router.** kube-router is the network policy controller that k3s embeds. It turns NetworkPolicy objects into iptables rules on every node. Module 29.
+**kube-router.** kube-router is the network policy controller that k3s embeds. It turns NetworkPolicy objects into iptables rules on every node, in the `FORWARD` chain. Modules 29 and 45.
 
 **Probe source 169.254.7.127.** 169.254.7.127 is the link-local source address that ambient mode gives to the kubelet's health checks. istio-cni rewrites the kubelet's probe traffic to come from it. ztunnel lets that traffic through without mTLS, so health checks work under STRICT mode. Module 29.
+
+## Outbound traffic and NAT
+
+**Egress.** Egress is traffic that leaves the cluster, such as a pod calling an API on the internet. Every layer between the pod and the internet rewrites its source address on the way out. Modules 12 and 45.
+
+**Default route.** The default route is the entry in a routing table that catches every destination no other route matches. A pod's default route points at the bridge, `10.42.0.1`, and the node's points at the Docker network's gateway. Module 45.
+
+**Passthrough (ztunnel).** Passthrough is what ztunnel does with a connection to an address the mesh doesn't know. It opens a plain TCP connection to that address and logs only the IP and port, with no identity and no policy. Modules 12 and 45.
+
+**flannel masquerade.** flannel's masquerade is the `FLANNEL-POSTRTG` chain on each node, whose rule rewrites the source of any packet from the pod network to an address outside it. It turns a pod's address into the node's address, so replies find their way back. Module 45.
+
+**--random-fully.** `--random-fully` is an option on a masquerade rule that gives every new connection a random source port. It prevents two connections from racing for the same conntrack entry when pods pick the same port at once. Module 45.
+
+**iptables-nft.** iptables-nft is the `iptables` command with the nftables backend: you write iptables rules, and the kernel stores them as nftables. `iptables --version` prints `(nf_tables)` for it. The lab's node and pods use it. Module 45.
+
+**Docker embedded DNS.** Docker's embedded DNS is a small DNS server at `127.0.0.11` inside each container on a user-defined network. The k3d node sends DNS for the gateway address there with a DNAT rule, and it forwards outside names to the host. Module 45.
+
+**Docker bridge.** A Docker bridge is the Linux bridge that connects the containers of one Docker network, named `br-` plus the first 12 characters of the network ID. It holds the network's gateway address and masquerades traffic that leaves the network. Module 45.
+
+**Network proxy (OrbStack).** OrbStack's network proxy is the part of the OrbStack app that carries the VM's connections into macOS. It accepts each connection from the VM and opens a new one with an ordinary macOS socket, so the internet sees your Mac's address. Module 45.
+
+**Egress gateway.** An egress gateway is a proxy that a cluster sends chosen outbound traffic through, usually with fixed source addresses. Partners then allow a short list of IPs, and the gateway applies policy and logs every call. Modules 12 and 45.
+
+**tcpdump.** tcpdump is the standard Linux tool that prints the packets crossing an interface. With `-i any` it shows each packet on every interface it crosses, which reveals each rewrite. Module 45.
 
 ## The practice cluster and the security modules
 

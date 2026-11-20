@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="800" viewBox="0 0 1600 800" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="800" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Who rewrites <tspan fill="#7c3aed">the source</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Each layer swaps the source for its own address and writes the swap down, so the reply finds its way back.</text>
+<rect x="60.0" y="150.0" width="256.0" height="570.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="87.0,165.0 95.5,169.5 95.5,179.0 87.0,183.5 78.5,179.0 78.5,169.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="78.5,169.5 87.0,174.0 95.5,169.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="87.0,174.0 87.0,183.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="106.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">client pod</text>
+<rect x="78.0" y="220.0" width="220.0" height="90.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="188.0" y="257.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">ztunnel</text>
+<text x="188.0" y="279.7" font-size="17.0" fill="#475569" text-anchor="middle">new connection</text>
+<rect x="78.0" y="400.0" width="220.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="188.0" y="437.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">10.42.0.204</text>
+<text x="188.0" y="459.7" font-size="17.0" fill="#475569" text-anchor="middle">port 52946</text>
+<rect x="78.0" y="600.0" width="220.0" height="90.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="188.0" y="637.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">conntrack</text>
+<text x="188.0" y="659.7" font-size="17.0" fill="#475569" text-anchor="middle">undoes redirect</text>
+<rect x="366.0" y="150.0" width="256.0" height="570.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<rect x="384.0" y="165.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="387.5" cy="167.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="393.0,167.5 398.5,167.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="384.0" y="171.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="387.5" cy="174.0" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="393.0,174.0 398.5,174.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="384.0" y="178.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="387.5" cy="180.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="393.0,180.5 398.5,180.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="412.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">k3d node</text>
+<rect x="384.0" y="220.0" width="220.0" height="90.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="494.0" y="257.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">masquerade</text>
+<text x="494.0" y="279.7" font-size="17.0" fill="#475569" text-anchor="middle">flannel rule</text>
+<rect x="384.0" y="400.0" width="220.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="494.0" y="437.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">192.168.107.2</text>
+<text x="494.0" y="459.7" font-size="17.0" fill="#475569" text-anchor="middle">port 25932</text>
+<rect x="384.0" y="600.0" width="220.0" height="90.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="494.0" y="637.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">conntrack</text>
+<text x="494.0" y="659.7" font-size="17.0" fill="#475569" text-anchor="middle">node table</text>
+<rect x="672.0" y="150.0" width="256.0" height="570.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="690.5" y="167.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="690.5,171.5 707.5,171.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="718.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">OrbStack VM</text>
+<rect x="690.0" y="220.0" width="220.0" height="90.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="800.0" y="257.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">masquerade</text>
+<text x="800.0" y="279.7" font-size="17.0" fill="#475569" text-anchor="middle">Docker rule</text>
+<rect x="690.0" y="400.0" width="220.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="800.0" y="437.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">192.168.139.2</text>
+<text x="800.0" y="459.7" font-size="17.0" fill="#475569" text-anchor="middle">port 25932</text>
+<rect x="690.0" y="600.0" width="220.0" height="90.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="800.0" y="637.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">conntrack</text>
+<text x="800.0" y="659.7" font-size="17.0" fill="#475569" text-anchor="middle">VM table</text>
+<rect x="978.0" y="150.0" width="256.0" height="570.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="998.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="995.5,181.0 1014.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1024.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Your Mac</text>
+<rect x="996.0" y="220.0" width="220.0" height="90.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="1106.0" y="257.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">OrbStack app</text>
+<text x="1106.0" y="279.7" font-size="17.0" fill="#475569" text-anchor="middle">new socket</text>
+<rect x="996.0" y="400.0" width="220.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1106.0" y="437.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">192.168.1.132</text>
+<text x="1106.0" y="459.7" font-size="17.0" fill="#475569" text-anchor="middle">port 56087</text>
+<rect x="996.0" y="600.0" width="220.0" height="90.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="1106.0" y="637.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">two sockets</text>
+<text x="1106.0" y="659.7" font-size="17.0" fill="#475569" text-anchor="middle">copies bytes</text>
+<rect x="1284.0" y="150.0" width="256.0" height="570.0" rx="16.0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.6"/>
+<text x="1302.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">home router</text>
+<rect x="1302.0" y="220.0" width="220.0" height="90.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="1412.0" y="257.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">NAT</text>
+<text x="1412.0" y="279.7" font-size="17.0" fill="#475569" text-anchor="middle">router rule</text>
+<rect x="1302.0" y="400.0" width="220.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1412.0" y="437.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">public IP</text>
+<text x="1412.0" y="459.7" font-size="17.0" fill="#475569" text-anchor="middle">router&#x27;s port</text>
+<rect x="1302.0" y="600.0" width="220.0" height="90.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="1412.0" y="637.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">NAT table</text>
+<text x="1412.0" y="659.7" font-size="17.0" fill="#475569" text-anchor="middle">router memory</text>
+<polyline points="188.0,310.0 188.0,390.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="188.0,400.0 182.2,388.5 193.8,388.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="188.0" cy="355.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="188.0" cy="355.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="188.0" y="361.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<polyline points="188.0,490.0 188.0,590.5" fill="none" stroke="#ea580c" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="188.0,600.0 182.2,588.5 193.8,588.5" fill="#ea580c" stroke="#ea580c" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="494.0,310.0 494.0,390.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="494.0,400.0 488.2,388.5 499.8,388.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="494.0" cy="355.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="494.0" cy="355.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="494.0" y="361.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<polyline points="494.0,490.0 494.0,590.5" fill="none" stroke="#ea580c" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="494.0,600.0 488.2,588.5 499.8,588.5" fill="#ea580c" stroke="#ea580c" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="800.0,310.0 800.0,390.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="800.0,400.0 794.2,388.5 805.8,388.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="800.0" cy="355.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="800.0" cy="355.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="800.0" y="361.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<polyline points="800.0,490.0 800.0,590.5" fill="none" stroke="#ea580c" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="800.0,600.0 794.2,588.5 805.8,588.5" fill="#ea580c" stroke="#ea580c" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="1106.0,310.0 1106.0,390.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1106.0,400.0 1100.2,388.5 1111.8,388.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1106.0" cy="355.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1106.0" cy="355.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1106.0" y="361.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<polyline points="1106.0,490.0 1106.0,590.5" fill="none" stroke="#ea580c" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="1106.0,600.0 1100.2,588.5 1111.8,588.5" fill="#ea580c" stroke="#ea580c" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="1412.0,310.0 1412.0,390.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1412.0,400.0 1406.2,388.5 1417.8,388.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1412.0" cy="355.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1412.0" cy="355.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1412.0" y="361.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">5</text>
+<polyline points="1412.0,490.0 1412.0,590.5" fill="none" stroke="#ea580c" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="1412.0,600.0 1406.2,588.5 1417.8,588.5" fill="#ea580c" stroke="#ea580c" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="298.0,445.0 341.0,445.0 341.0,265.0 374.5,265.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="384.0,265.0 372.5,270.8 372.5,259.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="604.0,445.0 647.0,445.0 647.0,265.0 680.5,265.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="690.0,265.0 678.5,270.8 678.5,259.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="910.0,445.0 953.0,445.0 953.0,265.0 986.5,265.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="996.0,265.0 984.5,270.8 984.5,259.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="1216.0,445.0 1259.0,445.0 1259.0,265.0 1292.5,265.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1302.0,265.0 1290.5,270.8 1290.5,259.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="1302.0,665.0 1225.5,665.0" fill="none" stroke="#0891b2" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="1216.0,665.0 1227.5,659.2 1227.5,670.8" fill="#0891b2" stroke="#0891b2" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="996.0,665.0 919.5,665.0" fill="none" stroke="#0891b2" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="910.0,665.0 921.5,659.2 921.5,670.8" fill="#0891b2" stroke="#0891b2" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="690.0,665.0 613.5,665.0" fill="none" stroke="#0891b2" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="604.0,665.0 615.5,659.2 615.5,670.8" fill="#0891b2" stroke="#0891b2" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="384.0,665.0 307.5,665.0" fill="none" stroke="#0891b2" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="298.0,665.0 309.5,659.2 309.5,670.8" fill="#0891b2" stroke="#0891b2" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1522.0" cy="600.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1522.0" cy="600.0" rx="16.0" ry="16.0" fill="#0891b2" stroke="none"/>
+<text x="1522.0" y="606.5" font-size="18.0" fill="#ffffff" font-weight="700" text-anchor="middle">6</text>
+<ellipse cx="1216.0" cy="600.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1216.0" cy="600.0" rx="16.0" ry="16.0" fill="#0891b2" stroke="none"/>
+<text x="1216.0" y="606.5" font-size="18.0" fill="#ffffff" font-weight="700" text-anchor="middle">7</text>
+<ellipse cx="910.0" cy="600.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="910.0" cy="600.0" rx="16.0" ry="16.0" fill="#0891b2" stroke="none"/>
+<text x="910.0" y="606.5" font-size="18.0" fill="#ffffff" font-weight="700" text-anchor="middle">8</text>
+<ellipse cx="604.0" cy="600.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="604.0" cy="600.0" rx="16.0" ry="16.0" fill="#0891b2" stroke="none"/>
+<text x="604.0" y="606.5" font-size="18.0" fill="#ffffff" font-weight="700" text-anchor="middle">9</text>
+<ellipse cx="298.0" cy="600.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="298.0" cy="600.0" rx="16.0" ry="16.0" fill="#0891b2" stroke="none"/>
+<text x="298.0" y="606.5" font-size="18.0" fill="#ffffff" font-weight="700" text-anchor="middle">10</text>
+<polyline points="380.0,770.0 404.5,770.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="414.0,770.0 402.5,775.8 402.5,764.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="424.0" y="775.5" font-size="16.0" fill="#475569" text-anchor="start">request out, steps 1 to 5</text>
+<polyline points="648.2,770.0 672.6,770.0" fill="none" stroke="#0891b2" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="682.2,770.0 670.6,775.8 670.6,764.2" fill="#0891b2" stroke="#0891b2" stroke-width="1" stroke-linejoin="round"/>
+<text x="692.2" y="775.5" font-size="16.0" fill="#475569" text-anchor="start">reply back, steps 6 to 10</text>
+</svg>

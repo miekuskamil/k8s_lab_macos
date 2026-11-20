@@ -23,7 +23,7 @@ The modules run on three kinds of machine, and each module names its machine at 
 
 | Where it runs | Modules | How to start it |
 |---|---|---|
-| The k3d lab on your Mac, with Istio, the shop and every UI | 0 to 32 | `./scripts/provision.sh`, as [Before you start](#before-you-start) shows |
+| The k3d lab on your Mac, with Istio, the shop and every UI | 0 to 32, and 45 | `./scripts/provision.sh`, as [Before you start](#before-you-start) shows |
 | The [practice cluster](practice-cluster.md), two kubeadm nodes on OrbStack or on your own VMs | 33 to 43, practice exams 1 to 6 | `./platform-engineering/practice/cluster/create.sh` |
 | A VM with a kernel of its own, Lima on a Mac | 44, and three tasks of practice exams 5 and 6 | `./platform-engineering/practice/cluster/lima.sh create`, as the [VM page](kernel-and-host/README.md) shows |
 
@@ -106,6 +106,7 @@ Hardening the nodes, the workloads and the supply chain, catching attacks at run
 | [30. Sidecar mode in depth](3-advanced/30-sidecar-in-depth.md) | The four injection webhooks, iptables traffic capture, excluded ports, the Sidecar resource (measured: 62 clusters down to 16), proxy resources, sidecar against ambient in latency and memory | `istioctl`, `iptables`, `kubectl top` |
 | [31. Debugging Envoy with istioctl](3-advanced/31-debugging-envoy.md) | Listener, route, cluster, endpoint; SYNCED and STALE (a frozen Envoy); `analyze` and `x describe` on broken config; causing `NC`, `URX`, `NR`, `UH`, `UF` and `UO` on purpose; runtime log levels; four break-and-fix exercises | `istioctl proxy-config`, access logs |
 | [32. Installing Istio with istioctl](3-advanced/32-installing-istio.md) | On a throwaway k3d cluster: install profiles, an IstioOperator file with meshConfig, components and values, `manifest generate` and `translate`, reconfiguring in place, switching to ambient, uninstalling. Never touches the lab's Istio | `k3d`, `istioctl` 1.24.2 |
+| [45. The life of an outbound request](3-advanced/45-life-of-an-outbound-request.md) | Module 29 in the other direction: one call from a pod to the internet through ztunnel's passthrough, the veth pair, the bridge, flannel's masquerade, Docker's NAT in the OrbStack VM, OrbStack and your router, with tcpdump and conntrack at every layer; then controlled egress through a waypoint | `tcpdump`, `conntrack`, `iptables`, `nsenter` |
 | **Timed practice exams** | | |
 | [Practice exam 4](3-advanced/practice-exam-4.md), [5](3-advanced/practice-exam-5.md) and [6](3-advanced/practice-exam-6.md) | Modules 38 to 43 against a 2-hour clock, each harder than the one before; exams 5 and 6 also need the VM | `practice-exam.sh` |
 
@@ -155,7 +156,7 @@ These modules cover the curricula of the Certified Kubernetes Application Develo
 | Route | Modules |
 |---|---|
 | Applications | modules 33 to 37 in order on the practice cluster, then practice exams 1 to 3. They need no Istio and no k3d lab. |
-| Istio | modules 0 to 8, then 11 to 16, then 30 and 31. Module 9 is a reference, and 10 is theory you read any time after module 7. Module 32 installs Istio on a separate throwaway cluster, so take it any time after module 14. |
+| Istio | modules 0 to 8, then 11 to 16, then 30 and 31, and 45 after module 12. Module 9 is a reference, and 10 is theory you read any time after module 7. Module 32 installs Istio on a separate throwaway cluster, so take it any time after module 14. |
 | Cluster security | modules 38 to 43 in order on the practice cluster, with each task of module 44 after the module it comes from, then practice exams 4 to 6. Module 36 is a good start, because it introduces RBAC and security contexts. |
 | AI on Kubernetes | modules 17 to 19 build on the Istio route, mainly modules 3 to 6 and 12. Each module lists what it needs at the top. |
 | Kubernetes operations | modules 20 and 21 need only module 0. As a CKA, you might take them first. |
@@ -169,7 +170,7 @@ The diagram shows the lab routes. The application and security routes run on the
 1. [Start here](start-here.md), then module 0.
 2. Modules 33 to 37, then practice exams 1 to 3, on the practice cluster.
 3. Modules 1 to 7, then 29 (the life of a request) to tie them together, then 8 to test yourself.
-4. Modules 11, 12, 13, 15 and 16, then 30 and 31.
+4. Modules 11, 12, 13, 15 and 16, then 30 and 31, then 45 (the life of an outbound request).
 5. Modules 38 and 39, then 40 to 43 with module 44 alongside, then practice exams 4 to 6.
 6. Modules 17 to 19, the AI track.
 7. Modules 22 to 28, the platform tools (27 is AI and needs Ollama).
@@ -256,6 +257,6 @@ The course changes Istio resources by hand, with `kubectl apply`. ArgoCD manages
 ./platform-engineering/verify.sh 32     # creates and deletes its own k3d cluster and downloads istioctl 1.24.2, not part of the full run
 ```
 
-The script covers the lab modules 0 to 32. It applies each module's manifests, checks the results and restores the baseline. It was run against this lab before the course was published. The [last section of module 0](1-foundations/00-setup.md#what-the-verification-run-showed) has the results.
+The script covers the lab modules 0 to 32 and 45. It applies each module's manifests, checks the results and restores the baseline. It was run against this lab before the course was published. The [last section of module 0](1-foundations/00-setup.md#what-the-verification-run-showed) has the results.
 
 The modules on the practice cluster check themselves task by task: `./platform-engineering/task.sh check 38.3` checks one task, and `./platform-engineering/practice-exam.sh score 4` scores a whole practice exam.

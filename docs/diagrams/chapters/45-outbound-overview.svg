@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1080" viewBox="0 0 1600 1080" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="1080" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">The life of an <tspan fill="#7c3aed">outbound request</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">curl https://example.com from a pod. Each layer is a private network, so each exit rewrites the source.</text>
+<rect x="40.0" y="150.0" width="1210.0" height="890.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="57.5,181.0 76.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Your Mac</text>
+<rect x="70.0" y="200.0" width="870.0" height="810.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="88.5" y="217.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="88.5,221.5 105.5,221.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="116.0" y="230.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">OrbStack Linux VM</text>
+<rect x="100.0" y="250.0" width="610.0" height="730.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<rect x="118.0" y="265.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="121.5" cy="267.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="127.0,267.5 132.5,267.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="118.0" y="271.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="121.5" cy="274.0" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="127.0,274.0 132.5,274.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="118.0" y="278.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="121.5" cy="280.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="127.0,280.5 132.5,280.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="146.0" y="280.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">k3d node container</text>
+<rect x="130.0" y="300.0" width="300.0" height="330.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="157.0,315.0 165.5,319.5 165.5,329.0 157.0,333.5 148.5,329.0 148.5,319.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="148.5,319.5 157.0,324.0 165.5,319.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="157.0,324.0 157.0,333.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="176.0" y="330.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">client pod</text>
+<rect x="150.0" y="350.0" width="260.0" height="64.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="280.0" y="374.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">curl</text>
+<text x="280.0" y="396.7" font-size="17.0" fill="#475569" text-anchor="middle">example.com:443</text>
+<rect x="150.0" y="460.0" width="260.0" height="64.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="280.0" y="484.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">ztunnel socket</text>
+<text x="280.0" y="505.3" font-size="17.0" fill="#475569" text-anchor="middle">DNS :15053, TCP :15001</text>
+<rect x="150.0" y="556.0" width="260.0" height="56.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="280.0" y="576.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">eth0</text>
+<text x="280.0" y="598.7" font-size="17.0" fill="#475569" text-anchor="middle">10.42.0.204</text>
+<rect x="470.0" y="410.0" width="210.0" height="140.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="497.0,425.0 505.5,429.5 505.5,439.0 497.0,443.5 488.5,439.0 488.5,429.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="488.5,429.5 497.0,434.0 505.5,429.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="497.0,434.0 497.0,443.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="516.0" y="440.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">CoreDNS pod</text>
+<rect x="485.0" y="460.0" width="180.0" height="64.0" rx="10.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<text x="575.0" y="484.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">CoreDNS</text>
+<text x="575.0" y="506.7" font-size="17.0" fill="#475569" text-anchor="middle">10.43.0.10</text>
+<rect x="485.0" y="590.0" width="180.0" height="70.0" rx="10.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<text x="575.0" y="617.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">Docker DNS</text>
+<text x="575.0" y="639.7" font-size="17.0" fill="#475569" text-anchor="middle">127.0.0.11</text>
+<rect x="130.0" y="680.0" width="300.0" height="60.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="280.0" y="702.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">cni0 bridge</text>
+<text x="280.0" y="724.7" font-size="17.0" fill="#475569" text-anchor="middle">10.42.0.1</text>
+<rect x="130.0" y="775.0" width="550.0" height="90.0" rx="14.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<polygon points="150.7,809.8 175.2,809.8 165.7,820.6 165.7,830.2 160.2,832.9 160.2,820.6" fill="none" stroke="#059669" stroke-width="1.63" stroke-linejoin="round"/>
+<text x="190.0" y="817.0" font-size="20.0" fill="#047857" font-weight="700" text-anchor="start">kernel NAT</text>
+<text x="190.0" y="841.0" font-size="17.0" fill="#475569" text-anchor="start">masquerade to 192.168.107.2</text>
+<rect x="460.0" y="890.0" width="220.0" height="64.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="570.0" y="914.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">eth0</text>
+<text x="570.0" y="936.7" font-size="17.0" fill="#475569" text-anchor="middle">192.168.107.2</text>
+<rect x="750.0" y="890.0" width="170.0" height="64.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="835.0" y="914.2" font-size="17.0" fill="#0f172a" font-weight="700" text-anchor="middle">Docker bridge</text>
+<text x="835.0" y="933.9" font-size="17.0" fill="#475569" text-anchor="middle">192.168.107.1</text>
+<rect x="750.0" y="750.0" width="170.0" height="100.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="835.0" y="792.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">Docker NAT</text>
+<text x="835.0" y="813.3" font-size="17.0" fill="#475569" text-anchor="middle">masquerade</text>
+<rect x="750.0" y="610.0" width="170.0" height="64.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="835.0" y="634.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">VM eth0</text>
+<text x="835.0" y="655.3" font-size="17.0" fill="#475569" text-anchor="middle">192.168.139.2</text>
+<rect x="990.0" y="600.0" width="230.0" height="84.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="1105.0" y="634.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">OrbStack app</text>
+<text x="1105.0" y="656.7" font-size="17.0" fill="#475569" text-anchor="middle">new connection</text>
+<rect x="990.0" y="450.0" width="230.0" height="70.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="1105.0" y="477.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">en0</text>
+<text x="1105.0" y="499.7" font-size="17.0" fill="#475569" text-anchor="middle">192.168.1.132</text>
+<rect x="1300.0" y="450.0" width="260.0" height="70.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="1430.0" y="477.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">home router</text>
+<text x="1430.0" y="499.7" font-size="17.0" fill="#475569" text-anchor="middle">NAT</text>
+<rect x="1300.0" y="250.0" width="260.0" height="90.0" rx="14.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<rect x="1316.0" y="273.0" width="44.0" height="44.0" rx="10.0" fill="#475569" stroke="none"/>
+<ellipse cx="1338.0" cy="295.0" rx="11.5" ry="11.5" fill="none" stroke="#ffffff" stroke-width="1.54"/>
+<ellipse cx="1338.0" cy="295.0" rx="5.1" ry="11.5" fill="none" stroke="#ffffff" stroke-width="1.28"/>
+<polyline points="1326.5,295.0 1349.5,295.0" fill="none" stroke="#ffffff" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1374.0" y="287.8" font-size="20.0" fill="#0f172a" font-weight="700" text-anchor="start">example.com</text>
+<text x="1374.0" y="311.1" font-size="17.0" fill="#475569" text-anchor="start">172.66.147.243</text>
+<polyline points="410.0,492.0 475.5,492.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="485.0,492.0 473.5,497.8 473.5,486.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="450.0" cy="492.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="450.0" cy="492.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="450.0" y="498.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<polyline points="575.0,524.0 575.0,580.5" fill="none" stroke="#0891b2" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="575.0,590.0 569.2,578.5 580.8,578.5" fill="#0891b2" stroke="#0891b2" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="280.0,414.0 280.0,450.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="280.0,460.0 274.2,448.5 285.8,448.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="280.0" cy="437.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="280.0" cy="437.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="280.0" y="443.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<text x="306.0" y="443.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">redirect</text>
+<polyline points="280.0,524.0 280.0,546.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="280.0,556.0 274.2,544.5 285.8,544.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="280.0,612.0 280.0,670.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="280.0,680.0 274.2,668.5 285.8,668.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="280.0" cy="650.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="280.0" cy="650.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="280.0" y="656.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<text x="306.0" y="656.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">veth pair</text>
+<polyline points="280.0,740.0 280.0,765.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="280.0,775.0 274.2,763.5 285.8,763.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="280.0" cy="758.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="280.0" cy="758.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="280.0" y="764.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<polyline points="570.0,865.0 570.0,880.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="570.0,890.0 564.2,878.5 575.8,878.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="680.0,922.0 740.5,922.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="750.0,922.0 738.5,927.8 738.5,916.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="835.0,890.0 835.0,859.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="835.0,850.0 840.8,861.5 829.2,861.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="835.0" cy="870.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="835.0" cy="870.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="835.0" y="876.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">5</text>
+<polyline points="835.0,750.0 835.0,683.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="835.0,674.0 840.8,685.5 829.2,685.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="920.0,642.0 980.5,642.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="990.0,642.0 978.5,647.8 978.5,636.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="955.0" cy="642.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="955.0" cy="642.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="955.0" y="648.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">6</text>
+<polyline points="1105.0,600.0 1105.0,529.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1105.0,520.0 1110.8,531.5 1099.2,531.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="1220.0,485.0 1290.5,485.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1300.0,485.0 1288.5,490.8 1288.5,479.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1260.0" cy="485.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1260.0" cy="485.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1260.0" y="491.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">7</text>
+<polyline points="1430.0,450.0 1430.0,349.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1430.0,340.0 1435.8,351.5 1424.2,351.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="1440.0" y="401.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">public IP</text>
+<ellipse cx="1010.0" cy="790.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1010.0" cy="790.0" rx="16.0" ry="16.0" fill="#0891b2" stroke="none"/>
+<text x="1010.0" y="796.5" font-size="18.0" fill="#ffffff" font-weight="700" text-anchor="middle">8</text>
+<text x="1040.0" y="784.0" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="start">replies retrace</text>
+<text x="1040.0" y="808.0" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="start">every step</text>
+<text x="1040.0" y="834.0" font-size="17.0" fill="#475569" text-anchor="start">conntrack undoes</text>
+<text x="1040.0" y="856.0" font-size="17.0" fill="#475569" text-anchor="start">each rewrite</text>
+</svg>
