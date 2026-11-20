@@ -61,7 +61,7 @@ The figure follows the greeter through four steps, which tasks 1 and 2 run on th
 
 [podman](../glossary.md#podman) and Docker accept the same commands and read the same Dockerfiles, so `docker build` and `docker push` work the same way on an exam host that has Docker instead. `podman save -o file.tar image` writes the image into a single archive file, which some exam tasks ask for when no registry exists, and `podman load -i file.tar` reads it back.
 
-The practice registry speaks plain HTTP, and both podman and containerd refuse plain HTTP by default because an attacker on the network might swap the layers in transit. So `extras.sh` marks `registry.practice:5000` as insecure in `/etc/containers/registries.conf.d/50-practice.conf` for podman, and in `/etc/containerd/certs.d/registry.practice:5000/hosts.toml` for containerd. An exam host has the same kind of setting already in place, and a `http: server gave HTTP response to HTTPS client` error means the setting is missing.
+The practice registry speaks plain HTTP, and both podman and containerd refuse plain HTTP by default because an attacker on the network might swap the layers in transit. So the practice node image marks `registry.practice:5000` as insecure in `/etc/containers/registries.conf.d/50-practice.conf` for podman, and in `/etc/containerd/certs.d/registry.practice:5000/hosts.toml` for containerd. An exam host has the same kind of setting already in place, and a `http: server gave HTTP response to HTTPS client` error means the setting is missing.
 
 ## Concept: pick the workload that matches the job
 
