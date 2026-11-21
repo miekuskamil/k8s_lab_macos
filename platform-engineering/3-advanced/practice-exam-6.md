@@ -33,7 +33,7 @@ This is the hardest of the three. When the clock starts, the API server refuses 
    Score yourself at any time with ./platform-engineering/practice-exam.sh score 6
    ```
 
-   In the final test run, the OrbStack reset took 3 minutes 7 seconds, the Lima reset 1 minute 54 seconds, and the setup 1 minute 13 seconds. The setup breaks the control plane in its last steps, so it doesn't wait for any pods to start.
+   In the final test run, the practice cluster reset took 95 seconds, the Lima reset 2 minutes 6 seconds, and the setup 1 minute 26 seconds. The setup breaks the control plane in its last steps, so it doesn't wait for any pods to start.
 
 2. The clock starts when `setup.sh` ends, and `score.sh` prints the minutes since then.
 3. Work only on the nodes, through `./lab.sh practice shell`, `./lab.sh practice shell worker` and `./platform-engineering/practice/cluster/lima.sh shell`, and use only the documentation the exam allows.

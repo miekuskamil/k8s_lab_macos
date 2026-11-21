@@ -38,7 +38,7 @@ Every tool comes from one **node image**. kind publishes a node image per Kubern
 ./lab.sh practice down --yes      # deletes the cluster and the registry; the node image stays cached
 ```
 
-In the test run on a Mac with 24 GB of memory and OrbStack, `./lab.sh practice up` took 2 minutes 38 seconds from nothing. That time includes downloading kind itself and kind's node image, and building the practice image on top. A second `up` on a finished cluster took 3 seconds, and `./lab.sh practice reset` took between 64 and 83 seconds. A reset deletes the two node containers and starts new ones from the cached image, which is faster and cleaner than undoing every task by hand.
+In the test run on a Mac with 24 GB of memory and OrbStack, `./lab.sh practice up` took 2 minutes 38 seconds from nothing. That time includes downloading kind itself and kind's node image, and building the practice image on top. A second `up` on a finished cluster took 3 seconds, and `./lab.sh practice reset` took between 64 and 95 seconds. A reset deletes the two node containers and starts new ones from the cached image, which is faster and cleaner than undoing every task by hand.
 
 The cluster fits next to the running k3d lab. With the cluster idle, `practice-control-plane` used about 0.95 GB of memory and `practice-worker` about 0.6 GB, while the k3d lab used between 3.3 and 4.0 GB, all inside OrbStack's Docker engine with its limit of 11.7 GB. Through all 108 tasks of modules 33 to 43 the two nodes together peaked at 2.6 GB, so the k3d lab and the practice cluster ran side by side the whole time.
 

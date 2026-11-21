@@ -8,7 +8,7 @@ The real exam gives you 2 hours for 15 to 20 tasks on several clusters, and this
 
 ## Rules
 
-1. Start fresh with `./lab.sh practice reset`, then `./platform-engineering/practice-exam.sh setup 4`. In the test run, the setup took 8 seconds, because the node already had the images, while on a new cluster the first run also downloads them.
+1. Start fresh with `./lab.sh practice reset`, then `./platform-engineering/practice-exam.sh setup 4`. In the test run, the reset took 67 seconds and the setup 19 seconds, because the nodes already had the images, while on a new cluster the first run also downloads them.
 2. The clock starts when `setup.sh` ends, because it writes the start time, and `score.sh` prints the minutes since then and flags a run over 120 minutes.
 3. Work only on the nodes, through `./lab.sh practice shell` and `./lab.sh practice shell worker`, and use only the documentation the exam allows: kubernetes.io, and the docs of Falco, bom, etcd, ingress-nginx, Cilium and Istio.
 4. Don't open the solutions while the timer runs, because the score only means something when you worked without them.
