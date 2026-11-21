@@ -34,11 +34,10 @@ Steps 1 to 6 are imperative: you run commands. From step 7 on, you only commit f
 
 ## Step 0: prerequisites
 
-**Do it.** On macOS:
+**Do it.** Install OrbStack from https://orbstack.dev on macOS, or Docker Engine on Linux, and git. The toolbox from `./lab.sh shell` holds kubectl, helm, k3d and istioctl at the tested versions, so run the steps below inside it. To work without the toolbox on macOS instead:
 
 ```bash
 brew install kubectl helm k3d git istioctl
-# install OrbStack from https://orbstack.dev and start it
 ```
 
 On Linux (tested on Ubuntu 24.04), install Docker Engine and add yourself to the `docker` group, then:
@@ -66,6 +65,7 @@ k3d cluster create k8s-lab \
   --image rancher/k3s:v1.31.5-k3s1 \
   --servers 1 --agents 0 \
   --port "8080:8080@loadbalancer" \
+  --port "8443:8443@loadbalancer" \
   --k3s-arg "--disable=traefik@server:0" \
   --wait
 kubectl config use-context k3d-k8s-lab
@@ -78,7 +78,7 @@ kubectl get nodes
 - **One node.** A second node would add cross-node traffic but double the memory. The trade-off is listed under known limits in [architecture.md](architecture.md#what-this-setup-does-not-cover).
 - **k3s pinned to 1.31.** k3d's default image was Kubernetes 1.35. Istio 1.24 supports up to 1.31, and ArgoCD 2.13 failed to compare resources that had a newer status field. Pin the platform and upgrade it together with the components on top.
 - **Traefik disabled.** k3s ships Traefik as its ingress controller. The Istio gateway takes that role, and two controllers would compete for port 8080.
-- **`--port 8080:8080@loadbalancer`.** k3d runs a small load balancer container in front of the node. This maps your machine's port 8080 to it, so the gateway's LoadBalancer Service is reachable at `localhost:8080`. k3s's built-in service load balancer (klipper) binds the port on the node.
+- **`--port 8080:8080@loadbalancer`.** k3d runs a small load balancer container in front of the node. This maps your machine's ports 8080 and 8443 to it, so the gateway's LoadBalancer Service is reachable at `localhost:8080`, and at `localhost:8443` once module 11 adds HTTPS. k3s's built-in service load balancer (klipper) binds the port on the node.
 
 **What went wrong here.** [Problem 1](troubleshooting.md#1-istio-cni-never-becomes-ready-on-orbstacks-built-in-kubernetes) (OrbStack's cluster) and [problem 6](troubleshooting.md#6-argocd-cannot-compare-kube-prometheus-stack) (Kubernetes 1.35).
 
@@ -87,10 +87,13 @@ kubectl get nodes
 **Do it.**
 
 ```bash
-docker build -t k8s-lab/backend:1.0.2 apps/backend
-docker build -t k8s-lab/frontend:1.0.2 apps/frontend
-k3d image import k8s-lab/backend:1.0.2 k8s-lab/frontend:1.0.2 -c k8s-lab
+docker build -t k8s-lab/backend:1.0.3 apps/backend
+docker build -t k8s-lab/frontend:1.0.3 apps/frontend
+docker build -t k8s-lab/assistant:1.2.0 apps/assistant
+k3d image import k8s-lab/backend:1.0.3 k8s-lab/frontend:1.0.3 k8s-lab/assistant:1.2.0 -c k8s-lab
 ```
+
+The assistant image waits in the node until module 17 deploys it.
 
 **Why this way.**
 
@@ -272,7 +275,7 @@ kubectl -n istio-system get pods -l app=kiali
 ## Step 10: check everything
 
 ```bash
-kubectl -n argocd get applications                          # 9 Applications, Synced and Healthy
+kubectl -n argocd get applications                          # 12 Applications, Synced and Healthy
 kubectl get pods -A | grep -vE "Running|Completed"          # no output
 ./scripts/traffic-test.sh 100                               # 100 x 200, all v1
 ./platform-engineering/verify.sh                                          # replays the whole course

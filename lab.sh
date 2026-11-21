@@ -33,7 +33,7 @@ Usage: ./lab.sh <command> [arguments]
   ui          open the web UIs on localhost; Ctrl-C closes them
   test        send 100 requests to the shop and print the version split
   test N...   run the course checks for modules N, for example: ./lab.sh test 4 5
-  test all    run the course checks for every module (about 40 minutes)
+  test all    run the course checks for every module (about 50 minutes)
   reset       undo course exercises and return to the Git baseline (--all also
               removes the course namespaces)
   down        delete the cluster and everything in it (asks first, --yes skips)

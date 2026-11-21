@@ -109,13 +109,13 @@ This section describes the lab as it runs after `./scripts/provision.sh`, measur
 | Headlamp | 0.46.0 |
 | cert-manager | 1.21.3 |
 | Redis | 7.4 |
-| Shop images | `k8s-lab/backend:1.0.2`, `k8s-lab/frontend:1.0.2` |
+| Shop images | `k8s-lab/backend:1.0.3`, `k8s-lab/frontend:1.0.3` |
 
 Istio 1.24 supports Kubernetes up to 1.31, which is why `provision.sh` pins the k3s image.
 
 ### What is running
 
-Measured on 12 November 2026 with the course workloads deployed: 31 pods on one node and nine ArgoCD Applications, all Synced and Healthy.
+Measured on 12 November 2026 with the course workloads deployed: 31 pods on one node and twelve ArgoCD Applications, `root` included, all Synced and Healthy.
 
 | Namespace | Pods | Memory in use |
 |---|---|---|
@@ -147,7 +147,7 @@ The node used 3.3 GiB in total, including k3s itself. Loki took 84 MiB, Alloy 57
 | The Grafana dashboard has data | All nine panel queries return series when run through Grafana | open the dashboard "Shop mesh and traffic experiments" |
 | Logs reach Loki and link to traces | Loki held logs from all 7 namespaces. Searching Loki for a Jaeger trace id returned the backend's log line for that request. | Grafana, Explore, Loki: `{namespace="shop"} \|= "<trace id>"` |
 | Kiali sees the mesh | Kiali 2.4 found Prometheus, Grafana and Jaeger, drew every edge with 100% mTLS, and reported 0 errors in `shop`'s 7 Istio objects | http://localhost:20001 |
-| The course works | On a cluster built from nothing, `./platform-engineering/verify.sh` passed 54 of 54 checks | `./platform-engineering/verify.sh` |
+| The course works | On 21 November 2026, `./platform-engineering/verify.sh` passed 322 of 322 checks for its 25 default modules in 49 minutes | `./platform-engineering/verify.sh` |
 | The lab runs on Linux | On Ubuntu 24.04.5 with Docker Engine 29.1.3 from Ubuntu's packages, a fresh clone ran `provision.sh` to exit 0 in 195 s with all 16 health checks passing, and the course verification passed every module. The Ubuntu machine ran in OrbStack, so it shared OrbStack's kernel (7.2), whose inotify limits are already high. | `./scripts/provision.sh` on Linux |
 | Traces join across the mesh | 200 of 200 recent backend traces start at the gateway, most with 7 spans across gateway, waypoint and backend | http://localhost:16686, service `backend` |
 | The default logins work | ArgoCD issued a session token, Grafana accepted the password and rejected a wrong one, Redis answered `PONG` | see the [README](../README.md#logins-and-addresses) |
@@ -155,7 +155,7 @@ The node used 3.3 GiB in total, including k3s itself. Loki took 84 MiB, Alloy 57
 ### What was not verified
 
 - The panels were checked through Grafana's query API, not by looking at them in a browser.
-- All 53 Excalidraw files in `docs/diagrams/` passed a structure check: valid JSON, the fields Excalidraw requires on every element, no duplicate ids. They were not opened in Excalidraw itself. Arrows are not bound to boxes, so they stay in place when you move a box.
+- All 87 Excalidraw files in `docs/diagrams/` and its `chapters` folder passed a structure check on 21 November 2026: valid JSON, the fields Excalidraw requires on every element, no duplicate ids. They were not opened in Excalidraw itself. Arrows are not bound to boxes, so they stay in place when you move a box.
 - Linux was tested on one distribution (Ubuntu 24.04) on one kernel. The inotify check in `provision.sh` was not triggered, because that kernel's limits were already above it.
 
 ## Resource limits

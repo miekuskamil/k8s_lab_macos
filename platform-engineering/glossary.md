@@ -407,6 +407,10 @@ Module 6.
 
 **k3s.** k3s is a small Kubernetes distribution in one binary. It brings its own containerd, flannel, and an SQLite or etcd datastore. The lab runs it inside Docker with k3d. Modules 20, 21.
 
+**k3d.** k3d runs k3s inside Docker, with each k3s node as a container and a small load balancer container in front, so a whole cluster starts in seconds on a laptop. The lab is the k3d cluster `k8s-lab`, and module 32 builds a second one to throw away.
+
+**Toolbox.** The toolbox is a container that holds every command-line tool the lab uses, such as kubectl, helm, k3d, kind and istioctl, at the versions the course was tested with. `./lab.sh shell` starts it and opens a shell inside it, so your machine needs only Docker and git. The clusters still run on your own Docker engine, which the toolbox reaches through the Docker socket.
+
 **system-upgrade-controller.** The system-upgrade-controller is a controller that upgrades k3s (and RKE2) nodes from a `Plan` resource. The Plan sets the target version, the node selector, how many nodes at once, and whether to cordon or drain. Module 21.
 
 **Certificate rotation and renewal.** These are two ways to keep certificates valid. Rotation replaces a certificate's key, and renewal extends its expiry. k3s renews certificates within 120 days of expiry each time it starts, and `k3s certificate rotate` rotates them. Module 21.

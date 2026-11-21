@@ -6,31 +6,17 @@ Modules 33 to 44 teach in a different rhythm from the lab modules. Each one open
 
 ## A task, step by step
 
-Every task has a title, a time budget and a host, then a short brief in a quote block, then the solution inside a folded `<details>` block. One script on your Mac prepares and checks it, and the task id joins the module number and the task number, so task 3 of module 38 is `38.3`:
-
-```bash
-./platform-engineering/task.sh setup 38.3    # seeds the starting state
-./platform-engineering/task.sh check 38.3    # prints PASS or FAIL for each thing the task asks
-./platform-engineering/task.sh solve 38.3    # applies the reference solution
-./platform-engineering/task.sh list          # every task id, 115 in all
-```
+Every task has a title, a time budget and a host, then a short brief in a quote block, then the solution inside a folded `<details>` block. The task id joins the module number and the task number, so task 3 of module 38 is `38.3`, and `./lab.sh task list` prints all 115 ids. The guide's [Practice cluster and timed tasks](../README.md#practice-cluster-and-timed-tasks) section walks through one task: `setup` seeds the starting state, `check` prints PASS or FAIL for each thing the task asks, and `solve` applies the reference solution.
 
 Read the brief, start a timer, and solve the task on the node the brief names. Open the solution only when the time runs out, and run the check either way. Every setup starts its namespace from scratch, so you repeat a task by running its setup again.
 
-The six timed practice exams work the same way with one script for a whole exam. Exams 1 to 3 cover the application modules and sit at the end of [level 1](../README.md#1-foundations), and exams 4 to 6 cover the security modules and sit at the end of [level 3](../README.md#3-advanced). Each gives you 2 hours for 16 or 17 tasks worth 100 points, and `score` prints the minutes since `setup` and flags a run over 120:
-
-```bash
-./platform-engineering/practice-exam.sh setup 4        # seeds every task of exam 4 and starts the clock
-./platform-engineering/practice-exam.sh score 4        # scores the cluster's state, with partial credit
-./platform-engineering/practice-exam.sh score 4 3 9    # scores only tasks 3 and 9
-./platform-engineering/practice-exam.sh solve 4        # applies every reference solution
-```
+The six timed practice exams work the same way for a whole exam, through `./lab.sh exam`. Exams 1 to 3 cover the application modules and sit at the end of [level 1](../README.md#1-foundations), and exams 4 to 6 cover the security modules and sit at the end of [level 3](../README.md#3-advanced). Each gives you 2 hours for 16 or 17 tasks worth 100 points, and `score` prints the minutes since `setup` and flags a run over 120. Two forms go beyond the guide: `./lab.sh exam score 4 3 9` scores only tasks 3 and 9, and `./lab.sh exam solve 4 9` applies the reference solution of task 9 alone.
 
 In the test run on the live clusters, every task's check failed after its setup and passed after its reference solution, and each practice exam scored 0 on a fresh setup and 100 after its reference solution.
 
 ## Where you type
 
-Every command except `task.sh`, `practice-exam.sh` and the `./lab.sh` commands runs on a node, in a root shell. `./lab.sh practice shell` opens that shell on the control plane, and `./lab.sh practice shell worker` opens it on the worker, already as root and with the `k` alias set. `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell on the Lima VM that [module 44](../README.md#the-vm-for-module-44) needs. On OrbStack machines or your own VMs the same command works too, because `./lab.sh` follows the platform setting that the [practice cluster page](practice-cluster.md#other-platforms-orbstack-machines-and-your-own-vms) describes.
+Every command except the `./lab.sh` commands and the scripts they call runs on a node, in a root shell. `./lab.sh practice shell` opens that shell on the control plane, and `./lab.sh practice shell worker` opens it on the worker, already as root and with the `k` alias set. `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell on the Lima VM that [module 44](../README.md#the-vm-for-module-44) needs. On OrbStack machines or your own VMs the same command works too, because `./lab.sh` follows the platform setting that the [practice cluster page](practice-cluster.md#other-platforms-orbstack-machines-and-your-own-vms) describes.
 
 The tasks need no repo files on the nodes, because each setup writes what its task needs onto the node itself. The application tasks keep their files under `/opt/apps` on `practice-control-plane`, the way many teams keep a task's files under a folder like `/opt/course`.
 
@@ -40,17 +26,17 @@ The command blocks are terminal transcripts, where each prompt line holds a comm
 
 The application modules 33 to 37 take about three weeks at an hour a day:
 
-1. Build the cluster and the extras: `./lab.sh practice up`, then `./platform-engineering/practice/app-extras/extras.sh`.
+1. Build the cluster and the extras, as steps 1 and 2 of the guide's [practice cluster section](../README.md#practice-cluster-and-timed-tasks) show.
 2. Work through modules 33 to 37 in order. Module 33 teaches pods and workloads that every later task builds on, and module 37 assumes the Services of module 35's debugging task. For each module, read the theory, then do each task against its time budget.
-3. Reset between modules with `./platform-engineering/practice/app-extras/reset.sh`.
+3. Reset between modules with the command from the guide's reset table.
 4. Repeat the tasks you needed the solution for, a few days later, until each one fits its budget.
 5. Take practice exams 1, 2 and 3 in order, each after a reset and with its 2-hour clock, and review every lost point before the next one. 80 points or more on exam 3 inside the time leaves a safe margin.
 
 The security modules 38 to 44 take about four weeks at an hour a day:
 
-1. Build both clusters: `./lab.sh practice up`, then `./platform-engineering/practice/cluster/lima.sh create`.
+1. Build both clusters: the practice cluster from the guide's [practice cluster section](../README.md#practice-cluster-and-timed-tasks), and the Lima VM from [the VM for module 44](../README.md#the-vm-for-module-44).
 2. Work through modules 38 to 43 in order, and take each task of module 44 after the module it comes from. Module 39 teaches the static pod repairs that every later API server edit relies on, and module 43 builds on audit logging and Falco basics from its own first tasks.
-3. Reset between modules with `./lab.sh practice reset`, and with `./platform-engineering/practice/cluster/lima.sh reset` after module 44's tasks, because some tasks change the API server, upgrade the cluster or load kernel profiles.
+3. Reset between modules with the commands from the guide's reset table, because some tasks change the API server, upgrade the cluster or load kernel profiles.
 4. Repeat the tasks you needed the solution for, a few days later, until each one fits its budget.
 5. Take practice exams 4, 5 and 6 in order, each on freshly reset clusters and with its 2-hour clock. Leave a few days between them, and aim for 80 points or more on exam 6 inside the time.
 

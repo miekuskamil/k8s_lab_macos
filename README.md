@@ -116,7 +116,7 @@ Run every command from the repository folder. `./lab.sh help` prints the same li
 | `./lab.sh status` | Shows the nodes, the ArgoCD applications and every pod that is not running. |
 | `./lab.sh ui` | Opens the web UIs on localhost until you press Ctrl-C. |
 | `./lab.sh test` | Sends 100 requests to the shop and prints the status codes, the versions and the latency. |
-| `./lab.sh test 4 5` | Runs the course checks for modules 4 and 5. `./lab.sh test all` runs every module that is safe to repeat, in about 40 minutes. |
+| `./lab.sh test 4 5` | Runs the course checks for modules 4 and 5. `./lab.sh test all` runs every module that is safe to repeat, in about 50 minutes. |
 | `./lab.sh reset` | Removes the course exercises and restores the Git baseline. `--all` also removes the course namespaces. |
 | `./lab.sh down` | Deletes the cluster after it asks. `--yes` skips the question. |
 | **The practice cluster** | |
@@ -277,7 +277,7 @@ Every lab module has automatic checks that apply its manifests, test the results
 ./lab.sh test all
 ```
 
-`./lab.sh test all` covers every lab module that is safe to repeat. Two groups stay out of it, so run them by number: modules 14, 21 and 32, which upgrade the lab or build a cluster of their own, and the AI modules 17, 18, 19 and 27, which need a language model or download one.
+`./lab.sh test all` covers every lab module that is safe to repeat. Two groups stay out of it, so run them by number: modules 14, 21 and 32, which upgrade the lab or build a cluster of their own, and the AI modules 17, 18, 19 and 27, which need a language model or download one. Modules 9 and 10 have no checks, because one is a reference and the other is theory.
 
 If you prepare for the CKAD or CKS exam, [Timed tasks and exam preparation](platform-engineering/timed-tasks.md#which-modules-cover-each-exam-domain) maps each exam domain to its modules.
 
@@ -428,7 +428,7 @@ Give the machine at least 12 GB of memory, because the lab needs about 8 GB and 
    sudo sysctl --system
    ```
 
-3. Follow the [quick start](#quick-start). On a remote machine, forward the ports over SSH to open the UIs, for example `ssh -L 8080:localhost:8080 <machine>`, and use `xdg-open` where the course says `open`.
+3. Follow the [quick start](#quick-start). On a remote machine, forward the ports over SSH to open the UIs, for example `ssh -L 8080:localhost:8080 <machine>`, with one `-L` for each port in [Logins and addresses](#logins-and-addresses).
 
 <details>
 <summary>Install the tools without the toolbox</summary>

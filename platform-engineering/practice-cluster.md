@@ -30,19 +30,13 @@ Every tool comes from one **node image**. kind publishes a node image per Kubern
 
 ### Create, open, reset, delete
 
-```bash
-./lab.sh practice up              # builds the node image once, then the cluster; safe to run again
-./lab.sh practice shell           # a root shell on the control plane, with the k alias set
-./lab.sh practice shell worker    # a root shell on the worker
-./lab.sh practice reset           # deletes both nodes and builds a fresh cluster at 1.37.1
-./lab.sh practice down --yes      # deletes the cluster and the registry; the node image stays cached
-```
+The guide's [Practice cluster and timed tasks](../README.md#practice-cluster-and-timed-tasks) section has the commands: `./lab.sh practice up` builds the node image once and then the cluster, `./lab.sh practice shell` opens a root shell on the control plane with the `k` alias set, and `./lab.sh practice shell worker` opens one on the worker. `./lab.sh practice reset` deletes both nodes and builds a fresh cluster at 1.37.1, and `./lab.sh practice down` deletes the cluster and the registry while Docker keeps the node image.
 
-In the test run on a Mac with 24 GB of memory and OrbStack, `./lab.sh practice up` took 2 minutes 38 seconds from nothing. That time includes downloading kind itself and kind's node image, and building the practice image on top. A second `up` on a finished cluster took 3 seconds, and `./lab.sh practice reset` took between 64 and 95 seconds. A reset deletes the two node containers and starts new ones from the cached image, which is faster and cleaner than undoing every task by hand.
+In the test run on a Mac with 24 GB of memory and OrbStack, `./lab.sh practice up` took 2 minutes 38 seconds from nothing, including the download of kind's node image and the build of the practice image on top. A second `up` on a finished cluster took 3 seconds, and `./lab.sh practice reset` took between 64 and 95 seconds. A reset deletes the two node containers and starts new ones from the cached image, which is faster and cleaner than undoing every task by hand.
 
 The cluster fits next to the running k3d lab. With the cluster idle, `practice-control-plane` used about 0.95 GB of memory and `practice-worker` about 0.6 GB, while the k3d lab used between 3.3 and 4.0 GB, all inside OrbStack's Docker engine with its limit of 11.7 GB. Through all 108 tasks of modules 33 to 43 the two nodes together peaked at 2.6 GB, so the k3d lab and the practice cluster ran side by side the whole time.
 
-kind writes the cluster's kubeconfig to `~/.kube/practice-kind.yaml` instead of your main kubeconfig, so the current context of your `kubectl` stays on the k3d lab. You rarely need it, because the tasks run inside a node, but `KUBECONFIG=~/.kube/practice-kind.yaml kubectl get nodes` works from your Mac.
+kind writes the cluster's kubeconfig to `~/.kube/practice-kind.yaml` instead of your main kubeconfig, so the current context of your `kubectl` stays on the k3d lab. You rarely need it, because the tasks run inside a node, but `KUBECONFIG=~/.kube/practice-kind.yaml kubectl get nodes` works from the toolbox and from your Mac. The toolbox also adds the context `kind-practice` to its own kubeconfig.
 
 ### What a shared kernel changes
 
@@ -67,14 +61,7 @@ The application modules 33 to 37 run on the same two nodes as the security modul
 2. Next to the nodes: a local image registry at `registry.practice:5000`, which runs as the container `practice-registry` on kind's Docker network. Both nodes and every pod reach it by that name, and containerd on both nodes pulls from it over plain HTTP.
 3. In the cluster: metrics-server 0.9.1, so that `kubectl top` works.
 
-`./lab.sh practice up` starts the registry with the cluster, so only metrics-server is left for the extras script:
-
-```bash
-./lab.sh practice up                                  # the cluster and the registry; safe to run again
-./platform-engineering/practice/app-extras/extras.sh  # checks the tools and adds metrics-server; safe to run again
-./lab.sh practice shell                               # a root shell on the control plane
-./platform-engineering/practice/app-extras/reset.sh   # removes everything the application tasks and exams created
-```
+`./lab.sh practice up` starts the registry with the cluster, so only metrics-server is left for `extras.sh`, and `app-extras/reset.sh` removes everything the application tasks and exams created. The guide's [Practice cluster and timed tasks](../README.md#practice-cluster-and-timed-tasks) section shows when to run each one.
 
 In the test run, `extras.sh` took 25 seconds, most of it for metrics-server to report its first numbers.
 

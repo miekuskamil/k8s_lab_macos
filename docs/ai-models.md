@@ -29,7 +29,7 @@ The `openai` provider matters most, because most model servers and hosted provid
    ```
    The command writes the ConfigMap `llm-settings`, and the Secret `llm-api-key` when you set a key, into each of the namespaces `shop` and `course-rag` that exists. Both apps load them through `envFrom`, and the command restarts an app that already runs, because a pod reads its environment only when it starts. `./lab.sh up` and `./lab.sh start` run it too, and module 27 creates `course-rag` later, so run `./lab.sh ai` again after module 27's deploy step.
 
-3. Check the switch: `curl -s localhost:8080/api/model` shows the provider, model and URL the assistant uses.
+3. Check the switch once module 17 has deployed the assistant: `curl -s localhost:8080/api/model` then shows the provider, model and URL the assistant uses. Before module 17 the path returns 404, because no assistant runs yet.
 
 The settings in `lab.env` win over the per-app variables further down this page, such as `OLLAMA_MODEL`. Delete `lab.env`, or leave `LLM_PROVIDER` empty, and run `./lab.sh ai` to go back to the defaults.
 
@@ -63,7 +63,7 @@ kubectl -n course-rag set env deploy/rag CHAT_MODEL=llama3.2:3b             # mo
 helm upgrade kagent ... --set providers.ollama.model=llama3.2:3b            # module 19, same flags as the install
 ```
 
-Check the switch with `curl -s localhost:8080/api/model`. Memory is the limit. A model needs roughly its download size plus 30% while it answers, on top of the lab's 5 GB. Models that call tools well matter most for module 19, because kagent's agents work by calling tools. Module 27's search model, `nomic-embed-text`, stays the same: the index was built with it, and a different embedding model means re-running the ingest step.
+After module 17, check the switch with `curl -s localhost:8080/api/model`. Memory is the limit. A model needs roughly its download size plus 30% while it answers, on top of the lab's 5 GB. Models that call tools well matter most for module 19, because kagent's agents work by calling tools. Module 27's search model, `nomic-embed-text`, stays the same: the index was built with it, and a different embedding model means re-running the ingest step.
 
 ## Claude through the Anthropic API
 
