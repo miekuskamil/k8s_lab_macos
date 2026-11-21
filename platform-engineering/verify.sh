@@ -1215,7 +1215,10 @@ module_45() {
   local vmct; vmct="$(docker run --rm --net host --privileged alpine:3.20 sh -c 'apk add -q conntrack-tools >/dev/null 2>&1; conntrack -L -p tcp --dport 443 2>/dev/null' 2>/dev/null | grep "src=$nodeip dst=$ip4 " | grep -v CLOSE)"
   expect "7. the VM masquerades the node's address to its own" "$(echo "$vmct" | grep -c "dst=$nodeip " )" '^0$'
   expect "7. and conntrack in the VM records the swap" "$(echo "$vmct" | grep -c .)" '^[1-9]'
-  expect "8. on the Mac, the OrbStack app holds the outside connection" "$(lsof -nP "-iTCP@$ip4:443" -sTCP:ESTABLISHED 2>/dev/null | awk 'NR>1 {print $1}' | sort -u)" 'OrbStack'
+  # Only a shell on the Mac itself sees the OrbStack app; the toolbox and Linux hosts have no view of it.
+  if [[ "$(uname -s)" == Darwin ]]; then
+    expect "8. on the Mac, the OrbStack app holds the outside connection" "$(lsof -nP "-iTCP@$ip4:443" -sTCP:ESTABLISHED 2>/dev/null | awk 'NR>1 {print $1}' | sort -u)" 'OrbStack'
+  fi
   # ztunnel logs a connection when it closes, after the 25 seconds of the hold
   local zlog=0
   for _ in $(seq 1 12); do
@@ -1274,7 +1277,7 @@ module_21() {
   local N="k3d-${CLUSTER_NAME:-k8s-lab}-server-0" B="${TMPDIR:-/tmp}/k8s-lab-k3s-backup" target=v1.31.14+k3s1
   local suc=https://github.com/rancher/system-upgrade-controller/releases/download/v0.20.2
   if [[ "$("${K[@]}" get node "$N" -o jsonpath='{.status.nodeInfo.kubeletVersion}')" == "$target" ]]; then
-    fail "the lab runs the course version of k3s" "already $target; run ./scripts/teardown.sh --yes && ./scripts/provision.sh first"
+    fail "the lab runs the course version of k3s" "already $target; run ./lab.sh down --yes && ./lab.sh up first"
     return
   fi
   baseline
@@ -1321,7 +1324,7 @@ module_14() {
   section "14: upgrading Istio (one-way: rebuild the lab to return)"
   local NEW=1.25.5 REV=1-25-5 H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n istio-system)
   if "${H[@]}" list -q | grep -q '^istiod-'; then
-    fail "the lab runs the course version of Istio" "already upgraded; run ./scripts/teardown.sh --yes && ./scripts/provision.sh first"
+    fail "the lab runs the course version of Istio" "already upgraded; run ./lab.sh down --yes && ./lab.sh up first"
     return
   fi
   baseline

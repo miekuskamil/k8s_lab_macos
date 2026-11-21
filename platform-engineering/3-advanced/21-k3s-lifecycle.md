@@ -14,7 +14,7 @@ Three jobs keep a cluster alive for years instead of months:
 
 This module does all three on the lab's k3s. The upgrade is a patch release, the kind most people treat as harmless, yet it takes the whole mesh down, and finding out why is the point of the exercise.
 
-**The upgrade is one-way.** After step 4 the lab runs k3s v1.31.14, and the rest of the course works on it. To return to the course version, rebuild: `./scripts/teardown.sh --yes && ./scripts/provision.sh`.
+**The upgrade is one-way.** After step 4 the lab runs k3s v1.31.14, and the rest of the course works on it. To return to the course version, rebuild: `./lab.sh down --yes && ./lab.sh up`.
 
 Time: about 60 minutes.
 
@@ -139,14 +139,14 @@ time="2026-11-15T11:22:42Z" level=info msg="Successfully backed up certificates 
 $ docker restart k3d-k8s-lab-server-0
 k3d-k8s-lab-server-0
 
-$ ./scripts/start.sh
+$ ./lab.sh start
 Restarting cluster k8s-lab through k3d so it can repair CoreDNS
 kubectl context is k3d-k8s-lab
 Waiting for istio-cni and ztunnel
 Recreating observability/alertmanager-kube-prometheus-stack-alertmanager-0: its network came up before the mesh was ready
 ...
 Waiting for every pod to become Ready (up to 3 minutes)
-All pods are Ready. The shop is at http://localhost:8080. Run ./scripts/port-forward.sh for the other UIs.
+All pods are Ready. The shop is at http://localhost:8080. Run ./lab.sh ui for the other UIs.
 
 $ key client-admin.crt; key client-ca.crt
 SHA2-256(stdin)= 1e7da96ab8227410a160a6c0da030ba243a9482ca2308b642f3e9aea5db8744c
@@ -195,14 +195,14 @@ drwx------@ 3 test  wheel        96 Nov 15 11:16 etcd
 -rw-r--r--@ 1 test  wheel     32768 Nov 15 11:25 state.db-shm
 -rw-r--r--@ 1 test  wheel   7119392 Nov 15 11:25 state.db-wal
 
-$ k3d cluster start k8s-lab && ./scripts/start.sh
+$ k3d cluster start k8s-lab && ./lab.sh start
 INFO[0000] Using the k3d-tools node to gather environment information
 INFO[0000] Starting new tools node...
 INFO[0000] Starting node 'k3d-k8s-lab-tools'
 ...
 Recreating shop/waypoint-b9b76876f-x97ch: its network came up before the mesh was ready
 Waiting for every pod to become Ready (up to 3 minutes)
-All pods are Ready. The shop is at http://localhost:8080. Run ./scripts/port-forward.sh for the other UIs.
+All pods are Ready. The shop is at http://localhost:8080. Run ./lab.sh ui for the other UIs.
 ```
 
 Now change the cluster, as if something went wrong:
@@ -228,14 +228,14 @@ Successfully copied 72.7MB (transferred 72.7MB) to k3d-k8s-lab-server-0:/var/lib
 $ docker cp $B/token k3d-k8s-lab-server-0:/var/lib/rancher/k3s/server/token
 Successfully copied 97B (transferred 2.05kB) to k3d-k8s-lab-server-0:/var/lib/rancher/k3s/server/token
 
-$ k3d cluster start k8s-lab && ./scripts/start.sh
+$ k3d cluster start k8s-lab && ./lab.sh start
 INFO[0000] Using the k3d-tools node to gather environment information
 INFO[0000] Starting new tools node...
 INFO[0000] Starting node 'k3d-k8s-lab-tools'
 ...
 Recreating shop/waypoint-b9b76876f-x97ch: its network came up before the mesh was ready
 Waiting for every pod to become Ready (up to 3 minutes)
-All pods are Ready. The shop is at http://localhost:8080. Run ./scripts/port-forward.sh for the other UIs.
+All pods are Ready. The shop is at http://localhost:8080. Run ./lab.sh ui for the other UIs.
 
 $ kubectl -n default get configmaps | grep backup
 before-backup        1      4m22s
@@ -356,7 +356,7 @@ $ helm -n istio-system get values istio-cni -o json | grep -o '"cniBinDir":"[^"]
 Repair it in three steps:
 
 ```console
-$ ./scripts/provision.sh            # re-reads the plugin directory and moves istio-cni there
+$ ./lab.sh up            # re-reads the plugin directory and moves istio-cni there
 
 ==> Checking prerequisites
  ok  kubectl found at /usr/local/bin/kubectl
@@ -374,7 +374,7 @@ Next steps
 $ ./platform-engineering/fix-ip-leases.sh         # frees the IPs that no pod holds
 IP leases on k3d-k8s-lab-server-0: 250 before, 32 after (pods hold 32)
 
-$ ./scripts/start.sh                # recreates mesh pods that came up during the outage
+$ ./lab.sh start                # recreates mesh pods that came up during the outage
 Cluster k8s-lab is running and CoreDNS is healthy.
 kubectl context is k3d-k8s-lab
 Waiting for istio-cni and ztunnel

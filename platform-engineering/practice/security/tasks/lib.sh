@@ -24,6 +24,14 @@ lima_sh() { limactl shell --workdir / "$CKS_LIMA" sudo bash -c "$*"; }
 kl() { limactl shell --workdir / "$CKS_LIMA" sudo kubectl "$@"; }
 # Stop early with a clear message when a Lima task runs while the VM is down.
 need_lima() {
+  if ! command -v limactl >/dev/null 2>&1; then
+    if [ "${LAB_TOOLBOX:-}" = 1 ]; then
+      echo "  this task runs on the Lima VM $CKS_LIMA, which the toolbox has no access to: run it in a terminal on your Mac, outside ./lab.sh shell"
+    else
+      echo "  this task runs on the Lima VM $CKS_LIMA: brew install lima, then ./platform-engineering/practice/cluster/lima.sh create"
+    fi
+    return 1
+  fi
   if [ "$(limactl list --format '{{.Status}}' "$CKS_LIMA" 2>/dev/null)" != Running ]; then
     echo "  this task runs on the Lima VM $CKS_LIMA: ./platform-engineering/practice/cluster/lima.sh start (or create)"
     return 1

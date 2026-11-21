@@ -36,7 +36,7 @@ In the test run on a Mac with 24 GB of memory and OrbStack, `./lab.sh practice u
 
 The cluster fits next to the running k3d lab. With the cluster idle, `practice-control-plane` used about 0.95 GB of memory and `practice-worker` about 0.6 GB, while the k3d lab used between 3.3 and 4.0 GB, all inside OrbStack's Docker engine with its limit of 11.7 GB. Through all 108 tasks of modules 33 to 43 the two nodes together peaked at 2.6 GB, so the k3d lab and the practice cluster ran side by side the whole time.
 
-kind writes the cluster's kubeconfig to `~/.kube/practice-kind.yaml` instead of your main kubeconfig, so the current context of your `kubectl` stays on the k3d lab. You rarely need it, because the tasks run inside a node, but `KUBECONFIG=~/.kube/practice-kind.yaml kubectl get nodes` works from the toolbox and from your Mac. The toolbox also adds the context `kind-practice` to its own kubeconfig.
+kind writes the cluster's kubeconfig to `~/.kube/practice-kind.yaml` instead of your main kubeconfig, so the current context of your `kubectl` stays on the k3d lab. You rarely need it, because the tasks run inside a node, and in a toolbox shell `kubectl --context kind-practice get nodes` reaches the cluster, because the toolbox adds that context to its own kubeconfig. The file lands in your Mac's home only when `./lab.sh practice up` runs on your Mac instead of in the toolbox, which happens when kubectl, helm and k3d are installed there.
 
 ### What a shared kernel changes
 
@@ -108,7 +108,7 @@ On Proxmox, `proxmox/create-vms.sh` builds both VMs from the Ubuntu cloud image.
 
 ### Settings and commands
 
-Five environment variables tell the scripts where the VMs are. Export them once in your shell:
+These commands work in your machine's own terminal and inside `./lab.sh shell` alike. The toolbox receives the settings below from your shell or from `lab.env`, and it sees your `~/.ssh` read-only at `/run/host-ssh`, so a key path into `~/.ssh` works there unchanged. The Cilium tasks of module 44 still run from your Mac's own terminal, because they reach the Lima VM with `limactl`. On a Mac, the toolbox reaches your home network only when OrbStack has the Local Network permission: turn it on in System Settings, Privacy & Security, Local Network, OrbStack. Without it, ssh from the toolbox times out while ssh from the Mac's terminal works. Five environment variables tell the scripts where the VMs are. Export them once in your shell, or write them in `lab.env`:
 
 ```bash
 export PRACTICE_PLATFORM=vms                  # without it, the scripts use kind

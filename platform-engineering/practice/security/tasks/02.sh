@@ -119,12 +119,12 @@ check_2_4() {
 }
 solve_2_4() {
   oncp <<'EOF'
-set -e
+set -eo pipefail
 apt-mark unhold kubeadm >/dev/null
 apt-get install -y -qq kubeadm=1.37.2-1.1 >/dev/null
 apt-mark hold kubeadm >/dev/null
 kubeadm upgrade plan v1.37.2 | grep -E 'kube-apiserver|You can now apply' | head -3
-kubeadm upgrade apply v1.37.2 -y 2>&1 | tail -2
+kubeadm upgrade apply v1.37.2 -y --ignore-preflight-errors=SystemVerification 2>&1 | tail -2
 kubectl drain $CP --ignore-daemonsets --delete-emptydir-data
 apt-mark unhold kubelet kubectl >/dev/null
 apt-get install -y -qq kubelet=1.37.2-1.1 kubectl=1.37.2-1.1 >/dev/null

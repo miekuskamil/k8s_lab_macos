@@ -25,12 +25,12 @@ This is the hardest of the three. When the clock starts, the API server refuses 
    === 4/4 Cilium 1.20.4
    ...
    cluster ready
-   $ ./platform-engineering/practice-exam.sh setup 6
+   $ ./lab.sh exam setup 6
    == setting up task 11: Rotate to a new provider
    == setting up task 2: One port range, two selectors
    ...
    Ready. The clock runs from now: 2 hours. Open platform-engineering/3-advanced/practice-exam-6.md.
-   Score yourself at any time with ./platform-engineering/practice-exam.sh score 6
+   Score yourself at any time with ./lab.sh exam score 6
    ```
 
    In the final test run, the practice cluster reset took 95 seconds, the Lima reset 2 minutes 6 seconds, and the setup 1 minute 26 seconds. The setup breaks the control plane in its last steps, so it doesn't wait for any pods to start.
@@ -38,7 +38,7 @@ This is the hardest of the three. When the clock starts, the API server refuses 
 2. The clock starts when `setup.sh` ends, and `score.sh` prints the minutes since then.
 3. Work only on the nodes, through `./lab.sh practice shell`, `./lab.sh practice shell worker` and `./platform-engineering/practice/cluster/lima.sh shell`, and use only the documentation the exam allows.
 4. Don't open the solutions while the clock runs, because the score only means something when you worked without them.
-5. Score from your Mac with `./platform-engineering/practice-exam.sh score 6`, or score single tasks with `./platform-engineering/practice-exam.sh score 6 1 13`.
+5. Score from your Mac with `./lab.sh exam score 6`, or score single tasks with `./lab.sh exam score 6 1 13`.
 
 ## Tasks
 
@@ -548,6 +548,6 @@ A fresh kubeadm node has no `/var/lib/kubelet/seccomp` folder until somebody cre
 
 `score.sh` runs two to five checks per task, splits the task's points evenly over them, rounded down, and gives points only when a task's first check passes.
 
-In the final test run, on clusters fresh from both resets and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` with `TIME: 3 minutes since setup, 117 minutes left.` After `./platform-engineering/practice-exam.sh solve 6`, which applies every solution above in its order (13, 8, 1, 11, 4, 16, then the rest) in 7 minutes 47 seconds, it was `TOTAL: 100 of 100 points (100%).` The solve order is the lesson, because each layer needs the one below it: the API server first, then the authorizer that keeps restarting it, then the scheduler and controller manager, and only then everything that needs a working cluster.
+In the final test run, on clusters fresh from both resets and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` with `TIME: 3 minutes since setup, 117 minutes left.` After `./lab.sh exam solve 6`, which applies every solution above in its order (13, 8, 1, 11, 4, 16, then the rest) in 7 minutes 47 seconds, it was `TOTAL: 100 of 100 points (100%).` The solve order is the lesson, because each layer needs the one below it: the API server first, then the authorizer that keeps restarting it, then the scheduler and controller manager, and only then everything that needs a working cluster.
 
 Three things broke the first test runs of this practice exam, and each became part of the text. Under `AlwaysAllow`, the API server's health probes get `401`, so the kubelet kills it every few minutes. Without a controller manager, a new namespace gets no `default` ServiceAccount, so no pod starts in it. A check that asks "is it gone?" also passes on a dead API server, so every such check here also asks the API server something that must succeed.

@@ -117,7 +117,7 @@ That's deliberate, because the only way to httpbin.org now runs through the wayp
 
 ## Do it
 
-If your lab existed before this module, run `./scripts/provision.sh` once, after `git pull`. It turns on DNS capture and virtual IPs, then restarts istio-cni. Pods pick up DNS capture only when they start, which is why the exercises restart the course client.
+If your lab existed before this module, run `./lab.sh up` once, after `git pull`. It turns on DNS capture and virtual IPs, then restarts istio-cni. Pods pick up DNS capture only when they start, which is why the exercises restart the course client.
 
 ```console
 $ kubectl apply -f platform-engineering/manifests/03-course-client.yaml

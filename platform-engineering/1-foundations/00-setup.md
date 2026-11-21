@@ -11,12 +11,12 @@ Every later module assumes a healthy lab and a working `istioctl`, so this modul
 ## Check the lab
 
 ```console
-$ ./scripts/start.sh               # safe to run any time, repairs the cluster after a reboot
+$ ./lab.sh start               # safe to run any time, repairs the cluster after a reboot
 Cluster k8s-lab is running and CoreDNS is healthy.
 kubectl context is k3d-k8s-lab
 Waiting for istio-cni and ztunnel
 Waiting for every pod to become Ready (up to 3 minutes)
-All pods are Ready. The shop is at http://localhost:8080. Run ./scripts/port-forward.sh for the other UIs.
+All pods are Ready. The shop is at http://localhost:8080. Run ./lab.sh ui for the other UIs.
 
 $ kubectl config current-context   # k3d-k8s-lab
 k3d-k8s-lab
@@ -40,7 +40,7 @@ shop-base               Synced        Healthy
 All twelve Applications should show `Synced` and `Healthy`, because ArgoCD reports any drift from Git on this list. Then open the UIs in a spare terminal and leave it running:
 
 ```console
-$ ./scripts/port-forward.sh
+$ ./lab.sh ui
 ArgoCD      http://localhost:8081
 Grafana     http://localhost:3000
 Prometheus  http://localhost:9090
@@ -128,4 +128,4 @@ The course uses Kiali only to look. You make every change with `kubectl`, so tha
 
 ## What the verification run showed
 
-`./platform-engineering/verify.sh`, or `./lab.sh test all`, replays every module that is safe to repeat against the lab, so run it whenever you change the lab and again after the course to check your own work. On 21 November 2026 it passed 322 of 322 checks for its 25 default modules in 49 minutes. [Check a module](../../README.md#check-a-module) in the guide lists the modules it leaves out.
+`./platform-engineering/verify.sh`, or `./lab.sh test all`, replays every module that is safe to repeat against the lab, so run it whenever you change the lab and again after the course to check your own work. On 21 November 2026 it passed 322 of 322 checks for its 25 default modules in 49 minutes on the Mac itself. Run through the toolbox from a fresh clone, it passed 321 of 321 in 47 minutes, because the check that the OrbStack app holds module 45's outside connection needs a shell on the Mac and the toolbox skips it. [Check a module](../../README.md#check-a-module) in the guide lists the modules it leaves out.

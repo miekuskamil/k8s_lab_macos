@@ -32,4 +32,4 @@ fi
 date +%s > "$HERE/.started-$MOCK"
 echo
 echo "Ready. The clock runs from now: 2 hours. Open platform-engineering/3-advanced/practice-exam-$((MOCK + 3)).md."
-echo "Score yourself at any time with ./platform-engineering/practice-exam.sh score $((MOCK + 3))"
+echo "Score yourself at any time with ./lab.sh exam score $((MOCK + 3))"

@@ -165,8 +165,8 @@ metadata: {name: defaults, namespace: k2-quota}
 spec:
   limits:
   - type: Container
-    default: {cpu: 200m, memory: 128Mi}
-    defaultRequest: {cpu: 100m, memory: 64Mi}
+    default: {cpu: 100m, memory: 64Mi}
+    defaultRequest: {cpu: 50m, memory: 32Mi}
 EOF
     kubectl -n k2-quota rollout restart deploy search
     kubectl -n k2-quota rollout status deploy search --timeout=120s"

@@ -55,7 +55,8 @@ The toolbox (toolbox/Dockerfile and compose.yaml):
   toolbox build            build the toolbox image again, after you changed toolbox/
   toolbox stop             stop and remove the toolbox container (your kubeconfig stays)
   Every command above works the same inside the toolbox. Run outside it, on a machine
-  without kubectl, helm or k3d, a command goes through the toolbox by itself.
+  without kubectl, helm or k3d, a command goes through the toolbox by itself, except task
+  and exam, which reach the nodes and the Lima VM from your machine with docker and limactl.
   LAB_USE_TOOLBOX=always or LAB_USE_TOOLBOX=never overrides that choice.
 
 README.md is the guide: logins, everyday commands, the course and troubleshooting.
@@ -68,7 +69,10 @@ TOOLBOX_IMAGE="$(awk '/^ *image: k8s-lab\/toolbox:/ {print $2; exit}' "$ROOT/com
 # Settings that pass from your shell into the toolbox when they are set.
 PASS_ENV=(CLUSTER_NAME KUBE_CONTEXT BASE_URL SKIP_IMAGE_BUILD ISTIO_VERSION ISTIO_PLATFORM
   SYNC_TIMEOUT_SECONDS LAB_OLLAMA_URL LAB_OLLAMA_MODEL PRACTICE_PLATFORM PRACTICE_KIND_NAME
-  PRACTICE_NODE_IMAGE K8S_VERSION TERM)
+  PRACTICE_NODE_IMAGE K8S_VERSION TERM
+  # The practice cluster on your own VMs (PRACTICE_PLATFORM=vms), and the older CKS_* names.
+  PRACTICE_CP PRACTICE_W1 PRACTICE_CP_HOST PRACTICE_W1_HOST PRACTICE_SSH_USER PRACTICE_SSH_KEY
+  PRACTICE_SSH_OPTS CKS_PLATFORM CKS_CP_HOST CKS_W1_HOST CKS_SSH_USER CKS_SSH_KEY CKS_SSH_OPTS)
 
 in_toolbox() { [[ "${LAB_TOOLBOX:-}" == 1 ]]; }
 
@@ -77,6 +81,9 @@ toolbox_compose_env() {
   # the toolbox leads to a rebuild on the next start.
   TOOLBOX_HASH="$(cat "$ROOT"/toolbox/* | cksum | awk '{print $1}')"
   export LAB_ROOT="$ROOT" HOST_UID="$(id -u)" HOST_GID="$(id -g)" TOOLBOX_HASH
+  # compose.yaml mounts ~/.ssh read-only, so the practice VMs answer ssh from the toolbox too.
+  # ssh-keygen makes this folder anyway; an empty one keeps Docker from creating it as root.
+  [[ -d "$HOME/.ssh" ]] || { mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"; }
 }
 
 toolbox_start() {
@@ -85,7 +92,7 @@ toolbox_start() {
   docker compose version >/dev/null 2>&1 || { echo "The toolbox needs Docker Compose v2 (the 'docker compose' command)." >&2; exit 1; }
   toolbox_compose_env
   if [[ "$(docker image inspect -f '{{index .Config.Labels "lab.toolbox.hash"}}' "$TOOLBOX_IMAGE" 2>/dev/null)" != "$TOOLBOX_HASH" ]]; then
-    echo "Building the toolbox image $TOOLBOX_IMAGE (about 2 minutes the first time)" >&2
+    echo "Building the toolbox image $TOOLBOX_IMAGE (about a minute the first time)" >&2
     "${COMPOSE[@]}" build lab >&2
   fi
   local out
@@ -150,7 +157,8 @@ ollama_service() {
   toolbox_compose_env
   "${COMPOSE[@]}" --profile ai up -d ollama
   echo "Ollama runs in the container k8s-lab-toolbox-ollama-1 on port ${LAB_OLLAMA_PORT:-11434}."
-  echo "It pulls ${LAB_OLLAMA_MODELS:-qwen2.5:3b nomic-embed-text} the first time (about 2.2 GB)."
+  echo "The first time it downloads the Ollama image (about 3.3 GB, 8.4 GB on disk) and pulls"
+  echo "${LAB_OLLAMA_MODELS:-qwen2.5:3b nomic-embed-text} (about 2.2 GB)."
   echo "Follow the download: docker compose -p k8s-lab-toolbox logs -f ollama"
 }
 
@@ -231,6 +239,11 @@ with_ai_settings() {
 
 case "$command" in
   help|-h|--help|shell|toolbox|ollama) ;;
+  # The timed tasks and exams reach the nodes with docker exec, orb or ssh, and the Lima VM
+  # with limactl, which only the host has. So they run on the host, where bash 3.2 is enough.
+  task|exam) [[ "${LAB_USE_TOOLBOX:-auto}" == always ]] && want_toolbox && { toolbox_start; toolbox_exec "$ROOT/lab.sh" "$command" "$@"; exit $?; } ;;
+  # The practice cluster on OrbStack machines needs orb, which only the host has.
+  practice) [[ "${PRACTICE_PLATFORM:-${CKS_PLATFORM:-kind}}" != orbstack ]] && want_toolbox && { toolbox_start; toolbox_exec "$ROOT/lab.sh" "$command" "$@"; exit $?; } ;;
   *)
     if want_toolbox; then
       toolbox_start
@@ -239,6 +252,12 @@ case "$command" in
       exit "$exec_status"
     fi ;;
 esac
+
+if in_toolbox && [[ "$command" =~ ^(practice|task|exam)$ ]] && [[ "${PRACTICE_PLATFORM:-${CKS_PLATFORM:-kind}}" == orbstack ]]; then
+  echo "With PRACTICE_PLATFORM=orbstack, run ./lab.sh $command in your Mac's own terminal, not in the toolbox:" >&2
+  echo "it reaches the OrbStack machines with the orb command, which only your Mac has." >&2
+  exit 1
+fi
 
 case "$command" in
   shell)  shell ;;

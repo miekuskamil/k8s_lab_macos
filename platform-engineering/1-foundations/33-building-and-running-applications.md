@@ -144,7 +144,7 @@ A pod names a claim rather than a volume because the two belong to different peo
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 33.1
+$ ./lab.sh task setup 33.1
 == setup task 33.1
 total 8
 -rw-r--r-- 1 root root 163 Nov 20 10:33 Dockerfile
@@ -199,7 +199,7 @@ Three blobs went up: busybox's own layer, and one layer each for `COPY` and `RUN
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 33.1
+$ ./lab.sh task check 33.1
 == check task 33.1
   PASS  the registry holds greeter:v1
   PASS  /opt/apps/1.1/greeter-v1.tar is an image archive
@@ -213,7 +213,7 @@ $ ./platform-engineering/task.sh check 33.1
 **Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 33.2
+$ ./lab.sh task setup 33.2
 == setup task 33.2
 deployment.apps/report created
 Waiting for deployment "report" rollout to finish: 0 of 1 updated replicas are available...
@@ -268,7 +268,7 @@ color=blue user=1000
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 33.2
+$ ./lab.sh task check 33.2
 == check task 33.2
   PASS  Deployment report runs registry.practice:5000/report:v2
   PASS  the registry still holds report:v1 and now report:v2
@@ -281,7 +281,7 @@ $ ./platform-engineering/task.sh check 33.2
 **Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 33.3
+$ ./lab.sh task setup 33.3
 == setup task 33.3
 apiVersion: v1
 kind: Pod
@@ -342,7 +342,7 @@ ready from init
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 33.3
+$ ./lab.sh task check 33.3
 == check task 33.3
   PASS  pod web has an init container prepare
   PASS  pod web is Ready
@@ -355,7 +355,7 @@ $ ./platform-engineering/task.sh check 33.3
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 33.4
+$ ./lab.sh task setup 33.4
 == setup task 33.4
 NAME   READY   UP-TO-DATE   AVAILABLE   AGE
 app    1/1     1            1           1s
@@ -406,7 +406,7 @@ The new pod shows `2/2`, which counts the sidecar with the app. `tail -F`, with 
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 33.4
+$ ./lab.sh task check 33.4
 == check task 33.4
   PASS  the pod template has a native sidecar named shipper
   PASS  the Deployment is rolled out
@@ -469,7 +469,7 @@ Three pods started at once, as `parallelism` asked, and the six completions took
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 33.5
+$ ./lab.sh task check 33.5
 == check task 33.5
   PASS  Job checksum: 6 completions, 3 at a time, backoffLimit 3, deadline 120s
   PASS  its pods carry the label job-type=checksum
@@ -519,7 +519,7 @@ removed temporary files
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 33.6
+$ ./lab.sh task check 33.6
 == check task 33.6
   PASS  CronJob cleanup runs every 30 minutes and forbids overlaps
   PASS  it keeps 2 successful and 4 failed Jobs, and starts at most 60s late
@@ -588,7 +588,7 @@ Without the toleration, the DaemonSet would report 1 of 1 pods and skip `practic
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 33.7
+$ ./lab.sh task check 33.7
 == check task 33.7
   PASS  DaemonSet node-agent has a ready pod on both nodes
   PASS  one of its pods runs on practice-control-plane
@@ -680,7 +680,7 @@ visit 10:40:34
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 33.8
+$ ./lab.sh task check 33.8
 == check task 33.8
   PASS  PersistentVolume ckad-pv-data: 1Gi, ReadWriteOnce, class manual, hostPath /var/lib/ckad-data
   PASS  PVC data-claim in storage is Bound to ckad-pv-data
@@ -694,7 +694,7 @@ $ ./platform-engineering/task.sh check 33.8
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 33.9
+$ ./lab.sh task setup 33.9
 == setup task 33.9
 pod/api condition met
 NAME   READY   STATUS    RESTARTS   AGE   LABELS
@@ -761,7 +761,7 @@ Delete the bare pod only after the Deployment exists, but know that the Deployme
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 33.9
+$ ./lab.sh task check 33.9
 == check task 33.9
   PASS  Deployment api has 3 ready replicas
   PASS  its pods keep the labels, image, env and requests of the old pod
@@ -836,7 +836,7 @@ GAMMA
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 33.10
+$ ./lab.sh task check 33.10
 == check task 33.10
   PASS  pod pipeline: init container fetch runs once, exporter is a native sidecar
   PASS  the main container is transform, and one emptyDir volume work is shared by all three

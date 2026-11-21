@@ -288,7 +288,7 @@ Real platform teams rarely hand out client certificates to people, because a cer
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 39.1
+$ ./lab.sh task setup 39.1
 == setup task 39.1
 serviceaccount/reporter created
 secret/report-key created
@@ -334,7 +334,7 @@ list secrets: no
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 39.1
+$ ./lab.sh task check 39.1
 == check task 39.1
   PASS  reporter lists pods
   PASS  reporter watches pods
@@ -353,7 +353,7 @@ In the test run, the setup's Role failed three of the seven checks, because it a
 **Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 39.2
+$ ./lab.sh task setup 39.2
 == setup task 39.2
 deployment.apps/checkout created
 Waiting for deployment "checkout" rollout to finish: 0 of 1 updated replicas are available...
@@ -391,7 +391,7 @@ command terminated with exit code 1
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 39.2
+$ ./lab.sh task check 39.2
 == check task 39.2
   PASS  ServiceAccount default in payments has automountServiceAccountToken: false
   PASS  ServiceAccount checkout exists, also without automount
@@ -405,7 +405,7 @@ $ ./platform-engineering/task.sh check 39.2
 **Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 39.3
+$ ./lab.sh task setup 39.3
 == setup task 39.3
 clusterrolebinding.rbac.authorization.k8s.io/anonymous-view created
 anonymous list of pods: 200
@@ -492,7 +492,7 @@ In the test run, the API server answered again within a minute of the manifest c
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 39.3
+$ ./lab.sh task check 39.3
 == check task 39.3
   PASS  ClusterRoleBinding anonymous-view is gone
   PASS  an anonymous request for pods gets 401
@@ -509,7 +509,7 @@ $ ./platform-engineering/task.sh check 39.3
 **Time budget:** 12 minutes. **Hosts:** `practice-control-plane`, then `practice-worker`.
 
 ```console
-$ ./platform-engineering/task.sh setup 39.4     # prints the node versions; both must say v1.37.1
+$ ./lab.sh task setup 39.4     # prints the node versions; both must say v1.37.1
 == setup task 39.4
 NAME     STATUS   ROLES           AGE     VERSION
 practice-control-plane   Ready    control-plane   2m12s   v1.37.1
@@ -570,7 +570,7 @@ You can now apply the upgrade by executing the following command:
 
 	kubeadm upgrade apply v1.37.2
 ...
-root@practice-control-plane:~# kubeadm upgrade apply v1.37.2 -y
+root@practice-control-plane:~# kubeadm upgrade apply v1.37.2 -y --ignore-preflight-errors=SystemVerification
 [upgrade] Reading configuration from the "kubeadm-config" ConfigMap in namespace "kube-system"...
 [upgrade] Use 'kubeadm init phase upload-config kubeadm --config your-config-file' to re-upload it.
 ...
@@ -640,7 +640,7 @@ pod/ingress-nginx-controller-8464654b6c-fdnh8 evicted
 node/practice-worker drained
 ```
 
-`--force` lets the drain delete bare pods that no controller owns, such as the ones earlier tasks created. Then upgrade the worker on `practice-worker`:
+The flag `--ignore-preflight-errors=SystemVerification` matters on a Linux machine. kubeadm's preflight check reads the kernel's configuration, and a kind node there has neither `/proc/config.gz` nor `/boot`, so the check fails and stops the upgrade. The flag skips only that check, and on a real node you leave it out. `--force` lets the drain delete bare pods that no controller owns, such as the ones earlier tasks created. Then upgrade the worker on `practice-worker`:
 
 ```console
 root@practice-worker:~# apt-mark unhold kubeadm kubelet kubectl
@@ -699,7 +699,7 @@ Finally, back on `practice-control-plane`, run `k uncordon practice-worker` so t
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 39.4
+$ ./lab.sh task check 39.4
 == check task 39.4
   PASS  practice-control-plane kubelet reports v1.37.2
   PASS  practice-worker kubelet reports v1.37.2
@@ -714,7 +714,7 @@ $ ./platform-engineering/task.sh check 39.4
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 39.5
+$ ./lab.sh task setup 39.5
 == setup task 39.5
 serviceaccount/prom created
 clusterrole.rbac.authorization.k8s.io/monitoring-reader created
@@ -782,7 +782,7 @@ no
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 39.5
+$ ./lab.sh task check 39.5
 == check task 39.5
   PASS  ClusterRole monitoring-endpoints carries the aggregation label
   PASS  prom lists endpoints in every namespace
@@ -800,7 +800,7 @@ In the test run, the check failed four of six items before the solution.
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 39.6
+$ ./lab.sh task setup 39.6
 == setup task 39.6
 serviceaccount/builder created
 serviceaccount/deployer created
@@ -853,7 +853,7 @@ services                                        []                  []          
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 39.6
+$ ./lab.sh task check 39.6
 == check task 39.6
   PASS  /root/cks/secret-reader.txt names cleaner
   PASS  cleaner may no longer read Secrets in kube-system
@@ -868,7 +868,7 @@ $ ./platform-engineering/task.sh check 39.6
 **Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 39.7
+$ ./lab.sh task setup 39.7
 == setup task 39.7
 serviceaccount/vault-auth created
 ```
@@ -924,7 +924,7 @@ In the test run, the claims held `"aud":["vault"]`, and `exp` minus `iat` was ex
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 39.7
+$ ./lab.sh task check 39.7
 == check task 39.7
   PASS  /root/cks/vault-token.txt is a token for vault-auth with audience vault, valid 2 hours
   PASS  pod client runs as vault-auth without the default token
@@ -937,7 +937,7 @@ $ ./platform-engineering/task.sh check 39.7
 **Time budget:** 4 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 39.8
+$ ./lab.sh task setup 39.8
 == setup task 39.8
 serviceaccount/old-ci created
 secret/old-ci-token created
@@ -972,7 +972,7 @@ Secret `app-config` has type `Opaque`, so the selector leaves it alone. In the t
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 39.8
+$ ./lab.sh task check 39.8
 == check task 39.8
   PASS  no Secret of type kubernetes.io/service-account-token is left in legacy
   PASS  old-ci's old token no longer authenticates (401)
@@ -985,7 +985,7 @@ $ ./platform-engineering/task.sh check 39.8
 **Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 39.9
+$ ./lab.sh task setup 39.9
 == setup task 39.9
   a colleague edited the API server manifest at 23:38:55
 ```
@@ -1039,7 +1039,7 @@ root@practice-control-plane:~# k run pull-test --image=busybox:1.36 --image-pull
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 39.9
+$ ./lab.sh task check 39.9
 == check task 39.9
   PASS  the API server answers and its pod is Ready
   PASS  the admission plugins are NodeRestriction and AlwaysPullImages
@@ -1053,7 +1053,7 @@ $ ./platform-engineering/task.sh check 39.9
 **Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 39.10
+$ ./lab.sh task setup 39.10
 == setup task 39.10
 configmap/cks-canary created
   someone edited etcd's manifest at 23:40:55
@@ -1108,7 +1108,7 @@ Never change `--data-dir` or the `etcd-data` volume to make etcd start, because 
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 39.10
+$ ./lab.sh task check 39.10
 == check task 39.10
   PASS  the API server answers again
   PASS  etcd uses its server certificate
@@ -1123,7 +1123,7 @@ $ ./platform-engineering/task.sh check 39.10
 **Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 39.11
+$ ./lab.sh task setup 39.11
 == setup task 39.11
 deployment.apps/canary created
 ```
@@ -1161,7 +1161,7 @@ The scheduler said `"command failed" err="stat /etc/kubernetes/scheduler.config:
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 39.11
+$ ./lab.sh task check 39.11
 == check task 39.11
   PASS  kube-scheduler runs and is Ready
   PASS  kube-controller-manager runs and is Ready
@@ -1175,7 +1175,7 @@ $ ./platform-engineering/task.sh check 39.11
 **Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 39.12
+$ ./lab.sh task setup 39.12
 == setup task 39.12
   may the default ServiceAccount list every Secret? yes
 ```
@@ -1207,7 +1207,7 @@ The same switch has a side effect that shows within minutes. kubeadm's health pr
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 39.12
+$ ./lab.sh task check 39.12
 == check task 39.12
   PASS  the API server uses --authorization-mode=Node,RBAC
   PASS  an anonymous request for kube-system Secrets gets 403

@@ -152,7 +152,7 @@ Real platform teams go further than hand-tuning each node. They build node image
 **Time budget:** 4 minutes. **Host:** `practice-worker`.
 
 ```console
-$ ./platform-engineering/task.sh setup 40.1
+$ ./lab.sh task setup 40.1
 == setup task 40.1
 LISTEN 0      32                 *:21               *:*    users:(("vsftpd",pid=68941,fd=3))     
 ```
@@ -196,7 +196,7 @@ In the test run, `ss` showed `users:(("vsftpd",pid=41498,fd=3))` on `*:21`, and 
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 40.1
+$ ./lab.sh task check 40.1
 == check task 40.1
   PASS  nothing listens on TCP port 21
   PASS  the package vsftpd is removed
@@ -208,7 +208,7 @@ $ ./platform-engineering/task.sh check 40.1
 **Time budget:** 4 minutes. **Host:** `practice-worker`.
 
 ```console
-$ ./platform-engineering/task.sh setup 40.2
+$ ./lab.sh task setup 40.2
 == setup task 40.2
 ```
 
@@ -238,7 +238,7 @@ The `grep` finds the second grant, a `NOPASSWD:ALL` line in `/etc/sudoers.d/cks-
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 40.2
+$ ./lab.sh task check 40.2
 == check task 40.2
   PASS  cks-dev is no longer in the sudo group
   PASS  sudo grants cks-dev nothing
@@ -252,7 +252,7 @@ $ ./platform-engineering/task.sh check 40.2
 **Time budget:** 6 minutes. **Hosts:** `practice-control-plane`, and `practice-worker` to test.
 
 ```console
-$ ./platform-engineering/task.sh setup 40.3
+$ ./lab.sh task setup 40.3
 == setup task 40.3
     - --enable-admission-plugins=AlwaysAdmit
 ```
@@ -293,7 +293,7 @@ Change the line to this value:
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 40.3
+$ ./lab.sh task check 40.3
 == check task 40.3
   PASS  the API server enables NodeRestriction
   PASS  the API server no longer enables AlwaysAdmit
@@ -309,7 +309,7 @@ In the test run, the third check passed even before the fix, for the reason the 
 **Time budget:** 5 minutes. **Host:** `practice-worker`.
 
 ```console
-$ ./platform-engineering/task.sh setup 40.4
+$ ./lab.sh task setup 40.4
 == setup task 40.4
 LISTEN 0      5                  *:4444             *:*    users:(("sysmond",pid=71147,fd=5))    
 ```
@@ -345,7 +345,7 @@ Kill only the process, and `Restart=always` starts it again a moment later. Dele
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 40.4
+$ ./lab.sh task check 40.4
 == check task 40.4
   PASS  nothing listens on TCP port 4444
   PASS  systemd knows no sysmon unit any more
@@ -359,7 +359,7 @@ $ ./platform-engineering/task.sh check 40.4
 **Time budget:** 4 minutes. **Host:** `practice-worker`.
 
 ```console
-$ ./platform-engineering/task.sh setup 40.5
+$ ./lab.sh task setup 40.5
 == setup task 40.5
 permitrootlogin yes
 passwordauthentication yes
@@ -395,7 +395,7 @@ passwordauthentication no
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 40.5
+$ ./lab.sh task check 40.5
 == check task 40.5
   PASS  sshd's effective config says permitrootlogin no
   PASS  sshd's effective config says passwordauthentication no
@@ -408,7 +408,7 @@ $ ./platform-engineering/task.sh check 40.5
 **Time budget:** 4 minutes. **Host:** `practice-worker`.
 
 ```console
-$ ./platform-engineering/task.sh setup 40.6
+$ ./lab.sh task setup 40.6
 == setup task 40.6
   kubectl auth can-i "*" "*" as cks-ops on practice-worker: yes
 ```
@@ -435,7 +435,7 @@ In the test run, the search found `/home/cks-ops/.kube/config` and `/var/backups
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 40.6
+$ ./lab.sh task check 40.6
 == check task 40.6
   PASS  no file on practice-worker holds the admin client certificate any more
   PASS  user cks-ops still exists

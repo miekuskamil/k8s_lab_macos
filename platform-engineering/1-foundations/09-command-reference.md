@@ -21,7 +21,7 @@ Switched to context "k3d-k8s-lab".
 |---|---|
 | Is Docker up? | `docker info --format '{{.ServerVersion}} {{.NCPU}} CPUs {{.MemTotal}}'` |
 | Are the k3d containers running, and since when? | `docker ps --filter name=k3d-k8s-lab --format '{{.Names}} {{.Status}}'` |
-| Repair after a reboot or Docker restart | `./scripts/start.sh` |
+| Repair after a reboot or Docker restart | `./lab.sh start` |
 | What does containerd use for CNI plugins? | `docker exec k3d-k8s-lab-server-0 grep -E "bin_dir\|conf_dir" /var/lib/rancher/k3s/agent/etc/containerd/config.toml` |
 | How many pod IPs are reserved on the node? | `docker exec k3d-k8s-lab-server-0 sh -c 'ls /var/lib/cni/networks/cbr0 \| wc -l'` |
 
@@ -58,7 +58,7 @@ Switched to context "k3d-k8s-lab".
 
 ## Layer 2b: alerting (modules 23 and 24)
 
-With `./scripts/port-forward.sh` running, Prometheus listens on 9090, Alertmanager on 9093 and Grafana on 3000.
+With `./lab.sh ui` running, Prometheus listens on 9090, Alertmanager on 9093 and Grafana on 3000.
 
 | Question | Command |
 |---|---|

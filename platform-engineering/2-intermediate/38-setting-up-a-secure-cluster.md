@@ -254,7 +254,7 @@ Real platform teams rarely make these changes by hand on each cluster, because h
 Prepare the task from your Mac, which creates the namespace, the three pods and their Services:
 
 ```console
-$ ./platform-engineering/task.sh setup 38.1
+$ ./lab.sh task setup 38.1
 == setup task 38.1
 pod/frontend created
 pod/api created
@@ -383,7 +383,7 @@ Two details decide whether the policies work, and both come from the theory:
 Run the check from your Mac, which tests each allowed and refused path with real connections:
 
 ```console
-$ ./platform-engineering/task.sh check 38.1
+$ ./lab.sh task check 38.1
 == check task 38.1
   PASS  NetworkPolicy default-deny selects every pod, Ingress and Egress
   PASS  frontend reaches api on port 80, by name
@@ -399,7 +399,7 @@ In the test run, the check failed three of four items before the solution and pa
 **Time budget:** 4 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 38.2
+$ ./lab.sh task setup 38.2
 == setup task 38.2
 pod/worker created
 pod/worker condition met
@@ -431,7 +431,7 @@ The policy selects every pod for egress, so egress becomes an allow list, and th
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 38.2
+$ ./lab.sh task check 38.2
 == check task 38.2
   PASS  NetworkPolicy deny-metadata exists and selects every pod
   PASS  it allows 0.0.0.0/0 except 169.254.169.254/32
@@ -446,7 +446,7 @@ In the test run, the worker pod reached the API server's port both before and af
 **Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 38.3     # seeds nothing: a fresh kubeadm cluster fails these checks already
+$ ./lab.sh task setup 38.3     # seeds nothing: a fresh kubeadm cluster fails these checks already
 == setup task 38.3
   nothing to seed: a fresh kubeadm cluster already fails these checks
 ```
@@ -553,7 +553,7 @@ In the test run, the three pods came back in under a minute, and kube-bench then
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 38.3
+$ ./lab.sh task check 38.3
 == check task 38.3
   PASS  kube-bench 1.2.15 passes
   PASS  kube-bench 1.3.2 passes
@@ -568,7 +568,7 @@ $ ./platform-engineering/task.sh check 38.3
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 38.4
+$ ./lab.sh task setup 38.4
 == setup task 38.4
 deployment.apps/shop created
 service/shop exposed
@@ -616,7 +616,7 @@ In the test run, these printed `200`, `subject=CN = shop.cks.local` and `308`. T
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 38.4
+$ ./lab.sh task check 38.4
 == check task 38.4
   PASS  Secret shop-tls has type kubernetes.io/tls
   PASS  HTTPS on shop.cks.local:30443 answers 200
@@ -630,7 +630,7 @@ $ ./platform-engineering/task.sh check 38.4
 **Time budget:** 3 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 38.5
+$ ./lab.sh task setup 38.5
 == setup task 38.5
 total 98120
 -rwxr-xr-x 1 root root 57868450 Nov 14 22:51 kubectl
@@ -659,7 +659,7 @@ The setup had appended three bytes to `kube-proxy`, which changed its checksum c
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 38.5
+$ ./lab.sh task check 38.5
 == check task 38.5
   PASS  the tampered kube-proxy is gone
   PASS  kubectl stays, and matches the official v1.37.1 sha512
@@ -671,7 +671,7 @@ $ ./platform-engineering/task.sh check 38.5
 **Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 38.6
+$ ./lab.sh task setup 38.6
 == setup task 38.6
 pod/agent created
 pod/web created
@@ -748,7 +748,7 @@ The `nc` goes to the Service's port 443 while the policy names port 6443, and bo
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 38.6
+$ ./lab.sh task check 38.6
 == check task 38.6
   PASS  NetworkPolicy deny-all-egress selects every pod for Egress and allows nothing
   PASS  agent resolves kubernetes.default
@@ -765,7 +765,7 @@ In the test run, the check failed three of five items before the solution and pa
 **Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 38.7
+$ ./lab.sh task setup 38.7
 == setup task 38.7
 pod/db created
 service/db created
@@ -844,7 +844,7 @@ command terminated with exit code 1
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 38.7
+$ ./lab.sh task check 38.7
 == check task 38.7
   PASS  NetworkPolicy db-ingress still exists
   PASS  api in team-api reaches db
@@ -860,7 +860,7 @@ In the test run, the setup printed `debug in team-api reaches db: yes`, and the 
 **Time budget:** 4 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 38.8
+$ ./lab.sh task setup 38.8
 == setup task 38.8
 pod/server created
 pod/client created
@@ -904,7 +904,7 @@ command terminated with exit code 1
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 38.8
+$ ./lab.sh task check 38.8
 == check task 38.8
   PASS  NetworkPolicy server-ports opens one port entry, 7000 to 7100 with endPort
   PASS  client reaches server on 7000, 7050 and 7100
@@ -921,7 +921,7 @@ The three Cilium tasks need a cluster whose kernel belongs to one machine, becau
 **Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 38.12
+$ ./lab.sh task setup 38.12
 == setup task 38.12
 /etc/kubernetes/manifests/kube-apiserver.yaml:    - --tls-cert-file=/etc/kubernetes/pki/apiserver.crt
 /etc/kubernetes/manifests/kube-apiserver.yaml:    - --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
@@ -977,7 +977,7 @@ OpenSSL names the suites differently from Go, so `ECDHE-RSA-AES128-GCM-SHA256` i
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 38.12
+$ ./lab.sh task check 38.12
 == check task 38.12
   PASS  the API server sets --tls-min-version=VersionTLS12 and the two cipher suites
   PASS  the API server accepts ECDHE-RSA-AES128-GCM-SHA256 on TLS 1.2
@@ -994,7 +994,7 @@ $ ./platform-engineering/task.sh check 38.12
 **Time budget:** 6 minutes. **Host:** `practice-worker`.
 
 ```console
-$ ./platform-engineering/task.sh setup 38.13
+$ ./lab.sh task setup 38.13
 == setup task 38.13
   read-only port /pods: 200
   anonymous /pods on 10250: 200
@@ -1050,7 +1050,7 @@ root@practice-worker:~# curl -sk -o /dev/null -w '%{http_code}\n' https://127.0.
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 38.13
+$ ./lab.sh task check 38.13
 == check task 38.13
   PASS  nothing answers on the read-only port 10255
   PASS  an anonymous request to the kubelet API gets 401

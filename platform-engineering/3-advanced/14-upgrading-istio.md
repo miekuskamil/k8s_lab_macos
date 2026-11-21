@@ -8,7 +8,7 @@
 
 Every Istio release gets security fixes for about six months and none after that, so a team that runs Istio upgrades it two or three times a year. In this module you upgrade the lab from Istio 1.24.2 to 1.25.5, following the steps Istio recommends for ambient mode, while a stream of requests checks that the shop keeps answering.
 
-**This module is one-way.** Istio has no clean downgrade, so after this module your lab runs 1.25.5, and the rest of the course still works on it. To return to the course version, rebuild with `./scripts/teardown.sh --yes && ./scripts/provision.sh`. `provision.sh` notices an upgraded mesh and leaves it alone, so it never mixes two versions.
+**This module is one-way.** Istio has no clean downgrade, so after this module your lab runs 1.25.5, and the rest of the course still works on it. To return to the course version, rebuild with `./lab.sh down --yes && ./lab.sh up`. `provision.sh` notices an upgraded mesh and leaves it alone, so it never mixes two versions.
 
 Time: about 45 minutes.
 
@@ -385,7 +385,7 @@ The lab installs Istio with Helm. [Module 32](32-installing-istio.md) installs i
 Nothing to clean up, because the upgrade stays. To return to Istio 1.24.2 for the rest of the course, rebuild the lab:
 
 ```console
-$ ./scripts/teardown.sh --yes && ./scripts/provision.sh
+$ ./lab.sh down --yes && ./lab.sh up
 INFO[0000] Deleting cluster 'k8s-lab'
 INFO[0002] Deleting cluster network 'k3d-k8s-lab'
 INFO[0002] Deleting 1 attached volumes...

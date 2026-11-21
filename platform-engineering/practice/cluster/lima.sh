@@ -35,7 +35,9 @@ build_cluster() {
     echo "already a cluster node, skipping"
   else
     on "hostnamectl set-hostname $VM && grep -q ' $VM\$' /etc/hosts || echo '127.0.1.1 $VM' >> /etc/hosts"
-    limactl shell --workdir / "$VM" sudo env K8S_VERSION="$K8S_VERSION" bash "$HERE/node-prep.sh"
+    # Copied in, because the VM mounts only your home folder and the clone may live elsewhere.
+    limactl copy "$HERE/node-prep.sh" "$VM:/tmp/node-prep.sh"
+    limactl shell --workdir / "$VM" sudo env K8S_VERSION="$K8S_VERSION" bash /tmp/node-prep.sh
   fi
 
   say "3/4 kubeadm init"
@@ -71,6 +73,9 @@ kubeadm init --config /etc/kubeadm/config.yaml >/var/log/kubeadm-init.log 2>&1 |
     grep -q "alias k=kubectl" /etc/bash.bashrc || printf "alias k=kubectl\nsource <(kubectl completion bash)\ncomplete -o default -F __start_kubectl k\nexport do=\"--dry-run=client -o yaml\"\n" >> /etc/bash.bashrc'
 
   say "4/4 Cilium $CILIUM_VERSION"
+  # On a VM that create or reset just started, the API server needs a little while to come up.
+  on 'for i in $(seq 1 90); do kubectl get --raw=/readyz >/dev/null 2>&1 && exit 0; sleep 2; done
+      echo "the API server did not answer in 3 minutes"; exit 1'
   on "set -e
 if ! cilium version --client 2>/dev/null | grep -q 'v$CILIUM_CLI_VERSION'; then
   curl -fsSL https://github.com/cilium/cilium-cli/releases/download/v$CILIUM_CLI_VERSION/cilium-linux-\$(dpkg --print-architecture).tar.gz | tar -xz -C /usr/local/bin cilium

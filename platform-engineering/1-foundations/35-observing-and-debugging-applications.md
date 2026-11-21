@@ -101,7 +101,7 @@ Kubernetes removes old API versions instead of serving them forever because ever
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 35.1
+$ ./lab.sh task setup 35.1
 == setup task 35.1
 Waiting for deployment "api" rollout to finish: 0 of 2 updated replicas are available...
 Waiting for deployment "api" rollout to finish: 1 of 2 updated replicas are available...
@@ -159,7 +159,7 @@ root@practice-control-plane:~# k -n probes describe pod -l app=api | grep -E 'Li
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 35.1
+$ ./lab.sh task check 35.1
 == check task 35.1
   PASS  container 1 has a readiness probe: GET /ready on 8080 every 5s
   PASS  a liveness probe: TCP 8080 every 10s, 3 failures allowed
@@ -173,7 +173,7 @@ $ ./platform-engineering/task.sh check 35.1
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 35.2
+$ ./lab.sh task setup 35.2
 == setup task 35.2
 NAME                    READY   STATUS    RESTARTS     AGE
 shop-65d9d5cd87-9b46d   0/1     Running   2 (7s ago)   25s
@@ -217,7 +217,7 @@ The `connection refused` lines come from the moments right after each restart, w
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 35.2
+$ ./lab.sh task check 35.2
 == check task 35.2
   PASS  both pods of shop are ready
   PASS  no restart in the 20 seconds after the rollout
@@ -230,7 +230,7 @@ $ ./platform-engineering/task.sh check 35.2
 **Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 35.3
+$ ./lab.sh task setup 35.3
 == setup task 35.3
 NAME                       READY   STATUS   RESTARTS      AGE
 billing-84d5744958-6blzl   0/1     Error    1 (18s ago)   31s
@@ -268,7 +268,7 @@ In the test run's first attempt, the pod showed `Error` at that moment, and `--p
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 35.3
+$ ./lab.sh task check 35.3
 == check task 35.3
   PASS  /opt/apps/3.3/crash.log holds the crash message
   PASS  billing's pod is ready and logs 'connected to postgres://db.logs:5432/billing'
@@ -280,7 +280,7 @@ $ ./platform-engineering/task.sh check 35.3
 **Time budget:** 3 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 35.4
+$ ./lab.sh task setup 35.4
 == setup task 35.4
 NAME     READY   STATUS    RESTARTS   AGE
 calc-a   1/1     Running   0          22s
@@ -309,7 +309,7 @@ root@practice-control-plane:~# echo calc-b > /opt/apps/3.4/top-pod.txt
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 35.4
+$ ./lab.sh task check 35.4
 == check task 35.4
   PASS  /opt/apps/3.4/top-pod.txt names calc-b
   PASS  /opt/apps/3.4/top.sh lists the pods of metrics-load, busiest first
@@ -321,7 +321,7 @@ $ ./platform-engineering/task.sh check 35.4
 **Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 35.5
+$ ./lab.sh task setup 35.5
 == setup task 35.5
 error: Internal error occurred: Internal error occurred: error executing command in container: failed to exec in container: failed to start exec "7f521802c9d96c0d7ec604ee860deaeb445631822dd6b7d845d33053a46a8f32": OCI runtime exec failed: exec failed: unable to start container process: exec: "sh": executable file not found in $PATH
 ```
@@ -353,7 +353,7 @@ Process 1 belongs to `app` and runs as user 65535, while the debugger's own proc
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 35.5
+$ ./lab.sh task check 35.5
 == check task 35.5
   PASS  pod vault has an ephemeral container debugger (busybox:1.36) that targets app
   PASS  /opt/apps/3.5/process.txt holds the command of app's process
@@ -366,7 +366,7 @@ $ ./platform-engineering/task.sh check 35.5
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 35.6
+$ ./lab.sh task setup 35.6
 == setup task 35.6
 NAME                      READY   STATUS    RESTARTS   AGE
 report-5bc98b878c-c6d24   0/1     Pending   0          3s
@@ -410,7 +410,7 @@ report-57cbc8947d-vfc8x   1/1     Running   0          1s    10.244.135.169   pr
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 35.6
+$ ./lab.sh task check 35.6
 == check task 35.6
   PASS  node practice-worker carries the label practice-disk=ssd
   PASS  the nodeSelector stays, and each pod requests 100m CPU
@@ -423,7 +423,7 @@ $ ./platform-engineering/task.sh check 35.6
 **Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 35.7
+$ ./lab.sh task setup 35.7
 == setup task 35.7
 no matches for kind "Deployment" in version "extensions/v1beta1"
 no matches for kind "HorizontalPodAutoscaler" in version "autoscaling/v2beta1"
@@ -507,7 +507,7 @@ The HPA shows `<unknown>` until metrics-server has two samples of the new pods, 
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 35.7
+$ ./lab.sh task check 35.7
 == check task 35.7
   PASS  /opt/apps/3.7/current.yaml uses apps/v1, policy/v1 and autoscaling/v2 only
   PASS  the file applies cleanly (server dry run)
@@ -567,7 +567,7 @@ The slice listed four addresses for a moment, the old pods and the new ones, and
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 35.8
+$ ./lab.sh task check 35.8
 == check task 35.8
   PASS  client gets 'backend ok' from http://backend
   PASS  Service backend has 2 ready endpoints

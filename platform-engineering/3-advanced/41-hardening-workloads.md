@@ -252,7 +252,7 @@ Real platform teams set these fences once, centrally, so app teams never think a
 **Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 41.1
+$ ./lab.sh task setup 41.1
 == setup task 41.1
 deployment.apps/app created
 Waiting for deployment "app" rollout to finish: 0 of 1 updated replicas are available...
@@ -296,7 +296,7 @@ Then run `k -n secure-apps rollout status deploy app`, and the new pod starts wh
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 41.1
+$ ./lab.sh task check 41.1
 == check task 41.1
   PASS  namespace secure-apps enforces the restricted standard
   PASS  Deployment app has a ready pod that the namespace admitted
@@ -310,7 +310,7 @@ $ ./platform-engineering/task.sh check 41.1
 **Time budget:** 10 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 41.2
+$ ./lab.sh task setup 41.2
 == setup task 41.2
 secret/db-creds created
 Sup3rS3cret
@@ -389,7 +389,7 @@ The certificate paths come from the API server's own `--etcd-*` flags, so `grep 
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 41.2
+$ ./lab.sh task check 41.2
 == check task 41.2
   PASS  the API server runs with --encryption-provider-config
   PASS  Secret db-creds is stored with prefix k8s:enc:aescbc:v1:
@@ -403,7 +403,7 @@ $ ./platform-engineering/task.sh check 41.2
 **Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 41.3
+$ ./lab.sh task setup 41.3
 == setup task 41.3
 secret/api-token created
 pod/api created
@@ -445,7 +445,7 @@ spec:
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 41.3
+$ ./lab.sh task check 41.3
 == check task 41.3
   PASS  pod api has no environment variable from a Secret
   PASS  pod api mounts Secret api-token read-only at /etc/api
@@ -458,7 +458,7 @@ $ ./platform-engineering/task.sh check 41.3
 **Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 41.4
+$ ./lab.sh task setup 41.4
 == setup task 41.4
 deployment.apps/untrusted created
 Waiting for deployment "untrusted" rollout to finish: 0 of 1 updated replicas are available...
@@ -502,7 +502,7 @@ root@practice-control-plane:~# k -n sandbox exec deploy/untrusted -- dmesg | hea
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 41.4
+$ ./lab.sh task check 41.4
 == check task 41.4
   PASS  RuntimeClass gvisor uses handler runsc
   PASS  Deployment untrusted uses RuntimeClass gvisor
@@ -515,7 +515,7 @@ $ ./platform-engineering/task.sh check 41.4
 **Time budget:** 10 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 41.5
+$ ./lab.sh task setup 41.5
 == setup task 41.5
 secret/app-secret created
   - aescbc:
@@ -591,7 +591,7 @@ In the test run, that printed `k8s:enc:aescbc:v1:key2:`. The rewrite touched 5 S
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 41.5
+$ ./lab.sh task check 41.5
 == check task 41.5
   PASS  app-secret is stored with key2
   PASS  every Secret in etcd is stored with key2
@@ -605,7 +605,7 @@ $ ./platform-engineering/task.sh check 41.5
 **Time budget:** 4 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 41.6
+$ ./lab.sh task setup 41.6
 == setup task 41.6
 deployment.apps/legacy created
 Waiting for deployment "legacy" rollout to finish: 0 of 1 updated replicas are available...
@@ -645,7 +645,7 @@ In the test run, the second command printed `Warning: would violate PodSecurity 
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 41.6
+$ ./lab.sh task check 41.6
 == check task 41.6
   PASS  enforce is baseline, pinned to v1.37
   PASS  warn and audit are restricted, at version latest
@@ -660,7 +660,7 @@ $ ./platform-engineering/task.sh check 41.6
 **Time budget:** 10 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 41.7
+$ ./lab.sh task setup 41.7
 == setup task 41.7
   a privileged pod in psa-default today: pod/t created (server dry run)
 ```
@@ -707,7 +707,7 @@ In the test run, the restart took 61 seconds, and the defaults hit every namespa
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 41.7
+$ ./lab.sh task check 41.7
 == check task 41.7
   PASS  the API server reads /etc/kubernetes/admission/psa.yaml
   PASS  a privileged pod in the unlabelled namespace psa-default is refused
@@ -722,7 +722,7 @@ $ ./platform-engineering/task.sh check 41.7
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 41.8
+$ ./lab.sh task setup 41.8
 == setup task 41.8
 pod/web created
 Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "c" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "c" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "c" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "c" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
@@ -781,7 +781,7 @@ Both namespaces carry `pod-security.kubernetes.io/enforce=privileged`, which exp
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 41.8
+$ ./lab.sh task check 41.8
 == check task 41.8
   PASS  node-debug (hostPID) is gone
   PASS  log-reader (hostPath /) is gone
@@ -796,7 +796,7 @@ $ ./platform-engineering/task.sh check 41.8
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 41.9
+$ ./lab.sh task setup 41.9
 == setup task 41.9
   runsc on practice-worker: /usr/local/bin/runsc   runsc on practice-control-plane: none
 ```
@@ -842,7 +842,7 @@ In the test run, all three pods landed on `practice-worker`, and each one carrie
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 41.9
+$ ./lab.sh task check 41.9
 == check task 41.9
   PASS  practice-worker carries the label sandbox=gvisor, practice-control-plane does not
   PASS  RuntimeClass gvisor-pinned uses runsc and schedules onto sandbox=gvisor

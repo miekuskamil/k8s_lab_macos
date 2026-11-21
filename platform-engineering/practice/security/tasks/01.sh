@@ -395,6 +395,8 @@ spec:
     - ports:
       - {port: "80", protocol: TCP}
 YAML
+# Wait until Cilium enforces the policy, so a check right after the solve sees it.
+for i in $(seq 1 15); do kubectl -n cilium-l4 exec other -- wget -qO- -T 2 http://backend >/dev/null 2>&1 || break; sleep 2; done
 EOF
 }
 

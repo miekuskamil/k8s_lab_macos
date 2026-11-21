@@ -128,7 +128,7 @@ Helm and Kustomize both exist because they suit different owners. A vendor ships
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 34.1
+$ ./lab.sh task setup 34.1
 == setup task 34.1
 NAME                   READY   STATUS         RESTARTS   AGE
 web-64fc786fb9-2z4bf   1/1     Running        0          13s
@@ -179,7 +179,7 @@ The three old pods ran 1.28 the whole time, because the broken pod never became 
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 34.1
+$ ./lab.sh task check 34.1
 == check task 34.1
   PASS  Deployment web runs nginx:1.28-alpine again
   PASS  all 3 replicas are ready and up to date
@@ -222,7 +222,7 @@ All four old pods terminate before any new pod exists, which is the gap `Recreat
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 34.2
+$ ./lab.sh task check 34.2
 == check task 34.2
   PASS  Deployment worker uses the Recreate strategy
   PASS  4 replicas, 2 old ReplicaSets kept, a pod counts as available after 5 seconds
@@ -236,7 +236,7 @@ $ ./platform-engineering/task.sh check 34.2
 **Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 34.3
+$ ./lab.sh task setup 34.3
 == setup task 34.3
 NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
 deployment.apps/shop-blue   3/3     3            3           1s
@@ -285,7 +285,7 @@ The merge patch changes only the `version` key of the selector and keeps `app: s
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 34.3
+$ ./lab.sh task check 34.3
 == check task 34.3
   PASS  Service shop answers 'green' on every call
   PASS  Deployment shop-green has 3 ready pods labelled version=green
@@ -298,7 +298,7 @@ $ ./platform-engineering/task.sh check 34.3
 **Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 34.4
+$ ./lab.sh task setup 34.4
 == setup task 34.4
 NAME                       READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS   IMAGES         SELECTOR
 deployment.apps/front-v1   4/4     4            4           1s    web          busybox:1.36   app=front,track=stable
@@ -345,7 +345,7 @@ Four of 20 requests reached v2 in the test run, exactly the fifth that the pod c
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 34.4
+$ ./lab.sh task check 34.4
 == check task 34.4
   PASS  Deployment front-v2 has 1 ready pod labelled app=front, track=canary
   PASS  front-v1 keeps 4 ready pods
@@ -359,7 +359,7 @@ $ ./platform-engineering/task.sh check 34.4
 **Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 34.5
+$ ./lab.sh task setup 34.5
 == setup task 34.5
 Pulled: registry.practice:5000/charts/webapp:0.1.0
 Digest: sha256:c3e28adbe840a3d0a19966f3ca79ada291977947ad625d5e7886c4cc4bd8e984
@@ -409,7 +409,7 @@ service/shop-webapp   NodePort   10.105.191.104   <none>        80:32532/TCP   1
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 34.5
+$ ./lab.sh task check 34.5
 == check task 34.5
   PASS  release shop in helm-shop is deployed from chart webapp 0.1.0
   PASS  its Deployment has 2 ready replicas
@@ -422,7 +422,7 @@ $ ./platform-engineering/task.sh check 34.5
 **Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 34.6
+$ ./lab.sh task setup 34.6
 == setup task 34.6
 NAME                           READY   STATUS         RESTARTS   AGE
 blog-webapp-5b77b696fc-fpllj   1/1     Running        0          6s
@@ -474,7 +474,7 @@ Helm reported revision 2 as `deployed` although its pods never started, because 
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 34.6
+$ ./lab.sh task check 34.6
 == check task 34.6
   PASS  the latest revision of blog is deployed from chart webapp 0.2.0
   PASS  Deployment blog-webapp has 3 ready replicas
@@ -488,7 +488,7 @@ $ ./platform-engineering/task.sh check 34.6
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 34.7
+$ ./lab.sh task setup 34.7
 == setup task 34.7
 NAME   	NAMESPACE	REVISION	UPDATED                                	STATUS  	CHART       	APP VERSION
 cache  	helm-ops 	1       	2026-11-20 10:52:26.363165592 +0000 UTC	failed  	webapp-0.1.0	1.27-alpine
@@ -538,7 +538,7 @@ The release `cache` failed because its install used `--wait` with an image tag t
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 34.7
+$ ./lab.sh task check 34.7
 == check task 34.7
   PASS  release old-api is gone
   PASS  no release in helm-ops is in the failed state
@@ -553,7 +553,7 @@ $ ./platform-engineering/task.sh check 34.7
 **Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 34.8
+$ ./lab.sh task setup 34.8
 == setup task 34.8
 /opt/apps/2.8/base/deployment.yaml
 /opt/apps/2.8/base/service.yaml
@@ -599,7 +599,7 @@ service/prod-web   ClusterIP   10.101.162.227   <none>        80/TCP    1s    en
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 34.8
+$ ./lab.sh task check 34.8
 == check task 34.8
   PASS  Deployment prod-web runs in kust-prod with 3 ready replicas
   PASS  it runs nginx:1.28-alpine
@@ -613,7 +613,7 @@ $ ./platform-engineering/task.sh check 34.8
 **Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 34.9
+$ ./lab.sh task setup 34.9
 == setup task 34.9
 error: merging from generator &{0x318ba94db790 <nil>}: id resid.ResId{Gvk:resid.Gvk{Group:"", Version:"v1", Kind:"ConfigMap", isClusterScoped:false}, Name:"api-config", Namespace:""} exists; can not use behavior: 'unspecified', behavior must be merge or replace
 ```
@@ -661,7 +661,7 @@ The ConfigMap's name ends with a hash of its content, `7t6ch9d7dd`, and Kustomiz
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 34.9
+$ ./lab.sh task check 34.9
 == check task 34.9
   PASS  Deployment staging-api in kust-staging has a limit of 64Mi memory
   PASS  its pod logs mode=staging
@@ -674,7 +674,7 @@ $ ./platform-engineering/task.sh check 34.9
 **Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 34.10
+$ ./lab.sh task setup 34.10
 == setup task 34.10
 NAME             DESIRED   CURRENT   READY   AGE
 api-776fc4695b   2         2         2       1s
@@ -723,7 +723,7 @@ The history copies the Deployment's `change-cause` annotation into the new Repli
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 34.10
+$ ./lab.sh task check 34.10
 == check task 34.10
   PASS  Deployment api: nginx:1.28-alpine, TIER=backend, memory limit 128Mi
   PASS  the three changes made exactly one new ReplicaSet (revision 2)

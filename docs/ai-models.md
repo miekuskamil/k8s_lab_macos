@@ -69,7 +69,7 @@ After module 17, check the switch with `curl -s localhost:8080/api/model`. Memor
 
 The shop assistant (module 17) and the RAG app (module 27) both have a `PROVIDER` setting. With `PROVIDER=anthropic`, they send the question to Claude through the official Anthropic Python SDK. kagent (module 19) supports Anthropic natively.
 
-The `PROVIDER` setting arrived with the images `assistant:1.1.0` and `rag:1.2.0`, and the `LLM_*` settings and the `openai` provider with `assistant:1.2.0` and `rag:1.3.0`. If your lab is older than 21 November 2026, run `./scripts/provision.sh` once to build the new assistant image. Module 27 builds its own image in its steps.
+The `PROVIDER` setting arrived with the images `assistant:1.1.0` and `rag:1.2.0`, and the `LLM_*` settings and the `openai` provider with `assistant:1.2.0` and `rag:1.3.0`. If your lab is older than 21 November 2026, run `./lab.sh up` once to build the new assistant image. Module 27 builds its own image in its steps.
 
 Some things work differently from Ollama:
 
@@ -138,7 +138,9 @@ The answers in module 27's text came from `qwen2.5:3b`. Claude answers the same 
 
 The Ollama path is the course default. With the new app images, `./platform-engineering/verify.sh 17 27` passed every check.
 
-The `lab.env` settings were tested from the toolbox on a fresh lab, with Ollama 0.32.13 and `qwen2.5:3b` throughout. With no `lab.env`, `./lab.sh test 17 27` passed 21 of 21 checks. With `LLM_PROVIDER=openai` and Ollama's `/v1` endpoint, the same run passed 21 of 21 once module 17's AuthorizationPolicy also allowed `/v1/chat/completions`, and `/api/model` reported the `openai` provider. Against the `ollama` service in a container, the assistant answered, `./lab.sh test 27` passed 11 of 11 checks, and the RAG app also ingested, searched and answered through the service's `/v1` API. The Claude path was tested without an API key:
+On 21 November 2026 the run was repeated the way a learner works, from a fresh clone with only Docker and git on the PATH, so every command went through the toolbox, with Ollama on the Mac. `./lab.sh test 17 18 19` passed 26 of 26 checks in 10 minutes 16 seconds, with the practice cluster deleted to leave memory for module 18's model servers and kagent. With the three `openai` lines above in `lab.env` and `./lab.sh ai`, `./lab.sh test 17 27` passed 21 of 21 in 3 minutes 9 seconds, and `/api/model` reported `"provider":"openai"`.
+
+The `lab.env` settings were first tested from the toolbox on a fresh lab, with Ollama 0.32.13 and `qwen2.5:3b` throughout. With no `lab.env`, `./lab.sh test 17 27` passed 21 of 21 checks. With `LLM_PROVIDER=openai` and Ollama's `/v1` endpoint, the same run passed 21 of 21 once module 17's AuthorizationPolicy also allowed `/v1/chat/completions`, and `/api/model` reported the `openai` provider. Against the `ollama` service in a container, the assistant answered, `./lab.sh test 27` passed 11 of 11 checks, and the RAG app also ingested, searched and answered through the service's `/v1` API. The Claude path was tested without an API key:
 
 - Both apps ran against a stand-in server that recorded each request. The SDK sent `POST /v1/messages` with the model, the system prompt, `effort: low` and the fallback setting, and the apps read the answer and the token counts from the reply.
 - In the cluster, the request went from the assistant through the waypoint to `api.anthropic.com` over HTTPS. With a fake key, Anthropic answered `401 authentication_error`, which shows the route and the TLS origination work. A pod with another service account got `403` from the waypoint, before its request left the cluster. The policy matches `/v1/messages` even though the SDK adds `?beta=true`, because Istio leaves the query string out of path matching.

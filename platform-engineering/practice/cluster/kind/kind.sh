@@ -122,8 +122,9 @@ create() {
 Work on the control plane the way the exam does, from a shell on the node:
   ./lab.sh practice shell            # then: kubectl get nodes
   ./lab.sh practice shell worker     # for node tasks on the worker
-From your Mac: KUBECONFIG=$KUBECONFIG_FILE kubectl get nodes
+From a toolbox shell (./lab.sh shell): kubectl --context kind-$NAME get nodes
 EOF
+  [[ "${LAB_TOOLBOX:-}" == 1 ]] || echo "Without the toolbox, with kubectl installed: KUBECONFIG=$KUBECONFIG_FILE kubectl get nodes"
 }
 
 delete_cluster() {
