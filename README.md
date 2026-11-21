@@ -492,7 +492,46 @@ Ollama now answers every machine on your network, so block port 11434 with a fir
 
 ### Proxmox
 
-Two scripts in [proxmox/](proxmox) build VMs from the Ubuntu cloud image on a Proxmox host. One VM, `pe-lab`, holds the whole lab, and `./proxmox/pe-lab.sh install` sets it up over SSH from your laptop. Two more VMs, `cks-cp` and `cks-w1`, hold the practice cluster. [The lab on Proxmox](proxmox/README.md) has the steps, the addresses and the memory each set needs.
+The scripts in [proxmox/](proxmox) build Ubuntu 24.04 VMs from the official cloud image on a Proxmox host. One VM, `pe-lab`, holds the whole lab, and two more, `cks-cp` and `cks-w1`, hold the practice cluster. Cloud-init sets the user, your SSH key and a fixed address on each.
+
+| Set | VMID | Name | Address | CPU | Memory | Disk |
+|---|---|---|---|---|---|---|
+| cks | 221 | cks-cp | 192.168.1.221 | 2 | 3 GB | 30 GB |
+| cks | 222 | cks-w1 | 192.168.1.222 | 2 | 2.5 GB | 30 GB |
+| course | 231 | pe-lab | 192.168.1.231 | 4 | 8 GB | 60 GB |
+
+1. On your laptop, make a key pair for the lab, then copy the script and the public key to the Proxmox host.
+
+   ```bash
+   ssh-keygen -t ed25519 -f ~/.ssh/cks_proxmox
+   scp proxmox/create-vms.sh ~/.ssh/cks_proxmox.pub root@192.168.1.250:/root/
+   ```
+
+2. In the Proxmox shell, as root, create a set of VMs. The addresses, bridge and storage match one homelab, so set `NET_PREFIX`, `GATEWAY`, `BRIDGE` and `STORAGE` for yours, and run with `DRY_RUN=1` first to print every `qm` command. The script checks that each address is free and never touches a VMID that belongs to a VM with another name.
+
+   ```bash
+   SSH_KEY_FILE=/root/cks_proxmox.pub ./create-vms.sh course     # pe-lab
+   SSH_KEY_FILE=/root/cks_proxmox.pub ./create-vms.sh cks        # cks-cp and cks-w1
+   ./create-vms.sh list
+   ```
+
+3. Install the lab on `pe-lab` from the repository on your laptop. The installer runs the [Linux](#linux) steps over SSH, checks the checksum of every download, and then builds the lab. A second run skips the finished steps, and `--with-ollama` also installs Ollama and its two models for the AI modules.
+
+   ```bash
+   ./proxmox/pe-lab.sh install
+   ```
+
+4. Open the web UIs on your laptop. The command forwards each port over SSH, so the addresses in [Logins and addresses](#logins-and-addresses) work unchanged. If your laptop runs its own lab on the same ports, stop it first or set `PE_LAB_PORT_OFFSET=10000` to move the VM's UIs to http://localhost:18080 and so on. `./proxmox/pe-lab.sh ssh` opens a shell on the VM for the rest of the course.
+
+   ```bash
+   ./proxmox/pe-lab.sh ui
+   ```
+
+The practice cluster runs on `cks-cp` and `cks-w1` when you set `PRACTICE_PLATFORM=vms`, and [the practice cluster on your own VMs](platform-engineering/practice-cluster.md#the-practice-cluster-on-your-own-vms-proxmox-or-any-ssh-reachable-ubuntu) lists the other settings. `./create-vms.sh snapshot cks` takes an instant rollback point, `./create-vms.sh backup cks` writes a compressed vzdump backup, and `./create-vms.sh destroy cks` asks before it deletes anything.
+
+The cks set uses 5.5 GB of memory and `pe-lab` 8 GB, so on a 16 GB host start one set at a time with `qm stop 221 222` before `qm start 231`. The AI modules need about 2.5 GB more while a model answers, so give `pe-lab` more memory for them. With `--with-ollama`, Ollama listens on every interface of the VM, so stop it after the AI modules with `sudo systemctl stop ollama`.
+
+On the test network, cloud-init's first-boot upgrade hung, because plain HTTP downloads from the Ubuntu mirrors stalled while HTTPS worked. If yours hangs the same way, change `http://` to `https://` in `/etc/apt/sources.list.d/ubuntu.sources`, stop the stuck `apt-get`, and run `sudo dpkg --configure -a`.
 
 ### Windows with WSL2
 
@@ -584,5 +623,5 @@ The built images stay in your local Docker store, so a new `./lab.sh up` takes a
 | [Choosing the model](docs/ai-models.md) | Every AI setting, other models, and Claude through the Anthropic API |
 | [The practice cluster in depth](platform-engineering/practice-cluster.md) | The kind nodes, the shared kernel, and the same cluster on OrbStack machines or your own VMs |
 | [Timed tasks and exam preparation](platform-engineering/timed-tasks.md) | Terminal habits, the CKAD and CKS domains by module, and where the lab modules explain each topic |
-| [The lab on Proxmox](proxmox/README.md) | VMs for the lab and the practice cluster on a Proxmox host |
+| [The lab on Proxmox](#proxmox) | VMs for the lab and the practice cluster on a Proxmox host |
 | [Diagrams](docs/diagrams/) | Every diagram, drawn from Python with `bbg.py`, as SVG and Excalidraw files |
