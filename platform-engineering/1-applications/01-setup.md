@@ -94,16 +94,37 @@ practice-worker          142m         0%       461Mi           3%
 
 ## 4. Run one task
 
-Every module of tracks 1 and 4 hands you timed tasks with an id of three numbers, track, module and task, so `1.2.3` is task 3 of module 1.2. A short dry run shows the loop you repeat for each one:
+Every module of tracks 1 and 4 hands you timed tasks with an id of three numbers, track, module and task, so `1.2.3` is task 3 of module 1.2. A dry run shows the loop you repeat for each one. `setup` prepares the starting state and prints what the task starts from, and `check` scores it:
 
 ```console
 $ ./lab.sh task setup 1.2.3
-$ ./lab.sh practice shell      # solve it on the node, then exit
+== setup task 1.2.3
+...
 $ ./lab.sh task check 1.2.3
-$ ./lab.sh task solve 1.2.3
+== check task 1.2.3
+  FAIL  pod web has an init container prepare
+  FAIL  pod web is Ready
+  FAIL  nginx serves 'ready from init'
+== task 1.2.3: 0 passed, 3 failed
 ```
 
-`setup` prepares the starting state, `check` prints PASS or FAIL for each thing the task asks, and `solve` applies the reference solution, so you always end on a working state. [Timed tasks and exam preparation](../timed-tasks.md) has the terminal habits that save the most time.
+**What you should see.** Three `FAIL` lines, because nobody has solved the task yet. In a real attempt you now read the brief in [module 1.2](02-building-and-running-applications.md#task-3-an-init-container-prepares-the-content), solve it in `./lab.sh practice shell`, and check again. Here, let the reference solution do it:
+
+```console
+$ ./lab.sh task solve 1.2.3
+== solve task 1.2.3
+root@practice-control-plane:~# k apply -f /opt/apps/1.3/web.yaml
+pod/web created
+...
+$ ./lab.sh task check 1.2.3
+== check task 1.2.3
+  PASS  pod web has an init container prepare
+  PASS  pod web is Ready
+  PASS  nginx serves 'ready from init'
+== task 1.2.3: 3 passed, 0 failed
+```
+
+**What you should see.** The solution prints each command it runs on the node, then the check turns all three lines to `PASS`. In the test run the whole loop took 8 seconds. [Timed tasks and exam preparation](../timed-tasks.md) has the terminal habits that save the most time.
 
 ## Where to go next
 

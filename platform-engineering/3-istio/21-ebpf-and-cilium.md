@@ -235,7 +235,7 @@ Running Cilium under this lab's Istio ambient install makes a poor learning setu
 
 - It needs a full rebuild.
 - It needs extra Cilium settings, `cni.exclusive=false` and `socketLB.hostNamespaceOnly=true`.
-- It puts a second layer that redirects traffic under every exercise in modules 1.1 and 3.1 to 3.9, so when something breaks, you have two layers to debug.
+- It puts a second layer that redirects traffic under every exercise in modules 3.1 to 3.9, so when something breaks, you have two layers to debug.
 
 Reading:
 

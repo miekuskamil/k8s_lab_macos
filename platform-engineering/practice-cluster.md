@@ -4,7 +4,7 @@
 
 Modules 1.2 to 1.6 and 4.1 to 4.6 and the six timed practice exams run on a second cluster, the practice cluster, instead of the k3d lab. The k3d lab is built for watching a platform work, so it runs the shop, Istio and every UI on one k3s node that you drive from your Mac. The application and security modules train a different skill, fixing a given problem on a live cluster from a terminal inside its time budget, and that skill needs a cluster that looks like the ones teams build by hand.
 
-| | k3d lab (modules 1.1, 2.1 and 2.2, 2.4 to 2.9, 3.1 to 3.15, 3.17 to 3.21 and 5.1 to 5.4) | Practice cluster (modules 1.2 to 1.6 and 4.1 to 4.6) |
+| | k3d lab (tracks 2, 3 and 5) | Practice cluster (tracks 1 and 4) |
 |---|---|---|
 | Cluster | k3d on your Mac, one k3s node, Istio and the shop | kubeadm on two kind nodes in Docker, no mesh |
 | You work | from your Mac, with `kubectl` and the UIs | inside a node, with `kubectl`, `vim`, `systemctl` and `journalctl` |

@@ -3,7 +3,7 @@
 # the pe-lab VM on Proxmox. Run it on that machine as a normal user with sudo rights:
 #
 #   ./install-lab.sh                 Docker, the tools, the repository, then provision.sh
-#   ./install-lab.sh --with-ollama   the same, plus Ollama and its models for modules 5.1, 5.2, 5.3 and 5.4
+#   ./install-lab.sh --with-ollama   the same, plus Ollama and its models for track 5
 #   ./install-lab.sh --no-provision  install everything but leave the cluster alone
 #
 # Safe to run again: every step checks what is already there and skips it.
