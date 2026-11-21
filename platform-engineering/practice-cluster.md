@@ -38,9 +38,9 @@ Every tool comes from one **node image**. kind publishes a node image per Kubern
 ./lab.sh practice down --yes      # deletes the cluster and the registry; the node image stays cached
 ```
 
-In the test run on a Mac with 24 GB of memory and OrbStack, `./lab.sh practice up` took __CREATE_NOTHING__ from nothing, which includes __BUILD__ for the node image. A second `up` on a finished cluster took __CREATE_AGAIN__, and `./lab.sh practice reset` took between __RESET_MIN__ and __RESET_MAX__. A reset deletes the two node containers and starts new ones from the cached image, which is faster and cleaner than undoing every task by hand.
+In the test run on a Mac with 24 GB of memory and OrbStack, `./lab.sh practice up` took 2 minutes 38 seconds from nothing. That time includes downloading kind itself and kind's node image, and building the practice image on top. A second `up` on a finished cluster took 3 seconds, and `./lab.sh practice reset` took between 64 and 83 seconds. A reset deletes the two node containers and starts new ones from the cached image, which is faster and cleaner than undoing every task by hand.
 
-The cluster fits next to the running k3d lab. With the cluster idle, `practice-control-plane` used __MEM_CP__ of memory and `practice-worker` __MEM_W1__, while the k3d lab used __MEM_K3D__, all inside OrbStack's Docker engine with its limit of 11.7 GB. During the tasks the two nodes peaked at __MEM_PEAK__ together.
+The cluster fits next to the running k3d lab. With the cluster idle, `practice-control-plane` used about 0.95 GB of memory and `practice-worker` about 0.6 GB, while the k3d lab used between 3.3 and 4.0 GB, all inside OrbStack's Docker engine with its limit of 11.7 GB. Through all 108 tasks of modules 33 to 43 the two nodes together peaked at 2.6 GB, so the k3d lab and the practice cluster ran side by side the whole time.
 
 kind writes the cluster's kubeconfig to `~/.kube/practice-kind.yaml` instead of your main kubeconfig, so the current context of your `kubectl` stays on the k3d lab. You rarely need it, because the tasks run inside a node, but `KUBECONFIG=~/.kube/practice-kind.yaml kubectl get nodes` works from your Mac.
 
@@ -76,9 +76,9 @@ The application modules 33 to 37 run on the same two nodes as the security modul
 ./platform-engineering/practice/app-extras/reset.sh   # removes everything the application tasks and exams created
 ```
 
-In the test run, `extras.sh` took __EXTRAS__.
+In the test run, `extras.sh` took 25 seconds, most of it for metrics-server to report its first numbers.
 
-The application and security modules share one cluster, so each keeps out of the other's way. Every namespace an application task creates carries the label `practice=task`, and every practice exam namespace `practice=mock`, so `reset.sh` finds and deletes them all. Cluster-wide objects that the tasks create start with `ckad-`, and Custom Resource Definitions sit in the `ckad.io` group, so the reset finds those too. The reset also empties the registry and removes metrics-server, which the security modules don't use, and the tasks that need it install it again. It does that last, after the namespaces are gone, because a namespace only finishes deleting while every API group answers, and the metrics API stops answering when metrics-server goes. In the test run the reset took __APPRESET__.
+The application and security modules share one cluster, so each keeps out of the other's way. Every namespace an application task creates carries the label `practice=task`, and every practice exam namespace `practice=mock`, so `reset.sh` finds and deletes them all. Cluster-wide objects that the tasks create start with `ckad-`, and Custom Resource Definitions sit in the `ckad.io` group, so the reset finds those too. The reset also empties the registry and removes metrics-server, which the security modules don't use, and the tasks that need it install it again. It does that last, after the namespaces are gone, because a namespace only finishes deleting while every API group answers, and the metrics API stops answering when metrics-server goes. In the test run, after all 50 application tasks, the reset took 57 seconds.
 
 `./lab.sh practice reset` builds the cluster from scratch, so run `extras.sh` again after it.
 
