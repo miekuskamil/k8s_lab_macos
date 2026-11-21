@@ -8,7 +8,7 @@ This practice exam is the hardest of the three, harder than most real exam tasks
 
 ## Rules
 
-1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./platform-engineering/practice-exam.sh setup 3`. In the test run, the reset took 46 seconds and the setup 57 seconds, most of it for the two Helm releases of task 3.
+1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./platform-engineering/practice-exam.sh setup 3`. In the test run, the reset took 45 seconds and the setup 59 seconds, most of it for the two Helm releases of task 3.
 2. The clock starts when `setup.sh` ends, and `./platform-engineering/practice-exam.sh score 3` prints the minutes since then.
 3. Work only on `practice-control-plane`, and use only kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
 4. Don't open the solutions while the timer runs.

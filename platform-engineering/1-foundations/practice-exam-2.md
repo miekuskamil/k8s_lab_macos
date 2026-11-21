@@ -8,7 +8,7 @@ Most tasks in this practice exam start from something broken: a pod that never s
 
 ## Rules
 
-1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./platform-engineering/practice-exam.sh setup 2`. In the test run, the reset took 45 seconds and the setup 40 seconds, most of it for the Helm release of task 7.
+1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./platform-engineering/practice-exam.sh setup 2`. In the test run, the reset took 42 seconds and the setup 45 seconds, most of it for the Helm release of task 7.
 2. The clock starts when `setup.sh` ends, and `./platform-engineering/practice-exam.sh score 2` prints the minutes since then.
 3. Work only on `practice-control-plane`, and use only kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
 4. Don't open the solutions while the timer runs.
