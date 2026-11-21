@@ -116,7 +116,7 @@ Run every command from the repository folder. `./lab.sh help` prints the same li
 | `./lab.sh status` | Shows the nodes, the ArgoCD applications and every pod that is not running. |
 | `./lab.sh ui` | Opens the web UIs on localhost until you press Ctrl-C. |
 | `./lab.sh test` | Sends 100 requests to the shop and prints the status codes, the versions and the latency. |
-| `./lab.sh test 4 5` | Runs the course checks for modules 4 and 5. `./lab.sh test all` runs every module and takes about 40 minutes. |
+| `./lab.sh test 4 5` | Runs the course checks for modules 4 and 5. `./lab.sh test all` runs every module that is safe to repeat, in about 40 minutes. |
 | `./lab.sh reset` | Removes the course exercises and restores the Git baseline. `--all` also removes the course namespaces. |
 | `./lab.sh down` | Deletes the cluster after it asks. `--yes` skips the question. |
 | **The practice cluster** | |
@@ -140,7 +140,7 @@ Each command runs a script in [scripts/](scripts) or [platform-engineering/](pla
 
 ### Your first experiment
 
-The baseline sends every request to backend v1. This experiment sends 10% to v2, measures the split, and then puts the baseline back.
+The baseline sends every request to backend v1. This experiment sends 10% to v2, measures the split, and then puts the baseline back. Give the mesh a few seconds after the `kubectl apply` before the second test.
 
 ```bash
 ./lab.sh test
@@ -248,7 +248,7 @@ The seven tasks that change the kernel itself. Take each task after the module i
 
 Every lab module follows the same pattern. It explains one problem and the design that solves it, then gives you commands to run, each followed by the output you should see, then questions you answer in the UIs, and it ends with a clean-up. Run `./lab.sh reset` after each exercise. Your pod names, IP addresses and timings differ from the printed output, while names, namespaces and ports stay the same.
 
-The practice cluster modules open with theory and diagrams, then hand you timed tasks of 3 to 10 minutes each. You prepare a task, solve it against the clock, and let the script check your work, as [Practice cluster and timed tasks](#practice-cluster-and-timed-tasks) shows. Each level ends with three practice exams of 2 hours, which score your cluster out of 100 points with partial credit.
+The practice cluster modules open with theory and diagrams, then hand you timed tasks of 3 to 10 minutes each. You prepare a task, solve it against the clock, and let the script check your work, as [Practice cluster and timed tasks](#practice-cluster-and-timed-tasks) shows. Levels 1 and 3 each end with three practice exams of 2 hours, which score your cluster out of 100 points with partial credit.
 
 ![Routes through the lab modules: module 0, then the Istio, operations, platform and AI routes](docs/diagrams/chapters/readme-course-routes.svg)
 
@@ -384,7 +384,7 @@ To use another model or a hosted provider, write your settings in `lab.env`, whi
    ./lab.sh ai
    ```
 
-4. Check which model the shop assistant uses.
+4. Once module 17 has deployed the shop assistant, check which model it uses.
 
    ```bash
    curl -s localhost:8080/api/model
@@ -544,7 +544,7 @@ Start with `./lab.sh status`. It shows the sync and health of every ArgoCD appli
 | Your exercise disappeared in the middle of a module. | A new commit on `main` made ArgoCD sync. Apply the step's manifests again. |
 | A pod never appears, because a quota or LimitRange refused it. | Run `kubectl get events -A --field-selector reason=FailedCreate`. |
 | Pods fail with "too many open files" on Linux. | Raise the inotify limits as [Linux](#linux) shows. |
-| The AI modules get no answer. | Check `curl -s localhost:8080/api/model`, then that Ollama runs with `ollama list`. |
+| The AI modules get no answer. | Check that Ollama runs and has the models with `ollama list`. After module 17, `curl -s localhost:8080/api/model` shows the model the assistant calls. |
 
 To see the most recent warnings in the cluster:
 

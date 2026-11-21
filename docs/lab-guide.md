@@ -1,6 +1,6 @@
 # Lab tour
 
-This tour assumes `./lab.sh up` finished and you can open http://localhost:8080. Run all commands from the repository root, in the toolbox from `./lab.sh shell`. Start `./lab.sh ui` in a spare terminal so Grafana, Jaeger and ArgoCD are open while you work.
+This tour assumes `./lab.sh up` finished and http://localhost:8080 shows the shop. Run all commands from the repository root, in the toolbox from `./lab.sh shell`. Start `./lab.sh ui` in a spare terminal so Grafana, Jaeger and ArgoCD are open while you work.
 
 This page is the short tour. For a full introduction to Istio with diagrams, design reasons and investigation exercises in Kiali, Grafana, Jaeger and Loki, take the [Kubernetes Platform Engineering course](../README.md#the-course).
 
@@ -84,7 +84,7 @@ git push origin canary-20
 
 ## 3. Three traffic experiments
 
-Each experiment lists what to run, what you should see, and how to undo it. Wait a few seconds after you apply or remove a rule before you send traffic. While the waypoint loads the new config, a handful of requests can return 503. Use the shop UI at http://localhost:8080 (the "Burst traffic" box) or `./scripts/traffic-test.sh [requests] [concurrency] [path]`.
+Each experiment lists what to run, what you should see, and how to undo it. Wait a few seconds after you apply or remove a rule before you send traffic. While the waypoint loads the new config, a handful of requests sometimes return 503. Use the shop UI at http://localhost:8080 (the "Burst traffic" box) or `./scripts/traffic-test.sh [requests] [concurrency] [path]`.
 
 ### A. Canary release, 90% to v1 and 10% to v2
 
@@ -99,7 +99,7 @@ kubectl apply -f manifests/scenarios/a-canary-httproute.yaml
 
 ### B. Fault injection on /api/orders
 
-Gateway API routes cannot inject faults, so this experiment uses an Istio VirtualService. A route and a VirtualService for the same host conflict, so remove the route first.
+Gateway API routes have no fault injection, so this experiment uses an Istio VirtualService. A route and a VirtualService for the same host conflict, so remove the route first.
 
 ```bash
 kubectl -n shop delete httproute backend-route
@@ -129,7 +129,7 @@ kubectl apply -f manifests/scenarios/c-circuit-breaker.yaml
 
 **Undo.** `kubectl delete -f manifests/scenarios/c-circuit-breaker.yaml`
 
-The second half limits request rate. A waypoint cannot do this, so the backend has its own token bucket, controlled by an environment variable:
+The second half limits request rate. A waypoint has no rate limiter, so the backend has its own token bucket, controlled by an environment variable:
 
 ```bash
 kubectl -n shop set env deploy/backend-v1 deploy/backend-v2 RATE_LIMIT_RPS=20
@@ -260,7 +260,7 @@ This lab runs on one laptop. These are the habits worth carrying to a real clust
 ### Resources
 
 - Give every container a request and a limit. The quotas in `manifests/base/02-quotas.yaml` reject pods without them, and a LimitRange fills the gap for third-party charts.
-- Requests decide scheduling. Limits decide throttling and out-of-memory kills. Memory cannot be squeezed, so keep the memory limit close to the request.
+- Requests decide scheduling. Limits decide throttling and out-of-memory kills. Memory does not compress like CPU time, so keep the memory limit close to the request.
 - Do not set a CPU limit so low that startup gets throttled. A throttled startup fails its probe and restarts in a loop.
 - Redis runs with `--maxmemory` below the container limit, so it evicts keys and does not get killed.
 
@@ -269,7 +269,7 @@ This lab runs on one laptop. These are the habits worth carrying to a real clust
 The backend and frontend use all three kinds:
 
 - The startup probe gives the app up to 40 seconds to boot. The other probes wait until it passes.
-- The readiness probe takes a pod out of the Service when it cannot do its job. The backend checks Redis on `/readyz`, so a Redis outage drains the backends instead of returning errors.
+- The readiness probe takes a pod out of the Service when it is unable to do its job. The backend checks Redis on `/readyz`, so a Redis outage drains the backends instead of returning errors.
 - The liveness probe restarts a stuck process. It only checks the process itself (`/healthz`), never a dependency. If liveness checked Redis, a Redis outage would restart every backend and make things worse.
 
 ### Secrets
@@ -279,7 +279,7 @@ This lab commits its credentials to Git: two Secrets in `manifests/base/03-lab-c
 - Keep secret values out of Git. Use External Secrets Operator (reads from a cloud secret manager), Sealed Secrets (encrypted blobs in Git) or SOPS with age keys.
 - Remember that a Kubernetes Secret is base64, not encryption. Turn on encryption at rest for the API server.
 - Read a secret from a mounted file if it rotates. An environment variable is fixed at container start, which is why changing the Redis password here needs a pod restart.
-- Limit who can read them. The `shop-developer` Role in `manifests/base/01-rbac.yaml` has no access to Secrets.
+- Limit who reads them. The `shop-developer` Role in `manifests/base/01-rbac.yaml` has no access to Secrets.
 - Rotate anything that was ever committed. Git history keeps the old value.
 
 ### Pod hardening in this lab
