@@ -175,7 +175,7 @@ module_3_5() {
 }
 
 module_3_6() {
-  section "3.6: observability"
+  section "3.6: mesh observability"
   baseline
   curl -s -o /dev/null -m 10 -X POST -H 'content-type: application/json' -d '{"item":"verify","quantity":1}' "$BASE/api/orders"
   settle 9
@@ -570,6 +570,14 @@ module_2_8() {
   expect "after k3d deletes the node, Kubernetes still lists it" "$("${K[@]}" get node "$node" --no-headers 2>&1 | grep -c "$node")" '^1$'
   "${K[@]}" delete node "$node" >/dev/null
   expect "kubectl delete node removes it" "$("${K[@]}" get nodes --no-headers | wc -l | tr -d ' ')" '^1$'
+  # The deleted node's DaemonSet pods linger until the pod garbage collector removes them,
+  # and istioctl ztunnel-config would otherwise ask the dead node's ztunnel.
+  local zt=0
+  for _ in $(seq 1 36); do
+    zt="$("${K[@]}" -n istio-system get pods -l app=ztunnel --no-headers 2>/dev/null | wc -l | tr -d ' ')"
+    [[ "$zt" == 1 ]] && break; settle 5
+  done
+  expect "only the remaining node's ztunnel pod is left" "$zt" '^1$'
   baseline
   expect "after the reset course-ops is gone" "$("${K[@]}" get ns course-ops 2>&1 | grep -c NotFound)" '^1$'
   rm -f "$log"
@@ -752,7 +760,12 @@ module_2_3() {
   logql() { "${K[@]}" get --raw "/api/v1/namespaces/observability/services/loki:3100/proxy/loki/api/v1/$1?query=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$2")&limit=1000" 2>/dev/null; }
   "${K[@]}" apply -f "$M/2.3-plain-app.yaml" >/dev/null
   "${K[@]}" -n course-logs rollout status deploy/orders --timeout=120s >/dev/null 2>&1
-  expect "the plain app prints JSON order lines" "$("${K[@]}" -n course-logs logs deploy/orders --tail=1 2>/dev/null)" '^\{"level":"(info|error)","msg":"order (placed|failed)"'
+  local line=""
+  for _ in $(seq 1 24); do
+    line="$("${K[@]}" -n course-logs logs deploy/orders --tail=1 2>/dev/null)"
+    [[ -n "$line" ]] && break; settle 5
+  done
+  expect "the plain app prints JSON order lines" "$line" '^\{"level":"(info|error)","msg":"order (placed|failed)"'
   local n=0 failed=0
   for _ in $(seq 1 36); do
     n="$(logql query_range '{namespace="course-logs"}' | python3 -c 'import json,sys; print(sum(len(s["values"]) for s in json.load(sys.stdin)["data"]["result"]))' 2>/dev/null)"
@@ -762,8 +775,15 @@ module_2_3() {
   between "Loki holds the app's lines" "${n:-0}" 5 100000
   expect "| json | status >= 500 finds failed orders" "${failed:-0}" '^[1-9]'
   expect "Loki refuses a query with an empty selector" "$("${K[@]}" get --raw '/api/v1/namespaces/observability/services/loki:3100/proxy/loki/api/v1/query_range?query=%7B%7D' 2>&1 | grep -c BadRequest)" '^1$'
-  expect "count_over_time groups the lines by status" "$(logql query 'sum by (status) (count_over_time({namespace="course-logs"} | json [10m]))' | python3 -c 'import json,sys; print(" ".join(sorted(r["metric"]["status"] for r in json.load(sys.stdin)["data"]["result"])))' 2>/dev/null)" '^200 500$'
-  expect "unwrap gives a p95 duration for failures from 300 to 660 ms" "$(logql query 'quantile_over_time(0.95, {namespace="course-logs"} | json | status >= 500 | unwrap duration_ms [10m])' | python3 -c 'import json,sys; v=float(json.load(sys.stdin)["data"]["result"][0]["value"][1]); print(int(300 <= v <= 660))' 2>/dev/null)" '^1$'
+  # Instant queries lag the newest lines by a few seconds, so poll them too.
+  local by_status="" p95=""
+  for _ in $(seq 1 24); do
+    by_status="$(logql query 'sum by (status) (count_over_time({namespace="course-logs"} | json [10m]))' | python3 -c 'import json,sys; print(" ".join(sorted(r["metric"]["status"] for r in json.load(sys.stdin)["data"]["result"])))' 2>/dev/null)"
+    p95="$(logql query 'quantile_over_time(0.95, {namespace="course-logs"} | json | status >= 500 | unwrap duration_ms [10m])' | python3 -c 'import json,sys; v=float(json.load(sys.stdin)["data"]["result"][0]["value"][1]); print(int(300 <= v <= 660))' 2>/dev/null)"
+    [[ "$by_status" == "200 500" && "$p95" == 1 ]] && break; settle 5
+  done
+  expect "count_over_time groups the lines by status" "$by_status" '^200 500$'
+  expect "unwrap gives a p95 duration for failures from 300 to 660 ms" "$p95" '^1$'
   expect "Grafana loads the Shop logs dashboard" "$("${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- sh -c \
     'curl -s -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" localhost:3000/api/dashboards/uid/shop-logs' 2>/dev/null | grep -o '"title":"Shop logs"' | head -1)" '^"title":"Shop logs"$'
   baseline

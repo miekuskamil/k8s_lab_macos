@@ -332,7 +332,7 @@ NAME                   STATUS   ROLES                  AGE   VERSION
 k3d-k8s-lab-server-0   Ready    control-plane,master   46h   v1.31.5+k3s1
 ```
 
-**What you should see.** After `k3d node delete` the machine is gone, but Kubernetes keeps listing the node, which shows `NotReady` after about 40 seconds, and only `kubectl delete node` removes it. Cloud providers do this step for you through their cloud controller, while on bare metal and in k3d you do it yourself.
+**What you should see.** After `k3d node delete` the machine is gone, but Kubernetes keeps listing the node, which shows `NotReady` after about 40 seconds, and only `kubectl delete node` removes it. Cloud providers do this step for you through their cloud controller, while on bare metal and in k3d you do it yourself. The node's DaemonSet pods, its ztunnel and istio-cni, stay listed for a short while longer until Kubernetes cleans them up, so wait until `kubectl -n istio-system get pods -l app=ztunnel` shows one pod before you run `istioctl ztunnel-config`, which otherwise asks the ztunnel of the node that no longer exists.
 
 ## Investigate
 
