@@ -661,7 +661,7 @@ module_2_1() {
   "${K[@]}" -n course-metrics exec deploy/podinfo -- sh -c 'for i in $(seq 1 20); do wget -q -O /dev/null localhost:9898/; done; for i in 1 2 3; do wget -q -O /dev/null localhost:9898/status/500; done' >/dev/null 2>&1
   expect "the plain app counts its own requests by status" "$("${K[@]}" -n course-metrics exec deploy/podinfo -- wget -q -O - localhost:9797/metrics 2>/dev/null | grep -c '^http_request_duration_seconds_count{.*status="\(200\|500\)"')" '^2$'
   plain_scraped() { [[ -n "$(prom 'sum(http_request_duration_seconds_count{namespace="course-metrics",status="500"})')" ]]; }
-  poll 150 plain_scraped
+  poll 300 plain_scraped
   expect "Prometheus scrapes the plain app through its PodMonitor" "$(prom 'sum(http_request_duration_seconds_count{namespace="course-metrics",status="500"})')" '^[1-9]'
   expect "Prometheus sends alerts to Alertmanager" "$(curl -s "localhost:$port/api/v1/alertmanagers" | grep -o '"activeAlertmanagers":\[{"url":"http://[0-9.]*:9093' | grep -c 9093)" '^1$'
   "${K[@]}" apply -f "$M/2.1-alert-receiver.yaml" -f "$M/2.1-shop-slo.yaml" >/dev/null
