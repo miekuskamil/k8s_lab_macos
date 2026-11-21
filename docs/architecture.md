@@ -109,13 +109,13 @@ This section describes the lab as it runs after `./scripts/provision.sh`, measur
 | Headlamp | 0.46.0 |
 | cert-manager | 1.21.3 |
 | Redis | 7.4 |
-| Shop images | `k8s-lab/backend:1.0.2`, `k8s-lab/frontend:1.0.2` |
+| Shop images | `k8s-lab/backend:1.0.3`, `k8s-lab/frontend:1.0.3` |
 
 Istio 1.24 supports Kubernetes up to 1.31, which is why `provision.sh` pins the k3s image.
 
 ### What is running
 
-Measured on 12 November 2026 with the course workloads deployed: 31 pods on one node and nine ArgoCD Applications, all Synced and Healthy.
+Measured on 12 November 2026 with the course workloads deployed: 31 pods on one node and twelve ArgoCD Applications, `root` included, all Synced and Healthy.
 
 | Namespace | Pods | Memory in use |
 |---|---|---|

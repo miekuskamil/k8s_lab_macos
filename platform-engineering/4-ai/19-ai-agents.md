@@ -200,7 +200,7 @@ The istio-agent went further astray. It picked `istio_ztunnel_config`, which fai
 
 Each question used about 3,400 to 3,800 input tokens, most of them the descriptions of the agent's tools, which the agent sends with every request.
 
-For a chat window, open the UI: run `kubectl -n kagent port-forward svc/kagent-ui 8082:8080`, then open http://localhost:8082.
+For a chat window, open the UI: run `kubectl -n kagent port-forward svc/kagent-ui 8082:8080` on your Mac, which needs `kubectl` installed there because the toolbox publishes only the lab's UI ports, then open http://localhost:8082.
 
 ### 3. Skip the agent: call the tools yourself
 

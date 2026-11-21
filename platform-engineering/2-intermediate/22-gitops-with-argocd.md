@@ -4,7 +4,7 @@
 
 **Before this module:** module 0. No Istio knowledge needed.
 
-**You need:** the lab running (`./lab.sh start` starts or repairs it), `git`, and `./lab.sh ui` running in a spare terminal for the ArgoCD UI (http://localhost:8081). The lab's own Git server on http://localhost:3001 comes with the lab.
+**You need:** the lab running (`./lab.sh start` starts or repairs it), `git`, and `./lab.sh ui` running in a spare terminal for the ArgoCD UI (http://localhost:8081). Step 1 deploys a Git server of your own, Gitea, and forwards it to http://localhost:3001.
 
 The whole lab runs on ArgoCD, and so far you've mostly worked around it, because `reset.sh` re-syncs it and the course warns you not to push in the middle of an exercise. In this module ArgoCD becomes the subject: you run your own Git server inside the cluster, deploy an app from it, and practise the tasks that come up in every platform team and every GitOps interview:
 
@@ -106,7 +106,7 @@ New user 'lab' has been successfully created!
 $ kubectl -n course-gitops port-forward svc/gitea 3001:3000 >/dev/null 2>&1 &
 ```
 
-**What you should see.** The last command prints `New user 'lab' has been successfully created!`, and Gitea now answers on http://localhost:3001, where you sign in as `lab` with the password `lab-gitops-pass` to browse it. The manifest also creates the namespaces `course-gitops-dev` and `course-gitops-prod`, because the project from step 2 won't allow ArgoCD to create namespaces.
+**What you should see.** The last command prints `New user 'lab' has been successfully created!`, and Gitea now answers on http://localhost:3001 for `git push`, with the user `lab` and the password `lab-gitops-pass`. The toolbox publishes only the lab's UI ports, so to browse Gitea in your browser, run the same `port-forward` command on your Mac, which needs `kubectl` installed there. The manifest also creates the namespaces `course-gitops-dev` and `course-gitops-prod`, because the project from step 2 won't allow ArgoCD to create namespaces.
 
 ### 2. Push an app and let ArgoCD deploy it
 
