@@ -337,7 +337,7 @@ The practice exams work the same way for a whole exam. Each one gives you 2 hour
 ./lab.sh exam solve 4
 ```
 
-Aim for 80 points or more inside the time before you move on. [Timed tasks and exam preparation](platform-engineering/timed-tasks.md) has the terminal habits that save the most time, and [the practice cluster in depth](platform-engineering/practice-cluster.md) explains the nodes, the shared kernel, and how to run the same cluster on OrbStack machines or your own VMs.
+Aim for 80 points or more inside the time before you move on. [Timed tasks and exam preparation](platform-engineering/timed-tasks.md) has the terminal habits that save the most time, and [the practice cluster in depth](platform-engineering/practice-cluster.md) explains the nodes, the shared kernel, and how to run the same cluster on OrbStack machines or your own VMs. On OrbStack machines or your own VMs, run the practice, task and exam commands in your machine's own terminal, not in the toolbox, because they reach the nodes with `orb` or `ssh` and your key in `~/.ssh`.
 
 ## AI models
 
@@ -413,11 +413,11 @@ brew install kubectl helm k3d istioctl
 
 Give the machine at least 12 GB of memory, because the lab needs about 8 GB and a language model adds about 2.5 GB while it answers.
 
-1. Install Docker Engine and git, and add your user to the `docker` group. Log out and back in for the group to apply.
+1. Install Docker Engine with its Compose and Buildx plugins, then add your user to the `docker` group. The toolbox needs the `docker compose` command, which Ubuntu ships as a package of its own. Log out and back in for the group to apply.
 
    ```bash
    sudo apt-get update
-   sudo apt-get install -y docker.io git
+   sudo apt-get install -y docker.io docker-compose-v2 docker-buildx git
    sudo usermod -aG docker $USER
    ```
 
@@ -428,7 +428,7 @@ Give the machine at least 12 GB of memory, because the lab needs about 8 GB and 
    sudo sysctl --system
    ```
 
-3. Follow the [quick start](#quick-start). On a remote machine, forward the ports over SSH to open the UIs, for example `ssh -L 8080:localhost:8080 <machine>`, with one `-L` for each port in [Logins and addresses](#logins-and-addresses).
+3. Follow the [quick start](#quick-start). On a remote machine, open the UIs over SSH: run `./lab.sh ui` on the machine in an SSH session that forwards each port in [Logins and addresses](#logins-and-addresses), for example `ssh -L 8080:localhost:8080 -L 3000:localhost:3000 <machine> k8s_lab_macos/lab.sh ui`. If your own machine runs the lab too, map the ports to other local ones, such as `-L 18080:localhost:8080`.
 
 <details>
 <summary>Install the tools without the toolbox</summary>
@@ -527,7 +527,7 @@ The scripts in [proxmox/](proxmox) build Ubuntu 24.04 VMs from the official clou
    ./proxmox/pe-lab.sh ui
    ```
 
-The practice cluster runs on `cks-cp` and `cks-w1` when you set `PRACTICE_PLATFORM=vms`, and [the practice cluster on your own VMs](platform-engineering/practice-cluster.md#the-practice-cluster-on-your-own-vms-proxmox-or-any-ssh-reachable-ubuntu) lists the other settings. `./create-vms.sh snapshot cks` takes an instant rollback point, `./create-vms.sh backup cks` writes a compressed vzdump backup, and `./create-vms.sh destroy cks` asks before it deletes anything.
+The practice cluster runs on `cks-cp` and `cks-w1` when you set `PRACTICE_PLATFORM=vms` in your laptop's own terminal, outside the toolbox, and [the practice cluster on your own VMs](platform-engineering/practice-cluster.md#the-practice-cluster-on-your-own-vms-proxmox-or-any-ssh-reachable-ubuntu) lists the other settings. `./create-vms.sh snapshot cks` takes an instant rollback point, `./create-vms.sh backup cks` writes a compressed vzdump backup, and `./create-vms.sh destroy cks` asks before it deletes anything.
 
 The cks set uses 5.5 GB of memory and `pe-lab` 8 GB, so on a 16 GB host start one set at a time with `qm stop 221 222` before `qm start 231`. The AI modules need about 2.5 GB more while a model answers, so give `pe-lab` more memory for them. With `--with-ollama`, Ollama listens on every interface of the VM, so stop it after the AI modules with `sudo systemctl stop ollama`.
 

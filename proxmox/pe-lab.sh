@@ -20,7 +20,7 @@ KEY="${PE_LAB_KEY-$HOME/.ssh/cks_proxmox}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SSH=(ssh -o StrictHostKeyChecking=accept-new)
 [ -z "$KEY" ] || SSH+=(-i "$KEY")
-# The shop's ports plus every port that scripts/port-forward.sh opens on the VM.
+# The shop's ports plus every port that ./lab.sh ui opens on the VM.
 PORTS="8080 8443 8081 3000 9090 9093 16686 20001 4466"
 
 install() {
@@ -54,7 +54,7 @@ install() {
 
 ui() {
   # One SSH session forwards every port from the Mac to the same port on the VM and
-  # runs port-forward.sh there, so http://localhost:3000 on the Mac reaches Grafana in the VM.
+  # runs ./lab.sh ui there, so http://localhost:3000 on the Mac reaches Grafana in the VM.
   # PE_LAB_PORT_OFFSET=10000 moves the Mac side to 18080, 13000 and so on, next to a running local lab.
   local off="${PE_LAB_PORT_OFFSET:-0}" fwd=()
   for p in $PORTS; do
@@ -68,7 +68,7 @@ ui() {
   echo "Kiali: http://localhost:$((20001 + off))   Headlamp: http://localhost:$((4466 + off))   Jaeger: http://localhost:$((16686 + off))"
   # A dropped connection leaves the VM's kubectl port-forwards behind, so clear them first.
   "${SSH[@]}" -t -o ExitOnForwardFailure=yes "${fwd[@]}" "$HOST" \
-    'pkill -f "kubectl --context k3d-k8s-lab -n [a-z-]* port-forward svc/" ; k8s_lab_macos/scripts/port-forward.sh'
+    'pkill -f "kubectl --context k3d-k8s-lab -n [a-z-]* port-forward svc/" ; k8s_lab_macos/lab.sh ui'
 }
 
 case "${1:-}" in

@@ -1215,7 +1215,10 @@ module_45() {
   local vmct; vmct="$(docker run --rm --net host --privileged alpine:3.20 sh -c 'apk add -q conntrack-tools >/dev/null 2>&1; conntrack -L -p tcp --dport 443 2>/dev/null' 2>/dev/null | grep "src=$nodeip dst=$ip4 " | grep -v CLOSE)"
   expect "7. the VM masquerades the node's address to its own" "$(echo "$vmct" | grep -c "dst=$nodeip " )" '^0$'
   expect "7. and conntrack in the VM records the swap" "$(echo "$vmct" | grep -c .)" '^[1-9]'
-  expect "8. on the Mac, the OrbStack app holds the outside connection" "$(lsof -nP "-iTCP@$ip4:443" -sTCP:ESTABLISHED 2>/dev/null | awk 'NR>1 {print $1}' | sort -u)" 'OrbStack'
+  # Only a shell on the Mac itself sees the OrbStack app; the toolbox and Linux hosts have no view of it.
+  if [[ "$(uname -s)" == Darwin ]]; then
+    expect "8. on the Mac, the OrbStack app holds the outside connection" "$(lsof -nP "-iTCP@$ip4:443" -sTCP:ESTABLISHED 2>/dev/null | awk 'NR>1 {print $1}' | sort -u)" 'OrbStack'
+  fi
   # ztunnel logs a connection when it closes, after the 25 seconds of the hold
   local zlog=0
   for _ in $(seq 1 12); do

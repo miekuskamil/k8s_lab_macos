@@ -570,7 +570,7 @@ You can now apply the upgrade by executing the following command:
 
 	kubeadm upgrade apply v1.37.2
 ...
-root@practice-control-plane:~# kubeadm upgrade apply v1.37.2 -y
+root@practice-control-plane:~# kubeadm upgrade apply v1.37.2 -y --ignore-preflight-errors=SystemVerification
 [upgrade] Reading configuration from the "kubeadm-config" ConfigMap in namespace "kube-system"...
 [upgrade] Use 'kubeadm init phase upload-config kubeadm --config your-config-file' to re-upload it.
 ...
@@ -640,7 +640,7 @@ pod/ingress-nginx-controller-8464654b6c-fdnh8 evicted
 node/practice-worker drained
 ```
 
-`--force` lets the drain delete bare pods that no controller owns, such as the ones earlier tasks created. Then upgrade the worker on `practice-worker`:
+The flag `--ignore-preflight-errors=SystemVerification` matters on a Linux machine. kubeadm's preflight check reads the kernel's configuration, and a kind node there has neither `/proc/config.gz` nor `/boot`, so the check fails and stops the upgrade. The flag skips only that check, and on a real node you leave it out. `--force` lets the drain delete bare pods that no controller owns, such as the ones earlier tasks created. Then upgrade the worker on `practice-worker`:
 
 ```console
 root@practice-worker:~# apt-mark unhold kubeadm kubelet kubectl

@@ -108,7 +108,7 @@ On Proxmox, `proxmox/create-vms.sh` builds both VMs from the Ubuntu cloud image.
 
 ### Settings and commands
 
-Five environment variables tell the scripts where the VMs are. Export them once in your shell:
+Run these commands in your machine's own terminal, not inside `./lab.sh shell`. They reach the VMs with ssh and your key in `~/.ssh`, and the Cilium tasks call `limactl` on the Mac, and the toolbox has neither, so `./lab.sh` keeps them on your machine and stops with a message when you try them in the toolbox. Five environment variables tell the scripts where the VMs are. Export them once in your shell:
 
 ```bash
 export PRACTICE_PLATFORM=vms                  # without it, the scripts use kind

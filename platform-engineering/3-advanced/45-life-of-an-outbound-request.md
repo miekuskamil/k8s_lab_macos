@@ -390,6 +390,8 @@ Unlike flannel's rule, Docker's has no `--random-fully`, so the port `7921` surv
 
 ### 8. OrbStack and your Mac
 
+The toolbox is a container, so it sees none of your Mac's own connections. Run `hold` in the toolbox as before, then run `lsof` and `route` in a second terminal on your Mac, outside `./lab.sh shell`, after you copy the value of `IP4` there with `IP4=<the address that echo $IP4 prints in the toolbox>`.
+
 ```console
 $ hold; sleep 4
 $ lsof -nP -iTCP@$IP4:443 -sTCP:ESTABLISHED | awk '{print $1, $9, $10}'

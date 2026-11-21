@@ -151,7 +151,8 @@ ollama_service() {
   toolbox_compose_env
   "${COMPOSE[@]}" --profile ai up -d ollama
   echo "Ollama runs in the container k8s-lab-toolbox-ollama-1 on port ${LAB_OLLAMA_PORT:-11434}."
-  echo "It pulls ${LAB_OLLAMA_MODELS:-qwen2.5:3b nomic-embed-text} the first time (about 2.2 GB)."
+  echo "The first time it downloads the Ollama image (about 3.3 GB, 8.4 GB on disk) and pulls"
+  echo "${LAB_OLLAMA_MODELS:-qwen2.5:3b nomic-embed-text} (about 2.2 GB)."
   echo "Follow the download: docker compose -p k8s-lab-toolbox logs -f ollama"
 }
 
@@ -235,6 +236,9 @@ case "$command" in
   # The timed tasks and exams reach the nodes with docker exec, orb or ssh, and the Lima VM
   # with limactl, which only the host has. So they run on the host, where bash 3.2 is enough.
   task|exam) [[ "${LAB_USE_TOOLBOX:-auto}" == always ]] && want_toolbox && { toolbox_start; toolbox_exec "$ROOT/lab.sh" "$command" "$@"; exit $?; } ;;
+  # The practice cluster on OrbStack machines or your own VMs needs orb or ssh and your key in
+  # ~/.ssh, which only the host has, so it stays on the host as well.
+  practice) [[ "${PRACTICE_PLATFORM:-${CKS_PLATFORM:-kind}}" == kind ]] && want_toolbox && { toolbox_start; toolbox_exec "$ROOT/lab.sh" "$command" "$@"; exit $?; } ;;
   *)
     if want_toolbox; then
       toolbox_start
@@ -243,6 +247,12 @@ case "$command" in
       exit "$exec_status"
     fi ;;
 esac
+
+if in_toolbox && [[ "$command" =~ ^(practice|task|exam)$ ]] && [[ "${PRACTICE_PLATFORM:-${CKS_PLATFORM:-kind}}" != kind ]]; then
+  echo "With PRACTICE_PLATFORM=${PRACTICE_PLATFORM:-$CKS_PLATFORM}, run ./lab.sh $command in your machine's own terminal, not in the toolbox:" >&2
+  echo "it reaches the nodes with orb or ssh and your key in ~/.ssh, and the toolbox has neither." >&2
+  exit 1
+fi
 
 case "$command" in
   shell)  shell ;;

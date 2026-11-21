@@ -35,7 +35,7 @@ solve_m1() {
   oncp <<'EOF'
 set -e
 apt-mark unhold kubeadm >/dev/null; apt-get install -y -qq kubeadm=1.37.2-1.1 >/dev/null; apt-mark hold kubeadm >/dev/null
-kubeadm upgrade apply v1.37.2 -y >/dev/null 2>&1
+kubeadm upgrade apply v1.37.2 -y --ignore-preflight-errors=SystemVerification >/dev/null 2>&1
 kubectl drain $CP --ignore-daemonsets --delete-emptydir-data >/dev/null
 apt-mark unhold kubelet kubectl >/dev/null; apt-get install -y -qq kubelet=1.37.2-1.1 kubectl=1.37.2-1.1 >/dev/null; apt-mark hold kubelet kubectl >/dev/null
 systemctl daemon-reload; systemctl restart kubelet
