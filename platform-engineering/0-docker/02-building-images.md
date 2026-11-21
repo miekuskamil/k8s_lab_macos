@@ -92,12 +92,12 @@ CMD ["hits"]
 $ docker build --no-cache --progress=plain -f $APP/Dockerfile.single -t course/hits:single $APP 2>&1 | steps
 ran 0.0s   [1/4] FROM docker.io/library/golang:1.25.3-alpine3.22@sha256:aee43c3ccbf
 CACHED     [2/4] WORKDIR /src
-ran 0.0s   [3/4] COPY . .
-ran 4.4s   [4/4] RUN go build -o /usr/local/bin/hits .
+ran 0.1s   [3/4] COPY . .
+ran 4.0s   [4/4] RUN go build -o /usr/local/bin/hits .
 
 $ docker image ls course/hits
 REPOSITORY    TAG       IMAGE ID       CREATED         SIZE
-course/hits   single    99a0f551d5eb   3 seconds ago   435MB
+course/hits   single    6f410ebb95d5   3 seconds ago   435MB
 ```
 
 **What you should see.** `--no-cache` forbids reuse, so `COPY . .` and the compile run, the compile for about 4 seconds in the test run. The image weighs about 435 MB, because it carries the whole Go toolchain, the Alpine userland and the source code next to a program of a few megabytes. The trailing `$APP` is the build context: BuildKit receives that folder and nothing else, so `COPY . .` reads from it.
@@ -107,16 +107,16 @@ course/hits   single    99a0f551d5eb   3 seconds ago   435MB
 ```console
 $ docker build --progress=plain -f $APP/Dockerfile.single -t course/hits:single $APP 2>&1 | steps
 ran 0.0s   [1/4] FROM docker.io/library/golang:1.25.3-alpine3.22@sha256:aee43c3ccbf
-CACHED     [3/4] COPY . .
 CACHED     [2/4] WORKDIR /src
+CACHED     [3/4] COPY . .
 CACHED     [4/4] RUN go build -o /usr/local/bin/hits .
 
 $ echo "// changed at $(date)" >> $APP/main.go
 $ docker build --progress=plain -f $APP/Dockerfile.single -t course/hits:single $APP 2>&1 | steps
-ran 0.1s   [1/4] FROM docker.io/library/golang:1.25.3-alpine3.22@sha256:aee43c3ccbf
+ran 0.0s   [1/4] FROM docker.io/library/golang:1.25.3-alpine3.22@sha256:aee43c3ccbf
 CACHED     [2/4] WORKDIR /src
 ran 0.2s   [3/4] COPY . .
-ran 4.8s   [4/4] RUN go build -o /usr/local/bin/hits .
+ran 4.1s   [4/4] RUN go build -o /usr/local/bin/hits .
 ```
 
 **What you should see.** The same build again takes no work at all: every step is `CACHED`, and the build finishes in under a second. After one line changes in `main.go`, `WORKDIR` stays cached, but `COPY . .` runs, because the checksum of the copied files changed, and `go build` runs after it, because the layer below it changed. That's the chain rule from the first concept. The comment carries the current time on purpose: the cache key comes from the files' content, not from when you edited them, so appending a line you already appended in an earlier run produces a checksum BuildKit has seen, and the step comes back `CACHED`.
@@ -126,7 +126,9 @@ ran 4.8s   [4/4] RUN go build -o /usr/local/bin/hits .
 ```console
 $ cat $APP/Dockerfile
 # Two stages: the first compiles, the second holds only the program.
-FROM golang:1.25.3-alpine3.22 AS build
+# GO_IMAGE picks the Go toolchain; module 0.6 builds with a newer one.
+ARG GO_IMAGE=golang:1.25.3-alpine3.22
+FROM ${GO_IMAGE} AS build
 WORKDIR /src
 # The module file first, so a change to the code reuses this layer.
 COPY go.mod ./
@@ -147,8 +149,8 @@ ENTRYPOINT ["/hits"]
 
 $ docker build --progress=plain --build-arg VERSION=1.0.0 -t course/hits:1.0.0 $APP 2>&1 | steps
 ran 0.0s   [build 1/6] FROM docker.io/library/golang:1.25.3-alpine3.22@sha256:aee43
-CACHED     [build 2/6] WORKDIR /src
 CACHED     [build 3/6] COPY go.mod ./
+CACHED     [build 2/6] WORKDIR /src
 CACHED     [build 4/6] RUN go mod download
 ran 0.2s   [build 5/6] COPY *.go ./
 ran 4.0s   [build 6/6] RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main
@@ -161,13 +163,13 @@ CACHED     [build 2/6] WORKDIR /src
 CACHED     [build 3/6] COPY go.mod ./
 CACHED     [build 4/6] RUN go mod download
 ran 0.1s   [build 5/6] COPY *.go ./
-ran 4.4s   [build 6/6] RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main
+ran 3.9s   [build 6/6] RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main
 ran 0.0s   [stage-1 1/1] COPY --from=build /out/hits /hits
 
 $ docker image ls course/hits
-REPOSITORY    TAG       IMAGE ID       CREATED                  SIZE
-course/hits   1.0.0     3bd2ad52dfd1   Less than a second ago   8.2MB
-course/hits   single    f94020ff531b   12 seconds ago           435MB
+REPOSITORY    TAG       IMAGE ID       CREATED          SIZE
+course/hits   1.0.0     03b67dc1b71f   1 second ago     8.2MB
+course/hits   single    5a379fa7c608   13 seconds ago   435MB
 ```
 
 **What you should see.** Seven steps in two stages, `build` and `stage-1`, the unnamed final stage. After the code change, `COPY go.mod` and `go mod download` stay `CACHED`, and only `COPY *.go`, `go build` and the final `COPY --from=build` run again. The new image weighs about 8 MB, roughly 50 times smaller than the naive one, and holds exactly one file.
@@ -177,11 +179,11 @@ course/hits   single    f94020ff531b   12 seconds ago           435MB
 <!-- fails-ok -->
 ```console
 $ docker run -d --name course-hits -p 8881:8000 course/hits:1.0.0
-c5dc97b1fd9bc4fe39388842f5be52fb85d940b893f65175790360109ca12be8
+039ad1e3a114d53cf1a0de31c2e2644e21f8818791703eb35fdf8ffb64b72b01
 
 $ curl -s --retry 5 --retry-all-errors --retry-delay 1 http://host.docker.internal:8881/; curl -s http://host.docker.internal:8881/
-hello from c5dc97b1fd9b, visit 1, version 1.0.0
-hello from c5dc97b1fd9b, visit 2, version 1.0.0
+hello from 039ad1e3a114, visit 1, version 1.0.0
+hello from 039ad1e3a114, visit 2, version 1.0.0
 
 $ docker exec course-hits sh -c 'echo hi'
 OCI runtime exec failed: exec failed: unable to start container process: exec: "sh": executable file not found in $PATH
@@ -190,10 +192,10 @@ $ sleep 6; docker inspect -f 'user={{.Config.User}} health={{.State.Health.Statu
 user=65532:65532 health=healthy
 
 $ docker logs course-hits
-2026/11/21 15:44:14 hits 1.0.0 listening on :8000, redis="", uid=65532
-2026/11/21 15:44:14 GET / from 192.168.215.1:30920 in 7µs
-2026/11/21 15:44:14 GET / from 192.168.215.1:29489 in 17µs
-2026/11/21 15:44:16 GET /healthz from 127.0.0.1:39888 in 9µs
+2026/11/21 20:01:57 hits 1.0.0 listening on :8000, redis="", uid=65532
+2026/11/21 20:01:57 GET / from 192.168.215.1:63022 in 13µs
+2026/11/21 20:01:57 GET / from 192.168.215.1:41170 in 18µs
+2026/11/21 20:01:59 GET /healthz from 127.0.0.1:42018 in 9µs
 ```
 
 **What you should see.** The app answers with its hostname, the container's ID, a visit counter that counts per container because no Redis is set, and the version `1.0.0` that the build argument baked in. `docker exec ... sh` fails with `exec: "sh": executable file not found in $PATH`, because the image holds no shell. The container runs as user `65532:65532`, as the Dockerfile asked, and its health status reads `healthy` after a few seconds: the image's `HEALTHCHECK` runs `/hits healthcheck`, the same binary in a second mode, because there is no curl to call. The log lines come from the app itself and show its user ID and each request.
@@ -217,9 +219,9 @@ $ docker build --progress=plain -f $APP/Dockerfile.single -t course/hits:fat $AP
 
 $ docker run --rm course/hits:fat ls -la /src/notes
 total 102400
-drwxrwxrwx    1 root     root            14 Nov 21 15:44 .
-drwxr-xr-x    1 root     root           124 Nov 21 15:44 ..
--rw-rw-rw-    1 root     root     104857600 Nov 21 15:44 big.log
+drwxrwxrwx    1 root     root            14 Nov 21 20:02 .
+drwxr-xr-x    1 root     root           124 Nov 21 20:02 ..
+-rw-rw-rw-    1 root     root     104857600 Nov 21 20:02 big.log
 
 $ mv $APP/.dockerignore.off $APP/.dockerignore
 ```
@@ -232,7 +234,7 @@ The registry joins the toolbox's network, so the toolbox reaches it as `localhos
 
 ```console
 $ docker run -d --name course-registry --network k8s-lab-toolbox_default -p 127.0.0.1:5555:5000 registry:3.1.2
-03a9a898edbc2cfb8371386b3d4d3104bebdaa9ed882d49bd975175e7ef364ec
+5c9ea6e5e69d16a2089d19e050c0e70421c777f60429cd08c3fb15007854ac61
 
 $ docker tag course/hits:1.0.0 localhost:5555/hits:1.0.0
 $ docker push -q localhost:5555/hits:1.0.0
@@ -242,12 +244,12 @@ $ curl -s --retry 5 --retry-all-errors --retry-delay 1 http://localhost:5555/v2/
 {"name":"hits","tags":["1.0.0"]}
 
 $ docker image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' localhost:5555/hits:1.0.0
-course/hits@sha256:3bd2ad52dfd132f77f72ce07a0da6f0a893da305e60de1d3ec705cb05c98c5ae
-localhost:5555/hits@sha256:3bd2ad52dfd132f77f72ce07a0da6f0a893da305e60de1d3ec705cb05c98c5ae
+course/hits@sha256:03b67dc1b71f4f848d8f4ccc65c1fec7ad9ab78106314a5fc4009952991f5ce5
+localhost:5555/hits@sha256:03b67dc1b71f4f848d8f4ccc65c1fec7ad9ab78106314a5fc4009952991f5ce5
 
 $ D=$(curl -s -I -H 'Accept: application/vnd.oci.image.index.v1+json' http://localhost:5555/v2/hits/manifests/1.0.0 | tr -d '\r' | awk '/Docker-Content-Digest/ {print $2}')
 $ DIGEST=localhost:5555/hits@$D; echo $DIGEST
-localhost:5555/hits@sha256:3bd2ad52dfd132f77f72ce07a0da6f0a893da305e60de1d3ec705cb05c98c5ae
+localhost:5555/hits@sha256:03b67dc1b71f4f848d8f4ccc65c1fec7ad9ab78106314a5fc4009952991f5ce5
 ```
 
 **What you should see.** The registry lists the tag `1.0.0`, and the image now carries repo digests, one per name it has, both with the same `sha256` value. The registry reports that same hash in its `Docker-Content-Digest` header, because the digest is the hash of the manifest it stores, and `DIGEST` keeps it with the registry's name for step 7. With the containerd image store, which Docker 29 uses on OrbStack and on new Linux installs, the pushed manifest is an index that also carries build provenance, so the digest covers both.
@@ -256,22 +258,22 @@ localhost:5555/hits@sha256:3bd2ad52dfd132f77f72ce07a0da6f0a893da305e60de1d3ec705
 
 ```console
 $ docker build -q --build-arg VERSION=1.0.1 -t localhost:5555/hits:1.0.0 $APP
-sha256:477d434859826f475cac10a8118ac2dfd774743e8d0ce228318dcf4f7f180ce3
+sha256:f206d68a1122f65eb0aae6e0464e9d305b1ad3b9dae490d88205e446599d889c
 $ docker push -q localhost:5555/hits:1.0.0
 localhost:5555/hits:1.0.0
 
 $ docker run --rm -d --name course-by-tag -p 8882:8000 localhost:5555/hits:1.0.0
-a3ce8922807255c5a7c4de0487381c99003a81ad836ee0224b27aa4409b41e48
+8ab0d4261cb980aaeec55a8c408826368d1c0a2e5568ca6d02647ca2cc366084
 $ docker run --rm -d --name course-by-digest -p 8883:8000 $DIGEST
-Unable to find image 'localhost:5555/hits@sha256:3bd2ad52dfd132f77f72ce07a0da6f0a893da305e60de1d3ec705cb05c98c5ae' locally
-localhost:5555/hits@sha256:3bd2ad52dfd132f77f72ce07a0da6f0a893da305e60de1d3ec705cb05c98c5ae: Pulling from hits
-Digest: sha256:3bd2ad52dfd132f77f72ce07a0da6f0a893da305e60de1d3ec705cb05c98c5ae
-Status: Downloaded newer image for localhost:5555/hits@sha256:3bd2ad52dfd132f77f72ce07a0da6f0a893da305e60de1d3ec705cb05c98c5ae
-60ab5c582a0e2d77326304a8f17ec55d5c07d93817ee418e322a552c0bd87c87
+Unable to find image 'localhost:5555/hits@sha256:03b67dc1b71f4f848d8f4ccc65c1fec7ad9ab78106314a5fc4009952991f5ce5' locally
+localhost:5555/hits@sha256:03b67dc1b71f4f848d8f4ccc65c1fec7ad9ab78106314a5fc4009952991f5ce5: Pulling from hits
+Digest: sha256:03b67dc1b71f4f848d8f4ccc65c1fec7ad9ab78106314a5fc4009952991f5ce5
+Status: Downloaded newer image for localhost:5555/hits@sha256:03b67dc1b71f4f848d8f4ccc65c1fec7ad9ab78106314a5fc4009952991f5ce5
+e4c2342e841ddd482b060aabf0bfe9ef61dc0a727012eeb570604e6ed3fe7086
 
 $ curl -s --retry 5 --retry-all-errors --retry-delay 1 http://host.docker.internal:8882/; curl -s --retry 5 --retry-all-errors --retry-delay 1 http://host.docker.internal:8883/
-hello from a3ce89228072, visit 1, version 1.0.1
-hello from 60ab5c582a0e, visit 1, version 1.0.0
+hello from 8ab0d4261cb9, visit 1, version 1.0.1
+hello from e4c2342e841d, visit 1, version 1.0.0
 ```
 
 **What you should see.** Someone pushed version `1.0.1` under the tag `1.0.0`, which a registry allows unless you turn on tag immutability. The container started by tag runs the new code and reports `version 1.0.1`, while the container started by the digest you saved runs exactly the image you pushed first and reports `version 1.0.0`. No local name pointed at that digest any more, so Docker pulled it from the registry, which still keeps the old manifest. That's the reason deploy files pin digests.
@@ -284,8 +286,8 @@ hello from 60ab5c582a0e, visit 1, version 1.0.0
 $ ./lab.sh task setup 0.2.1
 == setup task 0.2.1
 total 8
--rw-rw-rw- 1 lab dialout 112 Nov 21 15:44 Dockerfile
--rw-rw-rw- 1 lab dialout  82 Nov 21 15:44 report.sh
+-rw-rw-rw- 1 lab dialout 112 Nov 21 20:02 Dockerfile
+-rw-rw-rw- 1 lab dialout  82 Nov 21 20:02 report.sh
 ```
 
 > The folder `platform-engineering/0-docker/work/task-0.2.1` holds a Dockerfile and a script. Every change to `report.sh` reinstalls `curl`, which takes seconds and needs the internet. Change the Dockerfile so that a change to `report.sh` leaves the `apk add` step cached, keep what the image does, and build it as `course/task-cache:1`.
@@ -304,7 +306,7 @@ RUN apk add --no-cache curl
 CMD ["sh", "/app/report.sh"]
 $ printf 'FROM alpine:3.22.2\nLABEL lab.course=docker\nRUN apk add --no-cache curl\nCOPY . /app\nCMD ["sh", "/app/report.sh"]\n' > platform-engineering/0-docker/work/task-0.2.1/Dockerfile
 $ docker build -q -t course/task-cache:1 platform-engineering/0-docker/work/task-0.2.1
-sha256:5355fdbeb1e34e4b69f9715e4e012b0c72f25c810db67ec9143c9f4f05d8f382
+sha256:756d1a86e0dea2b04318c534453f18daf00da67cf00c99ae7d731d2b1011ad66
 ```
 
 </details>
@@ -324,10 +326,10 @@ $ ./lab.sh task check 0.2.1
 $ ./lab.sh task setup 0.2.2
 == setup task 0.2.2
 total 16
--rw-r--r-- 1 lab dialout  215 Nov 21 15:44 .dockerignore
--rw-r--r-- 1 lab dialout  210 Nov 21 15:44 Dockerfile
--rw-r--r-- 1 lab dialout   21 Nov 21 15:44 go.mod
--rw-r--r-- 1 lab dialout 3710 Nov 21 15:44 main.go
+-rw-r--r-- 1 lab dialout  215 Nov 21 20:02 .dockerignore
+-rw-r--r-- 1 lab dialout  210 Nov 21 20:02 Dockerfile
+-rw-r--r-- 1 lab dialout   21 Nov 21 20:02 go.mod
+-rw-r--r-- 1 lab dialout 3710 Nov 21 20:02 main.go
 ```
 
 > The folder `platform-engineering/0-docker/work/task-0.2.2` holds the `hits` app with a one-stage Dockerfile that builds a 435 MB image running as root. Change the Dockerfile so the image `course/task-small:1` is under 20 MB, runs as a non-root user, and still serves the app: a container from it must answer `ok` on `/healthz`.
@@ -340,10 +342,10 @@ Compile in a build stage and copy the static binary into `scratch`, with a numer
 ```console
 $ cp platform-engineering/0-docker/lab/app/Dockerfile platform-engineering/0-docker/work/task-0.2.2/Dockerfile
 $ docker build -q -t course/task-small:1 platform-engineering/0-docker/work/task-0.2.2
-sha256:9690d2bd7379723ad31eb9827f60a624ee8877f4bdd7d083f7e5524b435e3382
+sha256:51fc97a392bc4f94c81196253ddbc71f802468667b92fa565ccf5f0f84efebfd
 $ docker image ls course/task-small
-REPOSITORY          TAG       IMAGE ID       CREATED         SIZE
-course/task-small   1         9690d2bd7379   5 minutes ago   8.2MB
+REPOSITORY          TAG       IMAGE ID       CREATED       SIZE
+course/task-small   1         51fc97a392bc   4 hours ago   8.2MB
 ```
 
 </details>
@@ -377,10 +379,10 @@ Pull the tag, read the repo digest, and start the container with `name@sha256:..
 $ docker pull -q localhost:5555/task-app:stable
 localhost:5555/task-app:stable
 $ D=$(docker image inspect -f '{{index .RepoDigests 0}}' localhost:5555/task-app:stable); echo $D
-localhost:5555/task-app@sha256:3e7881df444a6782dabdf76b7162f2ef3bd740fa31288b3513ca462cf265f3cb
+localhost:5555/task-app@sha256:0cbcac6c2340bb5fc28952827d56fd798d75ea58cbb38b73ba73514e59074ee1
 $ echo ${D#*@} > platform-engineering/0-docker/work/task-0.2.3/digest.txt
 $ docker run -d --name course-task-pinned $D
-2c73328909dfe068cd7dfc20ee3a187a856b972ca56d03ef9adbd34570122d80
+47bf012a2c8faf43a8d706cab7224b89e369885e5d50c8d2cfb165814bc5f3ba
 ```
 
 </details>
@@ -390,7 +392,7 @@ $ ./lab.sh task check 0.2.3
 == check task 0.2.3
   PASS  digest.txt holds the digest of task-app:stable
   PASS  course-task-pinned runs
-  PASS  course-task-pinned names its image by that digest (localhost:5555/task-app@sha256:3e7881df444a6782dabdf76b7162f2ef3bd740fa31288b3513ca462cf265f3cb)
+  PASS  course-task-pinned names its image by that digest (localhost:5555/task-app@sha256:0cbcac6c2340bb5fc28952827d56fd798d75ea58cbb38b73ba73514e59074ee1)
 == task 0.2.3: 3 passed, 0 failed
 ```
 
