@@ -408,7 +408,7 @@ module_3_14() {
 }
 
 module_5_1() {
-  section "5.1: an LLM as a mesh service"
+  section "5.1: an LLM behind the shop"
   baseline
   local model
   model="${LAB_OLLAMA_MODEL:-$(curl -s -m 5 $OLLAMA/api/tags | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; c=[x["name"] for x in m if "embed" not in x["name"]]; print(c[0] if c else "")' 2>/dev/null)}"
@@ -463,8 +463,13 @@ module_5_2() {
   "${K[@]}" -n ai wait --for=condition=Programmed gateway/waypoint --timeout=120s >/dev/null 2>&1; settle 10
   for _ in 1 2 3; do n="$("$ROOT/platform-engineering/llm-load.sh" | sed -n 's/.*it (over 2 s): \([0-9]*\) of 10/\1/p')"; l7=$(( l7 + ${n:-10} )); done
   between "with the waypoint's least-request balancing, fewer get stuck (3 runs, out of 30)" "$l7" 0 12
-  settle 20
-  expect "Prometheus collects the model servers' token counts" "$("${K[@]}" get --raw "${prom}?query=sum(llamacpp%3Atokens_predicted_total)" | grep -c '"value"')" '^1$'
+  # A new PodMonitor reaches Prometheus through a Secret, which takes up to four minutes.
+  local tok=0
+  for _ in $(seq 1 48); do
+    tok="$("${K[@]}" get --raw "${prom}?query=sum(llamacpp%3Atokens_predicted_total)" | grep -c '"value"')"
+    [[ "$tok" == 1 ]] && break; settle 5
+  done
+  expect "Prometheus collects the model servers' token counts" "$tok" '^1$'
   "${K[@]}" apply -f "$M/5.2-llm-smol.yaml" >/dev/null
   "${K[@]}" -n ai rollout status deploy/llm-smol --timeout=600s >/dev/null 2>&1
   "${K[@]}" apply -f "$M/5.2-route-by-model.yaml" >/dev/null; settle 10
