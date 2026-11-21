@@ -95,7 +95,7 @@ INFO[0000] HostIP: using network gateway 192.168.107.1 address
 INFO[0000] Starting node 'k3d-agent-0'
 INFO[0003] Successfully created 1 node(s)!
 
-$ k3d image import k8s-lab/backend:1.0.3 k8s-lab/frontend:1.0.3 k8s-lab/assistant:1.1.0 -c k8s-lab
+$ k3d image import k8s-lab/backend:1.0.3 k8s-lab/frontend:1.0.3 k8s-lab/assistant:1.2.0 -c k8s-lab
 INFO[0000] Importing image(s) into cluster 'k8s-lab'
 INFO[0000] Starting new tools node...
 INFO[0000] Starting node 'k3d-k8s-lab-tools'
@@ -289,7 +289,7 @@ $ docker exec k3d-agent-0 sh -c 'du -sh /var/lib/rancher/k3s/agent/containerd'
 $ docker exec k3d-agent-0 crictl rmi --prune
 Deleted: docker.io/k8s-lab/backend:1.0.3
 Deleted: docker.io/k8s-lab/frontend:1.0.3
-Deleted: docker.io/k8s-lab/assistant:1.1.0
+Deleted: docker.io/k8s-lab/assistant:1.2.0
 
 $ docker exec k3d-agent-0 crictl images
 IMAGE                              TAG                 IMAGE ID            SIZE
