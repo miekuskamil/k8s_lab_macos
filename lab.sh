@@ -32,8 +32,8 @@ Usage: ./lab.sh <command> [arguments]
   status      show the cluster, nodes, ArgoCD apps and any pod that is not Running
   ui          open the web UIs on localhost; Ctrl-C closes them
   test        send 100 requests to the shop and print the version split
-  test N...   run the course checks for modules N, for example: ./lab.sh test 4 5
-  test all    run the course checks for every module (about 50 minutes)
+  test ID...  run the course checks for modules ID, for example: ./lab.sh test 3.4 3.5
+  test all    run the course checks for every lab module that is safe to repeat (about 50 minutes)
   reset       undo course exercises and return to the Git baseline (--all also
               removes the course namespaces)
   down        delete the cluster and everything in it (asks first, --yes skips)
@@ -42,12 +42,12 @@ Usage: ./lab.sh <command> [arguments]
               two models the course uses
   help        show this list
 
-The practice cluster for modules 33 to 43 (two kubeadm nodes in Docker, built with kind):
+The practice cluster for tracks 1 and 4 (two kubeadm nodes in Docker, built with kind):
   practice up              build it (about 3 minutes the first time, 2 after that)
   practice reset           build it again from scratch, to start a module clean
   practice down            delete it (asks first, --yes skips)
   practice shell [node]    open a root shell on the control plane, or on "worker"
-  task setup|check|solve|list ID     the timed tasks, for example: ./lab.sh task setup 38.3
+  task setup|check|solve|list ID     the timed tasks, for example: ./lab.sh task setup 4.1.3
   exam setup|score|solve N [task]    the six practice exams, for example: ./lab.sh exam setup 4
 
 The toolbox (toolbox/Dockerfile and compose.yaml):

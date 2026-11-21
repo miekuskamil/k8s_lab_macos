@@ -1,7 +1,7 @@
 fullnameOverride: kube-prometheus-stack
 
 # Alertmanager receives alerts from Prometheus, groups them and sends them on.
-# Course module 23 routes them to a receiver with an AlertmanagerConfig.
+# Course module 2.1 routes them to a receiver with an AlertmanagerConfig.
 alertmanager:
   enabled: true
   alertmanagerSpec:
@@ -106,7 +106,7 @@ grafana:
       searchNamespace: ALL
     datasources:
       defaultDatasourceEnabled: true
-      # Grafana shows Alertmanager's alerts and silences (course module 24).
+      # Grafana shows Alertmanager's alerts and silences (course module 2.2).
       alertmanager:
         enabled: true
   additionalDataSources:

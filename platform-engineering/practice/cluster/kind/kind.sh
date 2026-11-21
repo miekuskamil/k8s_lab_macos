@@ -88,7 +88,7 @@ create() {
       systemctl restart containerd; }
     systemctl enable --now falco-modern-bpf >/dev/null 2>&1 || true
     echo \"$W1: runsc \$(runsc --version | awk 'NR==1{print \$3}'), falco service \$(systemctl is-active falco-modern-bpf)\""
-  # gVisor belongs to the worker only, as on the other platforms (module 41, task 9 relies on it).
+  # gVisor belongs to the worker only, as on the other platforms (module 4.4, task 9 relies on it).
   on "$CP" "rm -rf /usr/local/bin/runsc /usr/local/bin/containerd-shim-runsc-v1 /usr/local/bin/gvisor-bin
     bash /opt/practice/image-policy/install.sh"
 

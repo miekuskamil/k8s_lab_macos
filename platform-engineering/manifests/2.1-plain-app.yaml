@@ -1,0 +1,52 @@
+# Module 2.1: a plain app outside the mesh that counts its own requests.
+# podinfo serves its metrics on /metrics, and the PodMonitor tells Prometheus to scrape them.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-metrics
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: podinfo
+  namespace: course-metrics
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: podinfo}
+  template:
+    metadata:
+      labels: {app: podinfo}
+    spec:
+      containers:
+        - name: podinfo
+          image: ghcr.io/stefanprodan/podinfo:6.7.1
+          command: ["./podinfo", "--port=9898", "--port-metrics=9797"]
+          ports:
+            - {name: http, containerPort: 9898}
+            - {name: metrics, containerPort: 9797}
+          resources:
+            requests: {cpu: 20m, memory: 32Mi}
+            limits: {cpu: 200m, memory: 64Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: podinfo
+  namespace: course-metrics
+spec:
+  selector: {app: podinfo}
+  ports:
+    - {name: http, port: 9898}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: podinfo
+  namespace: course-metrics
+spec:
+  selector:
+    matchLabels: {app: podinfo}
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 15s

@@ -1,0 +1,41 @@
+# Module 2.3: a plain app outside the mesh that writes one JSON log line per order.
+# About one order in ten fails with status 500, and the duration varies, so LogQL has
+# something to filter, count and measure. Alloy collects its output like every pod's.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-logs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders
+  namespace: course-logs
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: orders}
+  template:
+    metadata:
+      labels: {app: orders}
+    spec:
+      containers:
+        - name: orders
+          image: busybox:1.37.0
+          command: ["sh", "-c"]
+          args:
+            - |
+              i=0
+              while true; do
+                i=$((i + 1))
+                r=$(awk -v s="$i" 'BEGIN { srand(s); print int(rand() * 100) }')
+                if [ "$r" -lt 10 ]; then
+                  echo "{\"level\":\"error\",\"msg\":\"order failed\",\"order\":$i,\"status\":500,\"duration_ms\":$((r * 40 + 300))}"
+                else
+                  echo "{\"level\":\"info\",\"msg\":\"order placed\",\"order\":$i,\"status\":200,\"duration_ms\":$((r / 2 + 5))}"
+                fi
+                sleep 1
+              done
+          resources:
+            requests: {cpu: 5m, memory: 8Mi}
+            limits: {cpu: 200m, memory: 16Mi}

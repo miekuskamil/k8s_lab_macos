@@ -31,5 +31,5 @@ if [ -z "${MOCK_SETUP_ORDER:-}" ]; then
 fi
 date +%s > "$HERE/.started-$MOCK"
 echo
-echo "Ready. The clock runs from now: 2 hours. Open platform-engineering/3-advanced/practice-exam-$((MOCK + 3)).md."
+echo "Ready. The clock runs from now: 2 hours. Open platform-engineering/4-security/practice-exam-$((MOCK + 3)).md."
 echo "Score yourself at any time with ./lab.sh exam score $((MOCK + 3))"

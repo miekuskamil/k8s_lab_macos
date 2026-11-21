@@ -11,28 +11,28 @@ echo "Removing course rules from the shop namespace"
 "${K[@]}" -n shop delete telemetry waypoint-access-logs --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy backend-allow-course-client --ignore-not-found >/dev/null
 "${K[@]}" -n course-sidecar delete virtualservice,destinationrule,peerauthentication --all --ignore-not-found >/dev/null 2>&1 || true
-# Module 45: the outbound client, its waypoint, the ServiceEntry and DestinationRule
+# Module 3.16: the outbound client, its waypoint, the ServiceEntry and DestinationRule
 "${K[@]}" delete namespace course-outbound --ignore-not-found >/dev/null
-# Module 31: the debugging namespace, with its access logs, routes and break files inside
+# Module 3.18: the debugging namespace, with its access logs, routes and break files inside
 "${K[@]}" delete namespace course-debug --ignore-not-found >/dev/null
-# Module 30: the sidecar and ambient test namespaces, with the Sidecar resource and patches.
-# Module 32 needs nothing here: it runs on its own k3d cluster and deletes it at the end.
+# Module 3.17: the sidecar and ambient test namespaces, with the Sidecar resource and patches.
+# Module 3.20 needs nothing here: it runs on its own k3d cluster and deletes it at the end.
 "${K[@]}" delete namespace course-proxy course-ambient --ignore-not-found >/dev/null
-# Module 29: the plain app and its client
+# Module 3.15: the plain app and its client
 "${K[@]}" delete namespace course-life --ignore-not-found >/dev/null
-# Module 28: the release first (Alloy's ClusterRole outlives the namespace), then the
+# Module 2.5: the release first (Alloy's ClusterRole outlives the namespace), then the
 # namespace and Grafana's Pyroscope data source.
 if helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n course-profiling status pyroscope >/dev/null 2>&1; then
   helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n course-profiling uninstall pyroscope --wait >/dev/null 2>&1 || true
 fi
 "${K[@]}" delete namespace course-profiling --ignore-not-found >/dev/null
-# Module 27: Qdrant's release, then the namespace. Its volume goes with the PVC.
+# Module 5.4: Qdrant's release, then the namespace. Its volume goes with the PVC.
 # The rag image and the Ollama models on your Mac stay.
 if helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n course-rag status qdrant >/dev/null 2>&1; then
   helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n course-rag uninstall qdrant --wait >/dev/null 2>&1 || true
 fi
 "${K[@]}" delete namespace course-rag --ignore-not-found >/dev/null
-# Module 26: policies before Kyverno itself, so nothing blocks the clean-up. The chart's
+# Module 2.7: policies before Kyverno itself, so nothing blocks the clean-up. The chart's
 # own hook removes the webhooks Kyverno created at runtime, and its CRDs.
 if helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kyverno status kyverno >/dev/null 2>&1; then
   "${K[@]}" delete clusterpolicies.kyverno.io,validatingpolicies.policies.kyverno.io --all --ignore-not-found >/dev/null 2>&1 || true
@@ -43,7 +43,7 @@ fi
 "${K[@]}" get validatingwebhookconfigurations,mutatingwebhookconfigurations -o name 2>/dev/null \
   | grep -i kyverno | xargs -r "${K[@]}" delete --ignore-not-found >/dev/null 2>&1 || true
 "${K[@]}" delete namespace kyverno course-policy course-tenant-a --ignore-not-found >/dev/null
-# Module 25: Helm releases first, because the Collector's ClusterRole and binding
+# Module 2.4: Helm releases first, because the Collector's ClusterRole and binding
 # outlive a namespace delete. Then the namespace and Grafana's Tempo data source.
 for release in otel-collector tempo; do
   if helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n course-otel status "$release" >/dev/null 2>&1; then
@@ -69,31 +69,34 @@ remove_datasource() {
 }
 remove_datasource course-tempo-datasource tempo Tempo
 remove_datasource course-pyroscope-datasource pyroscope Pyroscope
-# Module 24: the dashboard's namespace, and the alert rule and folder that live only in Grafana
+# Module 2.3: the plain app that writes the order lines
+"${K[@]}" delete namespace course-logs --ignore-not-found >/dev/null
+# Module 2.2: the dashboard's namespace, and the alert rule and folder that live only in Grafana
 "${K[@]}" delete namespace course-dashboards --ignore-not-found >/dev/null
 "${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- sh -c \
   'A="$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD"
    curl -s -o /dev/null -u "$A" -X DELETE localhost:3000/api/v1/provisioning/alert-rules/shop-burn-grafana
    curl -s -o /dev/null -u "$A" -X DELETE "localhost:3000/api/folders/course?forceDeleteRules=true"' >/dev/null 2>&1 || true
-# Module 23: the receiver, its Alertmanager route and the SLO rules all live in one namespace
-"${K[@]}" delete namespace course-alerts --ignore-not-found >/dev/null
-# Module 22: the ApplicationSet first (its Applications' finalizers delete what they
+# Module 2.1: the receiver, its Alertmanager route and the SLO rules all live in one namespace,
+# and the plain app with its PodMonitor in another
+"${K[@]}" delete namespace course-alerts course-metrics --ignore-not-found >/dev/null
+# Module 2.6: the ApplicationSet first (its Applications' finalizers delete what they
 # deployed), then the hand-made Application, the project, Gitea and the namespaces.
 "${K[@]}" -n argocd delete applicationset podinfo --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || true
 "${K[@]}" -n argocd delete application podinfo-dev podinfo-prod --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || true
 "${K[@]}" -n argocd delete appproject team-shop --ignore-not-found >/dev/null
 "${K[@]}" delete clusterrole podinfo-reads-everything --ignore-not-found >/dev/null
 "${K[@]}" delete namespace course-gitops course-gitops-dev course-gitops-prod --ignore-not-found >/dev/null
-# Module 21: the backup markers. The k3s upgrade itself stays, like module 14's.
+# Module 2.9: the backup markers. The k3s upgrade itself stays, like module 3.19's.
 "${K[@]}" -n default delete configmap before-backup after-backup --ignore-not-found >/dev/null
-# Module 20: the ops app and the extra node
+# Module 2.8: the ops app and the extra node
 "${K[@]}" delete namespace course-ops --ignore-not-found >/dev/null
 if k3d node list 2>/dev/null | grep -q '^k3d-agent-0'; then
   "${K[@]}" drain k3d-agent-0 --ignore-daemonsets --delete-emptydir-data --disable-eviction --timeout=120s >/dev/null 2>&1 || true
   k3d node delete k3d-agent-0 >/dev/null 2>&1 || true
 fi
 "${K[@]}" delete node k3d-agent-0 --ignore-not-found >/dev/null
-# Module 19: kagent, its CRDs and the agent's test namespace
+# Module 5.3: kagent, its CRDs and the agent's test namespace
 if helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kagent status kagent >/dev/null 2>&1; then
   helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kagent uninstall kagent --wait >/dev/null 2>&1 || true
 fi
@@ -102,10 +105,10 @@ if helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kagent status kagent-cr
 fi
 "${K[@]}" delete namespace kagent course-agent --ignore-not-found >/dev/null
 "${K[@]}" delete clusterrolebinding kagent-tools-view --ignore-not-found >/dev/null
-# Module 18: the model servers. Deleting the namespace removes the downloaded models too.
+# Module 5.2: the model servers. Deleting the namespace removes the downloaded models too.
 "${K[@]}" delete namespace ai --ignore-not-found >/dev/null
 "${K[@]}" -n observability delete servicemonitor ai-models --ignore-not-found >/dev/null
-# Module 17: the shop assistant and the Ollama ServiceEntry
+# Module 5.1: the shop assistant and the Ollama ServiceEntry
 "${K[@]}" -n shop delete deployment,service,serviceaccount -l app=assistant --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete serviceaccount assistant --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete httproute assistant ollama-timeout --ignore-not-found >/dev/null
@@ -113,18 +116,18 @@ fi
 "${K[@]}" -n shop delete destinationrule anthropic-api-tls --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete secret anthropic --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy backend-allow-assistant ollama-chat-only anthropic-assistant-only --ignore-not-found >/dev/null
-# Module 16: the classic ingress gateway. Deleting its namespace removes the Helm release too.
+# Module 3.14: the classic ingress gateway. Deleting its namespace removes the Helm release too.
 "${K[@]}" delete namespace istio-ingress --ignore-not-found >/dev/null
-# Module 15: the faulty backend pod
+# Module 3.13: the faulty backend pod
 "${K[@]}" -n shop delete deployment backend-v1-faulty --ignore-not-found >/dev/null
-# Module 13: end-user authentication with JWT
+# Module 3.12: end-user authentication with JWT
 "${K[@]}" -n shop-ingress delete requestauthentication shop-jwt --ignore-not-found >/dev/null
 "${K[@]}" -n shop-ingress delete authorizationpolicy shop-require-jwt --ignore-not-found >/dev/null
-# Module 12: egress to httpbin.org
+# Module 3.11: egress to httpbin.org
 "${K[@]}" -n shop delete serviceentry httpbin-org --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy httpbin-org-read-only --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete networkpolicy course-client-egress --ignore-not-found >/dev/null
-# Module 11: the HTTP to HTTPS redirect and the shop certificate
+# Module 3.10: the HTTP to HTTPS redirect and the shop certificate
 "${K[@]}" -n shop delete httproute http-to-https --ignore-not-found >/dev/null
 "${K[@]}" -n shop-ingress delete certificate shop-tls --ignore-not-found >/dev/null 2>&1 || true
 "${K[@]}" -n shop-ingress delete secret shop-tls --ignore-not-found >/dev/null

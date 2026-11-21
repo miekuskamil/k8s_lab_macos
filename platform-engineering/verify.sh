@@ -3,7 +3,7 @@
 # Use it to confirm the course works on your lab, or to check your own work.
 #
 #   ./platform-engineering/verify.sh          run every module (about 50 minutes)
-#   ./platform-engineering/verify.sh 4 5      run only modules 4 and 5
+#   ./platform-engineering/verify.sh 3.4 3.5  run only modules 3.4 and 3.5
 #
 # The script changes routing and policies while it runs and restores the baseline at the end.
 set -uo pipefail
@@ -42,17 +42,18 @@ count_matching() { grep -c "$1" || true; }
 
 baseline() { "$ROOT/platform-engineering/reset.sh" >/dev/null 2>&1; settle 5; }
 
-module_0() {
-  section "0: the lab is ready"
+module_1_1() {
+  section "1.1: the lab is ready"
   expect "kubectl reaches the cluster" "$("${K[@]}" get nodes --no-headers 2>&1 | awk '{print $2}' | head -1)" '^Ready$'
-  expect "istioctl is installed" "$("${I[@]}" version 2>&1 | grep -c 'control plane version')" '^1$'
   expect "the shop answers on localhost:8080" "$(code "$BASE/healthz")" '^200$'
   expect "no ArgoCD application is unhealthy" "$("${K[@]}" -n argocd get applications --no-headers | awk '$3!="Healthy"' | wc -l | tr -d ' ')" '^0$'
   expect "Kiali answers" "$("${K[@]}" -n istio-system get deploy kiali -o jsonpath='{.status.readyReplicas}')" '^1$'
 }
 
-module_1() {
-  section "1: what a mesh adds"
+module_3_1() {
+  section "3.1: what a mesh adds"
+  expect "istioctl reaches the control plane" "$("${I[@]}" version 2>&1 | grep -c 'control plane version')" '^1$'
+  expect "istiod manages 3 proxies at the baseline" "$("${I[@]}" version 2>&1 | grep -o '([0-9]* proxies)')" '^\(3 proxies\)$'
   expect "the shop namespace is in ambient mode" "$("${K[@]}" get ns shop -o jsonpath='{.metadata.labels.istio\.io/dataplane-mode}')" '^ambient$'
   expect "shop pods have no sidecar (one container each)" "$("${K[@]}" -n shop get pods -l app=backend -o jsonpath='{.items[0].spec.containers[*].name}')" '^backend$'
   expect "ztunnel lists the backend as an HBONE workload" "$("${I[@]}" ztunnel-config workloads 2>/dev/null | grep -c 'backend-v1.*HBONE')" '^[1-9]'
@@ -68,9 +69,9 @@ module_1() {
   expect "no shop app pod has a proxy of its own" "$(echo "$proxies" | grep -cE '^(backend|frontend|redis)-')" '^0$'
 }
 
-module_2() {
-  section "2: identity and mTLS"
-  "${K[@]}" apply -f "$M/02-outside-client.yaml" >/dev/null
+module_3_2() {
+  section "3.2: identity and mTLS"
+  "${K[@]}" apply -f "$M/3.2-outside-client.yaml" >/dev/null
   "${K[@]}" -n course-outside rollout status deploy/client --timeout=180s >/dev/null
   "${K[@]}" label ns course-outside istio.io/dataplane-mode- >/dev/null 2>&1; settle 3
   expect "ztunnel holds a certificate for the backend identity" "$("${I[@]}" ztunnel-config certificates 2>/dev/null | grep -c 'ns/shop/sa/backend.*Leaf')" '^[1-9]'
@@ -89,9 +90,9 @@ module_2() {
   expect "after removing the label, it is locked out again" "$(in_outside curl -s -m 5 -o /dev/null -w '%{http_code}' http://frontend.shop:3000/healthz)" '^000$'
 }
 
-module_3() {
-  section "3: authorization"
-  "${K[@]}" apply -f "$M/03-course-client.yaml" >/dev/null
+module_3_3() {
+  section "3.3: authorization"
+  "${K[@]}" apply -f "$M/3.3-course-client.yaml" >/dev/null
   "${K[@]}" -n shop rollout status deploy/course-client --timeout=180s >/dev/null
   "${K[@]}" -n shop delete authorizationpolicy backend-allow-course-client --ignore-not-found >/dev/null; settle 4
   local pod_ip
@@ -99,7 +100,7 @@ module_3() {
   expect "course-client is refused by the waypoint (L7)" "$(in_shop curl -s -m 5 -o /dev/null -w '%{http_code}' http://backend:8000/api/version)" '^403$'
   expect "the waypoint writes the refusal body itself" "$(in_shop curl -s -m 5 http://backend:8000/api/version)" '^RBAC: access denied$'
   expect "the frontend has no policy and answers course-client" "$(in_shop curl -s -m 5 -o /dev/null -w '%{http_code}' http://frontend:3000/healthz)" '^200$'
-  "${K[@]}" apply -f "$M/03-allow-course-client.yaml" >/dev/null; settle 4
+  "${K[@]}" apply -f "$M/3.3-allow-course-client.yaml" >/dev/null; settle 4
   expect "with its own rule, GET /api/version is allowed" "$(in_shop curl -s -m 5 -o /dev/null -w '%{http_code}' http://backend:8000/api/version)" '^200$'
   expect "the rule does not cover /api/orders" "$(in_shop curl -s -m 5 -o /dev/null -w '%{http_code}' http://backend:8000/api/orders)" '^403$'
   expect "dialing a backend pod IP is refused by ztunnel (L4)" "$(in_shop curl -s -m 5 -o /dev/null -w '%{http_code}' "http://${pod_ip}:8000/api/orders")" '^000$'
@@ -114,8 +115,8 @@ module_3() {
   "${K[@]}" -n shop delete authorizationpolicy backend-allow-course-client >/dev/null
 }
 
-module_4() {
-  section "4: traffic routing"
+module_3_4() {
+  section "3.4: traffic routing"
   baseline
   local out
   out="$(burst 100 10 /api/version)"
@@ -123,27 +124,27 @@ module_4() {
   "${K[@]}" apply -f "$ROOT/manifests/scenarios/a-canary-httproute.yaml" >/dev/null; settle 5
   out="$(burst 300 10 /api/version)"
   between "canary 90/10: v2 gets about 10% of 300" "$(echo "$out" | count_matching ' v2$')" 10 60
-  "${K[@]}" apply -f "$M/04-route-50-50.yaml" >/dev/null; settle 5
+  "${K[@]}" apply -f "$M/3.4-route-50-50.yaml" >/dev/null; settle 5
   out="$(burst 300 10 /api/version)"
   between "50/50: v2 gets about half of 300" "$(echo "$out" | count_matching ' v2$')" 110 190
-  "${K[@]}" apply -f "$M/04-route-by-path.yaml" >/dev/null; settle 5
+  "${K[@]}" apply -f "$M/3.4-route-by-path.yaml" >/dev/null; settle 5
   between "path rule: /api/version always reaches v2" "$(burst 50 5 /api/version | count_matching ' v2$')" 50 50
   between "path rule: /api/orders always reaches v1" "$(burst 50 5 /api/orders | count_matching ' v1$')" 50 50
   expect "the waypoint holds the path match from the HTTPRoute" "$("${I[@]}" proxy-config routes deploy/waypoint -n shop 2>/dev/null | grep 'backend.shop' | grep -c 'PathPrefix:/api/version.*backend-route-0-istio-autogenerated-k8s-gateway')" '^[1-9]'
-  sed 's/name: backend-v2/name: backend-v3/' "$M/04-route-by-path.yaml" | "${K[@]}" apply -f - >/dev/null; settle 5
+  sed 's/name: backend-v2/name: backend-v3/' "$M/3.4-route-by-path.yaml" | "${K[@]}" apply -f - >/dev/null; settle 5
   expect "a broken backendRef reports ResolvedRefs=False BackendNotFound" "$("${K[@]}" -n shop get httproute backend-route -o jsonpath='{.status.parents[0].conditions[?(@.type=="ResolvedRefs")].status} {.status.parents[0].conditions[?(@.type=="ResolvedRefs")].reason}')" '^False BackendNotFound$'
   expect "the broken rule fails /api/version" "$(code "$BASE/api/version")" '^500$'
   expect "the other rule keeps /api/orders working" "$(code "$BASE/api/orders")" '^200$'
   baseline
 }
 
-module_5() {
-  section "5: resilience"
+module_3_5() {
+  section "3.5: resilience"
   baseline
   # waypoint_log <regex>: how many recent waypoint access log lines match
   waypoint_log() { settle 2; "${K[@]}" -n shop logs deploy/waypoint --since=2m 2>/dev/null | grep -cE "$1" || true; }
   "${K[@]}" -n shop delete httproute backend-route >/dev/null
-  "${K[@]}" apply -f "$ROOT/manifests/scenarios/b-fault-injection.yaml" -f "$M/06-waypoint-access-logs.yaml" >/dev/null; settle 6
+  "${K[@]}" apply -f "$ROOT/manifests/scenarios/b-fault-injection.yaml" -f "$M/3.6-waypoint-access-logs.yaml" >/dev/null; settle 6
   local out started elapsed
   out="$(burst 200 10 /api/orders)"
   between "fault injection: about 10% of 200 return 503" "$(echo "$out" | count_matching '^503')" 5 45
@@ -152,18 +153,18 @@ module_5() {
   started=$(date +%s); curl -s -o /dev/null -m 10 "$BASE/api/orders"; curl -s -o /dev/null -m 10 "$BASE/api/orders"; elapsed=$(( $(date +%s) - started ))
   between "fault injection: two requests take at least 1 second" "$elapsed" 1 5
   baseline
-  "${K[@]}" apply -f "$M/05-timeout.yaml" -f "$M/06-waypoint-access-logs.yaml" >/dev/null; settle 5
+  "${K[@]}" apply -f "$M/3.5-timeout.yaml" -f "$M/3.6-waypoint-access-logs.yaml" >/dev/null; settle 5
   expect "timeout: a 300 ms request still succeeds" "$(code "$BASE/api/slow?ms=300")" '^200$'
   expect "timeout: a 3 s request is cut off with 504" "$(code "$BASE/api/slow?ms=3000")" '^504$'
   expect "timeout: the waypoint wrote the body" "$(curl -s -m 10 "$BASE/api/slow?ms=3000")" '^upstream request timeout$'
   expect "timeout: the access log shows UT response_timeout" "$(waypoint_log '504 UT response_timeout')" '^[1-9]'
   baseline
   between "no circuit breaker: 50 parallel slow requests all succeed" "$(burst 200 50 '/api/slow?ms=300' | count_matching '^200')" 195 200
-  "${K[@]}" apply -f "$ROOT/manifests/scenarios/c-circuit-breaker.yaml" -f "$M/06-waypoint-access-logs.yaml" >/dev/null; settle 6
+  "${K[@]}" apply -f "$ROOT/manifests/scenarios/c-circuit-breaker.yaml" -f "$M/3.6-waypoint-access-logs.yaml" >/dev/null; settle 6
   between "circuit breaker: most of 200 parallel requests get 503" "$(burst 200 50 '/api/slow?ms=300' | count_matching '^503')" 100 200
   expect "circuit breaker: the access log shows UO overflow" "$(waypoint_log '503 UO upstream_reset_before_response_started\{overflow\}')" '^[1-9]'
   baseline
-  "${K[@]}" apply -f "$M/06-waypoint-access-logs.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.6-waypoint-access-logs.yaml" >/dev/null
   "${K[@]}" -n shop set env deploy/backend-v1 deploy/backend-v2 RATE_LIMIT_RPS=20 >/dev/null
   "${K[@]}" -n shop rollout status deploy/backend-v1 --timeout=180s >/dev/null
   "${K[@]}" -n shop rollout status deploy/backend-v2 --timeout=180s >/dev/null; settle 20
@@ -173,8 +174,8 @@ module_5() {
   baseline
 }
 
-module_6() {
-  section "6: observability"
+module_3_6() {
+  section "3.6: mesh observability"
   baseline
   curl -s -o /dev/null -m 10 -X POST -H 'content-type: application/json' -d '{"item":"verify","quantity":1}' "$BASE/api/orders"
   settle 9
@@ -183,7 +184,7 @@ module_6() {
   expect "Jaeger has a trace for POST /api/orders" "$trace_id" '^[0-9a-f]{16,32}$'
   expect "the same trace id appears in the backend logs" "$("${K[@]}" -n shop logs -l app=backend --tail=300 2>/dev/null | grep -c "$trace_id")" '^[1-9]'
   expect "that trace spans the gateway, the waypoint and the backend" "$("${K[@]}" get --raw "/api/v1/namespaces/observability/services/jaeger-query:16686/proxy/api/traces/${trace_id}" 2>/dev/null | python3 -c 'import json,sys; t=json.load(sys.stdin)["data"][0]; print(len({p["serviceName"] for p in t["processes"].values()}))' 2>/dev/null)" '^3$'
-  "${K[@]}" apply -f "$M/06-waypoint-access-logs.yaml" >/dev/null; settle 5
+  "${K[@]}" apply -f "$M/3.6-waypoint-access-logs.yaml" >/dev/null; settle 5
   curl -s -o /dev/null -m 10 "$BASE/api/version"; settle 2
   expect "the waypoint writes access logs after the Telemetry rule" "$("${K[@]}" -n shop logs deploy/waypoint --tail=20 2>/dev/null | grep -c 'GET /api/version')" '^[1-9]'
   expect "Prometheus has waypoint request metrics" "$("${K[@]}" get --raw '/api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/query?query=count(istio_requests_total%7Breporter%3D%22waypoint%22%7D)' 2>/dev/null | python3 -c 'import json,sys; r=json.load(sys.stdin)["data"]["result"]; print(r[0]["value"][1] if r else 0)' 2>/dev/null)" '^[1-9]'
@@ -209,12 +210,12 @@ module_6() {
   expect "reset.sh puts sampling back to 100%" "$("${K[@]}" -n istio-system get telemetry mesh-default -o jsonpath='{.spec.tracing[0].randomSamplingPercentage}')" '^100$'
 }
 
-module_7() {
-  section "7: sidecar mode"
-  "${K[@]}" apply -f "$M/07-sidecar-namespace.yaml" -f "$M/07-sidecar-apps.yaml" -f "$M/07-sidecar-podmonitor.yaml" >/dev/null
+module_3_9() {
+  section "3.9: sidecar mode"
+  "${K[@]}" apply -f "$M/3.9-sidecar-namespace.yaml" -f "$M/3.9-sidecar-apps.yaml" -f "$M/3.9-sidecar-podmonitor.yaml" >/dev/null
   "${K[@]}" -n course-sidecar rollout status deploy/httpbin --timeout=240s >/dev/null
   "${K[@]}" -n course-sidecar rollout status deploy/client --timeout=240s >/dev/null
-  "${K[@]}" apply -f "$M/02-outside-client.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.2-outside-client.yaml" >/dev/null
   "${K[@]}" -n course-outside rollout status deploy/client --timeout=180s >/dev/null
   "${K[@]}" -n course-sidecar delete peerauthentication,virtualservice --all --ignore-not-found >/dev/null 2>&1; settle 4
   expect "injected pods run two containers" "$("${K[@]}" -n course-sidecar get pod -l app=httpbin -o jsonpath='{.items[0].spec.containers[*].name}')" 'httpbin istio-proxy'
@@ -232,16 +233,16 @@ module_7() {
   expect "the operator added the sidecar PodMonitor to Prometheus's config" "$scrape_jobs" '^[1-9]'
   expect "httpbin sees the client certificate identity" "$(in_sidecar curl -s -m 5 http://httpbin:8000/headers | grep -c 'spiffe://cluster.local/ns/course-sidecar/sa/client')" '^[1-9]'
   expect "PERMISSIVE: a plaintext client gets in" "$(in_outside curl -s -m 5 -o /dev/null -w '%{http_code}' http://httpbin.course-sidecar:8000/status/200)" '^200$'
-  "${K[@]}" apply -f "$M/07-sidecar-strict-mtls.yaml" >/dev/null; settle 5
+  "${K[@]}" apply -f "$M/3.9-sidecar-strict-mtls.yaml" >/dev/null; settle 5
   expect "STRICT: the plaintext client is refused" "$(in_outside curl -s -m 5 -o /dev/null -w '%{http_code}' http://httpbin.course-sidecar:8000/status/200)" '^000$'
   expect "STRICT: the sidecar client still works" "$(in_sidecar curl -s -m 5 -o /dev/null -w '%{http_code}' http://httpbin:8000/status/200)" '^200$'
   expect "istioctl describe now reports STRICT" "$("${I[@]}" x describe pod "$httpbin_pod.course-sidecar" 2>/dev/null | grep 'Workload mTLS mode')" 'STRICT'
   local plain retried
   plain="$(in_sidecar sh -c 'ok=0; for i in $(seq 1 80); do c=$(curl -s -o /dev/null -w "%{http_code}" "http://httpbin:8000/unstable?failure_rate=0.5"); [ "$c" = 200 ] && ok=$((ok+1)); done; echo $ok')"
-  "${K[@]}" apply -f "$M/07-sidecar-retries.yaml" >/dev/null; settle 5
+  "${K[@]}" apply -f "$M/3.9-sidecar-retries.yaml" >/dev/null; settle 5
   retried="$(in_sidecar sh -c 'ok=0; for i in $(seq 1 80); do c=$(curl -s -o /dev/null -w "%{http_code}" "http://httpbin:8000/unstable?failure_rate=0.5"); [ "$c" = 200 ] && ok=$((ok+1)); done; echo $ok')"
   if (( retried > plain )); then pass "retries raise the success count ($plain of 80 without, $retried of 80 with)"; else fail "retries raise the success count" "$plain without, $retried with"; fi
-  "${K[@]}" apply -f "$M/07-sidecar-fault.yaml" >/dev/null; settle 5
+  "${K[@]}" apply -f "$M/3.9-sidecar-fault.yaml" >/dev/null; settle 5
   expect "the client sidecar injects a 2 s delay" "$(in_sidecar curl -s -m 10 -o /dev/null -w '%{time_total}' http://httpbin:8000/status/200)" '^2\.'
   "${K[@]}" -n course-sidecar delete virtualservice httpbin >/dev/null
   expect "cross-mode: the sidecar client reaches the ambient frontend" "$(in_sidecar curl -s -m 5 -o /dev/null -w '%{http_code}' http://frontend.shop:3000/healthz)" '^200$'
@@ -251,8 +252,8 @@ module_7() {
   expect "istioctl sees the sidecar proxies" "$("${I[@]}" proxy-status 2>/dev/null | grep -c 'course-sidecar')" '^2$'
 }
 
-module_8() {
-  section "8: incidents"
+module_3_7() {
+  section "3.7: incidents"
   baseline
   "$ROOT/platform-engineering/incident.sh" 1 >/dev/null; settle 5
   expect "incident 1 shows 403" "$(code "$BASE/api/orders")" '^403$'
@@ -279,22 +280,22 @@ module_8() {
   expect "after the repair the shop answers 200" "$(code "$BASE/api/orders")" '^200$'
 }
 
-module_11() {
-  section "11: TLS at the edge"
+module_3_10() {
+  section "3.10: TLS at the edge"
   baseline
   local ca="${TMPDIR:-/tmp}/k8s-lab-ca.crt" before after
   expect "the lab-ca issuer is Ready" "$("${K[@]}" get clusterissuer lab-ca -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}')" '^True$'
   "${K[@]}" -n cert-manager get secret lab-root-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > "$ca"
-  "${K[@]}" apply -f "$M/11-certificate.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.10-certificate.yaml" >/dev/null
   expect "cert-manager issues the shop certificate" "$("${K[@]}" -n shop-ingress wait --for=condition=Ready certificate/shop-tls --timeout=90s 2>&1)" 'condition met'
   expect "the lab root CA signed it" "$("${K[@]}" -n shop-ingress get secret shop-tls -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -noout -issuer)" 'k8s-lab root CA'
-  "${K[@]}" apply -f "$M/11-gateway-https.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.10-gateway-https.yaml" >/dev/null
   "${K[@]}" -n shop-ingress wait --for=condition=Programmed gateway/shop-gateway --timeout=60s >/dev/null 2>&1
   local c=000
   for _ in $(seq 1 12); do c="$(code --cacert "$ca" "https://localhost:8443/healthz")"; [[ "$c" == 200 ]] && break; settle 5; done
   expect "HTTPS answers when curl trusts the lab CA" "$c" '^200$'
   expect "HTTPS fails when curl does not trust the lab CA" "$(curl -s -o /dev/null -m 10 -w '%{exitcode}' https://localhost:8443/healthz 2>/dev/null)" '^60$'
-  "${K[@]}" apply -f "$M/11-redirect.yaml" >/dev/null; settle 8
+  "${K[@]}" apply -f "$M/3.10-redirect.yaml" >/dev/null; settle 8
   expect "plain HTTP gets a 301 to HTTPS" "$(curl -s -o /dev/null -m 10 -w '%{http_code} %{redirect_url}' "$BASE/api/orders")" '^301 https://localhost:8443/api/orders$'
   expect "following the redirect reaches the shop" "$(code -L --cacert "$ca" "$BASE/api/orders")" '^200$'
   before="$(openssl s_client -connect localhost:8443 -servername localhost </dev/null 2>/dev/null | openssl x509 -noout -serial 2>/dev/null)"
@@ -309,24 +310,24 @@ module_11() {
   rm -f "$ca"
 }
 
-module_12() {
-  section "12: egress"
+module_3_11() {
+  section "3.11: egress"
   baseline
-  "${K[@]}" apply -f "$M/03-course-client.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.3-course-client.yaml" >/dev/null
   # A fresh pod picks up DNS capture, which older labs turned on after the pod started.
   "${K[@]}" -n shop rollout restart deploy/course-client >/dev/null
   "${K[@]}" -n shop rollout status deploy/course-client --timeout=120s >/dev/null
   ext() { in_shop curl -s -o /dev/null -m 10 -w '%{http_code}' "$@"; }
   expect "by default a mesh pod reaches any website" "$(ext https://example.com)" '^200$'
-  "${K[@]}" apply -f "$M/12-serviceentry.yaml" >/dev/null; settle 8
+  "${K[@]}" apply -f "$M/3.11-serviceentry.yaml" >/dev/null; settle 8
   expect "DNS answers httpbin.org with the ServiceEntry's virtual IP" "$(in_shop nslookup httpbin.org | grep -A1 'Name:' | grep -o '240\.240\.[0-9.]*' | head -1)" '^240\.240\.'
   expect "the waypoint adds TLS (httpbin sees https)" "$(in_shop curl -s -m 15 http://httpbin.org/get | grep '"url"')" 'https://httpbin.org/get'
   settle 2
   expect "ztunnel sends the call to the waypoint" "$("${K[@]}" -n istio-system logs ds/ztunnel --since=30s | grep course-client | grep 'dst.service="httpbin.org"' | grep -c 'dst.workload="waypoint')" '^[1-9]'
-  "${K[@]}" apply -f "$M/12-egress-lockdown.yaml" >/dev/null; settle 5
+  "${K[@]}" apply -f "$M/3.11-egress-lockdown.yaml" >/dev/null; settle 5
   expect "with the NetworkPolicy, other websites are blocked" "$(ext https://example.com)" '^000$'
   expect "httpbin.org still works through the waypoint" "$(ext http://httpbin.org/get)" '^200$'
-  "${K[@]}" apply -f "$M/12-egress-policy.yaml" >/dev/null; settle 6
+  "${K[@]}" apply -f "$M/3.11-egress-policy.yaml" >/dev/null; settle 6
   expect "the L7 rule allows GET /get" "$(ext http://httpbin.org/get)" '^200$'
   expect "the L7 rule blocks GET /ip" "$(ext http://httpbin.org/ip)" '^403$'
   expect "the L7 rule blocks POST /post" "$(ext -X POST http://httpbin.org/post)" '^403$'
@@ -334,17 +335,17 @@ module_12() {
   expect "after the reset the course client reaches any website again" "$(ext https://example.com)" '^200$'
 }
 
-module_13() {
-  section "13: end-user authentication with JWT"
+module_3_12() {
+  section "3.12: end-user authentication with JWT"
   baseline
   local J="$ROOT/platform-engineering/jwt"
   tok() { code -H "Authorization: Bearer $(cat "$J/$1.jwt")" "${@:2}"; }
-  "${K[@]}" apply -f "$M/13-request-authentication.yaml" >/dev/null; settle 6
+  "${K[@]}" apply -f "$M/3.12-request-authentication.yaml" >/dev/null; settle 6
   expect "with RequestAuthentication only, no token still passes" "$(code "$BASE/api/orders")" '^200$'
   expect "a valid token passes" "$(tok alice "$BASE/api/orders")" '^200$'
   expect "an expired token gets 401" "$(tok expired "$BASE/api/orders")" '^401$'
   expect "a token signed with an unknown key gets 401" "$(tok forged "$BASE/api/orders")" '^401$'
-  "${K[@]}" apply -f "$M/13-require-jwt.yaml" >/dev/null; settle 6
+  "${K[@]}" apply -f "$M/3.12-require-jwt.yaml" >/dev/null; settle 6
   expect "the web page stays open without a token" "$(code "$BASE/")" '^200$'
   expect "the API now needs a token (403 without one)" "$(code "$BASE/api/orders")" '^403$'
   expect "alice reads orders" "$(tok alice "$BASE/api/orders")" '^200$'
@@ -354,26 +355,26 @@ module_13() {
   expect "after the reset the API answers without a token" "$(code "$BASE/api/orders")" '^200$'
 }
 
-module_15() {
-  section "15: outlier detection and retries"
+module_3_13() {
+  section "3.13: outlier detection and retries"
   baseline
-  "${K[@]}" apply -f "$M/15-faulty-pod.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.13-faulty-pod.yaml" >/dev/null
   "${K[@]}" -n shop rollout status deploy/backend-v1-faulty --timeout=120s >/dev/null 2>&1; settle 5
   faulty_calls() { "${K[@]}" -n shop logs deploy/backend-v1-faulty --since=30m 2>/dev/null | grep -c '/api/orders' || true; }
   local out before
   out="$(burst 90 3 /api/orders)"
   between "a faulty pod makes about a third of requests fail" "$(echo "$out" | count_matching '^503')" 15 50
-  "${K[@]}" apply -f "$M/15-outlier-detection.yaml" >/dev/null; settle 6
+  "${K[@]}" apply -f "$M/3.13-outlier-detection.yaml" >/dev/null; settle 6
   burst 30 3 /api/orders >/dev/null; settle 2
   between "outlier detection ejects it: no more failures" "$(burst 90 3 /api/orders | count_matching '^503')" 0 0
   "${K[@]}" -n shop delete destinationrule backend-v1-outlier >/dev/null
   "${K[@]}" -n shop delete httproute backend-route >/dev/null
-  "${K[@]}" apply -f "$M/15-retries.yaml" >/dev/null; settle 8
+  "${K[@]}" apply -f "$M/3.13-retries.yaml" >/dev/null; settle 8
   before="$(faulty_calls)"
   between "retries alone hide every failure" "$(burst 90 3 /api/orders | count_matching '^200')" 90 90
   settle 2
   between "but the faulty pod still gets calls" "$(( $(faulty_calls) - before ))" 15 60
-  "${K[@]}" apply -f "$M/15-outlier-detection.yaml" >/dev/null; settle 6
+  "${K[@]}" apply -f "$M/3.13-outlier-detection.yaml" >/dev/null; settle 6
   before="$(faulty_calls)"
   between "retries plus outlier detection: no failures" "$(burst 90 3 /api/orders | count_matching '^200')" 90 90
   settle 2
@@ -383,22 +384,22 @@ module_15() {
   expect "and the shop answers 200" "$(code "$BASE/api/orders")" '^200$'
 }
 
-module_16() {
-  section "16: the Istio API (Gateway and VirtualService)"
+module_3_14() {
+  section "3.14: the Istio API (Gateway and VirtualService)"
   baseline
   helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" install istio-ingress istio/gateway -n istio-ingress --create-namespace \
     --version 1.24.2 --skip-schema-validation --set service.type=ClusterIP --wait --timeout 3m >/dev/null 2>&1
   expect "the classic gateway runs, with a proxy injected" "$("${K[@]}" -n istio-ingress get pods -l istio=ingress -o jsonpath='{.items[0].spec.containers[0].image}')" 'proxyv2'
-  "${K[@]}" apply -f "$M/16-istio-gateway.yaml" -f "$M/16-ingress-virtualservice.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.14-istio-gateway.yaml" -f "$M/3.14-ingress-virtualservice.yaml" >/dev/null
   "${K[@]}" -n istio-ingress port-forward svc/istio-ingress 9080:80 >/dev/null 2>&1 &
   local pf=$! c=000
   for _ in $(seq 1 12); do settle 3; c="$(code http://localhost:9080/)"; [[ "$c" == 200 ]] && break; done
   expect "the shop answers through the Istio Gateway and VirtualService" "$c" '^200$'
   "${K[@]}" -n shop delete httproute backend-route >/dev/null
-  "${K[@]}" apply -f "$M/16-subsets.yaml" -f "$M/16-canary-virtualservice.yaml" >/dev/null; settle 8
+  "${K[@]}" apply -f "$M/3.14-subsets.yaml" -f "$M/3.14-canary-virtualservice.yaml" >/dev/null; settle 8
   local out; out="$(BASE=http://localhost:9080 burst 200 5 /api/orders)"
   between "the VirtualService splits about 90/10 with subsets (v2 share of 200)" "$(echo "$out" | count_matching ' v2$')" 6 40
-  "${K[@]}" apply -f "$M/03-course-client.yaml" -f "$M/03-allow-course-client.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.3-course-client.yaml" -f "$M/3.3-allow-course-client.yaml" >/dev/null
   "${K[@]}" -n shop rollout status deploy/course-client --timeout=120s >/dev/null 2>&1; settle 5
   expect "the header x-version: v2 always reaches v2" "$(in_shop sh -c 'for i in $(seq 1 10); do curl -s -o /dev/null -w "%header{x-app-version}\n" -H "x-version: v2" http://backend:8000/api/version; done' | sort -u | tr -d '\n')" '^v2$'
   kill "$pf" 2>/dev/null; wait "$pf" 2>/dev/null
@@ -406,8 +407,8 @@ module_16() {
   expect "after the reset the classic gateway is gone" "$("${K[@]}" get ns istio-ingress 2>&1 | grep -c NotFound)" '^1$'
 }
 
-module_17() {
-  section "17: an LLM as a mesh service"
+module_5_1() {
+  section "5.1: an LLM behind the shop"
   baseline
   local model
   model="${LAB_OLLAMA_MODEL:-$(curl -s -m 5 $OLLAMA/api/tags | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; c=[x["name"] for x in m if "embed" not in x["name"]]; print(c[0] if c else "")' 2>/dev/null)}"
@@ -418,55 +419,60 @@ module_17() {
   ask() { curl -s -m 180 -X POST "$BASE/api/ask" -H 'Content-Type: application/json' -d "{\"question\":\"$1\"}" 2>/dev/null; }
   # Your AI settings from lab.env, when there is one (scripts/llm-settings.sh).
   KUBE_CONTEXT="${K[2]}" "$ROOT/scripts/llm-settings.sh" --quiet
-  "${K[@]}" apply -f "$M/17-assistant.yaml" -f "$M/03-course-client.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/5.1-assistant.yaml" -f "$M/3.3-course-client.yaml" >/dev/null
   "${K[@]}" -n shop set env deploy/assistant OLLAMA_MODEL="$model" >/dev/null
   "${K[@]}" -n shop rollout status deploy/assistant --timeout=120s >/dev/null 2>&1
   "${K[@]}" -n shop rollout status deploy/course-client --timeout=120s >/dev/null 2>&1; settle 5
   expect "without permission the backend refuses the assistant (403)" "$(ask 'How many orders are there?')" '403 Forbidden'
-  "${K[@]}" apply -f "$M/17-allow-assistant.yaml" >/dev/null; settle 6
+  "${K[@]}" apply -f "$M/5.1-allow-assistant.yaml" >/dev/null; settle 6
   expect "with the allow policy the model answers ($model)" "$(ask 'How many orders are there?' | python3 -c 'import json,sys; d=json.load(sys.stdin); print("answered" if d.get("answer") and d.get("output_tokens",0)>0 else d)' 2>&1)" '^answered$'
-  "${K[@]}" apply -f "$M/17-ollama-serviceentry.yaml" >/dev/null; settle 4
+  "${K[@]}" apply -f "$M/5.1-ollama-serviceentry.yaml" >/dev/null; settle 4
   "${K[@]}" -n shop rollout restart deploy/assistant >/dev/null
   "${K[@]}" -n shop rollout status deploy/assistant --timeout=120s >/dev/null 2>&1; settle 4
   expect "the ServiceEntry gets a virtual IP" "$("${K[@]}" -n shop get serviceentry ollama -o jsonpath='{.status.addresses[0].value}')" '^240\.240\.'
   local trace_id; trace_id="$(ask 'Which item was ordered most?' | python3 -c 'import json,sys; print(json.load(sys.stdin).get("trace_id",""))' 2>/dev/null)"
   settle 2
   expect "model calls now go through the waypoint, by name" "$("${K[@]}" -n istio-system logs ds/ztunnel --since=1m | grep 'src.workload="assistant' | grep -c 'dst.service="host.docker.internal".*dst.workload="waypoint')" '^[1-9]'
-  "${K[@]}" apply -f "$M/17-ollama-policy.yaml" >/dev/null; settle 6
+  "${K[@]}" apply -f "$M/5.1-ollama-policy.yaml" >/dev/null; settle 6
   expect "other workloads may not list Ollama's models (403)" "$(in_shop curl -s -o /dev/null -m 20 -w '%{http_code}' http://host.docker.internal:11434/api/tags)" '^403$'
   expect "nor delete one (403, before it reaches Ollama)" "$(in_shop curl -s -o /dev/null -m 20 -w '%{http_code}' -X DELETE -d '{"model":"lab-model-that-does-not-exist"}' http://host.docker.internal:11434/api/delete)" '^403$'
   expect "the assistant still gets answers" "$(ask 'How many orders are there?' | grep -c '"answer"')" '^1$'
   settle 10
   expect "Jaeger shows the model call with its token counts" "$("${K[@]}" get --raw "/api/v1/namespaces/observability/services/jaeger-query:16686/proxy/api/traces/${trace_id}" 2>/dev/null | grep -c 'gen_ai.usage.output_tokens')" '^[1-9]'
-  "${K[@]}" apply -f "$M/17-llm-timeout.yaml" >/dev/null; settle 8
+  "${K[@]}" apply -f "$M/5.1-llm-timeout.yaml" >/dev/null; settle 8
   expect "a 100 ms route timeout cuts the model call off (504)" "$(ask 'How many orders are there?')" '504 Gateway Timeout'
   baseline
   expect "after the reset the assistant is gone" "$("${K[@]}" -n shop get deploy assistant 2>&1 | grep -c NotFound)" '^1$'
 }
 
-# Modules 17 and 18 are not in the default run: 17 needs Ollama on your machine, and
-# 18 downloads about 900 MB of models. Run them with: ./platform-engineering/verify.sh 17 18
-module_18() {
-  section "18: serving models inside the cluster"
+# Modules 5.1 and 5.2 are not in the default run: 5.1 needs Ollama on your machine, and
+# 5.2 downloads about 900 MB of models. Run them with: ./platform-engineering/verify.sh 5.1 5.2
+module_5_2() {
+  section "5.2: serving models inside the cluster"
   baseline
   local prom='/api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/query'
-  "${K[@]}" apply -f "$M/18-namespace.yaml" >/dev/null && "${K[@]}" apply -f "$M/18-llm-qwen.yaml" -f "$M/03-course-client.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/5.2-namespace.yaml" >/dev/null && "${K[@]}" apply -f "$M/5.2-llm-qwen.yaml" -f "$M/3.3-course-client.yaml" >/dev/null
   expect "two Qwen model servers download the model and become ready" "$("${K[@]}" -n ai rollout status deploy/llm-qwen --timeout=600s 2>&1 | tail -1)" 'successfully rolled out'
   "${K[@]}" -n shop rollout status deploy/course-client --timeout=120s >/dev/null 2>&1; settle 5
   expect "Qwen answers through the mesh" "$(in_shop curl -s -m 60 http://llm-qwen.ai.svc.cluster.local:8080/v1/chat/completions -H 'Content-Type: application/json' -d '{"messages":[{"role":"user","content":"Say hi."}],"max_tokens":5}' | grep -o '"model":"[^"]*"')" 'qwen2.5-0.5b'
   local l4 l7=0 n
   l4="$("$ROOT/platform-engineering/llm-load.sh" | sed -n 's/.*it (over 2 s): \([0-9]*\) of 10/\1/p')"
   between "with ztunnel alone, short questions get stuck behind a long one" "${l4:-0}" 2 10
-  "${K[@]}" apply -f "$M/18-waypoint.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/5.2-waypoint.yaml" >/dev/null
   "${K[@]}" label ns ai istio.io/use-waypoint=waypoint --overwrite >/dev/null
   "${K[@]}" -n ai wait --for=condition=Programmed gateway/waypoint --timeout=120s >/dev/null 2>&1; settle 10
   for _ in 1 2 3; do n="$("$ROOT/platform-engineering/llm-load.sh" | sed -n 's/.*it (over 2 s): \([0-9]*\) of 10/\1/p')"; l7=$(( l7 + ${n:-10} )); done
   between "with the waypoint's least-request balancing, fewer get stuck (3 runs, out of 30)" "$l7" 0 12
-  settle 20
-  expect "Prometheus collects the model servers' token counts" "$("${K[@]}" get --raw "${prom}?query=sum(llamacpp%3Atokens_predicted_total)" | grep -c '"value"')" '^1$'
-  "${K[@]}" apply -f "$M/18-llm-smol.yaml" >/dev/null
+  # A new PodMonitor reaches Prometheus through a Secret, which takes up to four minutes.
+  local tok=0
+  for _ in $(seq 1 48); do
+    tok="$("${K[@]}" get --raw "${prom}?query=sum(llamacpp%3Atokens_predicted_total)" | grep -c '"value"')"
+    [[ "$tok" == 1 ]] && break; settle 5
+  done
+  expect "Prometheus collects the model servers' token counts" "$tok" '^1$'
+  "${K[@]}" apply -f "$M/5.2-llm-smol.yaml" >/dev/null
   "${K[@]}" -n ai rollout status deploy/llm-smol --timeout=600s >/dev/null 2>&1
-  "${K[@]}" apply -f "$M/18-route-by-model.yaml" >/dev/null; settle 10
+  "${K[@]}" apply -f "$M/5.2-route-by-model.yaml" >/dev/null; settle 10
   local llm='http://llm.ai.svc.cluster.local:8080/v1/chat/completions'
   expect "the header x-model: smollm2 picks the second model" "$(in_shop curl -s -m 60 "$llm" -H 'Content-Type: application/json' -H 'x-model: smollm2' -d '{"messages":[{"role":"user","content":"Name a colour."}],"max_tokens":5}' | grep -o '"model":"[^"]*"')" 'smollm2-360m'
   expect "a model named only in the JSON body is ignored by the route" "$(in_shop curl -s -m 60 "$llm" -H 'Content-Type: application/json' -d '{"model":"smollm2-360m","messages":[{"role":"user","content":"Name a colour."}],"max_tokens":5}' | grep -o '"model":"[^"]*"')" 'qwen2.5-0.5b'
@@ -474,17 +480,17 @@ module_18() {
   expect "after the reset the ai namespace is gone" "$("${K[@]}" get ns ai 2>&1 | grep -c NotFound)" '^1$'
 }
 
-# Module 19 also needs Ollama on your machine, and installs kagent: ./platform-engineering/verify.sh 19
-module_19() {
-  section "19: AI agents and their tools"
+# Module 5.3 also needs Ollama on your machine, and installs kagent: ./platform-engineering/verify.sh 5.3
+module_5_3() {
+  section "5.3: AI agents and their tools"
   baseline
   local model H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n kagent)
   model="${LAB_OLLAMA_MODEL:-$(curl -s -m 5 $OLLAMA/api/tags | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; c=[x["name"] for x in m if "embed" not in x["name"]]; print(c[0] if c else "")' 2>/dev/null)}"
   if [[ -z "$model" ]]; then fail "Ollama runs on this machine with at least one model" "no answer from $OLLAMA/api/tags"; return; fi
   "${H[@]}" upgrade --install kagent-crds oci://ghcr.io/kagent-dev/kagent/helm/kagent-crds --version 0.10.6 --create-namespace --wait >/dev/null 2>&1
   "${H[@]}" upgrade --install kagent oci://ghcr.io/kagent-dev/kagent/helm/kagent --version 0.10.6 \
-    -f "$M/19-kagent-values.yaml" --set providers.ollama.model="$model" --wait --timeout 10m >/dev/null 2>&1
-  "${K[@]}" apply -f "$M/03-course-client.yaml" -f "$M/19-agent-target.yaml" >/dev/null
+    -f "$M/5.3-kagent-values.yaml" --set providers.ollama.model="$model" --wait --timeout 10m >/dev/null 2>&1
+  "${K[@]}" apply -f "$M/3.3-course-client.yaml" -f "$M/5.3-agent-target.yaml" >/dev/null
   "${K[@]}" -n shop rollout status deploy/course-client --timeout=120s >/dev/null 2>&1
   "${K[@]}" -n kagent wait --for=condition=Ready agent/k8s-agent --timeout=180s >/dev/null 2>&1
   local accepted=False
@@ -505,16 +511,16 @@ module_19() {
   # Enrolling breaks connections that were open before (the controller's database pool), so restart.
   "${K[@]}" -n kagent rollout restart deploy >/dev/null
   for d in $("${K[@]}" -n kagent get deploy -o name); do "${K[@]}" -n kagent rollout status "$d" --timeout=180s >/dev/null 2>&1; done
-  "${K[@]}" apply -f "$M/19-tools-policy.yaml" >/dev/null; settle 15
+  "${K[@]}" apply -f "$M/5.3-tools-policy.yaml" >/dev/null; settle 15
   expect "with the policy, that pod gets no session at all" "$(in_shop sh -c "$mcp" | grep -c 'lab-root-ca')" '^0$'
   expect "the agent still uses its tools" "$(agent 'List the pods in the namespace course-agent. One line.' | grep -o '"name":"k8s_get_resources"' | head -1)" 'k8s_get_resources'
   agent 'Delete the pod agent-target in the namespace course-agent with the k8s_delete_resource tool. Call the tool once. If it fails, do not retry: quote the error message.' >/dev/null
   settle 3
   expect "with cluster-admin rights, the agent deletes the pod" "$("${K[@]}" -n course-agent get pod agent-target 2>&1 | grep -c NotFound)" '^1$'
-  "${K[@]}" apply -f "$M/19-agent-target.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/5.3-agent-target.yaml" >/dev/null
   "${K[@]}" -n course-agent wait --for=condition=Ready pod/agent-target --timeout=90s >/dev/null 2>&1
   "${K[@]}" delete clusterrolebinding kagent-tools-cluster-admin-rolebinding --ignore-not-found >/dev/null
-  "${K[@]}" apply -f "$M/19-tools-read-only.yaml" >/dev/null; settle 3
+  "${K[@]}" apply -f "$M/5.3-tools-read-only.yaml" >/dev/null; settle 3
   agent 'Delete the pod agent-target in the namespace course-agent with the k8s_delete_resource tool. Call the tool once. If it fails, do not retry: quote the error message.' >/dev/null
   settle 3
   expect "with the view role, the same request leaves the pod alone" "$("${K[@]}" -n course-agent get pod agent-target --no-headers 2>&1 | awk '{print $3}')" '^Running$'
@@ -522,8 +528,8 @@ module_19() {
   expect "after the reset kagent is gone" "$("${K[@]}" get ns kagent 2>&1 | grep -c NotFound)" '^1$'
 }
 
-module_20() {
-  section "20: nodes, drains and cleanup"
+module_2_8() {
+  section "2.8: nodes, drains and cleanup"
   baseline
   local node=k3d-agent-0 log="${TMPDIR:-/tmp}/k8s-lab-drain.log"
   k3d node create agent --cluster "${CLUSTER_NAME:-k8s-lab}" --role agent --wait >/dev/null 2>&1
@@ -531,12 +537,12 @@ module_20() {
   k3d image import "k8s-lab/backend:1.0.3" "k8s-lab/frontend:1.0.3" "k8s-lab/assistant:1.2.0" -c "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
   "${K[@]}" -n istio-system rollout status ds/ztunnel --timeout=180s >/dev/null 2>&1
   expect "a second node joins, and ztunnel starts on it" "$("${K[@]}" -n istio-system get pods -l app=ztunnel --field-selector spec.nodeName=$node -o jsonpath='{.items[0].status.phase}')" '^Running$'
-  "${K[@]}" apply -f "$M/20-ops-app.yaml" -f "$M/03-course-client.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/2.8-ops-app.yaml" -f "$M/3.3-course-client.yaml" >/dev/null
   "${K[@]}" -n course-ops rollout status deploy/web --timeout=180s >/dev/null 2>&1
   "${K[@]}" -n shop rollout status deploy/course-client --timeout=120s >/dev/null 2>&1; settle 5
   expect "the two web replicas land on different nodes" "$("${K[@]}" -n course-ops get pods -l app=web -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' | sort -u | wc -l | tr -d ' ')" '^2$'
   expect "traffic crosses nodes through the mesh" "$(in_shop sh -c 'for i in $(seq 1 20); do curl -s -o /dev/null -w "%{http_code}\n" http://web.course-ops:8000/status/200; done' | grep -c 200)" '^20$'
-  "${K[@]}" apply -f "$M/20-pdb.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/2.8-pdb.yaml" >/dev/null
   in_shop sh -c 'end=$(( $(date +%s)+40 )); while [ $(date +%s) -lt $end ]; do curl -s -o /dev/null -m 3 -w "%{http_code}\n" http://web.course-ops:8000/status/200; sleep 0.1; done' > "$log" &
   local loader=$!
   settle 5
@@ -546,14 +552,14 @@ module_20() {
   "${K[@]}" uncordon "$node" >/dev/null
   "${K[@]}" -n course-ops rollout restart deploy/web >/dev/null
   "${K[@]}" -n course-ops rollout status deploy/web --timeout=120s >/dev/null 2>&1; settle 5
-  "${K[@]}" apply -f "$M/20-pdb-too-strict.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/2.8-pdb-too-strict.yaml" >/dev/null
   if [[ -n "$("${K[@]}" -n course-ops get pods -l app=web --field-selector spec.nodeName=$node -o name)" ]]; then
     expect "a budget that can never be met blocks the drain" "$("${K[@]}" drain "$node" --ignore-daemonsets --delete-emptydir-data --timeout=20s 2>&1 | grep -c "violate the pod's disruption budget")" '^[1-9]'
   else
     pass "a budget that can never be met blocks the drain (skipped: no web pod on $node this time)"
   fi
-  "${K[@]}" apply -f "$M/20-pdb.yaml" >/dev/null
-  "${K[@]}" apply -f "$M/20-job-ttl.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/2.8-pdb.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/2.8-job-ttl.yaml" >/dev/null
   "${K[@]}" -n course-ops wait --for=condition=Complete job/nightly-report --timeout=60s >/dev/null 2>&1; settle 40
   expect "a finished Job with ttlSecondsAfterFinished deletes itself" "$("${K[@]}" -n course-ops get job nightly-report 2>&1 | grep -c NotFound)" '^1$'
   local before; before="$(docker exec "$node" crictl images -q 2>/dev/null | wc -l | tr -d ' ')"
@@ -564,13 +570,21 @@ module_20() {
   expect "after k3d deletes the node, Kubernetes still lists it" "$("${K[@]}" get node "$node" --no-headers 2>&1 | grep -c "$node")" '^1$'
   "${K[@]}" delete node "$node" >/dev/null
   expect "kubectl delete node removes it" "$("${K[@]}" get nodes --no-headers | wc -l | tr -d ' ')" '^1$'
+  # The deleted node's DaemonSet pods linger until the pod garbage collector removes them,
+  # and istioctl ztunnel-config would otherwise ask the dead node's ztunnel.
+  local zt=0
+  for _ in $(seq 1 36); do
+    zt="$("${K[@]}" -n istio-system get pods -l app=ztunnel --no-headers 2>/dev/null | wc -l | tr -d ' ')"
+    [[ "$zt" == 1 ]] && break; settle 5
+  done
+  expect "only the remaining node's ztunnel pod is left" "$zt" '^1$'
   baseline
   expect "after the reset course-ops is gone" "$("${K[@]}" get ns course-ops 2>&1 | grep -c NotFound)" '^1$'
   rm -f "$log"
 }
 
-module_22() {
-  section "22: GitOps with ArgoCD"
+module_2_6() {
+  section "2.6: GitOps with ArgoCD"
   baseline
   local work="${TMPDIR:-/tmp}/k8s-lab-gitops" port=3011 pf
   app() { "${K[@]}" -n argocd get app "$1" -o jsonpath="$2" 2>/dev/null; }
@@ -579,7 +593,7 @@ module_22() {
   wait_app() { local v i; for ((i = 0; i < $4; i += 2)); do v="$(app "$1" "$2")"; [[ "$v" =~ $3 ]] && break; sleep 2; done; printf '%s' "$v"; }
   g() { git -C "$work" -c user.name=lab -c user.email=lab@example.invalid "$@" >/dev/null 2>&1; }
   push() { g push "http://lab:lab-gitops-pass@localhost:$port/lab/podinfo-gitops.git" main; refresh podinfo-dev; }
-  "${K[@]}" apply -f "$M/22-gitea.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/2.6-gitea.yaml" >/dev/null
   "${K[@]}" -n course-gitops rollout status deploy/gitea --timeout=180s >/dev/null 2>&1
   "${K[@]}" -n course-gitops exec deploy/gitea -- gitea admin user create --username lab --password lab-gitops-pass \
     --email lab@example.invalid --admin --must-change-password=false >/dev/null 2>&1
@@ -588,7 +602,7 @@ module_22() {
   rm -rf "$work"; cp -R "$ROOT/platform-engineering/gitops-repo" "$work"
   git -C "$work" init -q -b main; g add .; g commit -m "podinfo, dev and prod"
   expect "a push creates the repository in Gitea" "$(push; curl -s "localhost:$port/api/v1/repos/lab/podinfo-gitops" | grep -o '"private":false')" '^"private":false$'
-  "${K[@]}" apply -f "$M/22-project.yaml" -f "$M/22-app-dev.yaml" >/dev/null 2>&1
+  "${K[@]}" apply -f "$M/2.6-project.yaml" -f "$M/2.6-app-dev.yaml" >/dev/null 2>&1
   expect "ArgoCD deploys the dev app from Gitea" "$(wait_app podinfo-dev '{.status.sync.status} {.status.health.status}' '^Synced Healthy$' 90)" '^Synced Healthy$'
   "${K[@]}" -n course-gitops-dev scale deploy/podinfo --replicas=3 >/dev/null; settle 15
   expect "without selfHeal, drift shows as OutOfSync and stays" "$(app podinfo-dev '{.status.sync.status}') $("${K[@]}" -n course-gitops-dev get deploy podinfo -o jsonpath='{.spec.replicas}')" '^OutOfSync 3$'
@@ -621,7 +635,7 @@ module_22() {
   expect "terminating the retries lets the revert through" "$(wait_app podinfo-dev '{.status.sync.status} {.status.health.status}' '^Synced Healthy$' 60)" '^Synced Healthy$'
   "${K[@]}" -n argocd delete app podinfo-dev --wait=true --timeout=90s >/dev/null 2>&1
   expect "deleting the Application deletes what it deployed" "$("${K[@]}" -n course-gitops-dev get deploy podinfo 2>&1 | grep -c NotFound)" '^1$'
-  "${K[@]}" apply -f "$M/22-appset.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/2.6-appset.yaml" >/dev/null
   wait_app podinfo-prod '{.status.health.status}' '^Healthy$' 90 >/dev/null
   expect "the ApplicationSet deploys dev with 1 replica and prod with 2" "$("${K[@]}" -n course-gitops-dev get deploy podinfo -o jsonpath='{.status.readyReplicas}' 2>/dev/null) $("${K[@]}" -n course-gitops-prod get deploy podinfo -o jsonpath='{.status.readyReplicas}' 2>/dev/null)" '^1 2$'
   "${K[@]}" -n argocd delete app podinfo-prod --wait=true --timeout=90s >/dev/null 2>&1
@@ -631,8 +645,8 @@ module_22() {
   expect "after the reset the course-gitops namespaces and project are gone" "$("${K[@]}" get ns course-gitops course-gitops-dev course-gitops-prod 2>&1 | grep -c NotFound) $("${K[@]}" -n argocd get appproject team-shop 2>&1 | grep -c NotFound)" '^3 1$'
 }
 
-module_23() {
-  section "23: Prometheus and alerting"
+module_2_1() {
+  section "2.1: Prometheus and alerting"
   baseline
   local port=9092 pf loader
   "${K[@]}" -n observability port-forward svc/kube-prometheus-stack-prometheus "$port:9090" >/dev/null 2>&1 &
@@ -642,8 +656,15 @@ module_23() {
   alert_state() { curl -s "localhost:$port/api/v1/alerts" | python3 -c 'import json,sys; a=[x for x in json.load(sys.stdin)["data"]["alerts"] if x["labels"]["alertname"]=="ShopBackendErrorBudgetBurn"]; print(a[0]["state"] if a else "none")' 2>/dev/null; }
   # poll <seconds> <command...>: run the command every 5 s until it succeeds
   poll() { local t=$1 i; shift; for ((i = 0; i < t; i += 5)); do "$@" && return 0; sleep 5; done; return 1; }
+  "${K[@]}" apply -f "$M/2.1-plain-app.yaml" >/dev/null
+  "${K[@]}" -n course-metrics rollout status deploy/podinfo --timeout=120s >/dev/null 2>&1
+  "${K[@]}" -n course-metrics exec deploy/podinfo -- sh -c 'for i in $(seq 1 20); do wget -q -O /dev/null localhost:9898/; done; for i in 1 2 3; do wget -q -O /dev/null localhost:9898/status/500; done' >/dev/null 2>&1
+  expect "the plain app counts its own requests by status" "$("${K[@]}" -n course-metrics exec deploy/podinfo -- wget -q -O - localhost:9797/metrics 2>/dev/null | grep -c '^http_request_duration_seconds_count{.*status="\(200\|500\)"')" '^2$'
+  plain_scraped() { [[ -n "$(prom 'sum(http_request_duration_seconds_count{namespace="course-metrics",status="500"})')" ]]; }
+  poll 300 plain_scraped
+  expect "Prometheus scrapes the plain app through its PodMonitor" "$(prom 'sum(http_request_duration_seconds_count{namespace="course-metrics",status="500"})')" '^[1-9]'
   expect "Prometheus sends alerts to Alertmanager" "$(curl -s "localhost:$port/api/v1/alertmanagers" | grep -o '"activeAlertmanagers":\[{"url":"http://[0-9.]*:9093' | grep -c 9093)" '^1$'
-  "${K[@]}" apply -f "$M/23-alert-receiver.yaml" -f "$M/23-shop-slo.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/2.1-alert-receiver.yaml" -f "$M/2.1-shop-slo.yaml" >/dev/null
   "${K[@]}" -n course-alerts rollout status deploy/alert-receiver --timeout=120s >/dev/null 2>&1
   rules_loaded() { [[ "$(curl -s "localhost:$port/api/v1/rules" | grep -o '"name":"shop-slo-[a-z]*"' | sort -u | wc -l | tr -d ' ')" == 2 ]]; }
   poll 150 rules_loaded
@@ -651,7 +672,7 @@ module_23() {
   route_merged() { "${K[@]}" -n observability exec alertmanager-kube-prometheus-stack-alertmanager-0 -c alertmanager -- cat /etc/alertmanager/config_out/alertmanager.env.yaml 2>/dev/null | grep -q 'course-alerts/shop-pager/pager'; }
   poll 150 route_merged
   expect "Alertmanager merges the team's route" "$(route_merged && echo merged)" '^merged$'
-  "${K[@]}" apply -f "$M/15-faulty-pod.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.13-faulty-pod.yaml" >/dev/null
   "${K[@]}" -n shop rollout status deploy/backend-v1-faulty --timeout=120s >/dev/null 2>&1
   "$ROOT/platform-engineering/load.sh" 420 /api/orders 5 >/dev/null 2>&1 &
   loader=$!; disown "$loader"
@@ -674,11 +695,11 @@ module_23() {
   expect "the API server's histogram is the biggest metric" "$(curl -s "localhost:$port/api/v1/query" --data-urlencode 'query=topk(1, count by (__name__) ({__name__=~".+"}))' | grep -o '"__name__":"[a-z_]*"')" 'apiserver_'
   kill "$pf" 2>/dev/null; wait "$pf" 2>/dev/null
   baseline
-  expect "after the reset course-alerts is gone" "$("${K[@]}" get ns course-alerts 2>&1 | grep -c NotFound)" '^1$'
+  expect "after the reset course-alerts and course-metrics are gone" "$("${K[@]}" get ns course-alerts course-metrics 2>&1 | grep -c NotFound)" '^2$'
 }
 
-module_24() {
-  section "24: Grafana as code"
+module_2_2() {
+  section "2.2: Grafana as code"
   baseline
   local gport=3998 pport=9094 pf1 pf2 pw S="${TMPDIR:-/tmp}"
   pw="$("${K[@]}" -n observability get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 -d)"
@@ -689,7 +710,7 @@ module_24() {
   gf() { curl -s -u "admin:$pw" "$@"; }
   prom() { curl -s "localhost:$pport/api/v1/query" --data-urlencode "query=$1" | python3 -c 'import json,sys; r=json.load(sys.stdin)["data"]["result"]; print(r[0]["value"][1] if r else "")' 2>/dev/null; }
   poll() { local t=$1 i; shift; for ((i = 0; i < t; i += 5)); do "$@" && return 0; sleep 5; done; return 1; }
-  "${K[@]}" apply -f "$M/24-slo-dashboard.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/2.2-slo-dashboard.yaml" >/dev/null
   loaded() { gf "localhost:$gport/api/dashboards/uid/shop-slo" | grep -q '"provisioned":true'; }
   poll 60 loaded
   expect "the sidecar loads the dashboard from its ConfigMap" "$(gf "localhost:$gport/api/dashboards/uid/shop-slo" | grep -o '"title":"Shop SLO"' | head -1)" '^"title":"Shop SLO"$'
@@ -702,14 +723,14 @@ module_24() {
   local loader=$!; disown "$loader"; settle 70
   # Built in a variable: bash 3.2 (macOS) mis-parses escaped quotes inside "$( ... )".
   local errsel="$sel, response_code=~\"5..\"" avail
-  # $window=1m: right after module 23, the 5m window still holds its faulty pod's errors.
+  # $window=1m: right after module 2.1, the 5m window still holds its faulty pod's errors.
   avail="1 - (sum(rate(istio_requests_total{$errsel}[1m])) or vector(0)) / sum(rate(istio_requests_total{$sel}[1m]))"
   between "the availability panel reads close to 100% over 1m (percent)" "$(prom "$avail" | awk '{printf "%d", $1 * 100}')" 95 100
   between "the requests-per-second panel sees the load (x10)" "$(prom "sum(rate(istio_requests_total{$sel}[5m]))" | awk '{printf "%d", $1 * 10}')" 10 80
   expect "the p95 panel returns a latency" "$(prom "histogram_quantile(0.95, sum by (le) (rate(istio_request_duration_milliseconds_bucket{$sel}[5m])))")" '^[0-9.]+$'
   expect "the service variable lists the backend" "$(curl -s -G "localhost:$pport/api/v1/label/destination_canonical_service/values" --data-urlencode 'match[]=istio_requests_total{reporter="waypoint", destination_service_namespace="shop", destination_canonical_service!="unknown"}' | grep -o '"backend"')" '^"backend"$'
   gf -H 'Content-Type: application/json' -X POST "localhost:$gport/api/folders" -d '{"uid":"course","title":"Course"}' >/dev/null
-  expect "the Grafana-managed rule is accepted" "$(gf -H 'Content-Type: application/json' -X POST "localhost:$gport/api/v1/provisioning/alert-rules" -d @"$M/24-grafana-rule.json" | grep -o '"uid":"shop-burn-grafana"')" 'shop-burn-grafana'
+  expect "the Grafana-managed rule is accepted" "$(gf -H 'Content-Type: application/json' -X POST "localhost:$gport/api/v1/provisioning/alert-rules" -d @"$M/2.2-grafana-rule.json" | grep -o '"uid":"shop-burn-grafana"')" 'shop-burn-grafana'
   evaluated() { gf "localhost:$gport/api/prometheus/grafana/api/v1/rules" | grep -q '"health":"ok"'; }
   poll 90 evaluated
   expect "Grafana evaluates it" "$(gf "localhost:$gport/api/prometheus/grafana/api/v1/rules" | grep -o '"health":"ok"' | head -1)" '"health":"ok"'
@@ -732,19 +753,56 @@ module_24() {
   kill "$pf1" "$pf2" 2>/dev/null; wait "$pf1" "$pf2" 2>/dev/null
 }
 
-module_25() {
-  section "25: OpenTelemetry Collector and Tempo"
+module_2_3() {
+  section "2.3: logs with Loki"
+  baseline
+  # logql <kind> <query>: run a LogQL query through the API server's service proxy
+  logql() { "${K[@]}" get --raw "/api/v1/namespaces/observability/services/loki:3100/proxy/loki/api/v1/$1?query=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$2")&limit=1000" 2>/dev/null; }
+  "${K[@]}" apply -f "$M/2.3-plain-app.yaml" >/dev/null
+  "${K[@]}" -n course-logs rollout status deploy/orders --timeout=120s >/dev/null 2>&1
+  local line=""
+  for _ in $(seq 1 24); do
+    line="$("${K[@]}" -n course-logs logs deploy/orders --tail=1 2>/dev/null)"
+    [[ -n "$line" ]] && break; settle 5
+  done
+  expect "the plain app prints JSON order lines" "$line" '^\{"level":"(info|error)","msg":"order (placed|failed)"'
+  local n=0 failed=0
+  for _ in $(seq 1 36); do
+    n="$(logql query_range '{namespace="course-logs"}' | python3 -c 'import json,sys; print(sum(len(s["values"]) for s in json.load(sys.stdin)["data"]["result"]))' 2>/dev/null)"
+    failed="$(logql query_range '{namespace="course-logs"} | json | status >= 500' | python3 -c 'import json,sys; print(sum(len(s["values"]) for s in json.load(sys.stdin)["data"]["result"]))' 2>/dev/null)"
+    [[ "$failed" =~ ^[1-9] ]] && break; settle 5
+  done
+  between "Loki holds the app's lines" "${n:-0}" 5 100000
+  expect "| json | status >= 500 finds failed orders" "${failed:-0}" '^[1-9]'
+  expect "Loki refuses a query with an empty selector" "$("${K[@]}" get --raw '/api/v1/namespaces/observability/services/loki:3100/proxy/loki/api/v1/query_range?query=%7B%7D' 2>&1 | grep -c BadRequest)" '^1$'
+  # Instant queries lag the newest lines by a few seconds, so poll them too.
+  local by_status="" p95=""
+  for _ in $(seq 1 24); do
+    by_status="$(logql query 'sum by (status) (count_over_time({namespace="course-logs"} | json [10m]))' | python3 -c 'import json,sys; print(" ".join(sorted(r["metric"]["status"] for r in json.load(sys.stdin)["data"]["result"])))' 2>/dev/null)"
+    p95="$(logql query 'quantile_over_time(0.95, {namespace="course-logs"} | json | status >= 500 | unwrap duration_ms [10m])' | python3 -c 'import json,sys; v=float(json.load(sys.stdin)["data"]["result"][0]["value"][1]); print(int(300 <= v <= 660))' 2>/dev/null)"
+    [[ "$by_status" == "200 500" && "$p95" == 1 ]] && break; settle 5
+  done
+  expect "count_over_time groups the lines by status" "$by_status" '^200 500$'
+  expect "unwrap gives a p95 duration for failures from 300 to 660 ms" "$p95" '^1$'
+  expect "Grafana loads the Shop logs dashboard" "$("${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- sh -c \
+    'curl -s -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" localhost:3000/api/dashboards/uid/shop-logs' 2>/dev/null | grep -o '"title":"Shop logs"' | head -1)" '^"title":"Shop logs"$'
+  baseline
+  expect "after the reset course-logs is gone" "$("${K[@]}" get ns course-logs 2>&1 | grep -c NotFound)" '^1$'
+}
+
+module_2_4() {
+  section "2.4: OpenTelemetry Collector and Tempo"
   baseline
   local H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}")
   local tempo="/api/v1/namespaces/course-otel/services/tempo:3200/proxy"
   "${H[@]}" repo add grafana https://grafana.github.io/helm-charts >/dev/null 2>&1
   "${H[@]}" repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts >/dev/null 2>&1
   "${H[@]}" repo update grafana open-telemetry >/dev/null 2>&1
-  expect "Tempo installs" "$("${H[@]}" install tempo grafana/tempo --version 1.24.4 -n course-otel --create-namespace -f "$M/25-tempo-values.yaml" --wait --timeout 5m 2>&1 | grep -c 'STATUS: deployed')" '^1$'
-  expect "the Collector installs without deprecation warnings" "$("${H[@]}" install otel-collector open-telemetry/opentelemetry-collector --version 0.178.0 -n course-otel -f "$M/25-collector-values.yaml" --wait --timeout 5m 2>&1 | grep -cE 'STATUS: deployed|DEPRECATION')" '^1$'
+  expect "Tempo installs" "$("${H[@]}" install tempo grafana/tempo --version 1.24.4 -n course-otel --create-namespace -f "$M/2.4-tempo-values.yaml" --wait --timeout 5m 2>&1 | grep -c 'STATUS: deployed')" '^1$'
+  expect "the Collector installs without deprecation warnings" "$("${H[@]}" install otel-collector open-telemetry/opentelemetry-collector --version 0.178.0 -n course-otel -f "$M/2.4-collector-values.yaml" --wait --timeout 5m 2>&1 | grep -cE 'STATUS: deployed|DEPRECATION')" '^1$'
   # The back ends first, then the app: an app that starts before its Collector backs off.
-  "${K[@]}" apply -f "$M/25-orders-app.yaml" >/dev/null
-  "${K[@]}" apply -f "$M/25-collector-podmonitor.yaml" -f "$M/25-tempo-datasource.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/2.4-orders-app.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/2.4-collector-podmonitor.yaml" -f "$M/2.4-tempo-datasource.yaml" >/dev/null
   "${K[@]}" -n course-otel rollout status deploy/orders --timeout=120s >/dev/null 2>&1
   # tql <TraceQL>: how many traces from the last 10 minutes match
   tql() { local q; q="$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))' "$1")"
@@ -774,68 +832,68 @@ module_25() {
   expect "after the reset course-otel, its ClusterRole and the data source are gone" "$("${K[@]}" get ns course-otel 2>&1 | grep -c NotFound) $("${K[@]}" get clusterrole otel-collector 2>&1 | grep -c NotFound) $("${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- sh -c 'curl -s -o /dev/null -w "%{http_code}" -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" localhost:3000/api/datasources/uid/tempo' 2>/dev/null)" '^1 1 404$'
 }
 
-module_26() {
-  section "26: Kyverno, policy as code"
+module_2_7() {
+  section "2.7: Kyverno, policy as code"
   baseline
   local H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}")
   "${H[@]}" repo add kyverno https://kyverno.github.io/kyverno/ >/dev/null 2>&1
   "${H[@]}" repo update kyverno >/dev/null 2>&1
-  expect "Kyverno installs" "$("${H[@]}" install kyverno kyverno/kyverno --version 3.8.2 -n kyverno --create-namespace -f "$M/26-kyverno-values.yaml" --wait --timeout 6m 2>&1 | grep -c 'STATUS: deployed')" '^1$'
-  "${K[@]}" apply -f "$M/26-namespace.yaml" -f "$M/26-legacy-app.yaml" >/dev/null
+  expect "Kyverno installs" "$("${H[@]}" install kyverno kyverno/kyverno --version 3.8.2 -n kyverno --create-namespace -f "$M/2.7-kyverno-values.yaml" --wait --timeout 6m 2>&1 | grep -c 'STATUS: deployed')" '^1$'
+  "${K[@]}" apply -f "$M/2.7-namespace.yaml" -f "$M/2.7-legacy-app.yaml" >/dev/null
   "${K[@]}" -n course-policy rollout status deploy/legacy --timeout=120s >/dev/null 2>&1
-  "${K[@]}" apply -f "$M/26-require-limits.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/2.7-require-limits.yaml" >/dev/null
   report_fails() { "${K[@]}" -n course-policy get policyreport -o jsonpath='{range .items[*].results[?(@.result=="fail")]}{.policy}{"\n"}{end}' 2>/dev/null | grep -c "$1"; }
   for _ in $(seq 1 24); do [[ "$(report_fails require-memory-limits)" =~ ^[1-9] ]] && break; settle 5; done
   expect "Audit reports the legacy app without blocking it" "$(report_fails require-memory-limits) $("${K[@]}" -n course-policy get deploy legacy -o jsonpath='{.status.readyReplicas}')" '^[1-9][0-9]* 1$'
-  "${K[@]}" apply -f "$M/26-disallow-latest.yaml" >/dev/null; settle 3
+  "${K[@]}" apply -f "$M/2.7-disallow-latest.yaml" >/dev/null; settle 3
   expect "Enforce refuses an image with the latest tag" "$("${K[@]}" -n course-policy run t1 --image=nginx:latest 2>&1 | grep -c 'Use a specific image tag')" '^[1-9]'
   expect "Enforce refuses an image with no tag" "$("${K[@]}" -n course-policy run t2 --image=nginx 2>&1 | grep -c 'Use a specific image tag')" '^[1-9]'
   expect "a tagged image passes" "$("${K[@]}" -n course-policy run t3 --image=nginx:1.27-alpine 2>&1)" 'created'
   "${K[@]}" -n course-policy rollout restart deploy/legacy >/dev/null; settle 8
   expect "a restart of the legacy app hangs: its new pods are refused" "$("${K[@]}" -n course-policy get events --field-selector reason=FailedCreate 2>/dev/null | grep -c 'kyverno')" '^[1-9]'
-  "${K[@]}" apply -f "$M/26-exception.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/2.7-exception.yaml" >/dev/null
   expect "the PolicyException lets the rollout finish" "$("${K[@]}" -n course-policy rollout status deploy/legacy --timeout=120s 2>&1 | grep -c 'successfully rolled out')" '^1$'
-  sed 's/namespace: kyverno/namespace: course-policy/; s/name: legacy-may-use-latest/name: self-service/; s/"legacy\*"/"other*"/' "$M/26-exception.yaml" | "${K[@]}" apply -f - >/dev/null 2>&1; settle 3
+  sed 's/namespace: kyverno/namespace: course-policy/; s/name: legacy-may-use-latest/name: self-service/; s/"legacy\*"/"other*"/' "$M/2.7-exception.yaml" | "${K[@]}" apply -f - >/dev/null 2>&1; settle 3
   expect "an exception in the team's own namespace is ignored" "$("${K[@]}" -n course-policy run other --image=nginx:latest 2>&1 | grep -c 'Use a specific image tag')" '^[1-9]'
   "${K[@]}" -n course-policy delete policyexception self-service --ignore-not-found >/dev/null 2>&1
-  "${K[@]}" apply -f "$M/26-add-defaults.yaml" >/dev/null; settle 3
+  "${K[@]}" apply -f "$M/2.7-add-defaults.yaml" >/dev/null; settle 3
   "${K[@]}" -n course-policy run plain --image=nginx:1.27-alpine >/dev/null 2>&1
   expect "mutation adds a team label and a memory limit" "$("${K[@]}" -n course-policy get pod plain -o jsonpath='{.metadata.labels.team} {.spec.containers[0].resources.limits.memory}')" '^unassigned 128Mi$'
   "${K[@]}" -n course-policy run owned --image=nginx:1.27-alpine --labels=team=payments >/dev/null 2>&1
   expect "mutation keeps a label that's already there" "$("${K[@]}" -n course-policy get pod owned -o jsonpath='{.metadata.labels.team}')" '^payments$'
-  "${K[@]}" apply -f "$M/26-generate-tenant.yaml" >/dev/null; settle 3
+  "${K[@]}" apply -f "$M/2.7-generate-tenant.yaml" >/dev/null; settle 3
   "${K[@]}" create namespace course-tenant-a >/dev/null 2>&1
   "${K[@]}" label namespace course-tenant-a course-policy/tenant=true >/dev/null; settle 5
   expect "a tenant namespace gets a quota and a default-deny NetworkPolicy" "$("${K[@]}" -n course-tenant-a get resourcequota tenant-quota -o name 2>/dev/null) $("${K[@]}" -n course-tenant-a get networkpolicy default-deny-ingress -o name 2>/dev/null)" 'tenant-quota .*default-deny-ingress'
   local uid_before; uid_before="$("${K[@]}" -n course-tenant-a get networkpolicy default-deny-ingress -o jsonpath='{.metadata.uid}')"
   "${K[@]}" -n course-tenant-a delete networkpolicy default-deny-ingress >/dev/null; settle 5
   expect "Kyverno recreates a deleted generated NetworkPolicy" "$("${K[@]}" -n course-tenant-a get networkpolicy default-deny-ingress -o jsonpath='{.metadata.uid}' 2>/dev/null | grep -vc "^$uid_before$")" '^1$'
-  "${K[@]}" apply -f "$M/26-cel-policy.yaml" >/dev/null; settle 3
+  "${K[@]}" apply -f "$M/2.7-cel-policy.yaml" >/dev/null; settle 3
   expect "the CEL policy refuses a Deployment without an owner label" "$("${K[@]}" -n course-policy create deployment no-owner --image=nginx:1.27-alpine 2>&1 | grep -c 'need an owner label')" '^1$'
   expect "and leaves other namespaces alone" "$("${K[@]}" -n default create deployment no-owner --image=nginx:1.27-alpine --dry-run=server 2>&1)" 'created \(server dry run\)'
   baseline
   expect "after the reset Kyverno's webhooks, CRDs and namespaces are gone" "$("${K[@]}" get validatingwebhookconfigurations,mutatingwebhookconfigurations 2>/dev/null | grep -c kyverno) $("${K[@]}" get crd 2>/dev/null | grep -c kyverno) $("${K[@]}" get ns kyverno course-policy course-tenant-a 2>&1 | grep -c NotFound)" '^0 0 3$'
 }
 
-# Module 27 needs Ollama on your Mac with nomic-embed-text and qwen2.5:3b, so it only
-# runs when named: ./platform-engineering/verify.sh 27
-module_27() {
-  section "27: RAG on Kubernetes"
+# Module 5.4 needs Ollama on your Mac with nomic-embed-text and qwen2.5:3b, so it only
+# runs when named: ./platform-engineering/verify.sh 5.4
+module_5_4() {
+  section "5.4: RAG on Kubernetes"
   baseline
   local H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}") pf
   expect "Ollama has the two models" "$(curl -s -m 5 "$OLLAMA/api/tags" | python3 -c 'import json,sys; print("\n".join(m["name"] for m in json.load(sys.stdin)["models"]))' 2>/dev/null | grep -cE '^(nomic-embed-text|qwen2\.5:3b)')" '^2$'
   "${H[@]}" repo add qdrant https://qdrant.github.io/qdrant-helm >/dev/null 2>&1
   "${H[@]}" repo update qdrant >/dev/null 2>&1
-  expect "Qdrant installs with a volume" "$("${H[@]}" install qdrant qdrant/qdrant --version 1.20.0 -n course-rag --create-namespace -f "$M/27-qdrant-values.yaml" --wait --timeout 5m 2>&1 | grep -c 'STATUS: deployed') $("${K[@]}" -n course-rag get pvc -o jsonpath='{.items[0].status.phase}')" '^1 Bound$'
+  expect "Qdrant installs with a volume" "$("${H[@]}" install qdrant qdrant/qdrant --version 1.20.0 -n course-rag --create-namespace -f "$M/5.4-qdrant-values.yaml" --wait --timeout 5m 2>&1 | grep -c 'STATUS: deployed') $("${K[@]}" -n course-rag get pvc -o jsonpath='{.items[0].status.phase}')" '^1 Bound$'
   docker build -q -t k8s-lab/rag:1.3.0 "$ROOT/apps/rag" >/dev/null 2>&1
   k3d image import k8s-lab/rag:1.3.0 -c "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
   KUBE_CONTEXT="${K[2]}" "$ROOT/scripts/llm-settings.sh" --quiet
-  # The course Markdown: README, start-here and glossary, plus the lab modules 0 to 32 and 45.
-  # Modules 33 to 44 stay out, because with them the ConfigMap passes its 1 MiB limit.
+  # The course Markdown: README, start-here and glossary, plus module 1.1 and the lab tracks 2, 3 and 5.
+  # The practice cluster modules of tracks 1 and 4 stay out, because with them the ConfigMap passes its 1 MiB limit.
   local docs=() f
-  for f in "$ROOT"/README.md "$ROOT"/platform-engineering/{glossary,start-here}.md "$ROOT"/platform-engineering/*/[0-2][0-9]-*.md "$ROOT"/platform-engineering/*/3[0-2]-*.md "$ROOT"/platform-engineering/*/45-*.md; do docs+=(--from-file="$f"); done
+  for f in "$ROOT"/README.md "$ROOT"/platform-engineering/{glossary,start-here}.md "$ROOT"/platform-engineering/1-applications/01-*.md "$ROOT"/platform-engineering/[235]-*/[0-9][0-9]-*.md; do docs+=(--from-file="$f"); done
   "${K[@]}" -n course-rag create configmap course-docs "${docs[@]}" >/dev/null
-  "${K[@]}" apply -f "$M/27-rag-app.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/5.4-rag-app.yaml" >/dev/null
   expect "the rag app starts" "$("${K[@]}" -n course-rag rollout status deploy/rag --timeout=120s 2>&1 | grep -c 'successfully rolled out')" '^1$'
   "${K[@]}" -n course-rag port-forward svc/rag 8091:8000 >/dev/null 2>&1 &
   pf=$!; settle 3
@@ -844,8 +902,8 @@ module_27() {
   between "ingest splits the course into chunks" "$(echo "$ingest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["chunks"])' 2>/dev/null || echo 0)" 300 1500
   expect "nomic-embed-text makes 768-dimension vectors" "$(echo "$ingest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["dimensions"])' 2>/dev/null)" '^768$'
   expect "Qdrant holds every chunk" "$("${K[@]}" get --raw /api/v1/namespaces/course-rag/services/qdrant:6333/proxy/collections/course 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["points_count"])' 2>/dev/null)" "^$(echo "$ingest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["chunks"])' 2>/dev/null)\$"
-  expect "search puts module 22 first for the rollback question" "$(curl -s -G localhost:8091/search --data-urlencode 'q=how do I roll back a bad release with ArgoCD' | python3 -c 'import json,sys; print(json.load(sys.stdin)["results"][0]["file"])' 2>/dev/null)" '^22-gitops-with-argocd\.md$'
-  local ask; ask="$(curl -s -m 300 -X POST localhost:8091/ask -H 'content-type: application/json' -d '{"question":"Which Kyverno chart version does module 26 install?"}')"
+  expect "search puts module 2.6 first for the rollback question" "$(curl -s -G localhost:8091/search --data-urlencode 'q=how do I roll back a bad release with ArgoCD' | python3 -c 'import json,sys; print(json.load(sys.stdin)["results"][0]["file"])' 2>/dev/null)" '^06-gitops-with-argocd\.md$'
+  local ask; ask="$(curl -s -m 300 -X POST localhost:8091/ask -H 'content-type: application/json' -d '{"question":"Which Kyverno chart version does module 2.7 install?"}')"
   expect "ask answers a factual question from the course" "$(echo "$ask" | python3 -c 'import json,sys; print(json.load(sys.stdin)["answer"])' 2>/dev/null)" '3\.8\.2'
   local off; off="$(curl -s -m 300 -X POST localhost:8091/ask -H 'content-type: application/json' -d '{"question":"What is the capital of Denmark?"}')"
   expect "an off-topic question gets I don't know" "$(echo "$off" | python3 -c 'import json,sys; print(json.load(sys.stdin)["answer"])' 2>/dev/null)" "(don't|do not) know"
@@ -855,14 +913,14 @@ module_27() {
   expect "after the reset course-rag and its volume are gone" "$("${K[@]}" get ns course-rag 2>&1 | grep -c NotFound) $("${K[@]}" get pv 2>/dev/null | grep -c course-rag)" '^1 0$'
 }
 
-module_28() {
-  section "28: continuous profiling with Pyroscope"
+module_2_5() {
+  section "2.5: continuous profiling with Pyroscope"
   baseline
   local H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}") pf
   "${H[@]}" repo add grafana https://grafana.github.io/helm-charts >/dev/null 2>&1
   "${H[@]}" repo update grafana >/dev/null 2>&1
-  expect "Pyroscope and its Alloy agent install" "$("${H[@]}" install pyroscope grafana/pyroscope --version 2.4.2 -n course-profiling --create-namespace -f "$M/28-pyroscope-values.yaml" --wait --timeout 6m 2>&1 | grep -c 'STATUS: deployed') $("${K[@]}" -n course-profiling get pods --no-headers 2>/dev/null | grep -c Running)" '^1 2$'
-  "${K[@]}" apply -f "$M/28-podinfo.yaml" -f "$M/28-pyroscope-datasource.yaml" >/dev/null
+  expect "Pyroscope and its Alloy agent install" "$("${H[@]}" install pyroscope grafana/pyroscope --version 2.4.2 -n course-profiling --create-namespace -f "$M/2.5-pyroscope-values.yaml" --wait --timeout 6m 2>&1 | grep -c 'STATUS: deployed') $("${K[@]}" -n course-profiling get pods --no-headers 2>/dev/null | grep -c Running)" '^1 2$'
+  "${K[@]}" apply -f "$M/2.5-podinfo.yaml" -f "$M/2.5-pyroscope-datasource.yaml" >/dev/null
   "${K[@]}" -n course-profiling rollout status deploy/podinfo --timeout=120s >/dev/null 2>&1
   "${K[@]}" -n course-profiling port-forward svc/pyroscope 4041:4040 >/dev/null 2>&1 &
   pf=$!; settle 3
@@ -892,12 +950,12 @@ print(int(100*best/T))' "$2" 2>/dev/null || echo 0; }
   expect "after the reset course-profiling, Alloy's ClusterRole and the data source are gone" "$("${K[@]}" get ns course-profiling 2>&1 | grep -c NotFound) $("${K[@]}" get clusterrole pyroscope-alloy 2>&1 | grep -c NotFound) $("${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- sh -c 'curl -s -o /dev/null -w "%{http_code}" -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" localhost:3000/api/datasources/uid/pyroscope' 2>/dev/null)" '^1 1 404$'
 }
 
-module_29() {
-  section "29: the life of a request"
+module_3_15() {
+  section "3.15: the life of a request"
   baseline
   local N="${CLUSTER_NAME:-k8s-lab}" node pod pid
   node="k3d-${N}-server-0"
-  "${K[@]}" apply -f "$M/29-plain-app.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.15-plain-app.yaml" >/dev/null
   "${K[@]}" -n course-life rollout status deploy/hello --timeout=120s >/dev/null 2>&1
   "${K[@]}" -n course-life rollout status deploy/client --timeout=120s >/dev/null 2>&1
   local events; events="$("${K[@]}" -n course-life get events -o 'custom-columns=WHO:.source.component,REASON:.reason' --no-headers 2>/dev/null)"
@@ -935,12 +993,12 @@ module_29() {
   expect "after the reset course-life is gone" "$("${K[@]}" get ns course-life 2>&1 | grep -c NotFound)" '^1$'
 }
 
-module_30() {
-  section "30: sidecar mode in depth"
+module_3_17() {
+  section "3.17: sidecar mode in depth"
   baseline
   local P=(-n course-proxy) node="k3d-${CLUSTER_NAME:-k8s-lab}-server-0"
   expect "istiod registers four injection webhooks" "$("${K[@]}" get mutatingwebhookconfiguration istio-sidecar-injector -o jsonpath='{.webhooks[*].name}' | wc -w | tr -d ' ')" '^4$'
-  "${K[@]}" apply -f "$M/30-apps.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.17-apps.yaml" >/dev/null
   "${K[@]}" "${P[@]}" rollout status deploy/client --timeout=180s >/dev/null 2>&1
   "${K[@]}" "${P[@]}" rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1
   "${K[@]}" label namespace course-proxy istio-injection=enabled >/dev/null
@@ -978,7 +1036,7 @@ module_30() {
   expect "and inbound to 15006" "$(echo "$rules" | grep -c 'ISTIO_IN_REDIRECT -p tcp -j REDIRECT --to-ports 15006')" '^1$'
   local cp=(-n course-proxy exec deploy/client -c curl --)
   expect "through the client's Envoy httpbin sees the client certificate" "$("${K[@]}" "${cp[@]}" curl -s -m 5 http://httpbin:8000/headers 2>/dev/null | grep -c X-Forwarded-Client-Cert)" '^1$'
-  "${K[@]}" "${P[@]}" patch deploy client --patch-file "$M/30-exclude-port.yaml" >/dev/null
+  "${K[@]}" "${P[@]}" patch deploy client --patch-file "$M/3.17-exclude-port.yaml" >/dev/null
   "${K[@]}" "${P[@]}" rollout status deploy/client --timeout=180s >/dev/null 2>&1
   for _ in $(seq 1 24); do n="$("${K[@]}" "${P[@]}" get pods -l app=client --no-headers 2>/dev/null | wc -l | tr -d ' ')"; [[ $n == 1 ]] && break; settle 5; done
   expect "the annotation adds -o 8000 to istio-init" "$("${K[@]}" "${P[@]}" get pod -l app=client -o jsonpath='{.items[0].spec.initContainers[0].args}')" '"-o","8000"'
@@ -989,19 +1047,19 @@ module_30() {
   local before after
   before="$("${I[@]}" proxy-config cluster deploy/client -n course-proxy 2>/dev/null | tail -n +2 | wc -l | tr -d ' ')"
   between "without a Sidecar resource the client knows every Service (clusters)" "$before" 40 200
-  "${K[@]}" apply -f "$M/30-sidecar-scope.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.17-sidecar-scope.yaml" >/dev/null
   for _ in $(seq 1 12); do settle 3; after="$("${I[@]}" proxy-config cluster deploy/client -n course-proxy 2>/dev/null | tail -n +2 | wc -l | tr -d ' ')"; (( after < 30 )) && break; done
   between "the Sidecar resource cuts the clusters" "$after" 8 29
   expect "an unknown destination passes through (ALLOW_ANY)" "$("${K[@]}" "${cp[@]}" curl -s -m 5 -o /dev/null -w '%{http_code}' http://headlamp.headlamp/ 2>/dev/null)" '^200$'
   expect "the ambient frontend refuses the passthrough plain text" "$("${K[@]}" "${cp[@]}" curl -s -m 5 -o /dev/null -w '%{http_code}' http://frontend.shop:3000/healthz 2>/dev/null)" '^000$'
-  "${K[@]}" apply -f "$M/30-sidecar-registry-only.yaml" >/dev/null; settle 5
+  "${K[@]}" apply -f "$M/3.17-sidecar-registry-only.yaml" >/dev/null; settle 5
   expect "REGISTRY_ONLY blocks the unknown destination" "$("${K[@]}" "${cp[@]}" curl -s -m 5 -o /dev/null -w '%{http_code}' http://headlamp.headlamp/ 2>/dev/null)" '^000$'
   expect "REGISTRY_ONLY still allows httpbin" "$("${K[@]}" "${cp[@]}" curl -s -m 5 -o /dev/null -w '%{http_code}' http://httpbin:8000/status/200 2>/dev/null)" '^200$'
-  "${K[@]}" "${P[@]}" patch deploy httpbin --patch-file "$M/30-proxy-resources.yaml" >/dev/null
+  "${K[@]}" "${P[@]}" patch deploy httpbin --patch-file "$M/3.17-proxy-resources.yaml" >/dev/null
   "${K[@]}" "${P[@]}" rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1
   for _ in $(seq 1 24); do n="$("${K[@]}" "${P[@]}" get pods -l app=httpbin --no-headers 2>/dev/null | wc -l | tr -d ' ')"; [[ $n == 1 ]] && break; settle 5; done
   expect "the annotations set the sidecar's resources" "$("${K[@]}" "${P[@]}" get pod -l app=httpbin -o jsonpath='{.items[0].spec.containers[?(@.name=="istio-proxy")].resources}')" '"limits":\{"cpu":"200m","memory":"128Mi"\},"requests":\{"cpu":"50m","memory":"64Mi"\}'
-  "${K[@]}" apply -f "$M/30-ambient-apps.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.17-ambient-apps.yaml" >/dev/null
   "${K[@]}" -n course-ambient rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1
   "${K[@]}" -n course-ambient rollout status deploy/client --timeout=180s >/dev/null 2>&1
   expect "ambient pods keep one container" "$("${K[@]}" -n course-ambient get pod -l app=httpbin -o jsonpath='{.items[0].spec.containers[*].name}')" '^httpbin$'
@@ -1019,12 +1077,12 @@ for r in json.load(sys.stdin)["resources"]:
     print(r["node"]["id"], *[c["typeUrl"].split(".")[-1] + "=" + c.get("configStatus", "?") for c in r["genericXdsConfigs"]])'
 }
 
-module_31() {
-  section "31: debugging Envoy with istioctl"
+module_3_18() {
+  section "3.18: debugging Envoy with istioctl"
   baseline
   local D=(-n course-debug) node="k3d-${CLUSTER_NAME:-k8s-lab}-server-0" cl="outbound|8000||httpbin.course-debug.svc.cluster.local"
   local c=(-n course-debug exec deploy/client -c curl --)
-  "${K[@]}" apply -f "$M/31-apps.yaml" -f "$M/31-access-logs.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.18-apps.yaml" -f "$M/3.18-access-logs.yaml" >/dev/null
   "${K[@]}" "${D[@]}" rollout status deploy/httpbin --timeout=180s >/dev/null 2>&1
   "${K[@]}" "${D[@]}" rollout status deploy/client --timeout=180s >/dev/null 2>&1; settle 5
   expect "both sidecars are SYNCED" "$(debug_sync | grep -c 'Cluster=SYNCED ClusterLoadAssignment=SYNCED Listener=SYNCED RouteConfiguration=SYNCED')" '^2$'
@@ -1035,7 +1093,7 @@ module_31() {
   expect "the server sidecar has an inbound cluster for 8080" "$("${I[@]}" proxy-config cluster deploy/httpbin -n course-debug --direction inbound 2>/dev/null | grep -c '8080 .*inbound')" '^1$'
   expect "the client holds an active certificate and root" "$("${I[@]}" proxy-config secret deploy/client -n course-debug 2>/dev/null | grep -cE '^(default|ROOTCA) .*ACTIVE +true')" '^2$'
   expect "the waypoint's clusters are inbound-vip" "$("${I[@]}" proxy-config cluster deploy/waypoint -n shop 2>/dev/null | grep -c 'backend.shop.svc.cluster.local .*inbound-vip')" '^1$'
-  "${K[@]}" apply -f "$M/31-broken.yaml" >/dev/null; settle 5
+  "${K[@]}" apply -f "$M/3.18-broken.yaml" >/dev/null; settle 5
   local out; out="$("${I[@]}" analyze -n course-debug 2>&1)"
   expect "analyze finds the missing subset, the conflict and the empty subset" "$(echo "$out" | grep -oE 'IST0101|IST0109|IST0173' | sort -u | tr '\n' ' ')" '^IST0101 IST0109 IST0173 $'
   expect "the route to a missing subset gives 503" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/status/200 2>/dev/null)" '^503$'
@@ -1051,7 +1109,7 @@ module_31() {
   envoy="$(docker exec "$node" sh -c "cat /proc/$pid/task/*/children" 2>/dev/null | awk '{print $1}')"
   expect "pilot-agent's child is envoy" "$(docker exec "$node" cat "/proc/$envoy/comm" 2>/dev/null)" '^envoy$'
   docker exec "$node" kill -STOP "$envoy"
-  "${K[@]}" apply -f "$M/31-status-only.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.18-status-only.yaml" >/dev/null
   local s=""
   for _ in $(seq 1 10); do settle 2; s="$(debug_sync | grep "^$pod")"; [[ $s == *STALE* ]] && break; done
   expect "a frozen Envoy goes STALE" "$s" 'RouteConfiguration=STALE'
@@ -1076,7 +1134,7 @@ module_31() {
   settle 2
   expect "the server's sidecar logs UF" "$("${K[@]}" "${D[@]}" logs deploy/httpbin -c istio-proxy --tail=1 2>/dev/null)" ' 503 [A-Z,]*UF'
   "${K[@]}" "${D[@]}" patch svc httpbin --type json -p '[{"op":"replace","path":"/spec/ports/0/targetPort","value":"http"}]' >/dev/null; settle 5
-  "${K[@]}" apply -f "$M/31-tight-pool.yaml" >/dev/null; settle 5
+  "${K[@]}" apply -f "$M/3.18-tight-pool.yaml" >/dev/null; settle 5
   local overflow; overflow="$("${K[@]}" "${c[@]}" sh -c 'for i in $(seq 1 10); do curl -s -o /dev/null -w "%{http_code}\n" http://httpbin:8000/delay/1 & done; wait' 2>/dev/null | grep -c 503)"
   between "a pool of one rejects most of ten parallel requests" "$overflow" 5 9
   settle 2
@@ -1087,19 +1145,19 @@ module_31() {
   expect "the proxy logs router debug lines" "$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --since=15s 2>/dev/null | grep -c 'debug.*router')" '^[1-9]'
   expect "--reset sets it back to warning" "$("${I[@]}" proxy-config log deploy/client -n course-debug --reset 2>/dev/null | grep router)" 'router: warning'
   local clean=(-n course-debug delete virtualservice,destinationrule,sidecar,authorizationpolicy --all)
-  "${K[@]}" apply -f "$M/31-break-1.yaml" >/dev/null; settle 5
+  "${K[@]}" apply -f "$M/3.18-break-1.yaml" >/dev/null; settle 5
   "${K[@]}" "${c[@]}" curl -s -o /dev/null http://httpbin:8000/status/200 >/dev/null 2>&1; settle 2
   expect "break 1: UH on the v1 subset cluster" "$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --tail=1 2>/dev/null)" '503 UH .*outbound\|8000\|v1\|'
   expect "break 1: analyze names the empty subset" "$("${I[@]}" analyze -n course-debug 2>&1 | grep -c IST0173)" '^1$'
-  "${K[@]}" "${clean[@]}" >/dev/null; "${K[@]}" apply -f "$M/31-break-2.yaml" >/dev/null; settle 5
+  "${K[@]}" "${clean[@]}" >/dev/null; "${K[@]}" apply -f "$M/3.18-break-2.yaml" >/dev/null; settle 5
   expect "break 2: the call still works" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/status/200 2>/dev/null)" '^200$'
   expect "break 2: but httpbin sees no client certificate" "$("${K[@]}" "${c[@]}" curl -s http://httpbin:8000/headers 2>/dev/null | grep -c X-Forwarded-Client-Cert)" '^0$'
   settle 2
   expect "break 2: the client's log shows PassthroughCluster" "$("${K[@]}" "${D[@]}" logs deploy/client -c istio-proxy --tail=1 2>/dev/null)" 'PassthroughCluster'
-  "${K[@]}" "${clean[@]}" >/dev/null; "${K[@]}" apply -f "$M/31-break-3.yaml" >/dev/null; settle 5
+  "${K[@]}" "${clean[@]}" >/dev/null; "${K[@]}" apply -f "$M/3.18-break-3.yaml" >/dev/null; settle 5
   expect "break 3: /delay/1 times out with 504" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/delay/1 2>/dev/null)" '^504$'
   expect "break 3: the route holds a 0.5 s timeout" "$("${I[@]}" proxy-config route deploy/client -n course-debug --name 8000 -o json 2>/dev/null | grep -c '"timeout": "0.500s"')" '^[1-9]'
-  "${K[@]}" "${clean[@]}" >/dev/null; "${K[@]}" apply -f "$M/31-break-4.yaml" >/dev/null 2>&1; settle 5
+  "${K[@]}" "${clean[@]}" >/dev/null; "${K[@]}" apply -f "$M/3.18-break-4.yaml" >/dev/null 2>&1; settle 5
   expect "break 4: /anything/order gets 403" "$("${K[@]}" "${c[@]}" curl -s -o /dev/null -w '%{http_code}' http://httpbin:8000/anything/order 2>/dev/null)" '^403$'
   settle 2
   expect "break 4: httpbin's sidecar names the policy" "$("${K[@]}" "${D[@]}" logs deploy/httpbin -c istio-proxy --tail=1 2>/dev/null)" 'policy\[block-anything\]'
@@ -1107,12 +1165,12 @@ module_31() {
   expect "after the reset course-debug is gone" "$("${K[@]}" get ns course-debug 2>&1 | grep -c NotFound)" '^1$'
 }
 
-# Module 32 creates its own k3d cluster and downloads istioctl 1.24.2, so it is not in the
-# default run: ./platform-engineering/verify.sh 32. It never touches k8s-lab's Istio.
-module_32() {
-  section "32: installing Istio with istioctl (throwaway cluster istio-install-lab)"
+# Module 3.20 creates its own k3d cluster and downloads istioctl 1.24.2, so it is not in the
+# default run: ./platform-engineering/verify.sh 3.20. It never touches k8s-lab's Istio.
+module_3_20() {
+  section "3.20: installing Istio with istioctl (throwaway cluster istio-install-lab)"
   local X=(kubectl --context k3d-istio-install-lab) dir="$HOME/.istioctl/1.24.2" fetched=0 out
-  local IC="$dir/istioctl" op="$M/32-istio-operator.yaml" vals="${TMPDIR:-/tmp}/istio-helm-values-verify"
+  local IC="$dir/istioctl" op="$M/3.20-istio-operator.yaml" vals="${TMPDIR:-/tmp}/istio-helm-values-verify"
   k3d cluster delete istio-install-lab >/dev/null 2>&1
   k3d cluster create istio-install-lab --image rancher/k3s:v1.31.5-k3s1 --no-lb \
     --k3s-arg "--disable=traefik@server:0" --kubeconfig-switch-context=false --wait >/dev/null 2>&1
@@ -1172,8 +1230,8 @@ module_32() {
   expect "k8s-lab still has its 3 proxies" "$("${I[@]}" version 2>/dev/null | grep -o '([0-9]* proxies)')" '^\(3 proxies\)$'
 }
 
-module_45() {
-  section "45: the life of an outbound request"
+module_3_16() {
+  section "3.16: the life of an outbound request"
   baseline
   local N="k3d-${CLUSTER_NAME:-k8s-lab}-server-0" net="k3d-${CLUSTER_NAME:-k8s-lab}"
   in_out() { "${K[@]}" -n course-outbound exec deploy/client -- "$@" 2>/dev/null || true; }
@@ -1186,7 +1244,7 @@ module_45() {
     docker run --rm --net "$1" --cap-add NET_ADMIN --cap-add NET_RAW alpine:3.20 \
       sh -c "apk add -q tcpdump >/dev/null 2>&1 && timeout 40 tcpdump -tnni any -c 6 '$2' 2>/dev/null | cut -d, -f1" 2>/dev/null
   }
-  "${K[@]}" apply -f "$M/45-outbound-client.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.16-outbound-client.yaml" >/dev/null
   "${K[@]}" -n course-outbound rollout status deploy/client --timeout=120s >/dev/null 2>&1
   local podip nodeip gw ip4
   podip="$("${K[@]}" -n course-outbound get pod -l app=client -o jsonpath='{.items[0].status.podIP}')"
@@ -1255,7 +1313,7 @@ module_45() {
   expect "8. httpbin sees a public address, not a private one" "$origin" '^[0-9]'
   expect "8. which is none of the lab's private addresses" "$(echo "$origin" | grep -cE '^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)')" '^0$'
   # 9. controlled egress: the waypoint opens the outside connection
-  "${K[@]}" apply -f "$M/45-egress-waypoint.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.16-egress-waypoint.yaml" >/dev/null
   local wp=""
   for _ in $(seq 1 36); do
     wp="$("${K[@]}" -n course-outbound get pod -l gateway.networking.k8s.io/gateway-name=waypoint -o jsonpath='{.items[0].status.podIP}' 2>/dev/null)"
@@ -1271,9 +1329,9 @@ module_45() {
   expect "after the reset course-outbound is gone" "$("${K[@]}" get ns course-outbound 2>&1 | grep -c NotFound)" '^1$'
 }
 
-# Module 21 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 21
-module_21() {
-  section "21: k3s certificates, backups and upgrades (the upgrade is one-way)"
+# Module 2.9 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 2.9
+module_2_9() {
+  section "2.9: k3s certificates, backups and upgrades (the upgrade is one-way)"
   local N="k3d-${CLUSTER_NAME:-k8s-lab}-server-0" B="${TMPDIR:-/tmp}/k8s-lab-k3s-backup" target=v1.31.14+k3s1
   local suc=https://github.com/rancher/system-upgrade-controller/releases/download/v0.20.2
   if [[ "$("${K[@]}" get node "$N" -o jsonpath='{.status.nodeInfo.kubeletVersion}')" == "$target" ]]; then
@@ -1304,7 +1362,7 @@ module_21() {
   rm -rf "$B"
   "${K[@]}" apply -f "$suc/crd.yaml" -f "$suc/system-upgrade-controller.yaml" >/dev/null
   "${K[@]}" -n system-upgrade rollout status deploy/system-upgrade-controller --timeout=180s >/dev/null 2>&1
-  "${K[@]}" apply -f "$M/21-upgrade-plan.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/2.9-upgrade-plan.yaml" >/dev/null
   local v=""
   for _ in $(seq 1 60); do v="$("${K[@]}" get node "$N" -o jsonpath='{.status.nodeInfo.kubeletVersion}' 2>/dev/null)"; [[ "$v" == "$target" ]] && break; settle 10; done
   expect "the system-upgrade-controller upgrades k3s to $target" "$v" "^${target//+/\\+}$"
@@ -1318,17 +1376,17 @@ module_21() {
   expect "after the repair the shop answers 200" "$(code "$BASE/api/orders")" '^200$'
 }
 
-# Module 14 upgrades Istio for real and cannot be undone, so it is not in the default
-# run. Use it on a lab that runs the course version: ./platform-engineering/verify.sh 14
-module_14() {
-  section "14: upgrading Istio (one-way: rebuild the lab to return)"
+# Module 3.19 upgrades Istio for real and cannot be undone, so it is not in the default
+# run. Use it on a lab that runs the course version: ./platform-engineering/verify.sh 3.19
+module_3_19() {
+  section "3.19: upgrading Istio (one-way: rebuild the lab to return)"
   local NEW=1.25.5 REV=1-25-5 H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n istio-system)
   if "${H[@]}" list -q | grep -q '^istiod-'; then
     fail "the lab runs the course version of Istio" "already upgraded; run ./lab.sh down --yes && ./lab.sh up first"
     return
   fi
   baseline
-  "${K[@]}" apply -f "$M/07-sidecar-namespace.yaml" -f "$M/07-sidecar-apps.yaml" -f "$M/07-sidecar-podmonitor.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/3.9-sidecar-namespace.yaml" -f "$M/3.9-sidecar-apps.yaml" -f "$M/3.9-sidecar-podmonitor.yaml" >/dev/null
   "${K[@]}" -n course-sidecar rollout status deploy/httpbin --timeout=120s >/dev/null 2>&1
   "${K[@]}" -n course-sidecar rollout status deploy/client --timeout=120s >/dev/null 2>&1
   local log="${TMPDIR:-/tmp}/k8s-lab-upgrade-traffic.log"; : > "$log"
@@ -1370,7 +1428,7 @@ module_14() {
   expect "8. the default validator points at the new control plane" "$("${K[@]}" get validatingwebhookconfiguration istiod-default-validator -o jsonpath='{.webhooks[0].clientConfig.service.name}')" "^istiod-${REV}$"
   "${H[@]}" delete istiod >/dev/null 2>&1; settle 10
   expect "9. only the new control plane is left" "$("${K[@]}" -n istio-system get deploy -l app=istiod -o name)" "istiod-${REV}$"
-  expect "9. Istio still validates new resources" "$("${K[@]}" apply --dry-run=server -f "$M/12-serviceentry.yaml" 2>&1 | grep -c 'created (server dry run)')" '^2$'
+  expect "9. Istio still validates new resources" "$("${K[@]}" apply --dry-run=server -f "$M/3.11-serviceentry.yaml" 2>&1 | grep -c 'created (server dry run)')" '^2$'
   kill "$loader" 2>/dev/null; wait "$loader" 2>/dev/null
   local total failed; total="$(wc -l < "$log" | tr -d ' ')"; failed="$(grep -vc '^200$' "$log" || true)"
   expect "the shop kept answering during the upgrade ($failed of $total requests failed)" "$(( failed * 100 <= total * 5 ))" '^1$'
@@ -1379,17 +1437,17 @@ module_14() {
 }
 
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(0 1 2 3 4 5 6 7 8 11 12 13 15 16 20 22 23 24 25 26 28 29 30 31 45); fi
+if (( ${#modules[@]} == 0 )); then modules=(1.1 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.9 3.10 3.11 3.12 3.13 3.14 3.15 3.16 3.17 3.18); fi
 # Start from the Git baseline, in case an exercise is still applied.
 printf 'Restoring the baseline before the checks\n'
 "$ROOT/platform-engineering/reset.sh" >/dev/null 2>&1
 for m in "${modules[@]}"; do
-  if declare -F "module_$m" >/dev/null; then "module_$m"; else echo "No module $m"; fi
+  if declare -F "module_${m//./_}" >/dev/null; then "module_${m//./_}"; else echo "No module $m"; fi
 done
 
 printf '\nRestoring the baseline\n'
-# --all also removes the module 7 namespaces and the course client, so the lab ends
-# exactly as a fresh provision leaves it (module 0 expects 3 proxies).
+# --all also removes the module 3.9 namespaces and the course client, so the lab ends
+# exactly as a fresh provision leaves it (module 3.1 expects 3 proxies).
 "$ROOT/platform-engineering/reset.sh" --all >/dev/null 2>&1
 printf '\n%d checks passed, %d failed\n' "$PASS" "$FAIL"
 (( FAIL == 0 ))

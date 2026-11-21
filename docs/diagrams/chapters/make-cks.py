@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagrams for the security modules (platform-engineering/practice-cluster.md and modules 38 to 44) with the kit in ../bbg.py.
+"""Draw the diagrams for the security modules (platform-engineering/practice-cluster.md and modules 4.1 to 4.7) with the kit in ../bbg.py.
 
   cks-practice-cluster   the two kind nodes, the Lima VM, and what runs on each
   cks-supply-chain       where each supply chain check sits, from Dockerfile to node

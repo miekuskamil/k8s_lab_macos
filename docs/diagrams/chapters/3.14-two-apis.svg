@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="920" viewBox="0 0 1600 920" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="920" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Same jobs, <tspan fill="#7c3aed">different shapes</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Both APIs build an ingress proxy and route to backend versions. The pieces fit together differently.</text>
+<rect x="40.0" y="150.0" width="740.0" height="740.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="58.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Gateway API (modules 3.4, 3.10)</text>
+<rect x="70.0" y="210.0" width="280.0" height="100.0" rx="14.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<rect x="86.0" y="238.0" width="44.0" height="44.0" rx="10.0" fill="#2563eb" stroke="none"/>
+<polygon points="100.3,247.8 111.2,247.8 117.0,253.6 117.0,272.2 100.3,272.2" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linejoin="round"/>
+<polyline points="111.2,247.8 111.2,253.6 117.0,253.6" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="104.2,259.4 113.1,259.4" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="104.2,263.8 113.1,263.8" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="104.2,268.3 109.3,268.3" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="144.0" y="253.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Gateway</text>
+<text x="144.0" y="279.0" font-size="17.0" fill="#475569" text-anchor="start">creates the proxy</text>
+<rect x="470.0" y="210.0" width="280.0" height="100.0" rx="14.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<rect x="486.0" y="238.0" width="44.0" height="44.0" rx="10.0" fill="#7c3aed" stroke="none"/>
+<polygon points="500.3,247.8 511.2,247.8 517.0,253.6 517.0,272.2 500.3,272.2" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linejoin="round"/>
+<polyline points="511.2,247.8 511.2,253.6 517.0,253.6" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="504.2,259.4 513.1,259.4" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="504.2,263.8 513.1,263.8" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="504.2,268.3 509.3,268.3" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="544.0" y="253.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">HTTPRoute</text>
+<text x="544.0" y="279.0" font-size="17.0" fill="#475569" text-anchor="start">parentRefs</text>
+<rect x="70.0" y="420.0" width="280.0" height="120.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="97.0,435.0 105.5,439.5 105.5,449.0 97.0,453.5 88.5,449.0 88.5,439.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="88.5,439.5 97.0,444.0 105.5,439.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="97.0,444.0 97.0,453.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="116.0" y="450.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">gateway pod</text>
+<text x="90.0" y="510.0" font-size="17.0" fill="#475569" text-anchor="start">Istio creates it</text>
+<polyline points="210.0,310.0 210.0,410.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="210.0,420.0 204.2,408.5 215.8,408.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="220.0" y="371.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">creates</text>
+<polyline points="470.0,260.0 359.5,260.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="350.0,260.0 361.5,254.2 361.5,265.8" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="410.0" y="250.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">attaches to</text>
+<rect x="450.0" y="640.0" width="300.0" height="210.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="468.0" y="670.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace shop</text>
+<rect x="470.0" y="690.0" width="125.0" height="130.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="532.5" y="736.5" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">Service</text>
+<text x="532.5" y="758.7" font-size="17.0" fill="#475569" text-anchor="middle">backend</text>
+<text x="532.5" y="780.8" font-size="17.0" fill="#475569" text-anchor="middle">-v1</text>
+<rect x="610.0" y="690.0" width="125.0" height="130.0" rx="10.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<text x="672.5" y="736.5" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">Service</text>
+<text x="672.5" y="758.7" font-size="17.0" fill="#475569" text-anchor="middle">backend</text>
+<text x="672.5" y="780.8" font-size="17.0" fill="#475569" text-anchor="middle">-v2</text>
+<polyline points="532.5,310.0 532.5,680.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="532.5,690.0 526.7,678.5 538.3,678.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="672.5,310.0 672.5,680.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="672.5,690.0 666.7,678.5 678.3,678.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="545.0" y="480.0" font-size="17.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">backendRefs</text>
+<rect x="820.0" y="150.0" width="740.0" height="740.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="838.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Istio API (this module)</text>
+<rect x="850.0" y="210.0" width="300.0" height="100.0" rx="14.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<rect x="866.0" y="238.0" width="44.0" height="44.0" rx="10.0" fill="#475569" stroke="none"/>
+<rect x="875.8" y="249.8" width="24.3" height="20.5" rx="3.2" fill="none" stroke="#ffffff" stroke-width="1.536"/>
+<polyline points="880.3,256.2 884.2,260.0 880.3,263.8" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="886.7,264.5 893.1,264.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="924.0" y="253.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Helm chart</text>
+<text x="924.0" y="279.0" font-size="17.0" fill="#475569" text-anchor="start">istio/gateway</text>
+<rect x="1250.0" y="210.0" width="280.0" height="100.0" rx="14.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<rect x="1266.0" y="238.0" width="44.0" height="44.0" rx="10.0" fill="#2563eb" stroke="none"/>
+<polygon points="1280.3,247.8 1291.2,247.8 1297.0,253.6 1297.0,272.2 1280.3,272.2" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linejoin="round"/>
+<polyline points="1291.2,247.8 1291.2,253.6 1297.0,253.6" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1284.2,259.4 1293.1,259.4" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1284.2,263.8 1293.1,263.8" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1284.2,268.3 1289.3,268.3" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1324.0" y="242.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Gateway</text>
+<text x="1324.0" y="267.9" font-size="17.0" fill="#475569" text-anchor="start">selector:</text>
+<text x="1324.0" y="290.0" font-size="17.0" fill="#475569" text-anchor="start">istio=ingress</text>
+<rect x="850.0" y="400.0" width="300.0" height="120.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="877.0,415.0 885.5,419.5 885.5,429.0 877.0,433.5 868.5,429.0 868.5,419.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="868.5,419.5 877.0,424.0 885.5,419.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="877.0,424.0 877.0,433.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="896.0" y="430.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">gateway pod</text>
+<text x="870.0" y="490.0" font-size="17.0" fill="#475569" text-anchor="start">you install it</text>
+<polyline points="1000.0,310.0 1000.0,390.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1000.0,400.0 994.2,388.5 1005.8,388.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="1010.0" y="361.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">installs</text>
+<polyline points="1250.0,290.0 1200.0,290.0 1200.0,460.0 1159.5,460.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1150.0,460.0 1161.5,454.2 1161.5,465.8" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="1175.0" y="450.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">configures</text>
+<rect x="1250.0" y="400.0" width="280.0" height="100.0" rx="14.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<rect x="1266.0" y="428.0" width="44.0" height="44.0" rx="10.0" fill="#7c3aed" stroke="none"/>
+<polygon points="1280.3,437.8 1291.2,437.8 1297.0,443.6 1297.0,462.2 1280.3,462.2" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linejoin="round"/>
+<polyline points="1291.2,437.8 1291.2,443.6 1297.0,443.6" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1284.2,449.4 1293.1,449.4" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1284.2,453.8 1293.1,453.8" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1284.2,458.3 1289.3,458.3" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1324.0" y="443.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">VirtualService</text>
+<text x="1324.0" y="469.0" font-size="17.0" fill="#475569" text-anchor="start">gateways: [...]</text>
+<polyline points="1418.0,400.0 1418.0,319.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1418.0,310.0 1423.8,321.5 1412.2,321.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="1428.0" y="361.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">names it</text>
+<rect x="850.0" y="640.0" width="300.0" height="210.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="868.0" y="670.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Service backend</text>
+<rect x="870.0" y="690.0" width="125.0" height="130.0" rx="10.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-dasharray="7 6"/>
+<rect x="882.0" y="715.0" width="100.0" height="70.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="932.0" y="742.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">pods</text>
+<text x="932.0" y="764.7" font-size="17.0" fill="#475569" text-anchor="middle">v1</text>
+<rect x="1007.0" y="690.0" width="125.0" height="130.0" rx="10.0" fill="none" stroke="#0891b2" stroke-width="1.6" stroke-dasharray="7 6"/>
+<rect x="1019.0" y="715.0" width="100.0" height="70.0" rx="10.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<text x="1069.0" y="742.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">pods</text>
+<text x="1069.0" y="764.7" font-size="17.0" fill="#475569" text-anchor="middle">v2</text>
+<text x="932.0" y="845.0" font-size="15.0" fill="#475569" font-weight="700" text-anchor="middle">subset v1</text>
+<text x="1069.0" y="845.0" font-size="15.0" fill="#475569" font-weight="700" text-anchor="middle">subset v2</text>
+<rect x="1250.0" y="700.0" width="280.0" height="100.0" rx="14.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<rect x="1266.0" y="728.0" width="44.0" height="44.0" rx="10.0" fill="#7c3aed" stroke="none"/>
+<polygon points="1280.3,737.8 1291.2,737.8 1297.0,743.6 1297.0,762.2 1280.3,762.2" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linejoin="round"/>
+<polyline points="1291.2,737.8 1291.2,743.6 1297.0,743.6" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1284.2,749.4 1293.1,749.4" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1284.2,753.8 1293.1,753.8" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1284.2,758.3 1289.3,758.3" fill="none" stroke="#ffffff" stroke-width="1.41" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1324.0" y="743.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">DestinationRule</text>
+<text x="1324.0" y="769.0" font-size="17.0" fill="#475569" text-anchor="start">subsets by label</text>
+<polyline points="1250.0,480.0 1225.0,480.0 1225.0,671.0 1159.5,671.4" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1150.0,671.5 1161.5,665.7 1161.6,677.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="1235.0" y="586.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">routes to subsets</text>
+<polyline points="1250.0,750.0 1159.5,750.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1150.0,750.0 1161.5,744.2 1161.5,755.8" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="1200.0" y="740.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">defines</text>
+</svg>

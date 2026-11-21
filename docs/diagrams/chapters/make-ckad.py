@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the diagrams for the application modules (platform-engineering/practice-cluster.md and modules 33 to 37) with the kit in ../bbg.py.
+"""Draw the diagrams for the application modules (platform-engineering/practice-cluster.md and modules 1.2 to 1.6) with the kit in ../bbg.py.
 
   ckad-practice-cluster   the practice cluster with the application extras (practice-cluster.md)
   ckad-image-flow         Dockerfile to registry to node, the four steps of tasks 1 and 2 (01)

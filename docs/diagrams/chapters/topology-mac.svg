@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="620" viewBox="0 0 1600 620" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="620" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">On a Mac: <tspan fill="#7c3aed">one Docker engine</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">OrbStack runs Docker, Docker runs every part of the course, and Lima adds one VM for module 4.7.</text>
+<rect x="40.0" y="150.0" width="1520.0" height="430.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="57.5,181.0 76.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">macOS</text>
+<rect x="80.0" y="210.0" width="1080.0" height="330.0" rx="16.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.6"/>
+<text x="98.0" y="240.0" font-size="18.0" fill="#5b21b6" font-weight="700" text-anchor="start">OrbStack</text>
+<rect x="120.0" y="270.0" width="1000.0" height="230.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="138.0" y="300.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Docker</text>
+<rect x="150.0" y="330.0" width="212.5" height="110.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="256.2" y="377.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">toolbox</text>
+<text x="256.2" y="399.7" font-size="17.0" fill="#475569" text-anchor="middle">about 0.1 GB</text>
+<text x="256.2" y="470.0" font-size="15.0" fill="#475569" font-family="'SF Mono', Menlo, Consolas, monospace" text-anchor="middle">./lab.sh shell</text>
+<rect x="392.5" y="330.0" width="212.5" height="110.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="498.8" y="377.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">k3d lab</text>
+<text x="498.8" y="399.7" font-size="17.0" fill="#475569" text-anchor="middle">about 5 GB</text>
+<text x="498.8" y="470.0" font-size="15.0" fill="#475569" font-family="'SF Mono', Menlo, Consolas, monospace" text-anchor="middle">./lab.sh up</text>
+<rect x="635.0" y="330.0" width="212.5" height="110.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="741.2" y="377.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">kind practice</text>
+<text x="741.2" y="399.7" font-size="17.0" fill="#475569" text-anchor="middle">about 1.3 GB</text>
+<text x="741.2" y="470.0" font-size="15.0" fill="#475569" font-family="'SF Mono', Menlo, Consolas, monospace" text-anchor="middle">./lab.sh practice up</text>
+<rect x="877.5" y="330.0" width="212.5" height="110.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="983.8" y="377.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">Ollama</text>
+<text x="983.8" y="399.7" font-size="17.0" fill="#475569" text-anchor="middle">2.5 GB, optional</text>
+<text x="983.8" y="470.0" font-size="15.0" fill="#475569" font-family="'SF Mono', Menlo, Consolas, monospace" text-anchor="middle">./lab.sh ollama</text>
+<rect x="1200.0" y="210.0" width="320.0" height="330.0" rx="16.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.6"/>
+<text x="1218.0" y="240.0" font-size="18.0" fill="#5b21b6" font-weight="700" text-anchor="start">Lima</text>
+<rect x="1230.0" y="330.0" width="260.0" height="110.0" rx="10.0" fill="#fdeeee" stroke="#dc2626" stroke-width="1.8"/>
+<text x="1360.0" y="377.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">cks-lima VM</text>
+<text x="1360.0" y="399.7" font-size="17.0" fill="#475569" text-anchor="middle">3 GiB, module 4.7</text>
+<text x="1360.0" y="470.0" font-size="15.0" fill="#475569" font-family="'SF Mono', Menlo, Consolas, monospace" text-anchor="middle">lima.sh create</text>
+</svg>

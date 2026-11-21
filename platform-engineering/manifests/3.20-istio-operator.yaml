@@ -1,0 +1,38 @@
+# Module 3.20: an IstioOperator file for `istioctl install`. It is NOT applied with kubectl:
+# istioctl reads it, merges it over the profile, renders the charts and applies the result.
+# Use it only on the throwaway cluster istio-install-lab, never on k8s-lab.
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+spec:
+  # Start from the smallest profile: istiod only, no gateways.
+  profile: minimal
+  # meshConfig: settings for the whole mesh, read by istiod and pushed to every proxy.
+  meshConfig:
+    # Every sidecar writes one access log line per request to its stdout.
+    accessLogFile: /dev/stdout
+    # Unknown destinations (not in the service registry) are blocked, not passed through.
+    outboundTrafficPolicy:
+      mode: REGISTRY_ONLY
+    # defaultConfig: the ProxyConfig every proxy starts with.
+    defaultConfig:
+      # Start istio-proxy before the app container, so the app's first call finds Envoy ready.
+      holdApplicationUntilProxyStarts: true
+  # components: which pieces to install, and Kubernetes settings for each.
+  components:
+    pilot:
+      k8s:
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+  # values: settings passed straight to the Helm charts that istioctl renders.
+  values:
+    pilot:
+      autoscaleEnabled: false
+    global:
+      proxy:
+        # Requests for every injected sidecar (the default is 100m CPU and 128Mi).
+        resources:
+          requests:
+            cpu: 10m
+            memory: 40Mi

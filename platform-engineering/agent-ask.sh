@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Module 19: ask a kagent agent a question over A2A, from inside the mesh, and print
+# Module 5.3: ask a kagent agent a question over A2A, from inside the mesh, and print
 # the tools it called and its answer.
 #   ./platform-engineering/agent-ask.sh "How many pods run in the shop namespace?"
 #   AGENT=istio-agent ./platform-engineering/agent-ask.sh "Is mTLS strict in the shop namespace?"

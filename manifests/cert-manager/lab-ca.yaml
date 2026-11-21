@@ -2,7 +2,7 @@
 #   1. selfsigned   signs one certificate: the lab root CA.
 #   2. lab-root-ca  that root CA. Its key pair lives in the Secret cert-manager/lab-root-ca.
 #   3. lab-ca       a ClusterIssuer that signs certificates for any namespace with the root CA.
-# Course module 11 asks lab-ca for the shop's HTTPS certificate.
+# Course module 3.10 asks lab-ca for the shop's HTTPS certificate.
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:

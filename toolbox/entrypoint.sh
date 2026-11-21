@@ -28,7 +28,7 @@ forward() {   # forward <local port> <target host:port>
   socat "TCP-LISTEN:$1,bind=127.0.0.1,fork,reuseaddr" "TCP:$2" 2>/dev/null &
 }
 forward 8080 host.docker.internal:8080                     # the shop, through the k3d load balancer
-forward 8443 host.docker.internal:8443                     # the shop over HTTPS (module 11)
+forward 8443 host.docker.internal:8443                     # the shop over HTTPS (module 3.10)
 forward 11434 host.docker.internal:11434                   # Ollama on the host, or the ollama service
 forward 30080 "${PRACTICE_KIND_NAME:-practice}-control-plane:30080"   # the practice cluster's ingress
 forward 30443 "${PRACTICE_KIND_NAME:-practice}-control-plane:30443"

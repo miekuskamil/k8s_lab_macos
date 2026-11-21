@@ -2,7 +2,7 @@
 # Copies your AI settings from lab.env into the cluster, where the AI apps read them.
 # ./lab.sh ai runs it, and so do ./lab.sh up, ./lab.sh start and the course checks.
 #
-# The shop assistant (module 17) and the RAG app (module 27) load the ConfigMap llm-settings
+# The shop assistant (module 5.1) and the RAG app (module 5.4) load the ConfigMap llm-settings
 # and the Secret llm-api-key from their namespace when those exist. This script writes both
 # into every namespace of the two apps that exists, and restarts an app that already runs so
 # it picks the values up. Without lab.env, or with LLM_PROVIDER empty, it removes them, and

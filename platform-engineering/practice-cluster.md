@@ -2,16 +2,16 @@
 
 > New to a term here, like kubeadm, kind or static pod? The [glossary](glossary.md#the-practice-cluster-and-the-security-modules) explains every term the practice cluster and the security modules use.
 
-Modules 33 to 43 and the six timed practice exams run on a second cluster, the practice cluster, instead of the k3d lab. The k3d lab is built for watching a platform work, so it runs the shop, Istio and every UI on one k3s node that you drive from your Mac. The application and security modules train a different skill, fixing a given problem on a live cluster from a terminal inside its time budget, and that skill needs a cluster that looks like the ones teams build by hand.
+Modules 1.2 to 1.6 and 4.1 to 4.6 and the six timed practice exams run on a second cluster, the practice cluster, instead of the k3d lab. The k3d lab is built for watching a platform work, so it runs the shop, Istio and every UI on one k3s node that you drive from your Mac. The application and security modules train a different skill, fixing a given problem on a live cluster from a terminal inside its time budget, and that skill needs a cluster that looks like the ones teams build by hand.
 
-| | k3d lab (modules 0 to 32) | Practice cluster (modules 33 to 43) |
+| | k3d lab (tracks 2, 3 and 5) | Practice cluster (tracks 1 and 4) |
 |---|---|---|
 | Cluster | k3d on your Mac, one k3s node, Istio and the shop | kubeadm on two kind nodes in Docker, no mesh |
 | You work | from your Mac, with `kubectl` and the UIs | inside a node, with `kubectl`, `vim`, `systemctl` and `journalctl` |
 | A module is | 30 to 60 minutes that explain one idea in depth | course-style theory, concepts and diagrams, then timed tasks of 3 to 10 minutes each |
 | You finish when | you understand why the platform behaves as it does | you solve each task inside its time budget without opening the solution |
 
-The practice cluster comes from kubeadm, the official tool that turns plain Linux machines into a Kubernetes cluster. kubeadm runs the control plane as **static pods**, which are pods that the kubelet starts from YAML files in `/etc/kubernetes/manifests` with no API server involved. Many security tasks edit those files, while the k3s cluster of the lab keeps its control plane inside one binary, so those tasks have nothing to edit there. The [timed tasks page](timed-tasks.md) explains how a task works, and the [VM page](../README.md#the-vm-for-module-44) explains the third machine that the kernel tasks of module 44 need.
+The practice cluster comes from kubeadm, the official tool that turns plain Linux machines into a Kubernetes cluster. kubeadm runs the control plane as **static pods**, which are pods that the kubelet starts from YAML files in `/etc/kubernetes/manifests` with no API server involved. Many security tasks edit those files, while the k3s cluster of the lab keeps its control plane inside one binary, so those tasks have nothing to edit there. The [timed tasks page](timed-tasks.md) explains how a task works, and the [VM page](../README.md#the-vm-for-the-kernel-tasks) explains the third machine that the kernel tasks of module 4.7 need.
 
 ## Two nodes in Docker
 
@@ -26,7 +26,7 @@ The picture shows the two nodes inside the Docker engine on your Mac:
 
 Both nodes run Kubernetes 1.37.1. That is one patch release below the newest 1.37, so the upgrade task has somewhere to go. Calico 3.32.3 connects the pods and enforces NetworkPolicy, and ingress-nginx 1.15.1 serves Ingress objects on NodePorts 30080 and 30443, which also answer on your Mac at `localhost:30080` and `localhost:30443`.
 
-Every tool comes from one **node image**. kind publishes a node image per Kubernetes version, and its newest, for 1.37.0, is the base. A Dockerfile in `platform-engineering/practice/cluster/kind/` adds the kubeadm, kubelet and kubectl packages at 1.37.1 from the Kubernetes package repository, so `apt` upgrades them in module 39 the way it does on any kubeadm node, and then every scanner, runtime and helper that the tasks use. The first `./lab.sh practice up` builds that image once. After that Docker keeps it, so a new cluster downloads nothing but the Kubernetes images, and you carry the whole toolbox with you wherever Docker runs.
+Every tool comes from one **node image**. kind publishes a node image per Kubernetes version, and its newest, for 1.37.0, is the base. A Dockerfile in `platform-engineering/practice/cluster/kind/` adds the kubeadm, kubelet and kubectl packages at 1.37.1 from the Kubernetes package repository, so `apt` upgrades them in module 4.2 the way it does on any kubeadm node, and then every scanner, runtime and helper that the tasks use. The first `./lab.sh practice up` builds that image once. After that Docker keeps it, so a new cluster downloads nothing but the Kubernetes images, and you carry the whole toolbox with you wherever Docker runs.
 
 ### Create, open, reset, delete
 
@@ -34,7 +34,7 @@ The guide's [Practice cluster and timed tasks](../README.md#practice-cluster-and
 
 In the test run on a Mac with 24 GB of memory and OrbStack, `./lab.sh practice up` took 2 minutes 38 seconds from nothing, including the download of kind's node image and the build of the practice image on top. A second `up` on a finished cluster took 3 seconds, and `./lab.sh practice reset` took between 64 and 95 seconds. A reset deletes the two node containers and starts new ones from the cached image, which is faster and cleaner than undoing every task by hand.
 
-The cluster fits next to the running k3d lab. With the cluster idle, `practice-control-plane` used about 0.95 GB of memory and `practice-worker` about 0.6 GB, while the k3d lab used between 3.3 and 4.0 GB, all inside OrbStack's Docker engine with its limit of 11.7 GB. Through all 108 tasks of modules 33 to 43 the two nodes together peaked at 2.6 GB, so the k3d lab and the practice cluster ran side by side the whole time.
+The cluster fits next to the running k3d lab. With the cluster idle, `practice-control-plane` used about 0.95 GB of memory and `practice-worker` about 0.6 GB, while the k3d lab used between 3.3 and 4.0 GB, all inside OrbStack's Docker engine with its limit of 11.7 GB. Through all 108 tasks of modules 1.2 to 1.6 and 4.1 to 4.6 the two nodes together peaked at 2.6 GB, so the k3d lab and the practice cluster ran side by side the whole time.
 
 kind writes the cluster's kubeconfig to `~/.kube/practice-kind.yaml` instead of your main kubeconfig, so the current context of your `kubectl` stays on the k3d lab. You rarely need it, because the tasks run inside a node, and in a toolbox shell `kubectl --context kind-practice get nodes` reaches the cluster, because the toolbox adds that context to its own kubeconfig. The file lands in your Mac's home only when `./lab.sh practice up` runs on your Mac instead of in the toolbox, which happens when kubectl, helm and k3d are installed there.
 
@@ -42,12 +42,12 @@ kind writes the cluster's kubeconfig to `~/.kube/practice-kind.yaml` instead of 
 
 A kind node is a container, so both nodes share one Linux kernel with each other, with the k3d lab and with every other container on your Mac. Most security controls live above the kernel and work the same as on a server. Four consequences matter for the security modules:
 
-- The kernel has no AppArmor. The kubelet accepts AppArmor fields in a pod but refuses to start the pod: `Cannot enforce AppArmor: AppArmor is not enabled on the host`. So the AppArmor tasks run on the [Lima VM](../README.md#the-vm-for-module-44), which has a kernel of its own.
+- The kernel has no AppArmor. The kubelet accepts AppArmor fields in a pod but refuses to start the pod: `Cannot enforce AppArmor: AppArmor is not enabled on the host`. So the AppArmor tasks run on the [Lima VM](../README.md#the-vm-for-the-kernel-tasks), which has a kernel of its own.
 - The kernel has no WireGuard module, so Calico and Cilium node-to-node encryption don't run here. Pod-to-pod encryption points to Istio, which the course already runs, or to the Lima VM.
 - Cilium would load its eBPF programs into the kernel that every container shares. The Cilium tasks run on the Lima VM for that reason, and the practice cluster keeps Calico.
 - Falco sees every system call on the shared kernel, including the ones from the k3d lab and other containers. Filter its output by `k8s.ns.name` or container name to see only your cluster.
 
-gVisor and Falco still run on the worker. gVisor brings its own user-space kernel inside the sandbox, and Falco's eBPF probe only watches system calls, so neither needs a kernel to itself, and both passed every task in the test run. The [kernel and host page](../README.md#the-vm-for-module-44) collects the tasks that do need one.
+gVisor and Falco still run on the worker. gVisor brings its own user-space kernel inside the sandbox, and Falco's eBPF probe only watches system calls, so neither needs a kernel to itself, and both passed every task in the test run. The [kernel and host page](../README.md#the-vm-for-the-kernel-tasks) collects the tasks that do need one.
 
 Two kubeadm settings in `platform-engineering/practice/cluster/kind/cluster.yaml` exist because of the shared kernel. kube-proxy doesn't set the kernel's connection tracking table size (`conntrack.maxPerCore: 0`), because a container may not change a value the whole kernel shares. And the kubelet tolerates swap (`failSwapOn: false`), because the Docker engine's VM may have swap that every container sees.
 
@@ -55,7 +55,7 @@ Two kubeadm settings in `platform-engineering/practice/cluster/kind/cluster.yaml
 
 ![The application extras on the practice cluster: the two kind nodes with helm, podman and kubectl-convert in the node image, the local registry container, and metrics-server in the cluster](../docs/diagrams/chapters/ckad-practice-cluster.svg)
 
-The application modules 33 to 37 run on the same two nodes as the security modules, but building and shipping an app needs a few tools that hardening a cluster doesn't:
+The application modules 1.2 to 1.6 run on the same two nodes as the security modules, but building and shipping an app needs a few tools that hardening a cluster doesn't:
 
 1. On `practice-control-plane`: helm 4.3.1 to install charts, podman to build and push images, and `kubectl-convert` for API version changes. All three sit in the node image.
 2. Next to the nodes: a local image registry at `registry.practice:5000`, which runs as the container `practice-registry` on kind's Docker network. Both nodes and every pod reach it by that name, and containerd on both nodes pulls from it over plain HTTP.
@@ -94,59 +94,55 @@ orb stop cks-cp cks-w1            # frees the memory; "orb start cks-cp cks-w1" 
 ./lab.sh practice down --yes      # deletes both machines
 ```
 
-In the earlier test runs, `create.sh` took 3 minutes 45 seconds from nothing and `reset.sh` 2 minutes 30 seconds, and the machines used 1.1 GB and 0.7 GB of memory. The application extras install helm, podman and kubectl-convert on `cks-cp` there, with the registry as the systemd service `practice-registry` on port 5000. After the move to kind, a sample of six tasks (33.1, 35.3, 38.4, 40.4, 41.4 and 43.2, which cover podman and the registry, a node label, Ingress, a systemd unit, gVisor and Falco) still failed after setup and passed after the solution on the OrbStack machines.
+In the earlier test runs, `create.sh` took 3 minutes 45 seconds from nothing and `reset.sh` 2 minutes 30 seconds, and the machines used 1.1 GB and 0.7 GB of memory. The application extras install helm, podman and kubectl-convert on `cks-cp` there, with the registry as the systemd service `practice-registry` on port 5000. After the move to kind, a sample of six tasks (1.2.1, 1.4.3, 4.1.4, 4.3.4, 4.4.4 and 4.6.2, which cover podman and the registry, a node label, Ingress, a systemd unit, gVisor and Falco) still failed after setup and passed after the solution on the OrbStack machines.
 
-## The practice cluster on your own VMs (Proxmox or any SSH-reachable Ubuntu)
+## The practice cluster on Proxmox VMs
 
-The same two-node cluster also runs on two virtual machines that you reach over SSH, for example on a Proxmox server at home. The scripts then send every node command through `ssh` and `sudo`, so the tasks, the checks and the practice exams stay the same. A VM brings a kernel of its own, and that kernel has AppArmor, so the AppArmor and kernel module tasks move from the Lima VM to `cks-w1`.
+On a Proxmox host, the course runs as a set of its own: the toolbox VM `pe-lab` runs the lab and the kind practice cluster, as the [guide](../README.md#proxmox) shows, and two more VMs, `cks-cp` and `cks-w1`, form a second practice cluster with kernels of their own. The scripts on `pe-lab` send every node command to those VMs through `ssh` and `sudo`, so the tasks, the checks and the practice exams stay the same. The kernel of `cks-w1` has AppArmor and loads modules, so the AppArmor and kernel module tasks of module 4.7 run there.
 
 ### What you need
 
-You need two VMs with Ubuntu 24.04 on amd64 or arm64. Give `cks-cp` 2 CPUs, 3 GB of memory and 30 GB of disk, and give `cks-w1` 2 CPUs, 2.5 GB and 30 GB. Both VMs need internet access, and one user that logs in with an SSH key and runs `sudo` without a password. Their network must stay clear of the pod network `10.244.0.0/16` and the service network `10.96.0.0/12`. The pod network avoids Calico's default `192.168.0.0/16` on purpose, because that range overlaps most home networks.
-
-On Proxmox, `proxmox/create-vms.sh` builds both VMs from the Ubuntu cloud image. You run it as root on the Proxmox host, and it creates VM 221 `cks-cp` at 192.168.1.221 and VM 222 `cks-w1` at 192.168.1.222, with the user `ubuntu` and your public key. Any other hypervisor or cloud works the same way once the two VMs answer on SSH. The VMs need no particular hostname, because `create.sh` renames them to `cks-cp` and `cks-w1`, the node names that kubeadm and the tasks expect.
+`proxmox/create-vms.sh cks` builds both VMs from the Ubuntu 24.04 cloud image: VM 221 `cks-cp` at 192.168.1.221 with 2 CPUs, 3 GB of memory and 30 GB of disk, and VM 222 `cks-w1` at 192.168.1.222 with 2 CPUs, 2.5 GB and 30 GB, each with the user `ubuntu` and your public key. Their network must stay clear of the pod network `10.244.0.0/16` and the service network `10.96.0.0/12`. The VMs need no particular hostname, because `create.sh` renames them to `cks-cp` and `cks-w1`, the node names that kubeadm and the tasks expect.
 
 ### Settings and commands
 
-These commands work in your machine's own terminal and inside `./lab.sh shell` alike. The toolbox receives the settings below from your shell or from `lab.env`, and it sees your `~/.ssh` read-only at `/run/host-ssh`, so a key path into `~/.ssh` works there unchanged. The Cilium tasks of module 44 still run from your Mac's own terminal, because they reach the Lima VM with `limactl`. On a Mac, the toolbox reaches your home network only when OrbStack has the Local Network permission: turn it on in System Settings, Privacy & Security, Local Network, OrbStack. Without it, ssh from the toolbox times out while ssh from the Mac's terminal works. Five environment variables tell the scripts where the VMs are. Export them once in your shell, or write them in `lab.env`:
+Run these on `pe-lab`, inside `./lab.sh shell`. The toolbox reads the settings from `lab.env` and sees `~/.ssh` read-only, so put the private key for the two VMs at `~/.ssh/cks_proxmox` on `pe-lab`. Five variables tell the scripts where the VMs are, and all but the first have the defaults shown:
 
 ```bash
-export PRACTICE_PLATFORM=vms                  # without it, the scripts use kind
-export PRACTICE_CP_HOST=192.168.1.221         # the address of cks-cp (this is the default)
-export PRACTICE_W1_HOST=192.168.1.222         # the address of cks-w1 (this is the default)
-export PRACTICE_SSH_USER=ubuntu               # the login user on both VMs (the default)
-export PRACTICE_SSH_KEY=~/.ssh/cks_proxmox    # the private key for that user (the default)
+PRACTICE_PLATFORM=vms                  # without it, the scripts use kind on pe-lab
+PRACTICE_CP_HOST=192.168.1.221         # the address of cks-cp
+PRACTICE_W1_HOST=192.168.1.222         # the address of cks-w1
+PRACTICE_SSH_USER=ubuntu               # the login user on both VMs
+PRACTICE_SSH_KEY=~/.ssh/cks_proxmox    # the private key for that user
+```
 
+```bash
 ./lab.sh practice up             # builds the cluster on both VMs; safe to run again
 ./lab.sh practice shell          # ssh to cks-cp and sudo -i
 ./lab.sh practice reset          # back to a fresh cluster at 1.37.1
 ./lab.sh practice down --yes     # wipes the cluster with kubeadm reset and keeps both VMs
 ```
 
-`down` never deletes a VM here, because the VMs belong to you and to your hypervisor. It runs `kubeadm reset` and undoes the task changes, and `up` builds the cluster again on the same VMs. A sixth variable, `PRACTICE_SSH_OPTS`, passes extra options to `ssh`, such as a separate known hosts file.
+`down` never deletes a VM here, because the VMs belong to your hypervisor: it runs `kubeadm reset` and undoes the task changes. A sixth variable, `PRACTICE_SSH_OPTS`, passes extra options to `ssh`, such as a separate known hosts file. Remove `PRACTICE_PLATFORM=vms` from `lab.env` to go back to the kind cluster on `pe-lab`.
 
 ### What the test run measured
 
-The test ran on a Proxmox host with an Intel i7-12700T and 15 GB of memory, so the nodes ran on amd64. On two new VMs, `create.sh` built the cluster in 3 minutes 26 seconds, after it had waited for cloud-init to finish the first-boot package upgrade. A rebuild after `destroy.sh` took 2 minutes 28 seconds, and `reset.sh` took between 2 minutes 35 seconds and 4 minutes 33 seconds. With the cluster idle, `cks-cp` used 1.0 GB of memory and `cks-w1` 0.6 GB, page cache left out. The host kept 2.8 GB free through every task and mock exam, next to another VM of 7 GB, and never swapped.
-
-All 65 security tasks and the three security practice exams passed in this setup. The node scripts pick the downloads for the VM's CPU, amd64 here and arm64 on a Mac. The first boot stalled, because the VMs reached Ubuntu's package mirrors over HTTPS only and plain HTTP downloads hung. If `apt` hangs on your VMs, change `http://` to `https://` in `/etc/apt/sources.list.d/ubuntu.sources`.
+The test ran on a Proxmox host with an Intel i7-12700T and 15 GB of memory, so the nodes ran on amd64. On two new VMs, `create.sh` built the cluster in 3 minutes 26 seconds, after it had waited for cloud-init to finish the first-boot package upgrade, and `reset.sh` took between 2 minutes 35 seconds and 4 minutes 33 seconds. With the cluster idle, `cks-cp` used 1.0 GB of memory and `cks-w1` 0.6 GB. All 65 security tasks and the three security practice exams passed in this setup. If `apt` hangs on the VMs, change `http://` to `https://` in `/etc/apt/sources.list.d/ubuntu.sources`.
 
 ## Where each task runs
 
-A VM brings a kernel of its own. On a Mac every task of module 44 runs on the Lima VM `cks-lima`, which the [guide](../README.md#the-vm-for-module-44) builds. On your own VMs, the kernel of `cks-w1` has AppArmor and loads modules, so three tasks of module 44 and two practice exam tasks move there:
+The kernel tasks need a kernel of their own. On a Mac every task of module 4.7 runs on the Lima VM `cks-lima`, which the [guide](../README.md#the-vm-for-the-kernel-tasks) builds. On Proxmox, `cks-w1` takes the AppArmor and kernel module tasks:
 
-| Task | On a Mac | On your own VMs |
+| Task | On a Mac | On Proxmox |
 |---|---|---|
-| 44.1 to 44.3, Cilium policies | `cks-lima` | `cks-lima` |
-| 44.4, a kernel module | `cks-lima` | `cks-w1` |
-| 44.5, WireGuard with Cilium | `cks-lima` | `cks-lima` |
-| 44.6 and 44.7, AppArmor | `cks-lima` | `cks-w1` |
+| 4.7.1 to 4.7.3, Cilium policies | `cks-lima` | the Cilium VM `practice-cilium`, once `create-vms.sh` builds it |
+| 4.7.4, a kernel module | `cks-lima` | `cks-w1` |
+| 4.7.5, WireGuard with Cilium | `cks-lima` | the Cilium VM `practice-cilium`, once `create-vms.sh` builds it |
+| 4.7.6 and 4.7.7, AppArmor | `cks-lima` | `cks-w1` |
 | Practice exam 5 task 9, AppArmor | `cks-lima` | `cks-w1` |
 | Practice exam 6 task 10, a kernel module | `cks-lima` | `cks-w1` |
-| Practice exams 5 and 6, task 3, Cilium | `cks-lima` | `cks-lima` |
+| Practice exams 5 and 6, task 3, Cilium | `cks-lima` | the Cilium VM `practice-cilium`, once `create-vms.sh` builds it |
 
-The task text says `cks-lima`, so on your own VMs read it as `cks-w1` for the AppArmor and kernel module tasks: load the profile or write the modprobe rule on `cks-w1`, and run `kubectl` on `cks-cp`. The pods land on `cks-w1` anyway, because the control plane keeps its taint, and AppArmor confines a container only on the node that loaded the profile.
+The task text says `cks-lima`, so on Proxmox read it as `cks-w1` for the AppArmor and kernel module tasks: load the profile or write the modprobe rule on `cks-w1`, and run `kubectl` on `cks-cp`. The pods land on `cks-w1` anyway, because the control plane keeps its taint, and AppArmor confines a container only on the node that loaded the profile.
 
-The Cilium tasks stay on the Lima VM, because Cilium replaces the cluster's network plugin and so needs a cluster of its own. A third VM for it needs another 3 GB, which the test host lacked while `cks-cp` and `cks-w1` ran, so keep `cks-lima` on your Mac for those tasks. Without it, they stop with a message, and every other task still works.
-
-On Windows, two Ubuntu 24.04 VMs in Hyper-V or Multipass, set up like the Proxmox VMs and reached over SSH from a Linux shell, should work the same way. Nobody has tested that setup yet.
+The Cilium tasks need a cluster whose network plugin is Cilium. On Proxmox that is a third small VM, `practice-cilium`, with 3 GB and 2 cores, which a later version of `create-vms.sh` adds. Until then these tasks stop with a message on Proxmox, and every other task still works.

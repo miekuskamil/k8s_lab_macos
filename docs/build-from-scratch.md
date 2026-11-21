@@ -22,7 +22,7 @@ Steps 1 to 6 are imperative: you run commands. From step 7 on, you only commit f
 |---|---|---|---|
 | Kubernetes distribution | k3d (k3s in Docker) | OrbStack's built-in Kubernetes, kind, minikube | Istio's CNI cannot install on OrbStack's cluster. k3s is a supported Istio platform and starts in seconds. |
 | Kubernetes version | 1.31, pinned | k3d's default (1.35 at build time) | Istio 1.24 supports up to 1.31, and ArgoCD 2.13 does not know newer API fields. |
-| Mesh data plane | Istio ambient | Istio sidecars, Linkerd, Cilium | Ambient uses a fraction of the memory on a laptop. Sidecar mode is still available per namespace (course module 7). |
+| Mesh data plane | Istio ambient | Istio sidecars, Linkerd, Cilium | Ambient uses a fraction of the memory on a laptop. Sidecar mode is still available per namespace (course module 3.9). |
 | Istio install method | Helm, four charts | `istioctl install`, ArgoCD | Helm releases are upgradable and inspectable. ArgoCD cannot install the mesh it depends on. |
 | Ingress | Gateway API `Gateway` | Istio `Gateway` + `VirtualService`, ingress-nginx | Gateway API is the Kubernetes standard and the same resource type configures waypoints. |
 | GitOps | ArgoCD, app of apps | Flux, plain `kubectl apply` | Visual drift view, per-app self-heal settings, multi-source Helm apps. |
@@ -78,7 +78,7 @@ kubectl get nodes
 - **One node.** A second node would add cross-node traffic but double the memory. The trade-off is listed under known limits in [architecture.md](architecture.md#what-this-setup-does-not-cover).
 - **k3s pinned to 1.31.** k3d's default image was Kubernetes 1.35. Istio 1.24 supports up to 1.31, and ArgoCD 2.13 failed to compare resources that had a newer status field. Pin the platform and upgrade it together with the components on top.
 - **Traefik disabled.** k3s ships Traefik as its ingress controller. The Istio gateway takes that role, and two controllers would compete for port 8080.
-- **`--port 8080:8080@loadbalancer`.** k3d runs a small load balancer container in front of the node. This maps your machine's ports 8080 and 8443 to it, so the gateway's LoadBalancer Service is reachable at `localhost:8080`, and at `localhost:8443` once module 11 adds HTTPS. k3s's built-in service load balancer (klipper) binds the port on the node.
+- **`--port 8080:8080@loadbalancer`.** k3d runs a small load balancer container in front of the node. This maps your machine's ports 8080 and 8443 to it, so the gateway's LoadBalancer Service is reachable at `localhost:8080`, and at `localhost:8443` once module 3.10 adds HTTPS. k3s's built-in service load balancer (klipper) binds the port on the node.
 
 **What went wrong here.** [Problem 1](troubleshooting.md#1-istio-cni-never-becomes-ready-on-orbstacks-built-in-kubernetes) (OrbStack's cluster) and [problem 6](troubleshooting.md#6-argocd-cannot-compare-kube-prometheus-stack) (Kubernetes 1.35).
 
@@ -93,7 +93,7 @@ docker build -t k8s-lab/assistant:1.2.0 apps/assistant
 k3d image import k8s-lab/backend:1.0.3 k8s-lab/frontend:1.0.3 k8s-lab/assistant:1.2.0 -c k8s-lab
 ```
 
-The assistant image waits in the node until module 17 deploys it.
+The assistant image waits in the node until module 5.1 deploys it.
 
 **Why this way.**
 
@@ -153,7 +153,7 @@ kubectl -n istio-system get pods
 - **`global.platform=k3s`.** k3s keeps its CNI configuration in `/var/lib/rancher/k3s/agent/etc/cni/net.d`, not `/etc/cni/net.d`. The profile tells the CNI chart where to look.
 - **`cni.cniBinDir` from the node.** The k3s profile also guesses the plugin binary directory, and the guess was wrong on both k3s versions tried. Reading `bin_dir` from containerd's config is always right.
 - **`--force-conflicts`.** Helm 4 applies charts server-side, and istiod edits a field of its own webhook at runtime. Without the flag the second `helm upgrade` fails on that field. Helm 3 does not need it.
-- **DNS capture and virtual IPs for external hosts.** `helm/istio-cni-values.yaml` sets `ambient.dnsCapture: true`, and `helm/istiod-values.yaml` sets `PILOT_ENABLE_IP_AUTOALLOCATE`. Istio 1.24 ships with both off. Without them, a ServiceEntry gets no virtual IP, pods resolve external hosts to their real IPs, and ztunnel never sends that traffic to a waypoint, so egress rules do nothing. Course module 12 found this. Newer Istio releases turn both on by default.
+- **DNS capture and virtual IPs for external hosts.** `helm/istio-cni-values.yaml` sets `ambient.dnsCapture: true`, and `helm/istiod-values.yaml` sets `PILOT_ENABLE_IP_AUTOALLOCATE`. Istio 1.24 ships with both off. Without them, a ServiceEntry gets no virtual IP, pods resolve external hosts to their real IPs, and ztunnel never sends that traffic to a waypoint, so egress rules do nothing. Course module 3.11 found this. Newer Istio releases turn both on by default.
 - **Restart istio-cni when its config changes.** Helm rewrites the `istio-cni-config` ConfigMap but leaves the agent running with the old settings, because it reads them only at startup. `provision.sh` stores a hash of the ConfigMap on the DaemonSet and restarts the agent only when the hash changes. Pods pick up DNS capture only when they start, so existing pods need a restart too ([problem 18](troubleshooting.md#18-a-serviceentry-has-no-effect-in-ambient-mode)).
 - **Tracing configured at install time.** `helm/istiod-values.yaml` registers Jaeger as an `extensionProvider`. Istio's `Telemetry` resource can only point at a provider that istiod already knows.
 
@@ -248,7 +248,7 @@ curl http://localhost:8080/healthz
 **Why this way.**
 
 - **A waypoint only for the backend.** The label `istio.io/use-waypoint: waypoint` is on the three backend Services, not on the namespace. The frontend and Redis need no HTTP features, so their traffic skips the extra hop.
-- **Policies at both layers.** `backend-allow-frontend` is an L7 rule on the waypoint: only the frontend's identity may call `/api/*`. `backend-only-from-waypoint` is an L4 rule on the backend pods: only the waypoint (and Prometheus) may connect at all. Without the L4 rule, a client that dials a pod IP, or a sidecar client, skips the waypoint and its rules. Course module 3 demonstrates the bypass.
+- **Policies at both layers.** `backend-allow-frontend` is an L7 rule on the waypoint: only the frontend's identity may call `/api/*`. `backend-only-from-waypoint` is an L4 rule on the backend pods: only the waypoint (and Prometheus) may connect at all. Without the L4 rule, a client that dials a pod IP, or a sidecar client, skips the waypoint and its rules. Course module 3.3 demonstrates the bypass.
 - **STRICT mTLS for `shop`.** Plaintext connections from outside the mesh are refused. Prometheus can still scrape because the `observability` namespace is in the mesh too.
 
 ## Step 9: observability

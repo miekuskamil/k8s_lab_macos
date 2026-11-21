@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="900" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Two installers, <tspan fill="#7c3aed">one set of charts</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">istioctl merges its inputs and renders the same Helm charts that helm install uses.</text>
+<rect x="40.0" y="150.0" width="720.0" height="710.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="57.5,181.0 76.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Your Mac</text>
+<rect x="70.0" y="210.0" width="280.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="210.0" y="242.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">profile</text>
+<text x="210.0" y="264.7" font-size="17.0" fill="#475569" text-anchor="middle">minimal, ambient, ...</text>
+<rect x="70.0" y="320.0" width="280.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="210.0" y="352.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">IstioOperator file</text>
+<text x="210.0" y="374.7" font-size="17.0" fill="#475569" text-anchor="middle">-f 32-istio-operator</text>
+<rect x="70.0" y="430.0" width="280.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="210.0" y="462.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">--set flags</text>
+<text x="210.0" y="484.7" font-size="17.0" fill="#475569" text-anchor="middle">later input wins</text>
+<rect x="430.0" y="290.0" width="300.0" height="150.0" rx="14.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<rect x="446.0" y="343.0" width="44.0" height="44.0" rx="10.0" fill="#7c3aed" stroke="none"/>
+<rect x="455.8" y="354.8" width="24.3" height="20.5" rx="3.2" fill="none" stroke="#ffffff" stroke-width="1.536"/>
+<polyline points="460.3,361.2 464.2,365.0 460.3,368.8" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="466.7,369.5 473.1,369.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="504.0" y="347.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">istioctl</text>
+<text x="504.0" y="372.9" font-size="17.0" fill="#475569" text-anchor="start">merge, then</text>
+<text x="504.0" y="395.0" font-size="17.0" fill="#475569" text-anchor="start">render</text>
+<polyline points="350.0,250.0 390.0,250.0 390.0,327.5 420.5,327.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="430.0,327.5 418.5,333.3 418.5,321.7" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="350.0,360.0 390.0,360.0 390.0,365.0 420.5,365.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="430.0,365.0 418.5,370.8 418.5,359.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="350.0,470.0 390.0,470.0 390.0,402.5 420.5,402.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="430.0,402.5 418.5,408.3 418.5,396.7" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<rect x="430.0" y="560.0" width="300.0" height="130.0" rx="14.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<rect x="446.0" y="603.0" width="44.0" height="44.0" rx="10.0" fill="#ea580c" stroke="none"/>
+<polygon points="468.0,614.1 479.5,619.9 468.0,625.6 456.5,619.9" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linejoin="round"/>
+<polyline points="456.5,625.0 468.0,630.8 479.5,625.0" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="456.5,630.1 468.0,635.9 479.5,630.1" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="504.0" y="607.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Istio charts</text>
+<text x="504.0" y="632.9" font-size="17.0" fill="#475569" text-anchor="start">base, istiod, cni,</text>
+<text x="504.0" y="655.0" font-size="17.0" fill="#475569" text-anchor="start">ztunnel, gateways</text>
+<polyline points="580.0,440.0 580.0,550.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="580.0,560.0 574.2,548.5 585.8,548.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="580.0" cy="500.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="580.0" cy="500.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="580.0" y="506.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<text x="606.0" y="506.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">render</text>
+<rect x="70.0" y="700.0" width="280.0" height="120.0" rx="14.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<rect x="86.0" y="738.0" width="44.0" height="44.0" rx="10.0" fill="#2563eb" stroke="none"/>
+<rect x="95.8" y="749.8" width="24.3" height="20.5" rx="3.2" fill="none" stroke="#ffffff" stroke-width="1.536"/>
+<polyline points="100.3,756.2 104.2,760.0 100.3,763.8" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="106.7,764.5 113.1,764.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="144.0" y="742.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">helm install</text>
+<text x="144.0" y="767.9" font-size="17.0" fill="#475569" text-anchor="start">values files,</text>
+<text x="144.0" y="790.0" font-size="17.0" fill="#475569" text-anchor="start">module 3.19</text>
+<polyline points="350.0,760.0 580.0,760.0 580.0,699.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="580.0,690.0 585.8,701.5 574.2,701.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="470.0" y="750.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">same charts</text>
+<rect x="820.0" y="150.0" width="740.0" height="710.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<ellipse cx="847.0" cy="174.0" rx="9.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.20"/>
+<ellipse cx="847.0" cy="174.0" rx="4.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.00"/>
+<polyline points="838.0,174.0 856.0,174.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="866.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Cluster</text>
+<rect x="860.0" y="200.0" width="660.0" height="180.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="878.0" y="230.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace istio-system</text>
+<rect x="890.0" y="250.0" width="300.0" height="100.0" rx="14.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<rect x="906.0" y="278.0" width="44.0" height="44.0" rx="10.0" fill="#7c3aed" stroke="none"/>
+<polyline points="928.0,287.8 928.0,292.3" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="928.0,307.7 928.0,312.2" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="915.8,300.0 920.3,300.0" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="935.7,300.0 940.2,300.0" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="919.4,291.4 922.6,294.6" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="933.4,305.4 936.6,308.6" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="936.6,291.4 933.4,294.6" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="919.4,308.6 922.6,305.4" fill="none" stroke="#ffffff" stroke-width="2.30" stroke-linecap="round" stroke-linejoin="round"/>
+<ellipse cx="928.0" cy="300.0" rx="7.7" ry="7.7" fill="#7c3aed" stroke="#ffffff" stroke-width="1.54"/>
+<ellipse cx="928.0" cy="300.0" rx="2.9" ry="2.9" fill="none" stroke="#ffffff" stroke-width="1.54"/>
+<text x="964.0" y="304.2" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">istiod</text>
+<rect x="1210.0" y="250.0" width="280.0" height="100.0" rx="14.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<rect x="1226.0" y="278.0" width="44.0" height="44.0" rx="10.0" fill="#2563eb" stroke="none"/>
+<polygon points="1248.0,287.8 1258.2,291.7 1257.0,303.2 1248.0,312.2 1239.0,303.2 1237.8,291.7" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linejoin="round"/>
+<polyline points="1243.5,300.0 1246.7,303.8 1253.1,296.2" fill="none" stroke="#ffffff" stroke-width="1.66" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1284.0" y="282.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">gateways</text>
+<text x="1284.0" y="307.9" font-size="17.0" fill="#475569" text-anchor="start">if the profile</text>
+<text x="1284.0" y="330.0" font-size="17.0" fill="#475569" text-anchor="start">has them</text>
+<rect x="860.0" y="430.0" width="660.0" height="390.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<rect x="878.0" y="445.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="881.5" cy="447.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="887.0,447.5 892.5,447.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="878.0" y="451.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="881.5" cy="454.0" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="887.0,454.0 892.5,454.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="878.0" y="458.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="881.5" cy="460.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="887.0,460.5 892.5,460.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="906.0" y="460.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Node</text>
+<rect x="890.0" y="490.0" width="600.0" height="120.0" rx="14.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<rect x="910.7" y="537.7" width="24.5" height="6.8" rx="2.0" fill="none" stroke="#0891b2" stroke-width="1.4960000000000002"/>
+<ellipse cx="915.5" cy="541.1" rx="1.1" ry="1.1" fill="#0891b2" stroke="#0891b2" stroke-width="0.68"/>
+<polyline points="923.0,541.1 930.4,541.1" fill="none" stroke="#0891b2" stroke-width="1.36" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="910.7" y="546.6" width="24.5" height="6.8" rx="2.0" fill="none" stroke="#0891b2" stroke-width="1.4960000000000002"/>
+<ellipse cx="915.5" cy="550.0" rx="1.1" ry="1.1" fill="#0891b2" stroke="#0891b2" stroke-width="0.68"/>
+<polyline points="923.0,550.0 930.4,550.0" fill="none" stroke="#0891b2" stroke-width="1.36" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="910.7" y="555.4" width="24.5" height="6.8" rx="2.0" fill="none" stroke="#0891b2" stroke-width="1.4960000000000002"/>
+<ellipse cx="915.5" cy="558.8" rx="1.1" ry="1.1" fill="#0891b2" stroke="#0891b2" stroke-width="0.68"/>
+<polyline points="923.0,558.8 930.4,558.8" fill="none" stroke="#0891b2" stroke-width="1.36" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="950.0" y="547.0" font-size="20.0" fill="#155e75" font-weight="700" text-anchor="start">istio-cni</text>
+<text x="950.0" y="571.0" font-size="17.0" fill="#475569" text-anchor="start">DaemonSet, ambient</text>
+<rect x="890.0" y="650.0" width="600.0" height="120.0" rx="14.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<ellipse cx="915.5" cy="710.0" rx="4.1" ry="9.5" fill="none" stroke="#2563eb" stroke-width="1.63"/>
+<polyline points="915.5,700.4 930.4,700.4" fill="none" stroke="#2563eb" stroke-width="1.63" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="915.5,719.5 930.4,719.5" fill="none" stroke="#2563eb" stroke-width="1.63" stroke-linecap="round" stroke-linejoin="round"/>
+<ellipse cx="930.4" cy="710.0" rx="4.1" ry="9.5" fill="#2563eb" stroke="#2563eb" stroke-width="0.68"/>
+<text x="950.0" y="707.0" font-size="20.0" fill="#1e40af" font-weight="700" text-anchor="start">ztunnel</text>
+<text x="950.0" y="731.0" font-size="17.0" fill="#475569" text-anchor="start">DaemonSet, ambient</text>
+<polyline points="730.0,350.0 810.5,350.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="820.0,350.0 808.5,355.8 808.5,344.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="780.0" cy="350.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="780.0" cy="350.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="780.0" y="356.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<text x="780.0" y="301.5" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">apply, wait,</text>
+<text x="780.0" y="324.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">prune</text>
+<text x="70.0" y="845.0" font-size="16.0" fill="#475569" text-anchor="start">istioctl manifest generate stops after step 1.</text>
+</svg>

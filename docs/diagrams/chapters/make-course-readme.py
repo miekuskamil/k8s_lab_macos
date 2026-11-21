@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Draw the course map for the course section of README.md with the kit in ../bbg.py.
+"""Draw the course map for the guide with the kit in ../bbg.py.
 
-  readme-course-routes   module 0, then the Istio, operations and platform tracks
+  readme-course-routes   the five tracks, each from the quick start, its modules from easy to hard
 
 Run from anywhere: python3 docs/diagrams/chapters/make-course-readme.py
 """
@@ -16,53 +16,39 @@ OUT = Path(__file__).resolve().parent
 
 def routes():
     c = Canvas(1600, 900)
-    c.title("Routes through", "the course")
-    c.subtitle("Every route starts at module 0. Each line is a route, each stop a module.")
+    c.title("Five tracks,", "one lab")
+    c.subtitle("Every track starts from the quick start and needs no other track. Each stop is a module, easy on the left.")
 
-    start = c.node(40, 400, 230, 100, SLATE, "Start here", "doc", "Istio in one picture")
-    x0, y0 = 340, 450
-    c.line([(270, y0), (x0 - 26, y0)], LINE, 3)
+    start = c.node(40, 400, 230, 110, SLATE, "Quick start", "terminal", "./lab.sh up")
+    trunk = 330
 
-    def stop(x, y, n, col, r=24):
+    def stop(x, y, n, col, r=23):
         c.ellipse(x, y, r, r, col, WHITE, 3)
-        c.text(x, y + 6.5, str(n), 18 if len(str(n)) < 3 else 15, deep(col), True, "middle")
+        c.text(x, y + 6, str(n), 17 if len(str(n)) < 2 else 15, deep(col), True, "middle")
 
-    def lane(y, col, stops, label, sub, xs=420, gap=62, dashed=False):
-        c.line([(x0 + 40, y), (xs + (len(stops) - 1) * gap, y)], col, 5, dashed)
-        for i, n in enumerate(stops):
-            stop(xs + i * gap, y, n, col)
-        end = xs + (len(stops) - 1) * gap + 50
-        c.text(end, y - 2, label, 19, deep(col), True)
-        c.text(end, y + 22, sub, 16, SOFT)
-        return xs + (len(stops) - 1) * gap
+    gap = 54
+    xs = 400
 
-    c.line([(x0 + 30, y0), (x0 + 40, y0)], SLATE, 5)
-    c.line([(x0 + 40, 200), (x0 + 40, 780)], SLATE, 5)
-    stop(x0, y0, 0, SLATE, 30)
-    ist = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 30, 31, 45]
-    lane(200, BLUE, ist, "Istio", "", gap=56)
-    # module 32 branches off after 14, the AI route after the core
-    x14 = 420 + ist.index(14) * 56
-    c.line([(x14, 200), (x14, 290), (x14 + 60, 290)], BLUE, 4, True)
-    stop(x14 + 84, 290, 32, BLUE)
-    c.text(x14 + 120, 296, "throwaway cluster", 16, SOFT)
-    x8 = 420 + ist.index(8) * 56
-    c.line([(x8, 200), (x8, 360), (x8 + 40, 360)], PINK, 5)
-    for i, n in enumerate([17, 18, 19]):
-        stop(x8 + 64 + i * 62, 360, n, PINK)
-    c.text(x8 + 64 + 2 * 62 + 50, 358, "AI on Kubernetes", 19, DEEP[PINK], True)
-    c.text(x8 + 64 + 2 * 62 + 50, 382, "needs modules 3 to 6 and 12", 16, SOFT)
+    def lane(y, col, n, label, sub, exams=None):
+        last = xs + (n - 1) * gap
+        c.line([(trunk, y), (last, y)], col, 5)
+        for i in range(n):
+            stop(xs + i * gap, y, i + 1, col)
+        if exams:
+            ex = last + 60
+            c.line([(last + 23, y), (ex, y)], col, 4, True)
+            c.rect(ex, y - 22, 130, 44, col, WHITE, rx=22, sw=3)
+            c.text(ex + 65, y + 6, exams, 15, deep(col), True, "middle")
+        c.text(xs - 23, y - 42, label, 19, deep(col), True)
+        c.text(xs - 23 + 11 * len(label) + 20, y - 42, sub, 16, SOFT)
 
-    lane(560, GREEN, [20, 21], "Kubernetes operations", "only module 0 needed")
-    lane(670, ORANGE, [22, 23, 24, 25, 26, 28], "Platform tools", "GitOps, alerts, dashboards, OTel, policy, profiling")
-    lane(780, PINK, [27], "AI without Istio", "RAG, needs Ollama")
-
-    ref = c.frame(1180, 420, 380, 120, "Reference, read any time", "plain")
-    stop(1220, 490, 9, SLATE)
-    c.text(1256, 496, "commands", 17, SOFT)
-    stop(1390, 490, 10, SLATE)
-    c.text(1426, 496, "eBPF, Cilium", 17, SOFT)
-    c.text(420, 150, "29 ties the core together after 7, and 45 follows it outward", 16, SOFT)
+    c.line([(270, 455), (trunk, 455)], SLATE, 5)
+    c.line([(trunk, 210), (trunk, 790)], SLATE, 5)
+    lane(210, SLATE, 6, "1 Applications", "practice cluster, build to debug", "exams 1-3")
+    lane(355, ORANGE, 9, "2 Observability and platform", "lab, metrics to k3s upgrades")
+    lane(500, BLUE, 21, "3 Istio service mesh", "lab, what a mesh adds to installing it")
+    lane(645, RED, 7, "4 Cluster security", "practice cluster, network to kernel", "exams 4-6")
+    lane(790, PINK, 4, "5 AI on Kubernetes", "lab, a model call to RAG")
     c.save(OUT, "readme-course-routes")
 
 

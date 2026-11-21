@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Print the addresses and names from docs/life-of-a-request.md ("The cast in this run")
-# and module 29, as they are in YOUR lab right now. Pod and Service IPs change with every
+# and module 3.15, as they are in YOUR lab right now. Pod and Service IPs change with every
 # rebuild and every pod restart; the names, ports and ranges stay the same.
 #
 # Usage: ./platform-engineering/my-values.sh
-# Scenario A rows need module 29's app: kubectl apply -f platform-engineering/manifests/29-plain-app.yaml
+# Scenario A rows need module 3.15's app: kubectl apply -f platform-engineering/manifests/3.15-plain-app.yaml
 set -u
 NODE="${NODE:-k3d-k8s-lab-server-0}"
 LB="${LB:-k3d-k8s-lab-serverlb}"
@@ -28,7 +28,7 @@ if kubectl get ns course-life >/dev/null 2>&1; then
   row "hello pod (nginx)" "$(podip course-life app=hello)"
   row "hello pod name" "$(podname course-life app=hello)"
 else
-  echo "  not deployed: kubectl apply -f platform-engineering/manifests/29-plain-app.yaml"
+  echo "  not deployed: kubectl apply -f platform-engineering/manifests/3.15-plain-app.yaml"
 fi
 
 echo
