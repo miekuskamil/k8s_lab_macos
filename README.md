@@ -277,7 +277,7 @@ Every lab module has automatic checks that apply its manifests, test the results
 ./lab.sh test all
 ```
 
-`./lab.sh test all` covers every lab module that is safe to repeat. Two groups stay out of it, so run them by number: modules 14, 21 and 32, which upgrade the lab or build a cluster of their own, and the AI modules 17, 18, 19 and 27, which need a language model or download one.
+`./lab.sh test all` covers every lab module that is safe to repeat. Two groups stay out of it, so run them by number: modules 14, 21 and 32, which upgrade the lab or build a cluster of their own, and the AI modules 17, 18, 19 and 27, which need a language model or download one. Modules 9 and 10 have no checks, because one is a reference and the other is theory.
 
 If you prepare for the CKAD or CKS exam, [Timed tasks and exam preparation](platform-engineering/timed-tasks.md#which-modules-cover-each-exam-domain) maps each exam domain to its modules.
 
