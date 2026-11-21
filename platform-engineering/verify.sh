@@ -416,6 +416,8 @@ module_17() {
     return
   fi
   ask() { curl -s -m 180 -X POST "$BASE/api/ask" -H 'Content-Type: application/json' -d "{\"question\":\"$1\"}" 2>/dev/null; }
+  # Your AI settings from lab.env, when there is one (scripts/llm-settings.sh).
+  KUBE_CONTEXT="${K[2]}" "$ROOT/scripts/llm-settings.sh" --quiet
   "${K[@]}" apply -f "$M/17-assistant.yaml" -f "$M/03-course-client.yaml" >/dev/null
   "${K[@]}" -n shop set env deploy/assistant OLLAMA_MODEL="$model" >/dev/null
   "${K[@]}" -n shop rollout status deploy/assistant --timeout=120s >/dev/null 2>&1
@@ -526,7 +528,7 @@ module_20() {
   local node=k3d-agent-0 log="${TMPDIR:-/tmp}/k8s-lab-drain.log"
   k3d node create agent --cluster "${CLUSTER_NAME:-k8s-lab}" --role agent --wait >/dev/null 2>&1
   "${K[@]}" wait --for=condition=Ready "node/$node" --timeout=120s >/dev/null 2>&1
-  k3d image import "k8s-lab/backend:1.0.3" "k8s-lab/frontend:1.0.3" "k8s-lab/assistant:1.1.0" -c "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
+  k3d image import "k8s-lab/backend:1.0.3" "k8s-lab/frontend:1.0.3" "k8s-lab/assistant:1.2.0" -c "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
   "${K[@]}" -n istio-system rollout status ds/ztunnel --timeout=180s >/dev/null 2>&1
   expect "a second node joins, and ztunnel starts on it" "$("${K[@]}" -n istio-system get pods -l app=ztunnel --field-selector spec.nodeName=$node -o jsonpath='{.items[0].status.phase}')" '^Running$'
   "${K[@]}" apply -f "$M/20-ops-app.yaml" -f "$M/03-course-client.yaml" >/dev/null
@@ -825,8 +827,9 @@ module_27() {
   "${H[@]}" repo add qdrant https://qdrant.github.io/qdrant-helm >/dev/null 2>&1
   "${H[@]}" repo update qdrant >/dev/null 2>&1
   expect "Qdrant installs with a volume" "$("${H[@]}" install qdrant qdrant/qdrant --version 1.20.0 -n course-rag --create-namespace -f "$M/27-qdrant-values.yaml" --wait --timeout 5m 2>&1 | grep -c 'STATUS: deployed') $("${K[@]}" -n course-rag get pvc -o jsonpath='{.items[0].status.phase}')" '^1 Bound$'
-  docker build -q -t k8s-lab/rag:1.2.0 "$ROOT/apps/rag" >/dev/null 2>&1
-  k3d image import k8s-lab/rag:1.2.0 -c "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
+  docker build -q -t k8s-lab/rag:1.3.0 "$ROOT/apps/rag" >/dev/null 2>&1
+  k3d image import k8s-lab/rag:1.3.0 -c "${CLUSTER_NAME:-k8s-lab}" >/dev/null 2>&1
+  KUBE_CONTEXT="${K[2]}" "$ROOT/scripts/llm-settings.sh" --quiet
   # The course Markdown: README, start-here and glossary, plus the lab modules 0 to 32 and 45.
   # Modules 33 to 44 stay out, because with them the ConfigMap passes its 1 MiB limit.
   local docs=() f
@@ -836,7 +839,8 @@ module_27() {
   expect "the rag app starts" "$("${K[@]}" -n course-rag rollout status deploy/rag --timeout=120s 2>&1 | grep -c 'successfully rolled out')" '^1$'
   "${K[@]}" -n course-rag port-forward svc/rag 8091:8000 >/dev/null 2>&1 &
   pf=$!; settle 3
-  local ingest; ingest="$(curl -s -m 300 -X POST localhost:8091/ingest)"
+  # Ollama on a CPU (the ollama service in compose.yaml) takes about 15 minutes for the ingest.
+  local ingest; ingest="$(curl -s -m 1500 -X POST localhost:8091/ingest)"
   between "ingest splits the course into chunks" "$(echo "$ingest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["chunks"])' 2>/dev/null || echo 0)" 300 1500
   expect "nomic-embed-text makes 768-dimension vectors" "$(echo "$ingest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["dimensions"])' 2>/dev/null)" '^768$'
   expect "Qdrant holds every chunk" "$("${K[@]}" get --raw /api/v1/namespaces/course-rag/services/qdrant:6333/proxy/collections/course 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["points_count"])' 2>/dev/null)" "^$(echo "$ingest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["chunks"])' 2>/dev/null)\$"

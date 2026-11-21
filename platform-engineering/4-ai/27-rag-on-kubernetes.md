@@ -150,16 +150,16 @@ import time
 from pathlib import Path
 ...
 
-$ docker build -t k8s-lab/rag:1.2.0 apps/rag
+$ docker build -t k8s-lab/rag:1.3.0 apps/rag
 ...
 #13 exporting config sha256:f9d5918a19794c5aa9ec03600b1fb5280597b876bdec04524bf6bf270250111a done
 #13 exporting attestation manifest sha256:3473c69361eaa825e6915fe725bf1001cfa2b005d6eee2fa21bd908bd9ade287 0.0s done
 #13 exporting manifest list sha256:e7f8a170f3cc4ed1ab5dfa42b1dd911dabf7d8f525ca80b1491d8b9a37a09c55 0.0s done
-#13 naming to docker.io/k8s-lab/rag:1.2.0 done
-#13 unpacking to docker.io/k8s-lab/rag:1.2.0 0.0s done
+#13 naming to docker.io/k8s-lab/rag:1.3.0 done
+#13 unpacking to docker.io/k8s-lab/rag:1.3.0 0.0s done
 #13 DONE 0.1s
 
-$ k3d image import k8s-lab/rag:1.2.0 -c k8s-lab
+$ k3d image import k8s-lab/rag:1.3.0 -c k8s-lab
 INFO[0000] Importing image(s) into cluster 'k8s-lab'
 INFO[0000] Starting new tools node...
 INFO[0000] Starting node 'k3d-k8s-lab-tools'
@@ -202,7 +202,7 @@ spec:
     spec:
       containers:
         - name: rag
-          image: k8s-lab/rag:1.2.0
+          image: k8s-lab/rag:1.3.0
           imagePullPolicy: IfNotPresent
           ports: [{name: http, containerPort: 8000}]
           env:
@@ -212,6 +212,10 @@ spec:
             - {name: CHAT_MODEL, value: "qwen2.5:3b"}
             - {name: DOCS_DIR, value: /docs}
             - {name: EXCLUDE_FILES, value: 27-rag-on-kubernetes.md}
+          # Your AI settings from lab.env, once ./lab.sh ai has stored them.
+          envFrom:
+            - configMapRef: {name: llm-settings, optional: true}
+            - secretRef: {name: llm-api-key, optional: true}
           volumeMounts:
             - {name: docs, mountPath: /docs, readOnly: true}
           readinessProbe:

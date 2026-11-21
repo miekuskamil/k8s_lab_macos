@@ -7,12 +7,14 @@ A small shop runs on your laptop inside a k3d cluster, together with the tools a
 | | macOS | Linux |
 |---|---|---|
 | Container engine | [OrbStack](https://orbstack.dev) with 8 GiB of RAM or more | Docker Engine, your user in the `docker` group |
-| Tools | `brew install kubectl helm k3d git istioctl` | kubectl, helm, k3d, git, istioctl, curl 7.84 or newer |
+| Tools | git; the toolbox brings the rest (or `brew install kubectl helm k3d istioctl` to work without it) | git; the toolbox brings the rest (or kubectl, helm, k3d, istioctl and curl 7.84 or newer) |
 | Kernel setting | none | `sudo sysctl -w fs.inotify.max_user_instances=512 fs.inotify.max_user_watches=524288` |
 
 The lab installs k3s 1.31.5, Istio 1.24.2, Gateway API 1.2.1 and the ArgoCD Helm chart 7.7.11. OrbStack's own Kubernetes stays switched off, because Istio ambient needs the k3d cluster ([why](docs/build-from-scratch.md#step-1-the-cluster)).
 
 ## Quick start
+
+Your machine needs Docker (OrbStack on macOS) and git, nothing else. Every other tool runs in the toolbox, a container that `./lab.sh shell` builds and opens for you.
 
 1. Clone the repository.
    ```bash
@@ -20,22 +22,28 @@ The lab installs k3s 1.31.5, Istio 1.24.2, Gateway API 1.2.1 and the ArgoCD Helm
    cd k8s_lab_macos
    ```
 
-2. Build the lab. The first run takes about 10 minutes, mostly image downloads, and a rebuild with cached images takes about 2. The command waits until every health check passes, and it is safe to run again.
+2. Open a shell in the toolbox. The first time, this builds the toolbox image in about 2 minutes. The prompt then starts with `(lab)`, the repository is the current folder, and `kubectl` (alias `k`), `helm`, `k3d`, `kind` and `istioctl` are ready at the versions the course was tested with.
+   ```bash
+   ./lab.sh shell
+   ```
+
+3. Build the lab from inside the toolbox. The first run takes about 10 minutes, mostly image downloads, and a rebuild with cached images takes about 2. The command waits until every health check passes, and it is safe to run again.
    ```bash
    ./lab.sh up
    ```
 
-3. Open the shop at http://localhost:8080 in your browser. On macOS this command opens it:
-   ```bash
-   open http://localhost:8080
-   ```
+4. Open the shop at http://localhost:8080 in your browser.
 
-4. In a second terminal, open the other UIs and leave it running. Ctrl-C closes them.
+5. Open the other UIs and leave the command running. A second `./lab.sh shell` in another terminal joins the same toolbox, so you keep working there. Ctrl-C closes the UIs.
    ```bash
    ./lab.sh ui
    ```
 
+Every `./lab.sh` command works the same inside the toolbox and outside it. On a machine without kubectl, helm or k3d, `./lab.sh up` and the other commands go through the toolbox by themselves. The toolbox runs the clusters as containers on your own Docker engine, so they keep running after you leave the shell.
+
 ArgoCD deploys from the `main` branch on GitHub, not from your working copy, so push a change before you expect the cluster to show it.
+
+The AI modules use Ollama on your machine with `qwen2.5:3b` by default. To use another model, Ollama's OpenAI-compatible endpoint, or a hosted provider, copy `lab.env.example` to `lab.env`, set `LLM_PROVIDER`, `LLM_URL`, `LLM_MODEL` and `LLM_API_KEY` there, and run `./lab.sh ai`. Git ignores `lab.env`, so your key stays on your machine. Without Ollama, `./lab.sh ollama` runs it in a container and pulls the two models the course uses. [Choosing the model](docs/ai-models.md) has the details.
 
 ## Everyday commands
 

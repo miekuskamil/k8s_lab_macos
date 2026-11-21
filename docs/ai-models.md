@@ -1,11 +1,58 @@
 # Choosing the model for the AI modules
 
-The AI modules (17, 18, 19 and 27) use [Ollama](https://ollama.com) with `qwen2.5:3b` by default. Ollama runs models on your own machine, for free and offline, and the course's measured numbers come from that setup. You aren't tied to it. This page shows two other choices:
+The AI modules (17, 18, 19 and 27) use [Ollama](https://ollama.com) with `qwen2.5:3b` by default. Ollama runs models on your own machine, for free and offline, and the course's measured numbers come from that setup. You aren't tied to it. This page shows the choices:
 
-1. Any other model that Ollama serves.
-2. Claude, through the Anthropic API, for answers that a 3-billion-parameter model doesn't manage.
+1. One settings file, `lab.env`, for any provider: Ollama, any server that speaks the OpenAI API, or Claude.
+2. Any other model that Ollama serves, switched by hand.
+3. Claude, through the Anthropic API, with the mesh setup for module 17.
 
-## Option 1: another Ollama model
+## Settings in lab.env
+
+The shop assistant (module 17) and the RAG app (module 27) read four settings. `LLM_PROVIDER` picks the API they speak, and `LLM_URL`, `LLM_MODEL` and `LLM_API_KEY` say where the model runs, which model answers and which key pays for it. You write them once in `lab.env`, and `./lab.sh ai` copies them into the cluster.
+
+The `openai` provider matters most, because most model servers and hosted providers speak the OpenAI chat completions API: Ollama's own `/v1` endpoint, vLLM, LM Studio, OpenAI, Grok, Gemini, Groq and OpenRouter. The `ollama` provider speaks Ollama's native API, and `anthropic` uses the Anthropic SDK.
+
+1. Copy the example and edit it. Git ignores `lab.env`, so a key in it stays on your machine.
+   ```bash
+   cp lab.env.example lab.env
+   ```
+   For Ollama on your machine through its OpenAI-compatible endpoint, `lab.env` holds three lines. Pods reach your machine as `host.docker.internal`, never as `localhost`:
+   ```bash
+   LLM_PROVIDER=openai
+   LLM_URL=http://host.docker.internal:11434/v1
+   LLM_MODEL=qwen2.5:3b
+   ```
+
+2. Store the settings in the cluster:
+   ```bash
+   ./lab.sh ai
+   ```
+   The command writes the ConfigMap `llm-settings`, and the Secret `llm-api-key` when you set a key, into each of the namespaces `shop` and `course-rag` that exists. Both apps load them through `envFrom`, and the command restarts an app that already runs, because a pod reads its environment only when it starts. `./lab.sh up` and `./lab.sh start` run it too, and module 27 creates `course-rag` later, so run `./lab.sh ai` again after module 27's deploy step.
+
+3. Check the switch: `curl -s localhost:8080/api/model` shows the provider, model and URL the assistant uses.
+
+The settings in `lab.env` win over the per-app variables further down this page, such as `OLLAMA_MODEL`. Delete `lab.env`, or leave `LLM_PROVIDER` empty, and run `./lab.sh ai` to go back to the defaults.
+
+Module 27 also needs an embedding model for its search. With `LLM_PROVIDER=openai`, the RAG app asks the same server's `/embeddings` endpoint for `nomic-embed-text`. A provider without that model needs `EMBED_PROVIDER=ollama` and `EMBED_URL=http://host.docker.internal:11434`, so search stays in Ollama while another model writes the answers. Keep the embedding model the same once you ingest, because a different model means running the ingest step again.
+
+kagent (module 19) keeps its own model settings in its Helm release. For an OpenAI-compatible server, add these flags to module 19's `helm install kagent` command, with the key in the Secret `kagent-openai` under `OPENAI_API_KEY` (any value works for Ollama):
+
+```bash
+helm install kagent ... --set providers.default=openAI --set providers.openAI.model=qwen2.5:3b \
+  --set providers.openAI.config.baseUrl=http://host.docker.internal:11434/v1
+```
+
+### Ollama in a container
+
+A machine without Ollama runs it as a container next to the clusters:
+
+```bash
+./lab.sh ollama
+```
+
+The command starts the `ollama` service from `compose.yaml` and pulls `qwen2.5:3b` and `nomic-embed-text`, about 2.2 GB, into a Docker volume. It listens on port 11434 of your machine, where pods find it as `host.docker.internal:11434`, so the course commands work unchanged. It runs on the CPU, because containers on a Mac get no GPU, so it suits a Linux machine or a test more than daily work on a Mac. In the test run on an Apple silicon Mac, the assistant's first answer took 42 seconds instead of under one, and module 27's ingest of the whole course took about 15 minutes instead of under one. When something else holds port 11434, set `LAB_OLLAMA_PORT` in `lab.env` and use that port in `LLM_URL`. On Linux, also set `LAB_OLLAMA_BIND=0.0.0.0`, because pods reach the host there through the Docker network's gateway, not through its loopback.
+
+## Another Ollama model, by hand
 
 Each app reads the model name from an environment variable. Pull the model, then point the app at it:
 
@@ -18,11 +65,11 @@ helm upgrade kagent ... --set providers.ollama.model=llama3.2:3b            # mo
 
 Check the switch with `curl -s localhost:8080/api/model`. Memory is the limit. A model needs roughly its download size plus 30% while it answers, on top of the lab's 5 GB. Models that call tools well matter most for module 19, because kagent's agents work by calling tools. Module 27's search model, `nomic-embed-text`, stays the same: the index was built with it, and a different embedding model means re-running the ingest step.
 
-## Option 2: Claude through the Anthropic API
+## Claude through the Anthropic API
 
 The shop assistant (module 17) and the RAG app (module 27) both have a `PROVIDER` setting. With `PROVIDER=anthropic`, they send the question to Claude through the official Anthropic Python SDK. kagent (module 19) supports Anthropic natively.
 
-The `PROVIDER` setting arrived with the images `assistant:1.1.0` and `rag:1.2.0`. If your lab is older than 13 November 2026, run `./scripts/provision.sh` once to build the new assistant image. Module 27 builds its own image in its steps.
+The `PROVIDER` setting arrived with the images `assistant:1.1.0` and `rag:1.2.0`, and the `LLM_*` settings and the `openai` provider with `assistant:1.2.0` and `rag:1.3.0`. If your lab is older than 21 November 2026, run `./scripts/provision.sh` once to build the new assistant image. Module 27 builds its own image in its steps.
 
 Some things work differently from Ollama:
 
@@ -89,7 +136,9 @@ The answers in module 27's text came from `qwen2.5:3b`. Claude answers the same 
 
 ## What was tested
 
-The Ollama path is the course default. With the new app images, `./platform-engineering/verify.sh 17 27` passed every check. The Claude path was tested without an API key:
+The Ollama path is the course default. With the new app images, `./platform-engineering/verify.sh 17 27` passed every check.
+
+The `lab.env` settings were tested from the toolbox on a fresh lab, with Ollama 0.32.13 and `qwen2.5:3b` throughout. With no `lab.env`, `./lab.sh test 17 27` passed 21 of 21 checks. With `LLM_PROVIDER=openai` and Ollama's `/v1` endpoint, the same run passed 21 of 21 once module 17's AuthorizationPolicy also allowed `/v1/chat/completions`, and `/api/model` reported the `openai` provider. Against the `ollama` service in a container, the assistant answered, `./lab.sh test 27` passed 11 of 11 checks, and the RAG app also ingested, searched and answered through the service's `/v1` API. The Claude path was tested without an API key:
 
 - Both apps ran against a stand-in server that recorded each request. The SDK sent `POST /v1/messages` with the model, the system prompt, `effort: low` and the fallback setting, and the apps read the answer and the token counts from the reply.
 - In the cluster, the request went from the assistant through the waypoint to `api.anthropic.com` over HTTPS. With a fake key, Anthropic answered `401 authentication_error`, which shows the route and the TLS origination work. A pod with another service account got `403` from the waypoint, before its request left the cluster. The policy matches `/v1/messages` even though the SDK adds `?beta=true`, because Istio leaves the query string out of path matching.

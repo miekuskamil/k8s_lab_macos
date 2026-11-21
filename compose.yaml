@@ -1,0 +1,65 @@
+# The lab toolbox, and an optional Ollama. You rarely call docker compose yourself:
+#   ./lab.sh shell          builds the toolbox when needed, starts it and opens a shell in it
+#   ./lab.sh ollama         starts the ollama service and pulls the two models the course uses
+# The clusters are not services here. k3d and kind create them as containers on the same
+# Docker engine, through the Docker socket this file mounts into the toolbox.
+name: k8s-lab-toolbox
+
+services:
+  lab:
+    build:
+      context: toolbox
+      labels:
+        lab.toolbox.hash: ${TOOLBOX_HASH:-}   # lab.sh rebuilds when toolbox/ changes
+    image: k8s-lab/toolbox:1.0.0
+    init: false            # tini in the image is PID 1
+    environment:
+      HOST_UID: ${HOST_UID:-1000}
+      HOST_GID: ${HOST_GID:-1000}
+      LAB_ROOT: ${LAB_ROOT:?run ./lab.sh shell instead of docker compose}
+    volumes:
+      # The repo at the same path as on the host: k3d and kind pass host paths to the Docker
+      # engine, which resolves them on the host, so both sides must agree on the path.
+      - ${LAB_ROOT}:${LAB_ROOT}
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Home of the toolbox user: kubeconfig, Helm's repository cache and shell history.
+      - home:/home/lab
+    working_dir: ${LAB_ROOT}
+    extra_hosts:
+      # Docker Desktop and OrbStack know this name already; Docker Engine on Linux needs it.
+      - host.docker.internal:host-gateway
+    ports:
+      # The web UIs that ./lab.sh ui forwards. The shop on 8080 needs none: the k3d load
+      # balancer publishes it on the host already.
+      - 127.0.0.1:8081:8081     # ArgoCD
+      - 127.0.0.1:3000:3000     # Grafana
+      - 127.0.0.1:9090:9090     # Prometheus
+      - 127.0.0.1:9093:9093     # Alertmanager
+      - 127.0.0.1:16686:16686   # Jaeger
+      - 127.0.0.1:20001:20001   # Kiali
+      - 127.0.0.1:4466:4466     # Headlamp
+
+  # Only for machines without Ollama: ./lab.sh ollama starts it. It runs on the CPU, so answers
+  # are slower than from Ollama installed on a Mac, which uses the GPU.
+  ollama:
+    image: ollama/ollama:0.32.13
+    profiles: [ai]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama serve &
+        until ollama list >/dev/null 2>&1; do sleep 1; done
+        for m in $${LAB_OLLAMA_MODELS}; do ollama pull "$$m" >/dev/null && echo "pulled $$m"; done
+        wait
+    environment:
+      LAB_OLLAMA_MODELS: ${LAB_OLLAMA_MODELS:-qwen2.5:3b nomic-embed-text}
+    volumes:
+      - ollama:/root/.ollama
+    ports:
+      # Pods reach it as host.docker.internal, like Ollama on the host. On Linux, set
+      # LAB_OLLAMA_BIND=0.0.0.0 in lab.env, because pods reach the host through its gateway.
+      - ${LAB_OLLAMA_BIND:-127.0.0.1}:${LAB_OLLAMA_PORT:-11434}:11434
+
+volumes:
+  home:
+  ollama:

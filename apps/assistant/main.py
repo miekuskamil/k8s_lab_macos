@@ -1,9 +1,12 @@
 """Shop assistant for the k8s_lab_macos AI lessons.
 
 Answers questions about the shop's orders. It fetches recent orders from the
-backend, then asks a language model. PROVIDER picks where the model runs:
-"ollama" (the default, any model Ollama serves) or "anthropic" (Claude, through
-the official Anthropic SDK and an API key in ANTHROPIC_API_KEY). Every call to the model
+backend, then asks a language model. LLM_PROVIDER (or the older name PROVIDER) picks
+the API: "ollama" (the default, Ollama's own API), "openai" (any server that speaks the
+OpenAI chat completions API: Ollama's /v1, vLLM, LM Studio, OpenAI, Groq, OpenRouter and
+others) or "anthropic" (Claude, through the official Anthropic SDK). LLM_URL, LLM_MODEL
+and LLM_API_KEY win over the per-provider settings below; ./lab.sh ai sets them from
+lab.env through the ConfigMap llm-settings and the Secret llm-api-key. Every call to the model
 gets an OpenTelemetry span with the GenAI attributes (model, input and output
 tokens), and Prometheus metrics count tokens and model latency.
 """
@@ -32,13 +35,24 @@ from pydantic import BaseModel, Field
 from starlette.responses import Response
 
 POD_NAME = os.getenv("HOSTNAME", socket.gethostname())
-PROVIDER = os.getenv("PROVIDER", "ollama")
+PROVIDER = os.getenv("LLM_PROVIDER") or os.getenv("PROVIDER", "ollama")
+# The generic settings win over the provider-specific ones when they are set.
+LLM_URL = os.getenv("LLM_URL", "").rstrip("/")
+LLM_MODEL = os.getenv("LLM_MODEL", "")
+LLM_API_KEY = os.getenv("LLM_API_KEY", "")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://host.docker.internal:11434").rstrip("/")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 MAX_TOKENS = int(os.getenv("MAX_TOKENS", "120"))
+# An OpenAI-compatible URL ends in /v1, and the app appends /chat/completions. The default
+# is the OpenAI-compatible endpoint of Ollama on your machine.
+OPENAI_URL = LLM_URL or "http://host.docker.internal:11434/v1"
+OPENAI_MODEL = LLM_MODEL or OLLAMA_MODEL
+if PROVIDER == "ollama":
+    OLLAMA_URL = LLM_URL or OLLAMA_URL
+    OLLAMA_MODEL = LLM_MODEL or OLLAMA_MODEL
 # Claude thinks before it answers, and thinking counts against max_tokens, so it gets
 # a bigger budget than the small local model. The system prompt keeps answers short.
-ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-opus-5-5")
+ANTHROPIC_MODEL = (LLM_MODEL if PROVIDER == "anthropic" else "") or os.getenv("ANTHROPIC_MODEL", "claude-opus-5-5")
 ANTHROPIC_MAX_TOKENS = int(os.getenv("ANTHROPIC_MAX_TOKENS", "4000"))
 ANTHROPIC_EFFORT = os.getenv("ANTHROPIC_EFFORT", "low")
 LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "120"))
@@ -87,8 +101,13 @@ LLM_SECONDS = Histogram("assistant_llm_request_seconds", "Time the model took to
 ASKS = Counter("assistant_requests_total", "Questions answered, by outcome", ["outcome"])
 
 # The SDK reads ANTHROPIC_API_KEY, and ANTHROPIC_BASE_URL when the mesh originates TLS.
-claude = anthropic.AsyncAnthropic(timeout=LLM_TIMEOUT_S, max_retries=1) if PROVIDER == "anthropic" else None
-MODEL = ANTHROPIC_MODEL if PROVIDER == "anthropic" else OLLAMA_MODEL
+# LLM_API_KEY and LLM_URL take their place when they are set.
+claude = (
+    anthropic.AsyncAnthropic(api_key=LLM_API_KEY or None, base_url=LLM_URL or None, timeout=LLM_TIMEOUT_S, max_retries=1)
+    if PROVIDER == "anthropic"
+    else None
+)
+MODEL = {"anthropic": ANTHROPIC_MODEL, "openai": OPENAI_MODEL}.get(PROVIDER, OLLAMA_MODEL)
 
 app = FastAPI(title="shop-assistant")
 
@@ -117,6 +136,8 @@ async def model() -> dict:
     if PROVIDER == "anthropic":
         return {"provider": "anthropic", "model": ANTHROPIC_MODEL, "url": str(claude.base_url),
                 "max_tokens": ANTHROPIC_MAX_TOKENS, "effort": ANTHROPIC_EFFORT}
+    if PROVIDER == "openai":
+        return {"provider": "openai", "model": OPENAI_MODEL, "url": OPENAI_URL, "max_tokens": MAX_TOKENS}
     return {"model": OLLAMA_MODEL, "ollama": OLLAMA_URL, "max_tokens": MAX_TOKENS}
 
 
@@ -167,9 +188,46 @@ async def ask_claude(question: str, orders: list) -> dict:
         }
 
 
+async def ask_openai(client: httpx.AsyncClient, question: str, orders: list) -> dict:
+    """The OpenAI chat completions API, which most model servers and hosted providers speak."""
+    body = {
+        "model": OPENAI_MODEL,
+        "max_tokens": MAX_TOKENS,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"Recent orders: {json.dumps(orders)}\n\nQuestion: {question}"},
+        ],
+    }
+    headers = {"Authorization": f"Bearer {LLM_API_KEY}"} if LLM_API_KEY else {}
+    with tracer.start_as_current_span(f"chat {OPENAI_MODEL}", kind=SpanKind.CLIENT) as span:
+        span.set_attribute("gen_ai.operation.name", "chat")
+        span.set_attribute("gen_ai.system", "openai")
+        span.set_attribute("gen_ai.request.model", OPENAI_MODEL)
+        span.set_attribute("gen_ai.request.max_tokens", MAX_TOKENS)
+        started = time.perf_counter()
+        response = await client.post(f"{OPENAI_URL}/chat/completions", json=body, headers=headers, timeout=LLM_TIMEOUT_S)
+        elapsed = time.perf_counter() - started
+        response.raise_for_status()
+        data = response.json()
+        usage = data.get("usage") or {}
+        input_tokens = int(usage.get("prompt_tokens", 0))
+        output_tokens = int(usage.get("completion_tokens", 0))
+        model_name = data.get("model", OPENAI_MODEL)
+        record(span, model_name, elapsed, input_tokens, output_tokens)
+        return {
+            "answer": (data["choices"][0]["message"].get("content") or "").strip(),
+            "model": model_name,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "model_seconds": round(elapsed, 2),
+        }
+
+
 async def ask_model(client: httpx.AsyncClient, question: str, orders: list) -> dict:
     if PROVIDER == "anthropic":
         return await ask_claude(question, orders)
+    if PROVIDER == "openai":
+        return await ask_openai(client, question, orders)
     body = {
         "model": OLLAMA_MODEL,
         "stream": False,

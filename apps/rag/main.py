@@ -19,16 +19,34 @@ import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://host.docker.internal:11434")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://host.docker.internal:11434").rstrip("/")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
-EMBED_MODEL = os.getenv("EMBED_MODEL", "nomic-embed-text")
 CHAT_MODEL = os.getenv("CHAT_MODEL", "qwen2.5:3b")
-# PROVIDER picks who writes the answers: "ollama" or "anthropic" (Claude). Search always
-# uses EMBED_MODEL in Ollama, because Claude has no embedding model.
-PROVIDER = os.getenv("PROVIDER", "ollama")
+# LLM_PROVIDER (or the older name PROVIDER) picks who writes the answers: "ollama" (Ollama's
+# own API), "openai" (any OpenAI-compatible server, such as Ollama's /v1, vLLM or a hosted
+# provider) or "anthropic" (Claude). LLM_URL, LLM_MODEL and LLM_API_KEY win over the other
+# settings when they are set; ./lab.sh ai sets them from lab.env.
+PROVIDER = os.getenv("LLM_PROVIDER") or os.getenv("PROVIDER", "ollama")
+LLM_URL = os.getenv("LLM_URL", "").rstrip("/")
+LLM_API_KEY = os.getenv("LLM_API_KEY", "")
 if PROVIDER == "anthropic":
     CHAT_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-opus-5-5")
-claude = anthropic.Anthropic(timeout=300, max_retries=1) if PROVIDER == "anthropic" else None
+CHAT_MODEL = os.getenv("LLM_MODEL") or CHAT_MODEL
+OPENAI_URL = LLM_URL or "http://host.docker.internal:11434/v1"
+if PROVIDER == "ollama":
+    OLLAMA_URL = LLM_URL or OLLAMA_URL
+# Search needs an embedding model. It runs in Ollama, unless the chat provider is "openai":
+# then it uses the same server's /embeddings endpoint. Claude has no embedding model, so with
+# "anthropic" search stays in Ollama. EMBED_PROVIDER, EMBED_URL and EMBED_API_KEY change that.
+EMBED_MODEL = os.getenv("EMBED_MODEL", "nomic-embed-text")
+EMBED_PROVIDER = os.getenv("EMBED_PROVIDER") or ("openai" if PROVIDER == "openai" else "ollama")
+EMBED_URL = (os.getenv("EMBED_URL") or (OPENAI_URL if EMBED_PROVIDER == "openai" else OLLAMA_URL)).rstrip("/")
+EMBED_API_KEY = os.getenv("EMBED_API_KEY") or (LLM_API_KEY if EMBED_PROVIDER == "openai" else "")
+claude = (
+    anthropic.Anthropic(api_key=LLM_API_KEY or None, base_url=LLM_URL or None, timeout=300, max_retries=1)
+    if PROVIDER == "anthropic"
+    else None
+)
 COLLECTION = os.getenv("COLLECTION", "course")
 DOCS_DIR = Path(os.getenv("DOCS_DIR", "/docs"))
 # Files to leave out of the index, comma-separated. Module 27 quotes its own test
@@ -72,7 +90,12 @@ def chunks_of(path: Path) -> list[dict]:
 def embed(texts: list[str], kind: str) -> list[list[float]]:
     if USE_PREFIXES:
         texts = [PREFIX[kind] + t for t in texts]
-    r = http.post(f"{OLLAMA_URL}/api/embed", json={"model": EMBED_MODEL, "input": texts})
+    if EMBED_PROVIDER == "openai":
+        headers = {"Authorization": f"Bearer {EMBED_API_KEY}"} if EMBED_API_KEY else {}
+        r = http.post(f"{EMBED_URL}/embeddings", json={"model": EMBED_MODEL, "input": texts}, headers=headers)
+        r.raise_for_status()
+        return [d["embedding"] for d in sorted(r.json()["data"], key=lambda d: d["index"])]
+    r = http.post(f"{EMBED_URL}/api/embed", json={"model": EMBED_MODEL, "input": texts})
     r.raise_for_status()
     return r.json()["embeddings"]
 
@@ -174,6 +197,18 @@ def ask(body: Question):
     ]
     if PROVIDER == "anthropic":
         answer, input_tokens, output_tokens = ask_claude(messages)
+    elif PROVIDER == "openai":
+        headers = {"Authorization": f"Bearer {LLM_API_KEY}"} if LLM_API_KEY else {}
+        r = http.post(
+            f"{OPENAI_URL}/chat/completions",
+            json={"model": CHAT_MODEL, "messages": messages, "max_tokens": 250, "temperature": 0},
+            headers=headers,
+        )
+        r.raise_for_status()
+        out = r.json()
+        usage = out.get("usage") or {}
+        answer = out["choices"][0]["message"].get("content") or ""
+        input_tokens, output_tokens = usage.get("prompt_tokens"), usage.get("completion_tokens")
     else:
         r = http.post(
             f"{OLLAMA_URL}/api/chat",

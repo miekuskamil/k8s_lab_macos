@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 .venv/
 platform-engineering/practice/cluster/kind/.bin/
+lab.env

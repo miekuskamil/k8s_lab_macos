@@ -23,7 +23,7 @@ CLUSTER_NAME="${CLUSTER_NAME:-k8s-lab}"
 K3S_IMAGE="${K3S_IMAGE:-rancher/k3s:v1.31.5-k3s1}"
 KUBE_CONTEXT="k3d-${CLUSTER_NAME}"
 IMAGE_TAG="1.0.3"
-ASSISTANT_TAG="1.1.0"   # 1.1.0 added PROVIDER=anthropic, see docs/ai-models.md
+ASSISTANT_TAG="1.2.0"   # 1.1.0 added PROVIDER=anthropic, 1.2.0 the LLM_* settings and PROVIDER=openai, see docs/ai-models.md
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
