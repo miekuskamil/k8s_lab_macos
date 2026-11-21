@@ -11,13 +11,12 @@ This is the hardest of the three. When the clock starts, the API server refuses 
 1. Start fresh, with both resets and the setup on your Mac:
 
    ```console
-   $ ./platform-engineering/practice/cluster/reset.sh && ./platform-engineering/practice/cluster/lima.sh reset
-   === wiping cks-w1
-   === wiping cks-cp
+   $ ./lab.sh practice reset && ./platform-engineering/practice/cluster/lima.sh reset
+   Deleting cluster "practice" ...
    ...
-   === 1/7 machines
+   === 1/6 node image practice-node:v1.37.1
    ...
-   === 7/7 ingress-nginx 1.15.1 on NodePorts 30080 and 30443
+   === 6/6 ingress-nginx 1.15.1 on NodePorts 30080 and 30443
    ...
    === ready
    ...
@@ -34,10 +33,10 @@ This is the hardest of the three. When the clock starts, the API server refuses 
    Score yourself at any time with ./platform-engineering/practice-exam.sh score 6
    ```
 
-   In the final test run, the OrbStack reset took 3 minutes 7 seconds, the Lima reset 1 minute 54 seconds, and the setup 1 minute 13 seconds. The setup breaks the control plane in its last steps, so it doesn't wait for any pods to start.
+   In the final test run, the practice cluster reset took 95 seconds, the Lima reset 2 minutes 6 seconds, and the setup 1 minute 26 seconds. The setup breaks the control plane in its last steps, so it doesn't wait for any pods to start.
 
 2. The clock starts when `setup.sh` ends, and `score.sh` prints the minutes since then.
-3. Work only on the nodes, through `orb -m cks-cp`, `orb -m cks-w1` and `./platform-engineering/practice/cluster/lima.sh shell`, and use only the documentation the exam allows.
+3. Work only on the nodes, through `./lab.sh practice shell`, `./lab.sh practice shell worker` and `./platform-engineering/practice/cluster/lima.sh shell`, and use only the documentation the exam allows.
 4. Don't open the solutions while the clock runs, because the score only means something when you worked without them.
 5. Score from your Mac with `./platform-engineering/practice-exam.sh score 6`, or score single tasks with `./platform-engineering/practice-exam.sh score 6 1 13`.
 
@@ -45,27 +44,27 @@ This is the hardest of the three. When the clock starts, the API server refuses 
 
 | # | Task | Points | Module | Host |
 |---|---|---|---|---|
-| 1 | Pods stay Pending | 8 | 39 | cks-cp |
-| 2 | One port range, two selectors | 5 | 38 | cks-cp |
+| 1 | Pods stay Pending | 8 | 39 | practice-control-plane |
+| 2 | One port range, two selectors | 5 | 38 | practice-control-plane |
 | 3 | Keep a job off the internet | 6 | 38 | cks-lima |
-| 4 | CIS findings and etcd TLS | 6 | 38 | cks-cp |
-| 5 | An Ingress for two hosts | 4 | 38 | cks-cp |
-| 6 | A role that grows by itself | 6 | 39 | cks-cp |
-| 7 | Old tokens and mounted ones | 5 | 39 | cks-cp |
-| 8 | Everyone is admin | 5 | 39 | cks-cp |
-| 9 | SSH the right way | 4 | 40 | cks-w1 |
+| 4 | CIS findings and etcd TLS | 6 | 38 | practice-control-plane |
+| 5 | An Ingress for two hosts | 4 | 38 | practice-control-plane |
+| 6 | A role that grows by itself | 6 | 39 | practice-control-plane |
+| 7 | Old tokens and mounted ones | 5 | 39 | practice-control-plane |
+| 8 | Everyone is admin | 5 | 39 | practice-control-plane |
+| 9 | SSH the right way | 4 | 40 | practice-worker |
 | 10 | Kernel modules nobody needs | 4 | 40 | cks-lima |
-| 11 | Rotate to a new provider | 8 | 41 | cks-cp |
-| 12 | gVisor where it exists | 5 | 41 | cks-cp |
-| 13 | The API server doesn't start | 8 | 42 | cks-cp |
-| 14 | Delete what's vulnerable | 5 | 42 | cks-cp |
-| 15 | Tune Falco and act on it | 8 | 43 | cks-w1, cks-cp |
-| 16 | An audit policy for one team | 7 | 43 | cks-cp |
-| 17 | seccomp and a read-only root | 6 | 43 | cks-w1, cks-cp |
+| 11 | Rotate to a new provider | 8 | 41 | practice-control-plane |
+| 12 | gVisor where it exists | 5 | 41 | practice-control-plane |
+| 13 | The API server doesn't start | 8 | 42 | practice-control-plane |
+| 14 | Delete what's vulnerable | 5 | 42 | practice-control-plane |
+| 15 | Tune Falco and act on it | 8 | 43 | practice-worker, practice-control-plane |
+| 16 | An audit policy for one team | 7 | 43 | practice-control-plane |
+| 17 | seccomp and a read-only root | 6 | 43 | practice-worker, practice-control-plane |
 
 ### Task 1: Pods stay Pending (8 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Deployment `shop` in namespace `m3-app` must scale to 4 replicas, and the new pods never appear. Repair the control plane. Don't change what the components did before somebody edited them.
 
@@ -75,16 +74,16 @@ This is the hardest of the three. When the clock starts, the API server refuses 
 `kubectl` itself fails at first, because of task 13, so fix that task first and then look at the control plane pods:
 
 ```console
-root@cks-cp:~# k -n kube-system get pods -l tier=control-plane
+root@practice-control-plane:~# k -n kube-system get pods -l tier=control-plane
 NAME                             READY   STATUS             RESTARTS      AGE
-etcd-cks-cp                      1/1     Running            10            9m37s
-kube-apiserver-cks-cp            1/1     Running            0             4s
-kube-controller-manager-cks-cp   0/1     CrashLoopBackOff   1 (10s ago)   27s
-kube-scheduler-cks-cp            0/1     CrashLoopBackOff   5 (68s ago)   9m37s
-root@cks-cp:~# k -n kube-system logs kube-controller-manager-cks-cp | tail -2
+etcd-practice-control-plane                      1/1     Running            10            9m37s
+kube-apiserver-practice-control-plane            1/1     Running            0             4s
+kube-controller-manager-practice-control-plane   0/1     CrashLoopBackOff   1 (10s ago)   27s
+kube-scheduler-practice-control-plane            0/1     CrashLoopBackOff   5 (68s ago)   9m37s
+root@practice-control-plane:~# k -n kube-system logs kube-controller-manager-practice-control-plane | tail -2
 I1115 21:06:14.835680       1 leaderelection.go:304] "Failed to renew lease" lock="kube-system/kube-controller-manager" err="context canceled"
 E1115 21:06:14.835729       1 controllermanager.go:413] "leaderelection lost/stopped"
-root@cks-cp:~# k -n kube-system logs kube-scheduler-cks-cp | tail -2
+root@practice-control-plane:~# k -n kube-system logs kube-scheduler-practice-control-plane | tail -2
 Error: invalid argument "127.0.0.1:10259" for "--bind-address" flag: failed to parse IP: "127.0.0.1:10259"
 ```
 
@@ -106,7 +105,7 @@ Somebody added a second `--bind-address` line with a port in it, and since the l
 
 ### Task 2: One port range, two selectors (5 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Pod `metrics` in namespace `m3-svc` listens on TCP 9100, 9150, 9200 and 9300. Create a NetworkPolicy `metrics-scrape` so that only pods labelled `app=prometheus` in namespaces labelled `team=observability` reach it, and only on ports 9100 to 9200. Use one port entry.
 
@@ -170,9 +169,9 @@ spec:
 
 ### Task 4: CIS findings and etcd TLS (6 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
-> Fix kube-bench checks 1.2.15 and 1.3.2 on `cks-cp`. Also make etcd accept only TLS 1.3. The control plane keeps running.
+> Fix kube-bench checks 1.2.15 and 1.3.2 on `practice-control-plane`. Also make etcd accept only TLS 1.3. The control plane keeps running.
 
 <details>
 <summary>Solution</summary>
@@ -183,7 +182,7 @@ Set `--profiling=false` in the API server and controller manager manifests, and 
 
 ### Task 5: An Ingress for two hosts (4 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Namespace `m3-web` runs Services `shop` and `blog` on port 80. `/root/mock/m3.crt` and `/root/mock/m3.key` hold one certificate for both `shop.m3.local` and `blog.m3.local`. Create an Ingress `sites` with class `nginx` that serves both hosts over HTTPS with it.
 
@@ -191,12 +190,12 @@ Set `--profiling=false` in the API server and controller manager manifests, and 
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# k -n m3-web create secret tls m3-tls --cert=/root/mock/m3.crt --key=/root/mock/m3.key
+root@practice-control-plane:~# k -n m3-web create secret tls m3-tls --cert=/root/mock/m3.crt --key=/root/mock/m3.key
 secret/m3-tls created
-root@cks-cp:~# k -n m3-web create ingress sites --class=nginx \
+root@practice-control-plane:~# k -n m3-web create ingress sites --class=nginx \
   --rule="shop.m3.local/*=shop:80,tls=m3-tls" --rule="blog.m3.local/*=blog:80,tls=m3-tls"
 ingress.networking.k8s.io/sites created
-root@cks-cp:~# curl -sk --resolve blog.m3.local:30443:127.0.0.1 https://blog.m3.local:30443/
+root@practice-control-plane:~# curl -sk --resolve blog.m3.local:30443:127.0.0.1 https://blog.m3.local:30443/
 blog
 ```
 
@@ -206,7 +205,7 @@ One `tls` entry lists both hosts with the same Secret, and the certificate's sub
 
 ### Task 6: A role that grows by itself (6 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > ServiceAccount `viewer` in namespace `m3-ops` is bound to the aggregated ClusterRole `ops-view`. It may read Secrets, and it must not. It must also list Deployments in every namespace. Keep `ops-view` aggregating, and keep everything else `viewer` reads.
 
@@ -214,11 +213,11 @@ One `tls` entry lists both hosts with the same Secret, and the certificate's sub
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# k get clusterrole -l rbac.m3/aggregate=true
+root@practice-control-plane:~# k get clusterrole -l rbac.m3/aggregate=true
 NAME         CREATED AT
 ops-config   2026-11-15T21:01:53Z
 ops-pods     2026-11-15T21:01:53Z
-root@cks-cp:~# k get clusterrole ops-config -o yaml        # configmaps and secrets
+root@practice-control-plane:~# k get clusterrole ops-config -o yaml        # configmaps and secrets
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 ...
@@ -240,10 +239,10 @@ rules:
 Remove `secrets` from `ops-config`, so that ConfigMaps stay readable, and add a labelled ClusterRole for Deployments:
 
 ```console
-root@cks-cp:~# k edit clusterrole ops-config                 # resources: [configmaps]
-root@cks-cp:~# k create clusterrole ops-deploys --verb=get,list,watch --resource=deployments.apps $do > d.yaml
-root@cks-cp:~# vim d.yaml                                    # labels: {rbac.m3/aggregate: "true"}
-root@cks-cp:~# k apply -f d.yaml
+root@practice-control-plane:~# k edit clusterrole ops-config                 # resources: [configmaps]
+root@practice-control-plane:~# k create clusterrole ops-deploys --verb=get,list,watch --resource=deployments.apps $do > d.yaml
+root@practice-control-plane:~# vim d.yaml                                    # labels: {rbac.m3/aggregate: "true"}
+root@practice-control-plane:~# k apply -f d.yaml
 clusterrole.rbac.authorization.k8s.io/ops-deploys created
 ```
 
@@ -255,7 +254,7 @@ Deleting `ops-config` would remove the Secrets too, but it would take ConfigMaps
 
 ### Task 7: Old tokens and mounted ones (5 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > In namespace `m3-ci`, delete every legacy service account token Secret. Make ServiceAccount `builder` mount no token by default, and make pod `build` run again without one. Keep the pod's name.
 
@@ -263,13 +262,13 @@ Deleting `ops-config` would remove the Secrets too, but it would take ConfigMaps
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# k -n m3-ci delete secret --field-selector type=kubernetes.io/service-account-token
+root@practice-control-plane:~# k -n m3-ci delete secret --field-selector type=kubernetes.io/service-account-token
 secret "builder-token" deleted from m3-ci namespace
-root@cks-cp:~# k -n m3-ci patch sa builder -p '{"automountServiceAccountToken": false}'
+root@practice-control-plane:~# k -n m3-ci patch sa builder -p '{"automountServiceAccountToken": false}'
 serviceaccount/builder patched
-root@cks-cp:~# k -n m3-ci get pod build -o yaml > build.yaml
-root@cks-cp:~# vim build.yaml           # delete the kube-api-access volume and its volumeMount
-root@cks-cp:~# k -n m3-ci replace --force -f build.yaml
+root@practice-control-plane:~# k -n m3-ci get pod build -o yaml > build.yaml
+root@practice-control-plane:~# vim build.yaml           # delete the kube-api-access volume and its volumeMount
+root@practice-control-plane:~# k -n m3-ci replace --force -f build.yaml
 pod "build" deleted from m3-ci namespace
 pod/build replaced
 ```
@@ -282,7 +281,7 @@ A running pod keeps its token, so it needs recreating. The exported YAML spells 
 
 ### Task 8: Everyone is admin (5 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Every authenticated caller may do anything. Restore the authorizers kubeadm sets.
 
@@ -295,19 +294,19 @@ Set `--authorization-mode=Node,RBAC`, as in [module 39, task 12](../2-intermedia
 
 ### Task 9: SSH the right way (4 points)
 
-**Host:** `cks-w1`.
+**Host:** `practice-worker`.
 
-> sshd on `cks-w1` must refuse root logins and password logins, and forward no X11. It keeps running.
+> sshd on `practice-worker` must refuse root logins and password logins, and forward no X11. It keeps running.
 
 <details>
 <summary>Solution</summary>
 
 ```console
-root@cks-w1:~# sshd -T | grep -E '^(permitrootlogin|passwordauthentication|x11forwarding) '
+root@practice-worker:~# sshd -T | grep -E '^(permitrootlogin|passwordauthentication|x11forwarding) '
 permitrootlogin yes
 passwordauthentication yes
 x11forwarding yes
-root@cks-w1:~# grep -rnE '^(PermitRootLogin|PasswordAuthentication|X11Forwarding)' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/
+root@practice-worker:~# grep -rnE '^(PermitRootLogin|PasswordAuthentication|X11Forwarding)' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/
 /etc/ssh/sshd_config:99:X11Forwarding yes
 /etc/ssh/sshd_config.d/05-vendor.conf:1:PasswordAuthentication yes
 /etc/ssh/sshd_config.d/05-vendor.conf:2:PermitRootLogin yes
@@ -333,7 +332,7 @@ Write `install udf /bin/false`, `blacklist udf` and the same two lines for `dccp
 
 ### Task 11: Rotate to a new provider (8 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > The API server encrypts Secrets with the `aescbc` key `legacy` from `/etc/kubernetes/enc/m3.yaml`. Move every Secret to a new `secretbox` key named `new`, then remove the `aescbc` provider from the file.
 
@@ -361,9 +360,9 @@ Restart the API server, run `k get secrets -A -o json | k replace -f -`, delete 
 
 ### Task 12: gVisor where it exists (5 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
-> Label `cks-w1` with `runtime=gvisor`. Create a RuntimeClass `sandbox` for the handler `runsc` that sends its pods only to nodes with that label, and pod `scan` in namespace `m3-sbx` (image `busybox:1.36`, command `sleep 1d`) that uses it.
+> Label `practice-worker` with `runtime=gvisor`. Create a RuntimeClass `sandbox` for the handler `runsc` that sends its pods only to nodes with that label, and pod `scan` in namespace `m3-sbx` (image `busybox:1.36`, command `sleep 1d`) that uses it.
 
 <details>
 <summary>Solution</summary>
@@ -374,7 +373,7 @@ Put `scheduling.nodeSelector: {runtime: gvisor}` in the RuntimeClass, as in [mod
 
 ### Task 13: The API server doesn't start (8 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > A colleague turned on ImagePolicyWebhook with the configuration `/etc/kubernetes/admission/m3.yaml`, and the API server hasn't answered since. Get it running with the plugin on and `defaultAllow: false`. The back end and its kubeconfig sit in `/etc/kubernetes/policy-webhook/`.
 
@@ -382,11 +381,11 @@ Put `scheduling.nodeSelector: {runtime: gvisor}` in the RuntimeClass, as in [mod
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# crictl ps -a --name kube-apiserver
+root@practice-control-plane:~# crictl ps -a --name kube-apiserver
 CONTAINER           IMAGE               CREATED              STATE               NAME                ATTEMPT             POD ID              POD                     NAMESPACE
-ef0e95360c41f       98d6e75e244ec       About a minute ago   Exited              kube-apiserver      4                   a507ff2270144       kube-apiserver-cks-cp   kube-system
-root@cks-cp:~# crictl logs <id of the newest exited container>
-I1115 21:04:10.180684       1 options.go:261] external host was not specified, using 192.168.139.194
+ef0e95360c41f       98d6e75e244ec       About a minute ago   Exited              kube-apiserver      4                   a507ff2270144       kube-apiserver-practice-control-plane   kube-system
+root@practice-control-plane:~# crictl logs <id of the newest exited container>
+I1115 21:04:10.180684       1 options.go:261] external host was not specified, using 192.168.117.2
 W1115 21:04:10.180739       1 authentication.go:841] AnonymousAuth is not allowed with the AlwaysAllow authorizer. Resetting AnonymousAuth to false. You should use a different authorizer
 I1115 21:04:10.182935       1 server.go:151] Version: v1.37.1
 I1115 21:04:10.182950       1 server.go:153] "Golang settings" GOGC="" GOMAXPROCS="" GOTRACEBACK=""
@@ -396,13 +395,13 @@ E1115 21:04:10.459263       1 run.go:72] "command failed" err="failed to apply a
 
 The transcript ran `crictl logs` with the ID of the newest exited container.
 
-The last log line names the file the API server misses. `ls /etc/kubernetes/policy-webhook/` shows `kubeconfig.yaml`, so fix `kubeConfigFile` in `/etc/kubernetes/admission/m3.yaml`. The API server still doesn't start, with the same `stat ... no such file or directory`, now for the right file name, because the colleague mounted `/etc/kubernetes/admission` into the pod but not `/etc/kubernetes/policy-webhook`. Add a `volumeMount` and a `hostPath` volume for it, as [module 42, task 5](42-supply-chain-security.md#task-5-allow-only-approved-registries) shows. Do this task first, because until the API server runs, no other task on `cks-cp` works.
+The last log line names the file the API server misses. `ls /etc/kubernetes/policy-webhook/` shows `kubeconfig.yaml`, so fix `kubeConfigFile` in `/etc/kubernetes/admission/m3.yaml`. The API server still doesn't start, with the same `stat ... no such file or directory`, now for the right file name, because the colleague mounted `/etc/kubernetes/admission` into the pod but not `/etc/kubernetes/policy-webhook`. Add a `volumeMount` and a `hostPath` volume for it, as [module 42, task 5](42-supply-chain-security.md#task-5-allow-only-approved-registries) shows. Do this task first, because until the API server runs, no other task on `practice-control-plane` works.
 
 </details>
 
 ### Task 14: Delete what's vulnerable (5 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Delete every Deployment in namespace `m3-prod` whose image has at least one CRITICAL vulnerability, as trivy reports it. Keep the others.
 
@@ -410,13 +409,13 @@ The last log line names the file the API server misses. `ls /etc/kubernetes/poli
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# k -n m3-prod get deploy -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[0].image
+root@practice-control-plane:~# k -n m3-prod get deploy -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[0].image
 NAME      IMAGE
 front     nginx:1.27-alpine
 idle      registry.k8s.io/pause:3.10
 session   redis:6.0.5
 tools     busybox:1.36
-root@cks-cp:~# for img in redis:6.0.5 nginx:1.27-alpine registry.k8s.io/pause:3.10 busybox:1.36; do
+root@practice-control-plane:~# for img in redis:6.0.5 nginx:1.27-alpine registry.k8s.io/pause:3.10 busybox:1.36; do
   echo "$img $(trivy image --quiet --severity CRITICAL $img | grep -m1 Total)"
 done
 redis:6.0.5 Total: 17 (CRITICAL: 17)
@@ -428,7 +427,7 @@ busybox:1.36
 In an earlier test run, trivy found 22 CRITICAL findings in `redis:6.0.5` and 3 in `nginx:1.27-alpine`, and none in the other two, while the transcript's newer database counted 17 for redis. Either way, delete `session` and `front`:
 
 ```console
-root@cks-cp:~# k -n m3-prod delete deploy session front
+root@practice-control-plane:~# k -n m3-prod delete deploy session front
 deployment.apps "session" deleted from m3-prod namespace
 deployment.apps "front" deleted from m3-prod namespace
 ```
@@ -439,16 +438,16 @@ The check runs trivy itself and compares, so it still agrees with you after the 
 
 ### Task 15: Tune Falco and act on it (8 points)
 
-**Hosts:** `cks-w1`, then `cks-cp`.
+**Hosts:** `practice-worker`, then `practice-control-plane`.
 
 > 1. Without editing `/etc/falco/falco_rules.yaml`, raise the priority of Falco's rule `Search Private Keys or Passwords` to `ALERT`.
-> 2. A Deployment in namespace `m3-run` searches files for private keys. Find it through that rule, write its name to `/root/mock/key-hunter.txt` on `cks-cp`, and scale it to 0.
+> 2. A Deployment in namespace `m3-run` searches files for private keys. Find it through that rule, write its name to `/root/mock/key-hunter.txt` on `practice-control-plane`, and scale it to 0.
 
 <details>
 <summary>Solution</summary>
 
 ```yaml
-# /etc/falco/rules.d/m3.yaml on cks-w1
+# /etc/falco/rules.d/m3.yaml on practice-worker
 - rule: Search Private Keys or Passwords
   priority: ALERT
   override:
@@ -456,18 +455,18 @@ The check runs trivy itself and compares, so it still agrees with you after the 
 ```
 
 ```console
-root@cks-w1:~# journalctl -u falco-modern-bpf --since -2min | grep 'Alert Grep private keys' | grep -o 'k8s_pod_name=[^ ]*' | tail -1
+root@practice-worker:~# journalctl -u falco-modern-bpf --since -2min | grep 'Alert Grep private keys' | grep -o 'k8s_pod_name=[^ ]*' | tail -1
 k8s_pod_name=indexer-7d5f9f7b4d-zgcnl
 ```
 
 The pod's `app` label names the Deployment `indexer`, which you scale to zero:
 
 ```console
-root@cks-cp:~# k -n m3-run get pod <pod> --show-labels
+root@practice-control-plane:~# k -n m3-run get pod <pod> --show-labels
 NAME                       READY   STATUS    RESTARTS   AGE   LABELS
 indexer-7d5f9f7b4d-zgcnl   1/1     Running   0          16m   app=indexer,pod-template-hash=7d5f9f7b4d
-root@cks-cp:~# echo indexer > /root/mock/key-hunter.txt
-root@cks-cp:~# k -n m3-run scale deploy indexer --replicas=0
+root@practice-control-plane:~# echo indexer > /root/mock/key-hunter.txt
+root@practice-control-plane:~# k -n m3-run scale deploy indexer --replicas=0
 deployment.apps/indexer scaled
 ```
 
@@ -479,7 +478,7 @@ The transcript ran the first command with the pod name that the alert printed in
 
 ### Task 16: An audit policy for one team (7 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Turn on audit logging with the policy `/etc/kubernetes/audit/m3-policy.yaml` and the log `/var/log/kubernetes/audit/m3.log`:
 >
@@ -513,15 +512,15 @@ Deployments live in the API group `apps`, not in the core group `""`, so with `g
 
 ### Task 17: seccomp and a read-only root (6 points)
 
-**Hosts:** `cks-w1`, then `cks-cp`.
+**Hosts:** `practice-worker`, then `practice-control-plane`.
 
-> `/root/mock/no-mkdir.json` on `cks-w1` is a seccomp profile that blocks `mkdir`. Install it as `m3.json` in the kubelet's seccomp folder. Create pod `locked` in namespace `m3-sec` on `cks-w1` (image `busybox:1.36`, command `sleep 1d`) with that profile, a read-only root file system, and an `emptyDir` at `/data`.
+> `/root/mock/no-mkdir.json` on `practice-worker` is a seccomp profile that blocks `mkdir`. Install it as `m3.json` in the kubelet's seccomp folder. Create pod `locked` in namespace `m3-sec` on `practice-worker` (image `busybox:1.36`, command `sleep 1d`) with that profile, a read-only root file system, and an `emptyDir` at `/data`.
 
 <details>
 <summary>Solution</summary>
 
 ```console
-root@cks-w1:~# mkdir -p /var/lib/kubelet/seccomp && cp /root/mock/no-mkdir.json /var/lib/kubelet/seccomp/m3.json          # on cks-w1
+root@practice-worker:~# mkdir -p /var/lib/kubelet/seccomp && cp /root/mock/no-mkdir.json /var/lib/kubelet/seccomp/m3.json          # on practice-worker
 ```
 
 ```yaml
@@ -529,7 +528,7 @@ apiVersion: v1
 kind: Pod
 metadata: {name: locked, namespace: m3-sec}
 spec:
-  nodeName: cks-w1
+  nodeName: practice-worker
   containers:
   - name: c
     image: busybox:1.36

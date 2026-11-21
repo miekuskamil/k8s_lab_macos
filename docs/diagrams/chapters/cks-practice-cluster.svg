@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
 <rect width="1600" height="1000" fill="#ffffff"/>
 <rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
-<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">The CKS <tspan fill="#7c3aed">practice clusters</tspan></text>
-<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Two OrbStack machines share one kernel. The Lima VM brings its own, with AppArmor and WireGuard.</text>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">The practice cluster <tspan fill="#7c3aed">and the Lima VM</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Two kind nodes are containers on Docker&#x27;s shared kernel. The Lima VM brings its own.</text>
 <rect x="40.0" y="150.0" width="1520.0" height="820.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
 <rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
 <polyline points="57.5,181.0 76.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
@@ -13,11 +13,11 @@
 <polyline points="100.3,261.2 104.2,265.0 100.3,268.8" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
 <polyline points="106.7,269.5 113.1,269.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
 <text x="144.0" y="258.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">terminal</text>
-<text x="144.0" y="284.0" font-size="17.0" fill="#475569" text-anchor="start">orb, limactl</text>
+<text x="144.0" y="284.0" font-size="17.0" fill="#475569" text-anchor="start">./lab.sh practice</text>
 <rect x="330.0" y="200.0" width="1200.0" height="430.0" rx="16.0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.6"/>
 <rect x="348.5" y="217.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
 <polyline points="348.5,221.5 365.5,221.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="376.0" y="230.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">OrbStack</text>
+<text x="376.0" y="230.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Docker engine</text>
 <rect x="360.0" y="250.0" width="560.0" height="300.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
 <rect x="378.0" y="265.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
 <ellipse cx="381.5" cy="267.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
@@ -28,7 +28,7 @@
 <rect x="378.0" y="278.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
 <ellipse cx="381.5" cy="280.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
 <polyline points="387.0,280.5 392.5,280.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="406.0" y="280.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">cks-cp: control plane</text>
+<text x="406.0" y="280.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">practice-control-plane</text>
 <rect x="385.0" y="300.0" width="510.0" height="80.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
 <text x="640.0" y="332.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">static pods</text>
 <text x="640.0" y="354.7" font-size="17.0" fill="#475569" text-anchor="middle">API server, etcd, scheduler</text>
@@ -52,7 +52,7 @@
 <rect x="968.0" y="278.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
 <ellipse cx="971.5" cy="280.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
 <polyline points="977.0,280.5 982.5,280.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="996.0" y="280.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">cks-w1: worker</text>
+<text x="996.0" y="280.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">practice-worker</text>
 <rect x="975.0" y="300.0" width="500.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
 <text x="1225.0" y="332.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">your pods</text>
 <text x="1225.0" y="354.7" font-size="17.0" fill="#475569" text-anchor="middle">the task workloads</text>
@@ -68,7 +68,7 @@
 <ellipse cx="950.0" cy="250.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
 <text x="950.0" y="256.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
 <rect x="360.0" y="565.0" width="1140.0" height="50.0" rx="14.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
-<text x="380.0" y="595.8" font-size="16.0" fill="#047857" font-weight="700" text-anchor="start">one shared OrbStack kernel: no AppArmor, no WireGuard</text>
+<text x="380.0" y="595.8" font-size="16.0" fill="#047857" font-weight="700" text-anchor="start">one shared kernel: no AppArmor, no WireGuard</text>
 <rect x="330.0" y="670.0" width="1200.0" height="270.0" rx="16.0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.6"/>
 <rect x="348.5" y="687.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
 <polyline points="348.5,691.5 365.5,691.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
@@ -96,7 +96,6 @@
 <text x="380.0" y="907.8" font-size="16.0" fill="#047857" font-weight="700" text-anchor="start">its own Linux kernel</text>
 <polyline points="290.0,265.0 320.5,265.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="330.0,265.0 318.5,270.8 318.5,259.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
-<text x="310.0" y="255.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">orb shell</text>
 <polyline points="180.0,320.0 180.0,805.0 320.5,805.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="330.0,805.0 318.5,810.8 318.5,799.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
 <text x="190.0" y="706.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">limactl shell</text>

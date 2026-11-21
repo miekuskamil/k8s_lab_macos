@@ -2,7 +2,7 @@
 
 > New to a term here, like audit policy or syscall? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this module:** the [practice cluster](../practice-cluster.md) running, ideally fresh from `./platform-engineering/practice/cluster/reset.sh`. The course's [module 10](10-ebpf-and-cilium.md#concept-what-ebpf-is) explains eBPF, the technique Falco uses to watch the kernel.
+**Before this module:** the [practice cluster](../practice-cluster.md) running, ideally fresh from `./lab.sh practice reset`. The course's [module 10](10-ebpf-and-cilium.md#concept-what-ebpf-is) explains eBPF, the technique Falco uses to watch the kernel.
 
 The other security modules try to keep attackers out, while this one assumes somebody got in anyway. Three questions then matter: what did they do through the API, what are they doing inside the container right now, and how much damage does the container let them do. Audit logs answer the first, Falco the second, and immutable root file systems, seccomp and AppArmor limit the third. This module has 11 tasks here and two in module 44, and takes about 2 hours.
 
@@ -216,11 +216,11 @@ Falco loads `/etc/falco/falco_rules.yaml`, then `falco_rules.local.yaml`, then e
 
 `replace` swaps the field's value, while `append` adds to it, which suits a condition (`and not proc.name = backup`) or an output. Files in `rules.d/` load after the default file, so the override finds its rule.
 
-On the practice cluster, Falco runs as the systemd service `falco-modern-bpf` on `cks-w1` and logs to the journal, so `journalctl -u falco-modern-bpf` shows its alerts. Out of the box it already flags, among others, a read of `/etc/shadow` with `Sensitive file opened for reading by non-trusted program`.
+On the practice cluster, Falco runs as the systemd service `falco-modern-bpf` on `practice-worker` and logs to the journal, so `journalctl -u falco-modern-bpf` shows its alerts. Out of the box it already flags, among others, a read of `/etc/shadow` with `Sensitive file opened for reading by non-trusted program`.
 
 **What this stops.** Falco stops attacks from going unnoticed, such as a shell in a production container, a package manager running at night or a process reading private keys, and it turns minutes of attacker activity into an alert with a pod name.
 
-**Exam traps.** Falco 0.45 adds container and Kubernetes fields to every alert by itself, so `container_name=`, `k8s_pod_name=` and `k8s_ns_name=` appear at the end of each line, whatever the rule's own output says, and that is how you find the pod behind a default rule's alert. The alert shows the rule's output text rather than its name, so search the rules files for the text. Falco on OrbStack also sees more than its own node, because every machine shares one kernel. In the test run, Falco on `cks-w1` reported `Log files were tampered` for a file on `cks-cp`, and alerted on commands typed into the `cks-cp` shell with `ns=<NA>`, so filter alerts by `ns=` or `k8s_pod_name=` to see only pods.
+**Exam traps.** Falco 0.45 adds container and Kubernetes fields to every alert by itself, so `container_name=`, `k8s_pod_name=` and `k8s_ns_name=` appear at the end of each line, whatever the rule's own output says, and that is how you find the pod behind a default rule's alert. The alert shows the rule's output text rather than its name, so search the rules files for the text. Falco on OrbStack also sees more than its own node, because every machine shares one kernel. In the test run, Falco on `practice-worker` reported `Log files were tampered` for a file on `practice-control-plane`, and alerted on commands typed into the `practice-control-plane` shell with `ns=<NA>`, so filter alerts by `ns=` or `k8s_pod_name=` to see only pods.
 
 ## Concept: investigating an attack
 
@@ -260,7 +260,7 @@ Real platform teams ship audit logs and Falco alerts off the node to a central s
 
 ## Task 1: Turn on audit logging
 
-**Time budget:** 10 minutes. **Host:** `cks-cp`.
+**Time budget:** 10 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 43.1
@@ -324,10 +324,10 @@ In the API server manifest, after a backup, add the four flags and the two volum
 When the API server is back, make a request and read the newest entry in the log:
 
 ```console
-root@cks-cp:~# k -n audit-me get secret token
+root@practice-control-plane:~# k -n audit-me get secret token
 NAME    TYPE     DATA   AGE
 token   Opaque   1      47s
-root@cks-cp:~# tail -1 /var/log/kubernetes/audit/audit.log | python3 -m json.tool | head -20
+root@practice-control-plane:~# tail -1 /var/log/kubernetes/audit/audit.log | python3 -m json.tool | head -20
 {
     "kind": "Event",
     "apiVersion": "audit.k8s.io/v1",
@@ -369,7 +369,7 @@ The check makes three requests of its own and looks for each one in the log.
 
 ## Task 2: Catch a shell with Falco
 
-**Time budget:** 8 minutes. **Host:** `cks-w1`.
+**Time budget:** 8 minutes. **Host:** `practice-worker`.
 
 ```console
 $ ./platform-engineering/task.sh setup 43.2
@@ -392,15 +392,15 @@ active
   priority: WARNING
 ```
 
-Save the file, and Falco reloads by itself. Check the reload in the journal, then fire the rule from `cks-cp`:
+Save the file, and Falco reloads by itself. Check the reload in the journal, then fire the rule from `practice-control-plane`:
 
 ```console
-root@cks-w1:~# journalctl -u falco-modern-bpf -n 20 | grep cks-shell        # "schema validation: ok"
-Nov 15 15:17:26 cks-w1 falco[35575]:    /etc/falco/rules.d/cks-shell.yaml | schema validation: ok
-root@cks-cp:~# k -n falco-test exec target -- sh -c 'echo hello'             # on cks-cp
+root@practice-worker:~# journalctl -u falco-modern-bpf -n 20 | grep cks-shell        # "schema validation: ok"
+Nov 15 15:17:26 practice-worker falco[35575]:    /etc/falco/rules.d/cks-shell.yaml | schema validation: ok
+root@practice-control-plane:~# k -n falco-test exec target -- sh -c 'echo hello'             # on practice-control-plane
 hello
-root@cks-w1:~# journalctl -u falco-modern-bpf --since -1min | grep 'ns=falco-test'
-Nov 15 15:17:33 cks-w1 falco[35575]: 15:17:33.289362971: Warning shell in container (time=15:17:33.289362971 user=root ns=falco-test pod=target container=target cmd=sh -c echo hello) container_id=0d062466cf6a container_name=target container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=target k8s_ns_name=falco-test
+root@practice-worker:~# journalctl -u falco-modern-bpf --since -1min | grep 'ns=falco-test'
+Nov 15 15:17:33 practice-worker falco[35575]: 15:17:33.289362971: Warning shell in container (time=15:17:33.289362971 user=root ns=falco-test pod=target container=target cmd=sh -c echo hello) container_id=0d062466cf6a container_name=target container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=target k8s_ns_name=falco-test
 ```
 
 Falco's documentation, which the exam allows, lists every field under "Supported Fields". When a task asks for a format such as `%evt.time,%user.name,%proc.name`, copy it into `output` exactly, because the check compares the text.
@@ -418,7 +418,7 @@ $ ./platform-engineering/task.sh check 43.2
 
 ## Task 3: Make a container immutable
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 43.3
@@ -454,10 +454,10 @@ Run `k -n immutable edit deploy web`, and add the setting and three writable fol
 Without the volumes, nginx exits at start, and in the test run the pod went into `CrashLoopBackOff` with the log line `mkdir() "/var/cache/nginx/client_temp" failed (30: Read-only file system)`. Prove both sides, the refused write and the page that still serves:
 
 ```console
-root@cks-cp:~# k -n immutable exec deploy/web -- touch /cks-was-here    # Read-only file system
+root@practice-control-plane:~# k -n immutable exec deploy/web -- touch /cks-was-here    # Read-only file system
 touch: /cks-was-here: Read-only file system
 command terminated with exit code 1
-root@cks-cp:~# k -n immutable run t --rm -i --restart=Never --image=busybox:1.36 -- wget -qO- http://web | head -4
+root@practice-control-plane:~# k -n immutable run t --rm -i --restart=Never --image=busybox:1.36 -- wget -qO- http://web | head -4
 All commands and output from this session will be recorded in container logs, including credentials and sensitive information passed through the command prompt.
 If you don't see a command prompt, try pressing enter.
 <!DOCTYPE html>
@@ -480,7 +480,7 @@ $ ./platform-engineering/task.sh check 43.3
 
 ## Task 4: A seccomp profile
 
-**Time budget:** 6 minutes. **Hosts:** `cks-w1`, then `cks-cp`.
+**Time budget:** 6 minutes. **Hosts:** `practice-worker`, then `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 43.4
@@ -488,19 +488,19 @@ $ ./platform-engineering/task.sh setup 43.4
 -rw-r--r-- 1 root root 149 Nov 15 15:17 /root/cks/no-chmod.json
 ```
 
-> The seccomp profile `/root/cks/no-chmod.json` on `cks-w1` blocks the `chmod` family of syscalls. Install it where the kubelet finds it, as `profiles/no-chmod.json`. Then create pod `locked` in namespace `seccomp` on `cks-w1` with image `busybox:1.36` and command `sleep 1d`, using that profile.
+> The seccomp profile `/root/cks/no-chmod.json` on `practice-worker` blocks the `chmod` family of syscalls. Install it where the kubelet finds it, as `profiles/no-chmod.json`. Then create pod `locked` in namespace `seccomp` on `practice-worker` with image `busybox:1.36` and command `sleep 1d`, using that profile.
 
 <details>
 <summary>Solution</summary>
 
-Copy the profile into the kubelet's seccomp folder on `cks-w1`, the node that will run the pod:
+Copy the profile into the kubelet's seccomp folder on `practice-worker`, the node that will run the pod:
 
 ```console
-root@cks-w1:~# mkdir -p /var/lib/kubelet/seccomp/profiles
-root@cks-w1:~# cp /root/cks/no-chmod.json /var/lib/kubelet/seccomp/profiles/
+root@practice-worker:~# mkdir -p /var/lib/kubelet/seccomp/profiles
+root@practice-worker:~# cp /root/cks/no-chmod.json /var/lib/kubelet/seccomp/profiles/
 ```
 
-Then create the pod from `cks-cp`, pinned to `cks-w1`:
+Then create the pod from `practice-control-plane`, pinned to `practice-worker`:
 
 ```yaml
 apiVersion: v1
@@ -509,7 +509,7 @@ metadata:
   name: locked
   namespace: seccomp
 spec:
-  nodeName: cks-w1
+  nodeName: practice-worker
   securityContext:
     seccompProfile:
       type: Localhost
@@ -521,7 +521,7 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k -n seccomp exec locked -- sh -c 'touch /tmp/f && chmod 600 /tmp/f'
+root@practice-control-plane:~# k -n seccomp exec locked -- sh -c 'touch /tmp/f && chmod 600 /tmp/f'
 chmod: /tmp/f: Operation not permitted
 command terminated with exit code 1
 ```
@@ -535,7 +535,7 @@ $ ./platform-engineering/task.sh check 43.4
 == check task 43.4
   PASS  the kubelet finds the profile at /var/lib/kubelet/seccomp/profiles/no-chmod.json
   PASS  pod locked in seccomp uses the Localhost profile profiles/no-chmod.json
-  PASS  pod locked runs on cks-w1
+  PASS  pod locked runs on practice-worker
   PASS  chmod fails inside pod locked
   PASS  other writes still work inside pod locked
 == task 43.4: 5 passed, 0 failed
@@ -543,11 +543,11 @@ $ ./platform-engineering/task.sh check 43.4
 
 ## Task 5: AppArmor, on a VM
 
-The AppArmor tasks need a kernel with AppArmor turned on, which OrbStack's shared kernel lacks. Task 5 sits in [module 44](../kernel-and-host/44-kernel-and-host-security.md#task-6-an-apparmor-profile) as its task 6.
+The AppArmor tasks need a kernel with AppArmor turned on, which the kernel the kind nodes share lacks. Task 5 sits in [module 44](../kernel-and-host/44-kernel-and-host-security.md#task-6-an-apparmor-profile) as its task 6.
 
 ## Task 6: Investigate an attack
 
-**Time budget:** 8 minutes. **Host:** `cks-cp`.
+**Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 43.6
@@ -573,7 +573,7 @@ The setup needs audit logging, so when task 1 isn't done, it applies task 1's so
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# grep '"verb":"delete"' /var/log/kubernetes/audit/audit.log | grep '"name":"prod-db"' | tail -1 | python3 -m json.tool
+root@practice-control-plane:~# grep '"verb":"delete"' /var/log/kubernetes/audit/audit.log | grep '"name":"prod-db"' | tail -1 | python3 -m json.tool
 {
     "kind": "Event",
     "apiVersion": "audit.k8s.io/v1",
@@ -590,7 +590,7 @@ root@cks-cp:~# grep '"verb":"delete"' /var/log/kubernetes/audit/audit.log | grep
             ],
 ...
     "sourceIPs": [
-        "192.168.139.60"
+        "192.168.117.3"
     ],
     "userAgent": "curl/8.11.1",
 ...
@@ -599,12 +599,12 @@ root@cks-cp:~# grep '"verb":"delete"' /var/log/kubernetes/audit/audit.log | grep
 The pod no longer exists, but its token carried the pod's name, so the log keeps it. The source IP is the node's rather than the pod's, because the request left the pod through the node.
 
 ```console
-root@cks-cp:~# echo "system:serviceaccount:team-x:ci-bot nightly-cleanup" > /root/cks/culprit.txt
-root@cks-cp:~# k -n team-x get rolebinding -o wide | grep ci-bot
+root@practice-control-plane:~# echo "system:serviceaccount:team-x:ci-bot nightly-cleanup" > /root/cks/culprit.txt
+root@practice-control-plane:~# k -n team-x get rolebinding -o wide | grep ci-bot
 ci-bot-secrets     Role/secret-admin   5s                     team-x/ci-bot
-root@cks-cp:~# k -n team-x delete rolebinding ci-bot-secrets
+root@practice-control-plane:~# k -n team-x delete rolebinding ci-bot-secrets
 rolebinding.rbac.authorization.k8s.io "ci-bot-secrets" deleted from team-x namespace
-root@cks-cp:~# k auth can-i delete secrets -n team-x --as=system:serviceaccount:team-x:ci-bot    # no
+root@practice-control-plane:~# k auth can-i delete secrets -n team-x --as=system:serviceaccount:team-x:ci-bot    # no
 no
 ```
 
@@ -624,7 +624,7 @@ $ ./platform-engineering/task.sh check 43.6
 
 ## Task 7: A Falco rule with a list and a macro
 
-**Time budget:** 8 minutes. **Host:** `cks-w1`.
+**Time budget:** 8 minutes. **Host:** `practice-worker`.
 
 ```console
 $ ./platform-engineering/task.sh setup 43.7
@@ -632,7 +632,7 @@ $ ./platform-engineering/task.sh setup 43.7
 active
 ```
 
-> Create `/etc/falco/rules.d/cks-pkg.yaml` on `cks-w1` with:
+> Create `/etc/falco/rules.d/cks-pkg.yaml` on `practice-worker` with:
 >
 > 1. A list `cks_pkg_mgrs` with `apk`, `apt`, `apt-get`, `dpkg` and `pip`.
 > 2. A macro `cks_in_pod` that is true for processes in a container that belongs to a Kubernetes pod.
@@ -655,35 +655,35 @@ active
   priority: ERROR
 ```
 
-Falco reloads by itself, so check the reload in the journal and then fire the rule from `cks-cp`:
+Falco reloads by itself, so check the reload in the journal and then fire the rule from `practice-control-plane`:
 
 ```console
-root@cks-w1:~# journalctl -u falco-modern-bpf -n 20 | grep cks-pkg         # "schema validation: ok"
-Nov 15 15:18:21 cks-w1 falco[35575]:    /etc/falco/rules.d/cks-pkg.yaml | schema validation: ok
-root@cks-cp:~# k -n falco-test exec target -- apk --version                # on cks-cp
+root@practice-worker:~# journalctl -u falco-modern-bpf -n 20 | grep cks-pkg         # "schema validation: ok"
+Nov 15 15:18:21 practice-worker falco[35575]:    /etc/falco/rules.d/cks-pkg.yaml | schema validation: ok
+root@practice-control-plane:~# k -n falco-test exec target -- apk --version                # on practice-control-plane
 apk-tools 2.14.6, compiled for aarch64.
-root@cks-w1:~# journalctl -u falco-modern-bpf --since -1min | grep 'package manager'
-Nov 15 15:17:59 cks-w1 falco[35575]: 15:17:59.158277787: Warning shell in container (time=15:17:59.158277787 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:17:57'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:17:59 cks-w1 falco[35575]: 15:17:59.160025966: Warning shell in container (time=15:17:59.160025966 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:17:57' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:01 cks-w1 falco[35575]: 15:18:01.324540662: Warning shell in container (time=15:18:01.324540662 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:17:59'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:01 cks-w1 falco[35575]: 15:18:01.328347354: Warning shell in container (time=15:18:01.328347354 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:17:59' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:03 cks-w1 falco[35575]: 15:18:03.493870205: Warning shell in container (time=15:18:03.493870205 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:01'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:03 cks-w1 falco[35575]: 15:18:03.495776405: Warning shell in container (time=15:18:03.495776405 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:01' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:05 cks-w1 falco[35575]: 15:18:05.647359524: Warning shell in container (time=15:18:05.647359524 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:03'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:05 cks-w1 falco[35575]: 15:18:05.650652035: Warning shell in container (time=15:18:05.650652035 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:03' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:07 cks-w1 falco[35575]: 15:18:07.807076247: Warning shell in container (time=15:18:07.807076247 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:05'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:07 cks-w1 falco[35575]: 15:18:07.808903124: Warning shell in container (time=15:18:07.808903124 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:05' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:09 cks-w1 falco[35575]: 15:18:09.959029815: Warning shell in container (time=15:18:09.959029815 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:07'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:09 cks-w1 falco[35575]: 15:18:09.962051988: Warning shell in container (time=15:18:09.962051988 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:07' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:12 cks-w1 falco[35575]: 15:18:12.140395932: Warning shell in container (time=15:18:12.140395932 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:09'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:12 cks-w1 falco[35575]: 15:18:12.143786722: Warning shell in container (time=15:18:12.143786722 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:09' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:14 cks-w1 falco[35575]: 15:18:14.321263533: Warning shell in container (time=15:18:14.321263533 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:12'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:14 cks-w1 falco[35575]: 15:18:14.323704702: Warning shell in container (time=15:18:14.323704702 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:12' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:16 cks-w1 falco[35575]: 15:18:16.498213500: Warning shell in container (time=15:18:16.498213500 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:14'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:16 cks-w1 falco[35575]: 15:18:16.501958783: Warning shell in container (time=15:18:16.501958783 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:14' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:18 cks-w1 falco[35575]: 15:18:18.690149265: Warning shell in container (time=15:18:18.690149265 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:16'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:18 cks-w1 falco[35575]: 15:18:18.691812706: Warning shell in container (time=15:18:18.691812706 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:16' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
-Nov 15 15:18:23 cks-w1 falco[35575]: 15:18:23.930796842: Error package manager in pod (ns=falco-test pod=target proc=apk) container_id=0d062466cf6a container_name=target container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=target k8s_ns_name=falco-test
+root@practice-worker:~# journalctl -u falco-modern-bpf --since -1min | grep 'package manager'
+Nov 15 15:17:59 practice-worker falco[35575]: 15:17:59.158277787: Warning shell in container (time=15:17:59.158277787 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:17:57'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:17:59 practice-worker falco[35575]: 15:17:59.160025966: Warning shell in container (time=15:17:59.160025966 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:17:57' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:01 practice-worker falco[35575]: 15:18:01.324540662: Warning shell in container (time=15:18:01.324540662 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:17:59'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:01 practice-worker falco[35575]: 15:18:01.328347354: Warning shell in container (time=15:18:01.328347354 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:17:59' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:03 practice-worker falco[35575]: 15:18:03.493870205: Warning shell in container (time=15:18:03.493870205 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:01'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:03 practice-worker falco[35575]: 15:18:03.495776405: Warning shell in container (time=15:18:03.495776405 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:01' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:05 practice-worker falco[35575]: 15:18:05.647359524: Warning shell in container (time=15:18:05.647359524 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:03'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:05 practice-worker falco[35575]: 15:18:05.650652035: Warning shell in container (time=15:18:05.650652035 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:03' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:07 practice-worker falco[35575]: 15:18:07.807076247: Warning shell in container (time=15:18:07.807076247 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:05'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:07 practice-worker falco[35575]: 15:18:07.808903124: Warning shell in container (time=15:18:07.808903124 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:05' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:09 practice-worker falco[35575]: 15:18:09.959029815: Warning shell in container (time=15:18:09.959029815 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:07'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:09 practice-worker falco[35575]: 15:18:09.962051988: Warning shell in container (time=15:18:09.962051988 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:07' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:12 practice-worker falco[35575]: 15:18:12.140395932: Warning shell in container (time=15:18:12.140395932 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:09'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:12 practice-worker falco[35575]: 15:18:12.143786722: Warning shell in container (time=15:18:12.143786722 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:09' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:14 practice-worker falco[35575]: 15:18:14.321263533: Warning shell in container (time=15:18:14.321263533 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:12'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:14 practice-worker falco[35575]: 15:18:14.323704702: Warning shell in container (time=15:18:14.323704702 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:12' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:16 practice-worker falco[35575]: 15:18:16.498213500: Warning shell in container (time=15:18:16.498213500 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:14'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:16 practice-worker falco[35575]: 15:18:16.501958783: Warning shell in container (time=15:18:16.501958783 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:14' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:18 practice-worker falco[35575]: 15:18:18.690149265: Warning shell in container (time=15:18:18.690149265 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c bash -c 'journalctl -u falco-modern-bpf --since '\"'\"'2026-11-15 15:18:16'\"'\"' --no-pager | grep -qE '\"'\"'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)'\"'\"'') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:18 practice-worker falco[35575]: 15:18:18.691812706: Warning shell in container (time=15:18:18.691812706 user=root ns=<NA> pod=<NA> container=<NA> cmd=bash -c journalctl -u falco-modern-bpf --since '2026-11-15 15:18:16' --no-pager | grep -qE 'Error package manager in pod \\(ns=falco-test pod=target proc=apk\\)') container_id=container/01 container_name=<NA> container_image_repository=<NA> container_image_tag=<NA> k8s_pod_name=<NA> k8s_ns_name=<NA>
+Nov 15 15:18:23 practice-worker falco[35575]: 15:18:23.930796842: Error package manager in pod (ns=falco-test pod=target proc=apk) container_id=0d062466cf6a container_name=target container_image_repository=docker.io/library/nginx container_image_tag=1.27-alpine k8s_pod_name=target k8s_ns_name=falco-test
 ```
 
 In the alert, everything after the closing bracket is the part Falco 0.45 appends by itself. `falco -V <file>` validates a rules file without starting a second Falco.
@@ -702,7 +702,7 @@ $ ./platform-engineering/task.sh check 43.7
 
 ## Task 8: Change what a default Falco rule does
 
-**Time budget:** 6 minutes. **Host:** `cks-w1`.
+**Time budget:** 6 minutes. **Host:** `practice-worker`.
 
 ```console
 $ ./platform-engineering/task.sh setup 43.8
@@ -710,7 +710,7 @@ $ ./platform-engineering/task.sh setup 43.8
   /etc/falco/falco_rules.yaml matches the package
 ```
 
-> On `cks-w1`, without editing `/etc/falco/falco_rules.yaml`:
+> On `practice-worker`, without editing `/etc/falco/falco_rules.yaml`:
 >
 > 1. Raise the priority of the rule `Read sensitive file untrusted` to `CRITICAL`.
 > 2. Turn off the rule `Terminal shell in container`.
@@ -732,17 +732,17 @@ Write the overrides from the theory into `/etc/falco/rules.d/cks-override.yaml`,
     enabled: replace
 ```
 
-Test from `cks-cp`. A shell "with a terminal" needs `-t`, which is what the second command adds:
+Test from `practice-control-plane`. A shell "with a terminal" needs `-t`, which is what the second command adds:
 
 ```console
-root@cks-cp:~# k -n falco-test exec target -- cat /etc/shadow > /dev/null
-root@cks-cp:~# k -n falco-test exec -it target -- sh -c 'echo hi'
+root@practice-control-plane:~# k -n falco-test exec target -- cat /etc/shadow > /dev/null
+root@practice-control-plane:~# k -n falco-test exec -it target -- sh -c 'echo hi'
 hi
 ```
 
 The transcript ran the second command inside `script`, which gives `kubectl exec -t` the terminal it needs outside an interactive shell.
 
-On `cks-w1`, `journalctl -u falco-modern-bpf --since -1min` showed this line in the test run, and no line about a terminal shell:
+On `practice-worker`, `journalctl -u falco-modern-bpf --since -1min` showed this line in the test run, and no line about a terminal shell:
 
 ```
 Critical Sensitive file opened for reading by non-trusted program | file=/etc/shadow ... command=cat /etc/shadow ...
@@ -763,7 +763,7 @@ $ ./platform-engineering/task.sh check 43.8
 
 ## Task 9: Which pod hunts for keys?
 
-**Time budget:** 6 minutes. **Hosts:** `cks-w1`, then `cks-cp`.
+**Time budget:** 6 minutes. **Hosts:** `practice-worker`, then `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 43.9
@@ -773,33 +773,33 @@ deployment.apps/inventory created
 deployment.apps/reports created
 ```
 
-> One of the three Deployments in namespace `shop-runtime` searches the file system for private keys, and a default Falco rule catches it. Write two lines to `/root/cks/falco-finding.txt` on `cks-cp`: the name of the Falco rule, then `<namespace>/<deployment>`. Then delete that Deployment.
+> One of the three Deployments in namespace `shop-runtime` searches the file system for private keys, and a default Falco rule catches it. Write two lines to `/root/cks/falco-finding.txt` on `practice-control-plane`: the name of the Falco rule, then `<namespace>/<deployment>`. Then delete that Deployment.
 
 <details>
 <summary>Solution</summary>
 
-On `cks-w1`, filter the alerts by namespace, because Falco adds the namespace to every line:
+On `practice-worker`, filter the alerts by namespace, because Falco adds the namespace to every line:
 
 ```console
-root@cks-w1:~# journalctl -u falco-modern-bpf --since -5min | grep 'k8s_ns_name=shop-runtime' | tail -1
-Nov 15 20:24:18 cks-w1 falco[35575]: 16:19:29.686354270: Warning Grep private keys or passwords activities found | evt_type=execve user=root user_uid=0 user_loginuid=-1 process=find proc_exepath=/bin/find parent=sh command=find / -name id_rsa terminal=0 exe_flags=EXE_WRITABLE|EXE_LOWER_LAYER container_id=937f47cf6f85 container_name=busybox container_image_repository=docker.io/library/busybox container_image_tag=1.36 k8s_pod_name=inventory-fcc7f8846-852zt k8s_ns_name=shop-runtime
+root@practice-worker:~# journalctl -u falco-modern-bpf --since -5min | grep 'k8s_ns_name=shop-runtime' | tail -1
+Nov 15 20:24:18 practice-worker falco[35575]: 16:19:29.686354270: Warning Grep private keys or passwords activities found | evt_type=execve user=root user_uid=0 user_loginuid=-1 process=find proc_exepath=/bin/find parent=sh command=find / -name id_rsa terminal=0 exe_flags=EXE_WRITABLE|EXE_LOWER_LAYER container_id=937f47cf6f85 container_name=busybox container_image_repository=docker.io/library/busybox container_image_tag=1.36 k8s_pod_name=inventory-fcc7f8846-852zt k8s_ns_name=shop-runtime
 ```
 
 In the test run, the line began `Warning Grep private keys or passwords activities found | ... process=find ... command=find / -name id_rsa` and ended with `k8s_pod_name=inventory-fcc7f88...`. The alert shows the rule's output text rather than its name, so find the name from the text:
 
 ```console
-root@cks-w1:~# grep -B20 'Grep private keys or passwords activities found' /etc/falco/falco_rules.yaml | grep 'rule:' | tail -1
+root@practice-worker:~# grep -B20 'Grep private keys or passwords activities found' /etc/falco/falco_rules.yaml | grep 'rule:' | tail -1
 - rule: Search Private Keys or Passwords
 ```
 
-That prints `- rule: Search Private Keys or Passwords`. On `cks-cp`, the pod's `app` label names its Deployment, which is what you delete:
+That prints `- rule: Search Private Keys or Passwords`. On `practice-control-plane`, the pod's `app` label names its Deployment, which is what you delete:
 
 ```console
-root@cks-cp:~# k -n shop-runtime get pod <pod> --show-labels
+root@practice-control-plane:~# k -n shop-runtime get pod <pod> --show-labels
 NAME                        READY   STATUS    RESTARTS   AGE   LABELS
 inventory-fcc7f8846-852zt   1/1     Running   0          41s   app=inventory,pod-template-hash=fcc7f8846
-root@cks-cp:~# printf 'Search Private Keys or Passwords\nshop-runtime/inventory\n' > /root/cks/falco-finding.txt
-root@cks-cp:~# k -n shop-runtime delete deploy inventory
+root@practice-control-plane:~# printf 'Search Private Keys or Passwords\nshop-runtime/inventory\n' > /root/cks/falco-finding.txt
+root@practice-control-plane:~# k -n shop-runtime delete deploy inventory
 deployment.apps "inventory" deleted from shop-runtime namespace
 ```
 
@@ -818,7 +818,7 @@ $ ./platform-engineering/task.sh check 43.9
 
 ## Task 10: Read the audit log like a detective
 
-**Time budget:** 8 minutes. **Host:** `cks-cp`.
+**Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 43.10
@@ -849,22 +849,22 @@ The setup needs audit logging, so when task 1 isn't done, it applies task 1's so
 Search the log once for each question, and count only the `ResponseComplete` stage, because each request also produces other stages:
 
 ```console
-root@cks-cp:~# L=/var/log/kubernetes/audit/audit.log
-root@cks-cp:~# grep '"name":"salaries"' $L | grep '"verb":"get"' | grep ResponseComplete | python3 -m json.tool | grep username
+root@practice-control-plane:~# L=/var/log/kubernetes/audit/audit.log
+root@practice-control-plane:~# grep '"name":"salaries"' $L | grep '"verb":"get"' | grep ResponseComplete | python3 -m json.tool | grep username
         "username": "alice",
-root@cks-cp:~# grep '"name":"old-salaries"' $L | grep '"verb":"delete"' | grep ResponseComplete | grep -o '"username":"[^"]*"'
+root@practice-control-plane:~# grep '"name":"old-salaries"' $L | grep '"verb":"delete"' | grep ResponseComplete | grep -o '"username":"[^"]*"'
 "username":"bob"
-root@cks-cp:~# grep '"verb":"list"' $L | grep '"resource":"secrets","namespace":"hr"' | grep '"username":"carol"' | grep -c ResponseComplete
+root@practice-control-plane:~# grep '"verb":"list"' $L | grep '"resource":"secrets","namespace":"hr"' | grep '"username":"carol"' | grep -c ResponseComplete
 2
 ```
 
 In the test run, the answers were `alice`, `bob` and `2`. Task 1's policy logs Secrets at `Metadata`, so each line names the user and the object but holds no Secret data.
 
 ```console
-root@cks-cp:~# printf 'alice\nbob\n2\n' > /root/cks/audit-answers.txt
-root@cks-cp:~# k -n hr get rolebinding -o wide | grep bob
+root@practice-control-plane:~# printf 'alice\nbob\n2\n' > /root/cks/audit-answers.txt
+root@practice-control-plane:~# k -n hr get rolebinding -o wide | grep bob
 bob-secrets     Role/secret-admin   1s    bob              
-root@cks-cp:~# k -n hr delete rolebinding bob-secrets
+root@practice-control-plane:~# k -n hr delete rolebinding bob-secrets
 rolebinding.rbac.authorization.k8s.io "bob-secrets" deleted from hr namespace
 ```
 
@@ -884,7 +884,7 @@ $ ./platform-engineering/task.sh check 43.10
 
 ## Task 11: An audit policy per user and per resource
 
-**Time budget:** 8 minutes. **Host:** `cks-cp`.
+**Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 43.11
@@ -945,9 +945,9 @@ rules:
 The API server reads the policy only at start, and the manifest doesn't change, so restart it by moving the manifest out and back, as in [module 41, task 5](41-hardening-workloads.md#task-5-rotate-the-encryption-key). In the test run, that took 42 seconds. Then make some traffic and read the newest lines:
 
 ```console
-root@cks-cp:~# k -n audit-11 run p1 --image=busybox:1.36 -- sleep 1
+root@practice-control-plane:~# k -n audit-11 run p1 --image=busybox:1.36 -- sleep 1
 pod/p1 created
-root@cks-cp:~# tail -3 /var/log/kubernetes/audit/audit.log | grep -o '"level":"[A-Za-z]*","auditID[^,]*,"stage":"[A-Za-z]*","requestURI":"[^"]*","verb":"[a-z]*"'
+root@practice-control-plane:~# tail -3 /var/log/kubernetes/audit/audit.log | grep -o '"level":"[A-Za-z]*","auditID[^,]*,"stage":"[A-Za-z]*","requestURI":"[^"]*","verb":"[a-z]*"'
 "level":"Metadata","auditID":"67d8da68-59fe-4e59-8bae-a7246e98ad01","stage":"ResponseStarted","requestURI":"/api/v1/namespaces/seccomp/configmaps?allowWatchBookmarks=true\u0026fieldSelector=metadata.name%3Dkube-root-ca.crt\u0026resourceVersion=1511\u0026resourceVersionMatch=NotOlderThan\u0026sendInitialEvents=true\u0026timeout=56m10s\u0026timeoutSeconds=3370\u0026watch=true","verb":"watch"
 "level":"Metadata","auditID":"2fc51c1a-eaee-4119-95ba-0e8a2235e3c3","stage":"ResponseStarted","requestURI":"/api/v1/configmaps?allowWatchBookmarks=true\u0026labelSelector=OWNER%21%3DTILLER\u0026resourceVersion=1637\u0026resourceVersionMatch=NotOlderThan\u0026sendInitialEvents=true\u0026timeout=5m48s\u0026timeoutSeconds=348\u0026watch=true","verb":"watch"
 "level":"Request","auditID":"e7e96e72-907f-4cb5-a7a3-3b6481421657","stage":"ResponseComplete","requestURI":"/api/v1/namespaces/audit-11/pods?fieldManager=kubectl-run","verb":"create"
@@ -975,7 +975,7 @@ This task sits in [module 44](../kernel-and-host/44-kernel-and-host-security.md#
 
 ## Task 13: Pods that are not immutable
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 43.13
@@ -1000,7 +1000,7 @@ pod/frozen-but-privileged created
 Print each container's two settings, one line per pod, so the pods that fail the test stand out:
 
 ```console
-root@cks-cp:~# k -n immutable-check get pods -o jsonpath='{range .items[*]}{.metadata.name}{": ro="}{.spec.containers[*].securityContext.readOnlyRootFilesystem}{" priv="}{.spec.containers[*].securityContext.privileged}{"\n"}{end}'
+root@practice-control-plane:~# k -n immutable-check get pods -o jsonpath='{range .items[*]}{.metadata.name}{": ro="}{.spec.containers[*].securityContext.readOnlyRootFilesystem}{" priv="}{.spec.containers[*].securityContext.privileged}{"\n"}{end}'
 frozen: ro=true priv=
 frozen-but-privileged: ro=true priv=true
 frozen-too: ro=true priv=
@@ -1011,7 +1011,7 @@ writable: ro= priv=
 A pod is immutable only when every container says `ro=true` and none says `priv=true`. In the test run, three pods failed that test: `writable` (no setting), `half-frozen` (one of its two containers has no setting) and `frozen-but-privileged`, whose read-only root protects nothing, because a privileged container remounts any file system it likes.
 
 ```console
-root@cks-cp:~# k -n immutable-check delete pod writable half-frozen frozen-but-privileged
+root@practice-control-plane:~# k -n immutable-check delete pod writable half-frozen frozen-but-privileged
 pod "writable" deleted from immutable-check namespace
 pod "half-frozen" deleted from immutable-check namespace
 pod "frozen-but-privileged" deleted from immutable-check namespace
@@ -1029,4 +1029,4 @@ $ ./platform-engineering/task.sh check 43.13
 
 ## Clean up
 
-Tasks 1, 10 and 11 changed the API server, and tasks 2, 4, 7 and 8 left files on `cks-w1`, so `./platform-engineering/practice/cluster/reset.sh` removes all of it, including the Falco rules.
+Tasks 1, 10 and 11 changed the API server, and tasks 2, 4, 7 and 8 left files on `practice-worker`, so `./lab.sh practice reset` removes all of it, including the Falco rules.

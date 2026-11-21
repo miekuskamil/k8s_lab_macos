@@ -1,6 +1,6 @@
 # Domain 02, application deployment. Functions for task.sh: setup_2_N, check_2_N, solve_2_N.
 
-CHARTS=oci://registry.ckad:5000/charts
+CHARTS=oci://registry.practice:5000/charts
 
 # Build the chart "webapp" at a version and push it to the local registry: push_chart 0.1.0 1.27-alpine
 # It is "helm create" with nginx as the image, so every version runs a real web server.
@@ -130,7 +130,7 @@ check_2_3() {
     "kubectl -n bluegreen get deploy shop-blue -o jsonpath='{.spec.replicas}' | grep -qx 0"
 }
 solve_2_3() {
-  cp_sh "mkdir -p /opt/ckad/2.3"
+  cp_sh "mkdir -p /opt/apps/2.3"
   cp_sh "kubectl -n bluegreen get deploy shop-blue -o json | python3 -c '
 import json,sys
 d=json.load(sys.stdin); m=d[\"metadata\"]
@@ -138,10 +138,10 @@ d[\"metadata\"]={\"name\":\"shop-green\",\"namespace\":m[\"namespace\"]}
 d.pop(\"status\",None)
 s=d[\"spec\"]; s[\"selector\"][\"matchLabels\"][\"version\"]=\"green\"; s[\"template\"][\"metadata\"][\"labels\"][\"version\"]=\"green\"
 c=s[\"template\"][\"spec\"][\"containers\"][0]; c[\"command\"][2]=c[\"command\"][2].replace(\"echo blue\",\"echo green\")
-print(json.dumps(d))' | kubectl create -f - --dry-run=client -o yaml | grep -v -E '^  (creationTimestamp|generation|resourceVersion|uid):|deployment.kubernetes.io/revision' > /opt/ckad/2.3/green.yaml"
+print(json.dumps(d))' | kubectl create -f - --dry-run=client -o yaml | grep -v -E '^  (creationTimestamp|generation|resourceVersion|uid):|deployment.kubernetes.io/revision' > /opt/apps/2.3/green.yaml"
   shown <<'EOF'
-grep -n -E 'name: shop|version|echo' /opt/ckad/2.3/green.yaml
-k apply -f /opt/ckad/2.3/green.yaml
+grep -n -E 'name: shop|version|echo' /opt/apps/2.3/green.yaml
+k apply -f /opt/apps/2.3/green.yaml
 k -n bluegreen rollout status deploy shop-green
 k -n bluegreen patch svc shop -p '{"spec":{"selector":{"version":"green"}}}'
 k -n bluegreen exec client -- wget -qO- http://shop
@@ -170,18 +170,18 @@ check_2_4() {
     "out=\$(for i in \$(seq 1 40); do kubectl -n canary exec client -- wget -qO- -T 2 http://front; done); echo \"\$out\" | grep -qx v1 && echo \"\$out\" | grep -qx v2"
 }
 solve_2_4() {
-  cp_sh "mkdir -p /opt/ckad/2.4 && kubectl -n canary get deploy front-v1 -o json | python3 -c '
+  cp_sh "mkdir -p /opt/apps/2.4 && kubectl -n canary get deploy front-v1 -o json | python3 -c '
 import json,sys
 d=json.load(sys.stdin); m=d[\"metadata\"]
 d[\"metadata\"]={\"name\":\"front-v2\",\"namespace\":m[\"namespace\"]}
 d.pop(\"status\",None)
 s=d[\"spec\"]; s[\"replicas\"]=1; s[\"selector\"][\"matchLabels\"][\"track\"]=\"canary\"; s[\"template\"][\"metadata\"][\"labels\"][\"track\"]=\"canary\"
 c=s[\"template\"][\"spec\"][\"containers\"][0]; c[\"command\"][2]=c[\"command\"][2].replace(\"echo v1\",\"echo v2\")
-print(json.dumps(d))' | kubectl create -f - --dry-run=client -o yaml | grep -v -E '^  (creationTimestamp|generation|resourceVersion|uid):|deployment.kubernetes.io/revision' > /opt/ckad/2.4/canary.yaml"
+print(json.dumps(d))' | kubectl create -f - --dry-run=client -o yaml | grep -v -E '^  (creationTimestamp|generation|resourceVersion|uid):|deployment.kubernetes.io/revision' > /opt/apps/2.4/canary.yaml"
   shown <<'EOF'
 k -n canary get svc front -o jsonpath='{.spec.selector}{"\n"}'
-grep -n -E 'name: front|replicas|track|echo' /opt/ckad/2.4/canary.yaml
-k apply -f /opt/ckad/2.4/canary.yaml
+grep -n -E 'name: front|replicas|track|echo' /opt/apps/2.4/canary.yaml
+k apply -f /opt/apps/2.4/canary.yaml
 k -n canary rollout status deploy front-v2
 k -n canary get pods -l app=front -L track
 for i in $(seq 1 20); do k -n canary exec client -- wget -qO- http://front; done | sort | uniq -c
@@ -202,8 +202,8 @@ check_2_5() {
 }
 solve_2_5() {
   shown <<'EOF'
-helm show values oci://registry.ckad:5000/charts/webapp --version 0.1.0 --plain-http 2>/dev/null | grep -E '^replicaCount|^  type:|^  port:'
-helm -n helm-shop install shop oci://registry.ckad:5000/charts/webapp --version 0.1.0 --plain-http --set replicaCount=2 --set service.type=NodePort
+helm show values oci://registry.practice:5000/charts/webapp --version 0.1.0 --plain-http 2>/dev/null | grep -E '^replicaCount|^  type:|^  port:'
+helm -n helm-shop install shop oci://registry.practice:5000/charts/webapp --version 0.1.0 --plain-http --set replicaCount=2 --set service.type=NodePort
 helm -n helm-shop list
 k -n helm-shop rollout status deploy shop-webapp
 k -n helm-shop get deploy,svc
@@ -230,7 +230,7 @@ solve_2_6() {
 helm -n helm-blog history blog
 helm -n helm-blog get values blog --revision 2
 helm -n helm-blog rollback blog 1
-helm -n helm-blog upgrade blog oci://registry.ckad:5000/charts/webapp --version 0.2.0 --plain-http --reuse-values --set replicaCount=3
+helm -n helm-blog upgrade blog oci://registry.practice:5000/charts/webapp --version 0.2.0 --plain-http --reuse-values --set replicaCount=3
 k -n helm-blog rollout status deploy blog-webapp
 helm -n helm-blog history blog
 EOF
@@ -240,7 +240,7 @@ EOF
 setup_2_7() {
   charts_ready || return 1
   ns_fresh helm-ops
-  put_file /opt/ckad/2.7/values.yaml <<'EOF'
+  put_file /opt/apps/2.7/values.yaml <<'EOF'
 replicaCount: 2
 podLabels:
   team: observability
@@ -268,7 +268,7 @@ helm -n helm-ops list
 helm -n helm-ops uninstall old-api
 helm -n helm-ops list --failed
 helm -n helm-ops uninstall cache
-helm -n helm-ops install metrics-ui oci://registry.ckad:5000/charts/webapp --version 0.2.0 --plain-http -f /opt/ckad/2.7/values.yaml
+helm -n helm-ops install metrics-ui oci://registry.practice:5000/charts/webapp --version 0.2.0 --plain-http -f /opt/apps/2.7/values.yaml
 k -n helm-ops rollout status deploy metrics-ui-webapp
 helm -n helm-ops list
 EOF
@@ -277,8 +277,8 @@ EOF
 # ---- Task 8: a Kustomize overlay for production ---------------------------------------------------------
 setup_2_8() {
   ns_fresh kust-prod
-  cp_sh 'rm -rf /opt/ckad/2.8'
-  put_file /opt/ckad/2.8/base/deployment.yaml <<'EOF'
+  cp_sh 'rm -rf /opt/apps/2.8'
+  put_file /opt/apps/2.8/base/deployment.yaml <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -299,7 +299,7 @@ spec:
         ports:
         - containerPort: 80
 EOF
-  put_file /opt/ckad/2.8/base/service.yaml <<'EOF'
+  put_file /opt/apps/2.8/base/service.yaml <<'EOF'
 apiVersion: v1
 kind: Service
 metadata:
@@ -310,12 +310,12 @@ spec:
   ports:
   - port: 80
 EOF
-  put_file /opt/ckad/2.8/base/kustomization.yaml <<'EOF'
+  put_file /opt/apps/2.8/base/kustomization.yaml <<'EOF'
 resources:
 - deployment.yaml
 - service.yaml
 EOF
-  cp_sh 'find /opt/ckad/2.8 -type f'
+  cp_sh 'find /opt/apps/2.8 -type f'
 }
 check_2_8() {
   check_cp "Deployment prod-web runs in kust-prod with 3 ready replicas" \
@@ -323,11 +323,11 @@ check_2_8() {
   check_cp "it runs nginx:1.28-alpine" "kubectl -n kust-prod get deploy prod-web -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -qx nginx:1.28-alpine"
   check_cp "the Deployment, its pods and Service prod-web carry env=prod" \
     "kubectl -n kust-prod get deploy prod-web -o jsonpath='{.metadata.labels.env}{.spec.template.metadata.labels.env}' | grep -qx prodprod && kubectl -n kust-prod get svc prod-web -o jsonpath='{.metadata.labels.env}' | grep -qx prod"
-  check_cp "the overlay lives in /opt/ckad/2.8/overlays/prod and the base is unchanged" \
-    "test -f /opt/ckad/2.8/overlays/prod/kustomization.yaml && grep -q 'replicas: 1' /opt/ckad/2.8/base/deployment.yaml && grep -q 'nginx:1.27-alpine' /opt/ckad/2.8/base/deployment.yaml"
+  check_cp "the overlay lives in /opt/apps/2.8/overlays/prod and the base is unchanged" \
+    "test -f /opt/apps/2.8/overlays/prod/kustomization.yaml && grep -q 'replicas: 1' /opt/apps/2.8/base/deployment.yaml && grep -q 'nginx:1.27-alpine' /opt/apps/2.8/base/deployment.yaml"
 }
 solve_2_8() {
-  put_file /opt/ckad/2.8/overlays/prod/kustomization.yaml <<'EOF'
+  put_file /opt/apps/2.8/overlays/prod/kustomization.yaml <<'EOF'
 resources:
 - ../../base
 namespace: kust-prod
@@ -344,7 +344,7 @@ images:
   newTag: 1.28-alpine
 EOF
   shown <<'EOF'
-cd /opt/ckad/2.8/overlays/prod
+cd /opt/apps/2.8/overlays/prod
 k kustomize . | grep -E 'name:|namespace:|env:|replicas:|image:'
 k apply -k .
 k -n kust-prod rollout status deploy prod-web
@@ -355,8 +355,8 @@ EOF
 # ---- Task 9: repair a Kustomize overlay ---------------------------------------------------------------
 setup_2_9() {
   ns_fresh kust-staging
-  cp_sh 'rm -rf /opt/ckad/2.9'
-  put_file /opt/ckad/2.9/base/deployment.yaml <<'EOF'
+  cp_sh 'rm -rf /opt/apps/2.9'
+  put_file /opt/apps/2.9/base/deployment.yaml <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -379,7 +379,7 @@ spec:
         - configMapRef:
             name: api-config
 EOF
-  put_file /opt/ckad/2.9/base/kustomization.yaml <<'EOF'
+  put_file /opt/apps/2.9/base/kustomization.yaml <<'EOF'
 resources:
 - deployment.yaml
 configMapGenerator:
@@ -387,7 +387,7 @@ configMapGenerator:
   literals:
   - MODE=dev
 EOF
-  put_file /opt/ckad/2.9/overlays/staging/kustomization.yaml <<'EOF'
+  put_file /opt/apps/2.9/overlays/staging/kustomization.yaml <<'EOF'
 resources:
 - ../../base
 namespace: kust-staging
@@ -399,7 +399,7 @@ configMapGenerator:
 patches:
 - path: limits.yaml
 EOF
-  put_file /opt/ckad/2.9/overlays/staging/limits.yaml <<'EOF'
+  put_file /opt/apps/2.9/overlays/staging/limits.yaml <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -414,25 +414,25 @@ spec:
             cpu: 100m
             memory: 64Mi
 EOF
-  cp_sh 'cd /opt/ckad/2.9/overlays/staging && kubectl kustomize . 2>&1 | tail -2'
+  cp_sh 'cd /opt/apps/2.9/overlays/staging && kubectl kustomize . 2>&1 | tail -2'
 }
 check_2_9() {
   check_cp "Deployment staging-api in kust-staging has a limit of 64Mi memory" \
     "kubectl -n kust-staging get deploy staging-api -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}' | grep -qx 64Mi"
   check_cp "its pod logs mode=staging" \
     "kubectl -n kust-staging rollout status deploy staging-api --timeout=90s && for i in \$(seq 1 10); do kubectl -n kust-staging logs deploy/staging-api 2>/dev/null | grep -qx mode=staging && exit 0; sleep 2; done; exit 1"
-  check_cp "/opt/ckad/2.9/staging.yaml holds the rendered overlay" \
-    "grep -q 'name: staging-api' /opt/ckad/2.9/staging.yaml && grep -q 'MODE: staging' /opt/ckad/2.9/staging.yaml"
+  check_cp "/opt/apps/2.9/staging.yaml holds the rendered overlay" \
+    "grep -q 'name: staging-api' /opt/apps/2.9/staging.yaml && grep -q 'MODE: staging' /opt/apps/2.9/staging.yaml"
 }
 solve_2_9() {
   shown <<'EOF'
-cd /opt/ckad/2.9/overlays/staging
+cd /opt/apps/2.9/overlays/staging
 k kustomize .
 sed -i 's/name: api-server/name: api/' limits.yaml
 sed -i '/^configMapGenerator:/,/MODE=staging/s/  literals:/  behavior: merge\n  literals:/' kustomization.yaml
 cat kustomization.yaml
-k kustomize . > /opt/ckad/2.9/staging.yaml
-grep -E 'MODE|name: staging|memory' /opt/ckad/2.9/staging.yaml
+k kustomize . > /opt/apps/2.9/staging.yaml
+grep -E 'MODE|name: staging|memory' /opt/apps/2.9/staging.yaml
 k apply -k .
 k -n kust-staging rollout status deploy staging-api
 k -n kust-staging logs deploy/staging-api

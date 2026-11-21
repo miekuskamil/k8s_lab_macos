@@ -48,20 +48,20 @@ CMD ["/usr/local/bin/greet.sh"]
 | `ENTRYPOINT [...]` | the program the container always runs | a pod's `command` replaces it |
 | `CMD [...]` | default arguments, or the program when there is no `ENTRYPOINT` | a pod's `args` replaces it |
 
-After the build, the image needs a name that tells a node where to fetch it. A full image name has three parts, and `registry.ckad:5000/greeter:v1` shows all of them: the [registry](../glossary.md#registry) host `registry.ckad:5000`, the repository `greeter`, and the [tag](../glossary.md#tag) `v1`. A name without a host, like `nginx:1.27-alpine`, points to Docker Hub, which is why the greeter's tag carries the local registry's address. Without that address, the push goes to Docker Hub and the node never finds the image in the local registry.
+After the build, the image needs a name that tells a node where to fetch it. A full image name has three parts, and `registry.practice:5000/greeter:v1` shows all of them: the [registry](../glossary.md#registry) host `registry.practice:5000`, the repository `greeter`, and the [tag](../glossary.md#tag) `v1`. A name without a host, like `nginx:1.27-alpine`, points to Docker Hub, which is why the greeter's tag carries the local registry's address. Without that address, the push goes to Docker Hub and the node never finds the image in the local registry.
 
-![The greeter image travels from the Dockerfile on cks-cp through podman build and podman push into the local registry, and the kubelet on cks-w1 pulls it through containerd when a pod needs it](../../docs/diagrams/chapters/ckad-image-flow.svg)
+![The greeter image travels from the Dockerfile on practice-control-plane through podman build and podman push into the local registry, and the kubelet on practice-worker pulls it through containerd when a pod needs it](../../docs/diagrams/chapters/ckad-image-flow.svg)
 
 The figure follows the greeter through four steps, which tasks 1 and 2 run on the practice cluster:
 
-1. `podman build -t registry.ckad:5000/greeter:v1 .` reads the Dockerfile in the current folder, the build context, and writes the image into podman's local store on `cks-cp`.
-2. `podman push registry.ckad:5000/greeter:v1` uploads the layers and the manifest to the registry that the name points to.
-3. A pod that names the image lands on `cks-w1`, because the control plane node keeps its taint, and the kubelet there asks containerd for the image.
+1. `podman build -t registry.practice:5000/greeter:v1 .` reads the Dockerfile in the current folder, the build context, and writes the image into podman's local store on `practice-control-plane`.
+2. `podman push registry.practice:5000/greeter:v1` uploads the layers and the manifest to the registry that the name points to.
+3. A pod that names the image lands on `practice-worker`, because the control plane node keeps its taint, and the kubelet there asks containerd for the image.
 4. containerd pulls the layers from the registry and starts the container from them.
 
 [podman](../glossary.md#podman) and Docker accept the same commands and read the same Dockerfiles, so `docker build` and `docker push` work the same way on an exam host that has Docker instead. `podman save -o file.tar image` writes the image into a single archive file, which some exam tasks ask for when no registry exists, and `podman load -i file.tar` reads it back.
 
-The practice registry speaks plain HTTP, and both podman and containerd refuse plain HTTP by default because an attacker on the network might swap the layers in transit. So `extras.sh` marks `registry.ckad:5000` as insecure in `/etc/containers/registries.conf.d/50-ckad.conf` for podman, and in `/etc/containerd/certs.d/registry.ckad:5000/hosts.toml` for containerd. An exam host has the same kind of setting already in place, and a `http: server gave HTTP response to HTTPS client` error means the setting is missing.
+The practice registry speaks plain HTTP, and both podman and containerd refuse plain HTTP by default because an attacker on the network might swap the layers in transit. So the practice node image marks `registry.practice:5000` as insecure in `/etc/containers/registries.conf.d/50-practice.conf` for podman, and in `/etc/containerd/certs.d/registry.practice:5000/hosts.toml` for containerd. An exam host has the same kind of setting already in place, and a `http: server gave HTTP response to HTTPS client` error means the setting is missing.
 
 ## Concept: pick the workload that matches the job
 
@@ -123,7 +123,7 @@ The control plane binds a claim to a volume that matches all three, and the clai
 2. The volume's capacity must be at least the claim's request, so a 1Gi volume serves a 500Mi claim, and the claim then reports the full 1Gi.
 3. The volume must offer the access mode the claim asks for, such as `ReadWriteOnce`, which lets one node mount it for writing.
 
-A `hostPath` volume points at a folder on whatever node runs the pod. Task 8 uses one for the PersistentVolume because the practice cluster has no shared storage, and the data then sits in `/var/lib/ckad-data` on `cks-w1`. If the pod moves to another node, it finds an empty folder there, which is why real clusters keep hostPath for node agents and practice.
+A `hostPath` volume points at a folder on whatever node runs the pod. Task 8 uses one for the PersistentVolume because the practice cluster has no shared storage, and the data then sits in `/var/lib/ckad-data` on `practice-worker`. If the pod moves to another node, it finds an empty folder there, which is why real clusters keep hostPath for node agents and practice.
 
 ## The bigger picture: images and templates as the contract
 
@@ -141,7 +141,7 @@ A pod names a claim rather than a volume because the two belong to different peo
 
 ## Task 1: Build an image and push it
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 33.1
@@ -151,9 +151,9 @@ total 8
 -rw-r--r-- 1 root root  76 Nov 20 10:33 greet.sh
 ```
 
-> The folder `/opt/ckad/1.1` holds a Dockerfile and the script it copies.
-> 1. Build the image and tag it `registry.ckad:5000/greeter:v1`, then push it to that registry.
-> 2. Also save the image as an archive at `/opt/ckad/1.1/greeter-v1.tar`.
+> The folder `/opt/apps/1.1` holds a Dockerfile and the script it copies.
+> 1. Build the image and tag it `registry.practice:5000/greeter:v1`, then push it to that registry.
+> 2. Also save the image as an archive at `/opt/apps/1.1/greeter-v1.tar`.
 > 3. Run a pod `greeter` in namespace `build` from the image in the registry.
 
 <details>
@@ -162,8 +162,8 @@ total 8
 Build from inside the folder, because the trailing `.` is the build context, the folder whose files `COPY` reads. The push sends only the layers the registry lacks, and `podman save` writes the same layers into one file:
 
 ```console
-root@cks-cp:~# cd /opt/ckad/1.1
-root@cks-cp:~# podman build -t registry.ckad:5000/greeter:v1 .
+root@practice-control-plane:~# cd /opt/apps/1.1
+root@practice-control-plane:~# podman build -t registry.practice:5000/greeter:v1 .
 STEP 1/5: FROM docker.io/library/busybox:1.36
 STEP 2/5: COPY greet.sh /usr/local/bin/greet.sh
 --> 630a9caa26e1
@@ -172,29 +172,29 @@ STEP 3/5: RUN chmod 755 /usr/local/bin/greet.sh
 STEP 4/5: ENV GREETING=hello
 --> 8dc8dceb3ac5
 STEP 5/5: CMD ["/usr/local/bin/greet.sh"]
-COMMIT registry.ckad:5000/greeter:v1
+COMMIT registry.practice:5000/greeter:v1
 --> 85279e1b7dfa
-Successfully tagged registry.ckad:5000/greeter:v1
+Successfully tagged registry.practice:5000/greeter:v1
 85279e1b7dfadd6fc4150f930aa5447608248fa1299441c04fa61c453e2c4e74
-root@cks-cp:~# podman push registry.ckad:5000/greeter:v1
+root@practice-control-plane:~# podman push registry.practice:5000/greeter:v1
 Getting image source signatures
 Copying blob sha256:0c7d3f7febe73e9e6e78d61e64d41d6e4905adf04dc687f36d2cbffa10f2d494
 Copying blob sha256:6d0cc19a6875e48bdb50fd93fbd8c4ba85d1024d1a35552a1f61e1e286c39afd
 Copying blob sha256:8228d4ae11676c066e7d2c5f58664c4e8709524ae1735b3420630a5884615057
 Copying config sha256:85279e1b7dfadd6fc4150f930aa5447608248fa1299441c04fa61c453e2c4e74
 Writing manifest to image destination
-root@cks-cp:~# podman save -o greeter-v1.tar registry.ckad:5000/greeter:v1
+root@practice-control-plane:~# podman save -o greeter-v1.tar registry.practice:5000/greeter:v1
 ...
 Writing manifest to image destination
-root@cks-cp:~# k -n build run greeter --image=registry.ckad:5000/greeter:v1
+root@practice-control-plane:~# k -n build run greeter --image=registry.practice:5000/greeter:v1
 pod/greeter created
-root@cks-cp:~# k -n build wait pod greeter --for=condition=Ready --timeout=90s
+root@practice-control-plane:~# k -n build wait pod greeter --for=condition=Ready --timeout=90s
 pod/greeter condition met
-root@cks-cp:~# k -n build logs greeter
+root@practice-control-plane:~# k -n build logs greeter
 hello from greeter
 ```
 
-Three blobs went up: busybox's own layer, and one layer each for `COPY` and `RUN`. The pod's hostname is its name, so the log line reads `hello from greeter`. `curl http://registry.ckad:5000/v2/greeter/tags/list` lists the tags the registry now holds.
+Three blobs went up: busybox's own layer, and one layer each for `COPY` and `RUN`. The pod's hostname is its name, so the log line reads `hello from greeter`. `curl http://registry.practice:5000/v2/greeter/tags/list` lists the tags the registry now holds.
 
 </details>
 
@@ -202,15 +202,15 @@ Three blobs went up: busybox's own layer, and one layer each for `COPY` and `RUN
 $ ./platform-engineering/task.sh check 33.1
 == check task 33.1
   PASS  the registry holds greeter:v1
-  PASS  /opt/ckad/1.1/greeter-v1.tar is an image archive
-  PASS  pod greeter in build runs registry.ckad:5000/greeter:v1
+  PASS  /opt/apps/1.1/greeter-v1.tar is an image archive
+  PASS  pod greeter in build runs registry.practice:5000/greeter:v1
   PASS  pod greeter logs 'hello from greeter'
 == task 33.1: 4 passed, 0 failed
 ```
 
 ## Task 2: Change a Dockerfile and roll the new image out
 
-**Time budget:** 7 minutes. **Host:** `cks-cp`.
+**Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 33.2
@@ -220,9 +220,9 @@ Waiting for deployment "report" rollout to finish: 0 of 1 updated replicas are a
 deployment "report" successfully rolled out
 ```
 
-> Deployment `report` in namespace `build-report` runs `registry.ckad:5000/report:v1`, built from `/opt/ckad/1.2`, and logs `color=red user=0`.
+> Deployment `report` in namespace `build-report` runs `registry.practice:5000/report:v1`, built from `/opt/apps/1.2`, and logs `color=red user=0`.
 > 1. Change the Dockerfile so the image sets `APP_COLOR=blue` and runs as user 1000.
-> 2. Build it as `registry.ckad:5000/report:v2`, push it, and keep `v1` in the registry.
+> 2. Build it as `registry.practice:5000/report:v2`, push it, and keep `v1` in the registry.
 > 3. Update the Deployment to `v2`.
 
 <details>
@@ -231,35 +231,35 @@ deployment "report" successfully rolled out
 Edit the Dockerfile with `vim`: change the `ENV` line and add `USER 1000` at the end, after the `COPY` that still needs root to write `/report.sh`. A new tag leaves the old one in the registry, which keeps `v1` available for a rollback:
 
 ```console
-root@cks-cp:~# cd /opt/ckad/1.2
-root@cks-cp:~# cat Dockerfile
+root@practice-control-plane:~# cd /opt/apps/1.2
+root@practice-control-plane:~# cat Dockerfile
 FROM docker.io/library/busybox:1.36
 ENV APP_COLOR=blue
 COPY report.sh /report.sh
 CMD ["sh", "/report.sh"]
 USER 1000
-root@cks-cp:~# podman build -t registry.ckad:5000/report:v2 .
+root@practice-control-plane:~# podman build -t registry.practice:5000/report:v2 .
 ...
-Successfully tagged registry.ckad:5000/report:v2
-root@cks-cp:~# podman push registry.ckad:5000/report:v2
+Successfully tagged registry.practice:5000/report:v2
+root@practice-control-plane:~# podman push registry.practice:5000/report:v2
 Getting image source signatures
 Copying blob sha256:15ca37bf94ec4a3c45141efc4ee06a6e692a03cbbe2a834f823766506fb5cbd9
 Copying blob sha256:6d0cc19a6875e48bdb50fd93fbd8c4ba85d1024d1a35552a1f61e1e286c39afd
 Copying config sha256:ab374148b77a3b9c5b7cf9c9280ee351c70d3b0f23ec00fe53481562658513a0
 Writing manifest to image destination
-root@cks-cp:~# k -n build-report set image deploy/report report=registry.ckad:5000/report:v2
+root@practice-control-plane:~# k -n build-report set image deploy/report report=registry.practice:5000/report:v2
 deployment.apps/report image updated
-root@cks-cp:~# k -n build-report rollout status deploy report
+root@practice-control-plane:~# k -n build-report rollout status deploy report
 Waiting for deployment "report" rollout to finish: 1 old replicas are pending termination...
 deployment "report" successfully rolled out
-root@cks-cp:~# k -n build-report get pods
+root@practice-control-plane:~# k -n build-report get pods
 NAME                      READY   STATUS        RESTARTS   AGE
 report-5fc4c476bf-d6ggj   1/1     Terminating   0          63s
 report-868b9774d8-k5srj   1/1     Running       0          0s
-root@cks-cp:~# k -n build-report get pods
+root@practice-control-plane:~# k -n build-report get pods
 NAME                      READY   STATUS    RESTARTS   AGE
 report-868b9774d8-k5srj   1/1     Running   0          31s
-root@cks-cp:~# k -n build-report logs deploy/report
+root@practice-control-plane:~# k -n build-report logs deploy/report
 color=blue user=1000
 ```
 
@@ -270,7 +270,7 @@ color=blue user=1000
 ```console
 $ ./platform-engineering/task.sh check 33.2
 == check task 33.2
-  PASS  Deployment report runs registry.ckad:5000/report:v2
+  PASS  Deployment report runs registry.practice:5000/report:v2
   PASS  the registry still holds report:v1 and now report:v2
   PASS  the new pods log color=blue user=1000
 == task 33.2: 3 passed, 0 failed
@@ -278,7 +278,7 @@ $ ./platform-engineering/task.sh check 33.2
 
 ## Task 3: An init container prepares the content
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 33.3
@@ -296,7 +296,7 @@ spec:
     - containerPort: 80
 ```
 
-> Extend `/opt/ckad/1.3/web.yaml` and create the pod. An init container `prepare` (image `busybox:1.36`) writes the text `ready from init` into `index.html` on an emptyDir volume, and nginx serves that file as its start page from `/usr/share/nginx/html`.
+> Extend `/opt/apps/1.3/web.yaml` and create the pod. An init container `prepare` (image `busybox:1.36`) writes the text `ready from init` into `index.html` on an emptyDir volume, and nginx serves that file as its start page from `/usr/share/nginx/html`.
 
 <details>
 <summary>Solution</summary>
@@ -326,14 +326,14 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k apply -f /opt/ckad/1.3/web.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/1.3/web.yaml
 pod/web created
-root@cks-cp:~# k -n init-web get pod web
+root@practice-control-plane:~# k -n init-web get pod web
 NAME   READY   STATUS     RESTARTS   AGE
 web    0/1     Init:0/1   0          0s
-root@cks-cp:~# k -n init-web wait pod web --for=condition=Ready
+root@practice-control-plane:~# k -n init-web wait pod web --for=condition=Ready
 pod/web condition met
-root@cks-cp:~# k -n init-web exec web -c nginx -- wget -qO- http://localhost/
+root@practice-control-plane:~# k -n init-web exec web -c nginx -- wget -qO- http://localhost/
 ready from init
 ```
 
@@ -352,7 +352,7 @@ $ ./platform-engineering/task.sh check 33.3
 
 ## Task 4: A native sidecar that ships the log
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 33.4
@@ -383,19 +383,19 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k -n sidecar patch deploy app --patch-file /opt/ckad/1.4/patch.yaml
+root@practice-control-plane:~# k -n sidecar patch deploy app --patch-file /opt/apps/1.4/patch.yaml
 deployment.apps/app patched
-root@cks-cp:~# k -n sidecar rollout status deploy app
+root@practice-control-plane:~# k -n sidecar rollout status deploy app
 Waiting for deployment "app" rollout to finish: 1 old replicas are pending termination...
 deployment "app" successfully rolled out
-root@cks-cp:~# k -n sidecar get pod -l app=app
+root@practice-control-plane:~# k -n sidecar get pod -l app=app
 NAME                   READY   STATUS        RESTARTS   AGE
 app-55c75977f8-hdprh   1/1     Terminating   0          63s
 app-59f7fcff86-gsnzd   2/2     Running       0          0s
-root@cks-cp:~# k -n sidecar get pod -l app=app
+root@practice-control-plane:~# k -n sidecar get pod -l app=app
 NAME                   READY   STATUS    RESTARTS   AGE
 app-59f7fcff86-gsnzd   2/2     Running   0          33s
-root@cks-cp:~# k -n sidecar logs deploy/app -c shipper --tail=3
+root@practice-control-plane:~# k -n sidecar logs deploy/app -c shipper --tail=3
 10:38:20 order 9 accepted
 10:38:23 order 10 accepted
 10:38:26 order 11 accepted
@@ -417,7 +417,7 @@ $ ./platform-engineering/task.sh check 33.4
 
 ## Task 5: A Job with parallel completions
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 > In namespace `batch`, create a Job `checksum` with image `busybox:1.36` that runs `sh -c 'echo "checksum done on $(hostname)"; sleep 3'`. It must complete 6 times, run at most 3 pods at once, retry at most 3 failed pods, and stop after 120 seconds in total. Its pods carry the label `job-type=checksum`.
 
@@ -427,8 +427,8 @@ $ ./platform-engineering/task.sh check 33.4
 `kubectl create job` writes the skeleton with `$do`, and you add the four numbers and the label in `vim`:
 
 ```console
-root@cks-cp:~# mkdir -p /opt/ckad/1.5
-root@cks-cp:~# k -n batch create job checksum --image=busybox:1.36 $do -- sh -c 'echo "checksum done on $(hostname)"; sleep 3' > /opt/ckad/1.5/job.yaml
+root@practice-control-plane:~# mkdir -p /opt/apps/1.5
+root@practice-control-plane:~# k -n batch create job checksum --image=busybox:1.36 $do -- sh -c 'echo "checksum done on $(hostname)"; sleep 3' > /opt/apps/1.5/job.yaml
 ```
 
 ```yaml
@@ -450,16 +450,16 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k apply -f /opt/ckad/1.5/job.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/1.5/job.yaml
 job.batch/checksum created
-root@cks-cp:~# k -n batch get pods -l job-type=checksum
+root@practice-control-plane:~# k -n batch get pods -l job-type=checksum
 NAME             READY   STATUS              RESTARTS   AGE
 checksum-28cw9   0/1     Pending             0          0s
 checksum-8cwc7   0/1     ContainerCreating   0          0s
 checksum-bt2f2   0/1     ContainerCreating   0          0s
-root@cks-cp:~# k -n batch wait job checksum --for=condition=Complete --timeout=120s
+root@practice-control-plane:~# k -n batch wait job checksum --for=condition=Complete --timeout=120s
 job.batch/checksum condition met
-root@cks-cp:~# k -n batch get job checksum
+root@practice-control-plane:~# k -n batch get job checksum
 NAME       STATUS     COMPLETIONS   DURATION   AGE
 checksum   Complete   6/6           12s        12s
 ```
@@ -480,7 +480,7 @@ $ ./platform-engineering/task.sh check 33.5
 
 ## Task 6: A CronJob, and a run right now
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 > In namespace `batch-cron`, create a CronJob `cleanup` (image `busybox:1.36`, command `sh -c 'echo removed temporary files'`) that runs at minute 0 and 30 of every hour, never runs two Jobs at once, keeps 2 successful and 4 failed Jobs, and skips a run that starts more than 60 seconds late. Then start it once right away as a Job `cleanup-now`.
 
@@ -490,8 +490,8 @@ $ ./platform-engineering/task.sh check 33.5
 Generate the CronJob, then add the four fields at the top of its `spec`, next to `schedule`:
 
 ```console
-root@cks-cp:~# mkdir -p /opt/ckad/1.6
-root@cks-cp:~# k -n batch-cron create cronjob cleanup --image=busybox:1.36 --schedule='*/30 * * * *' $do -- sh -c 'echo removed temporary files' > /opt/ckad/1.6/cj.yaml
+root@practice-control-plane:~# mkdir -p /opt/apps/1.6
+root@practice-control-plane:~# k -n batch-cron create cronjob cleanup --image=busybox:1.36 --schedule='*/30 * * * *' $do -- sh -c 'echo removed temporary files' > /opt/apps/1.6/cj.yaml
 ```
 
 ```yaml
@@ -504,13 +504,13 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k apply -f /opt/ckad/1.6/cj.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/1.6/cj.yaml
 cronjob.batch/cleanup created
-root@cks-cp:~# k -n batch-cron create job cleanup-now --from=cronjob/cleanup
+root@practice-control-plane:~# k -n batch-cron create job cleanup-now --from=cronjob/cleanup
 job.batch/cleanup-now created
-root@cks-cp:~# k -n batch-cron wait job cleanup-now --for=condition=Complete
+root@practice-control-plane:~# k -n batch-cron wait job cleanup-now --for=condition=Complete
 job.batch/cleanup-now condition met
-root@cks-cp:~# k -n batch-cron logs job/cleanup-now
+root@practice-control-plane:~# k -n batch-cron logs job/cleanup-now
 removed temporary files
 ```
 
@@ -530,7 +530,7 @@ $ ./platform-engineering/task.sh check 33.6
 
 ## Task 7: A DaemonSet on every node
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 > In namespace `agents`, create a DaemonSet `node-agent` (label `app=node-agent`, image `busybox:1.36`, command `sleep 1d`) whose container requests 10m CPU and 16Mi memory. It must run on both nodes, the control plane included.
 
@@ -569,21 +569,21 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k describe node cks-cp | grep Taints
+root@practice-control-plane:~# k describe node practice-control-plane | grep Taints
 Taints:             node-role.kubernetes.io/control-plane:NoSchedule
-root@cks-cp:~# k apply -f /opt/ckad/1.7/ds.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/1.7/ds.yaml
 daemonset.apps/node-agent created
-root@cks-cp:~# k -n agents rollout status ds node-agent
+root@practice-control-plane:~# k -n agents rollout status ds node-agent
 Waiting for daemon set "node-agent" rollout to finish: 0 of 2 updated pods are available...
 Waiting for daemon set "node-agent" rollout to finish: 1 of 2 updated pods are available...
 daemon set "node-agent" successfully rolled out
-root@cks-cp:~# k -n agents get pod -o wide
+root@practice-control-plane:~# k -n agents get pod -o wide
 NAME               READY   STATUS    RESTARTS   AGE   IP               NODE     NOMINATED NODE   READINESS GATES
-node-agent-pqcr8   1/1     Running   0          0s    10.244.143.5     cks-cp   <none>           <none>
-node-agent-z52lp   1/1     Running   0          0s    10.244.135.103   cks-w1   <none>           <none>
+node-agent-pqcr8   1/1     Running   0          0s    10.244.143.5     practice-control-plane   <none>           <none>
+node-agent-z52lp   1/1     Running   0          0s    10.244.135.103   practice-worker   <none>           <none>
 ```
 
-Without the toleration, the DaemonSet would report 1 of 1 pods and skip `cks-cp` without any error, so always compare the pod count with the node count.
+Without the toleration, the DaemonSet would report 1 of 1 pods and skip `practice-control-plane` without any error, so always compare the pod count with the node count.
 
 </details>
 
@@ -591,14 +591,14 @@ Without the toleration, the DaemonSet would report 1 of 1 pods and skip `cks-cp`
 $ ./platform-engineering/task.sh check 33.7
 == check task 33.7
   PASS  DaemonSet node-agent has a ready pod on both nodes
-  PASS  one of its pods runs on cks-cp
+  PASS  one of its pods runs on practice-control-plane
   PASS  the container requests 10m CPU and 16Mi memory
 == task 33.7: 3 passed, 0 failed
 ```
 
 ## Task 8: A PersistentVolume, a claim and a pod
 
-**Time budget:** 7 minutes. **Host:** `cks-cp`.
+**Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 > 1. Create a PersistentVolume `ckad-pv-data`: 1Gi, access mode `ReadWriteOnce`, StorageClass `manual`, hostPath `/var/lib/ckad-data`.
 > 2. In namespace `storage`, create a PersistentVolumeClaim `data-claim` for 500Mi of class `manual`.
@@ -655,22 +655,22 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k apply -f /opt/ckad/1.8/storage.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/1.8/storage.yaml
 persistentvolume/ckad-pv-data created
 persistentvolumeclaim/data-claim created
 pod/writer created
-root@cks-cp:~# k -n storage get pvc data-claim
+root@practice-control-plane:~# k -n storage get pvc data-claim
 NAME         STATUS   VOLUME         CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
 data-claim   Bound    ckad-pv-data   1Gi        RWO            manual         <unset>                 0s
-root@cks-cp:~# k -n storage get pod writer -o wide
+root@practice-control-plane:~# k -n storage get pod writer -o wide
 NAME     READY   STATUS    RESTARTS   AGE   IP               NODE     NOMINATED NODE   READINESS GATES
-writer   1/1     Running   0          0s    10.244.135.104   cks-w1   <none>           <none>
+writer   1/1     Running   0          0s    10.244.135.104   practice-worker   <none>           <none>
 ```
 
-The claim reports 1Gi, the size of the volume it got, not the 500Mi it asked for. The pod runs on `cks-w1`, so the file sits on that node:
+The claim reports 1Gi, the size of the volume it got, not the 500Mi it asked for. The pod runs on `practice-worker`, so the file sits on that node:
 
 ```console
-root@cks-w1:~# cat /var/lib/ckad-data/visits.log
+root@practice-worker:~# cat /var/lib/ckad-data/visits.log
 visit 10:40:29
 visit 10:40:34
 ```
@@ -685,13 +685,13 @@ $ ./platform-engineering/task.sh check 33.8
   PASS  PersistentVolume ckad-pv-data: 1Gi, ReadWriteOnce, class manual, hostPath /var/lib/ckad-data
   PASS  PVC data-claim in storage is Bound to ckad-pv-data
   PASS  pod writer mounts the claim at /data and is Ready
-  PASS  the file lands on cks-w1 in /var/lib/ckad-data/visits.log
+  PASS  the file lands on practice-worker in /var/lib/ckad-data/visits.log
 == task 33.8: 4 passed, 0 failed
 ```
 
 ## Task 9: From a bare pod to a Deployment
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 33.9
@@ -709,9 +709,9 @@ api    1/1     Running   0          1s    app=api,tier=backend
 Save the pod's spec as a reference, generate a Deployment skeleton, and copy the container block from the first file into the second's template:
 
 ```console
-root@cks-cp:~# mkdir -p /opt/ckad/1.9
-root@cks-cp:~# k -n legacy get pod api -o yaml > /opt/ckad/1.9/pod.yaml
-root@cks-cp:~# k -n legacy create deploy api --image=nginx:1.27-alpine --replicas=3 $do > /opt/ckad/1.9/deploy.yaml
+root@practice-control-plane:~# mkdir -p /opt/apps/1.9
+root@practice-control-plane:~# k -n legacy get pod api -o yaml > /opt/apps/1.9/pod.yaml
+root@practice-control-plane:~# k -n legacy create deploy api --image=nginx:1.27-alpine --replicas=3 $do > /opt/apps/1.9/deploy.yaml
 ```
 
 ```yaml
@@ -743,13 +743,13 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k apply -f /opt/ckad/1.9/deploy.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/1.9/deploy.yaml
 deployment.apps/api created
-root@cks-cp:~# k -n legacy delete pod api
+root@practice-control-plane:~# k -n legacy delete pod api
 pod "api" deleted from legacy namespace
-root@cks-cp:~# k -n legacy rollout status deploy api
+root@practice-control-plane:~# k -n legacy rollout status deploy api
 deployment "api" successfully rolled out
-root@cks-cp:~# k -n legacy get pod --show-labels
+root@practice-control-plane:~# k -n legacy get pod --show-labels
 NAME                   READY   STATUS    RESTARTS   AGE   LABELS
 api-6c56c7b89c-9gvj8   1/1     Running   0          2s    app=api,pod-template-hash=6c56c7b89c,tier=backend
 api-6c56c7b89c-c96b4   1/1     Running   0          2s    app=api,pod-template-hash=6c56c7b89c,tier=backend
@@ -771,7 +771,7 @@ $ ./platform-engineering/task.sh check 33.9
 
 ## Task 10: Init, sidecar and main container in one pod
 
-**Time budget:** 10 minutes. **Host:** `cks-cp`.
+**Time budget:** 10 minutes. **Host:** `practice-control-plane`.
 
 > In namespace `etl`, create a pod `pipeline` with three containers, all `busybox:1.36`, sharing one emptyDir volume `work` mounted at `/work`:
 > 1. An init container `fetch` writes three lines `alpha`, `beta` and `gamma` to `/work/input.txt`, then exits.
@@ -818,14 +818,14 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k apply -f /opt/ckad/1.10/pipeline.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/1.10/pipeline.yaml
 pod/pipeline created
-root@cks-cp:~# k -n etl wait pod pipeline --for=condition=Ready
+root@practice-control-plane:~# k -n etl wait pod pipeline --for=condition=Ready
 pod/pipeline condition met
-root@cks-cp:~# k -n etl get pod pipeline
+root@practice-control-plane:~# k -n etl get pod pipeline
 NAME       READY   STATUS    RESTARTS   AGE
 pipeline   2/2     Running   0          1s
-root@cks-cp:~# k -n etl exec pipeline -c transform -- wget -qO- http://localhost:8080/output.txt
+root@practice-control-plane:~# k -n etl exec pipeline -c transform -- wget -qO- http://localhost:8080/output.txt
 ALPHA
 BETA
 GAMMA

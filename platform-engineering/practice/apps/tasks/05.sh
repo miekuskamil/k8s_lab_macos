@@ -1,7 +1,7 @@
 # Domain 05, services and networking. Functions for task.sh: setup_5_N, check_5_N, solve_5_N.
 
-# The worker's address, for NodePort and Ingress checks that run on cks-cp.
-W1IP='$(kubectl get node cks-w1 -o jsonpath="{.status.addresses[?(@.type==\"InternalIP\")].address}")'
+# The worker's address, for NodePort and Ingress checks that run on the control plane.
+W1IP='$(kubectl get node $W1 -o jsonpath="{.status.addresses[?(@.type==\"InternalIP\")].address}")'
 
 # A pod or Deployment that answers one word over HTTP on a port: web_pod ns name word port labels...
 # With replicas > 0 it is a Deployment, with 0 a bare pod.
@@ -83,23 +83,23 @@ setup_5_2() {
 check_5_2() {
   check_json "Service web-np is a NodePort on 30100, port 80" "kubectl -n svc-nodeport get svc web-np -o json" \
     's=p["spec"]; s["type"]=="NodePort" and s["ports"][0]["nodePort"]==30100 and s["ports"][0]["port"]==80'
-  check_cp "nginx answers on cks-w1's address, port 30100" "for i in \$(seq 1 15); do curl -s -m 3 http://$W1IP:30100 | grep -q 'Welcome to nginx' && exit 0; sleep 2; done; exit 1"
+  check_cp "nginx answers on $W1's address, port 30100" "for i in \$(seq 1 15); do curl -s -m 3 http://$W1IP:30100 | grep -q 'Welcome to nginx' && exit 0; sleep 2; done; exit 1"
 }
 solve_5_2() {
   shown <<'EOF'
-k -n svc-nodeport create service nodeport web-np --tcp=80:80 --node-port=30100 $do > /opt/ckad/5.2-svc.yaml
-grep -A2 selector /opt/ckad/5.2-svc.yaml
+k -n svc-nodeport create service nodeport web-np --tcp=80:80 --node-port=30100 $do > /opt/apps/5.2-svc.yaml
+grep -A2 selector /opt/apps/5.2-svc.yaml
 EOF
-  cp_sh "sed -i 's/app: web-np/app: web/' /opt/ckad/5.2-svc.yaml"
+  cp_sh "sed -i 's/app: web-np/app: web/' /opt/apps/5.2-svc.yaml"
   shown <<'EOF'
-k apply -f /opt/ckad/5.2-svc.yaml
+k apply -f /opt/apps/5.2-svc.yaml
 k -n svc-nodeport get svc web-np
 k -n svc-nodeport get endpointslice
-k get node cks-w1 -o wide
+k get node $W1 -o wide
 EOF
   cp_sh "for i in \$(seq 1 15); do curl -s -m 3 http://$W1IP:30100 | grep -q title && exit 0; sleep 1; done"
   shown <<'EOF'
-curl -s http://$(k get node cks-w1 -o jsonpath='{.status.addresses[0].address}'):30100 | grep title
+curl -s http://$(k get node $W1 -o jsonpath='{.status.addresses[0].address}'):30100 | grep title
 EOF
 }
 
@@ -140,7 +140,7 @@ check_5_3() {
   check_cp "client gets the metrics from http://shop:9090" "$(reach svc-ports client http://shop:9090) | grep -q orders_total"
 }
 solve_5_3() {
-  put_file /opt/ckad/5.3/svc.yaml <<'EOF'
+  put_file /opt/apps/5.3/svc.yaml <<'EOF'
 apiVersion: v1
 kind: Service
 metadata:
@@ -159,7 +159,7 @@ spec:
 EOF
   shown <<'EOF'
 k -n svc-ports get deploy shop -o jsonpath='{.spec.template.spec.containers[0].ports}{"\n"}'
-k apply -f /opt/ckad/5.3/svc.yaml
+k apply -f /opt/apps/5.3/svc.yaml
 k -n svc-ports get endpointslice
 k -n svc-ports exec client -- wget -qO- http://shop
 k -n svc-ports exec client -- wget -qO- http://shop:9090
@@ -203,8 +203,8 @@ solve_5_4() {
 k -n ing-shop create ingress shop --class=nginx --rule='shop.ckad.local/*=web:80' --rule='shop.ckad.local/api*=api:80'
 k -n ing-shop get ingress shop -o yaml | grep -A20 '^spec:'
 sleep 10
-curl -s -H 'Host: shop.ckad.local' http://$(k get node cks-w1 -o jsonpath='{.status.addresses[0].address}'):30080/
-curl -s -H 'Host: shop.ckad.local' http://$(k get node cks-w1 -o jsonpath='{.status.addresses[0].address}'):30080/api/orders
+curl -s -H 'Host: shop.ckad.local' http://$(k get node $W1 -o jsonpath='{.status.addresses[0].address}'):30080/
+curl -s -H 'Host: shop.ckad.local' http://$(k get node $W1 -o jsonpath='{.status.addresses[0].address}'):30080/api/orders
 EOF
 }
 
@@ -259,7 +259,7 @@ k -n ing-hosts describe ingress sites | grep -A6 Rules
 k -n ing-hosts patch ingress sites --type=json -p '[{"op":"replace","path":"/spec/ingressClassName","value":"nginx"},{"op":"replace","path":"/spec/rules/1/http/paths/0/backend/service/port","value":{"name":"web"}}]'
 k -n ing-hosts describe ingress sites | grep -A6 Rules
 sleep 10
-curl -s -H 'Host: docs.ckad.local' http://$(k get node cks-w1 -o jsonpath='{.status.addresses[0].address}'):30080/
+curl -s -H 'Host: docs.ckad.local' http://$(k get node $W1 -o jsonpath='{.status.addresses[0].address}'):30080/
 EOF
 }
 
@@ -282,7 +282,7 @@ check_5_6() {
     "! kubectl -n np-app exec backend -- wget -qO- -T 3 http://\$(kubectl -n np-app get pod frontend -o jsonpath='{.status.podIP}'):8080 2>&1 | grep -q 'refused'"
 }
 solve_5_6() {
-  put_file /opt/ckad/5.6/netpol.yaml <<'EOF'
+  put_file /opt/apps/5.6/netpol.yaml <<'EOF'
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -314,7 +314,7 @@ spec:
       port: 8080
 EOF
   shown <<'EOF'
-k apply -f /opt/ckad/5.6/netpol.yaml
+k apply -f /opt/apps/5.6/netpol.yaml
 BACKEND=$(k -n np-app get pod backend -o jsonpath='{.status.podIP}')
 k -n np-app exec frontend -- wget -qO- -T 3 http://$BACKEND:8080
 k -n np-app exec other -- wget -qO- -T 3 http://$BACKEND:8080
@@ -338,7 +338,7 @@ check_5_7() {
   check_cp "app does not reach the API server" "! $(reach np-egress app https://kubernetes.default)"
 }
 solve_5_7() {
-  put_file /opt/ckad/5.7/netpol.yaml <<'EOF'
+  put_file /opt/apps/5.7/netpol.yaml <<'EOF'
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -365,7 +365,7 @@ spec:
       port: 53
 EOF
   shown <<'EOF'
-k apply -f /opt/ckad/5.7/netpol.yaml
+k apply -f /opt/apps/5.7/netpol.yaml
 k -n np-egress exec app -- wget -qO- -T 3 http://db:5432
 k -n np-egress exec app -- wget -qO- -T 3 http://partner.np-egress-other
 EOF
@@ -390,7 +390,7 @@ check_5_8() {
   check_cp "prometheus in np-dev does not" "! $(reach np-dev prometheus "$E8")"
 }
 solve_5_8() {
-  put_file /opt/ckad/5.8/netpol.yaml <<'EOF'
+  put_file /opt/apps/5.8/netpol.yaml <<'EOF'
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -415,7 +415,7 @@ spec:
       port: 9100
 EOF
   shown <<'EOF'
-k apply -f /opt/ckad/5.8/netpol.yaml
+k apply -f /opt/apps/5.8/netpol.yaml
 EXPORTER=$(k -n np-metrics get pod exporter -o jsonpath='{.status.podIP}')
 k -n np-monitoring exec prometheus -- wget -qO- -T 3 http://$EXPORTER:9100
 k -n np-monitoring exec grafana -- wget -qO- -T 3 http://$EXPORTER:9100
@@ -493,7 +493,7 @@ check_5_10() {
     "$(reach stateful client http://db-0.db:8080) | grep -qx db-0 && $(reach stateful client http://db-1.db.stateful.svc.cluster.local:8080) | grep -qx db-1"
 }
 solve_5_10() {
-  put_file /opt/ckad/5.10/db.yaml <<'EOF'
+  put_file /opt/apps/5.10/db.yaml <<'EOF'
 apiVersion: v1
 kind: Service
 metadata:
@@ -530,7 +530,7 @@ spec:
         - containerPort: 8080
 EOF
   shown <<'EOF'
-k apply -f /opt/ckad/5.10/db.yaml
+k apply -f /opt/apps/5.10/db.yaml
 k -n stateful rollout status sts db
 k -n stateful get pods -o wide
 k -n stateful exec client -- nslookup db.stateful.svc.cluster.local

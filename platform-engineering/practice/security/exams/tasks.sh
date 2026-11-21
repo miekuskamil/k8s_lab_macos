@@ -27,19 +27,19 @@ ns_wait='for n in $NSS; do kubectl create ns $n --dry-run=client -o yaml | kubec
 # ---- 1. Upgrade the control plane (7) ------------------------------------------------------
 setup_m1() { :; }
 score_m1() {
-  check_cp "cks-cp kubelet is v1.37.2" "kubectl get node cks-cp -o jsonpath='{.status.nodeInfo.kubeletVersion}' | grep -qx v1.37.2"
+  check_cp "$CP kubelet is v1.37.2" "kubectl get node $CP -o jsonpath='{.status.nodeInfo.kubeletVersion}' | grep -qx v1.37.2"
   check_cp "the API server image is v1.37.2" "kubectl -n kube-system get pod -l component=kube-apiserver -o jsonpath='{.items[0].spec.containers[0].image}' | grep -q ':v1.37.2\$'"
-  check_cp "cks-cp is schedulable again" "! kubectl get node cks-cp -o jsonpath='{.spec.unschedulable}' | grep -q true"
+  check_cp "$CP is schedulable again" "! kubectl get node $CP -o jsonpath='{.spec.unschedulable}' | grep -q true"
 }
 solve_m1() {
   oncp <<'EOF'
 set -e
 apt-mark unhold kubeadm >/dev/null; apt-get install -y -qq kubeadm=1.37.2-1.1 >/dev/null; apt-mark hold kubeadm >/dev/null
 kubeadm upgrade apply v1.37.2 -y >/dev/null 2>&1
-kubectl drain cks-cp --ignore-daemonsets --delete-emptydir-data >/dev/null
+kubectl drain $CP --ignore-daemonsets --delete-emptydir-data >/dev/null
 apt-mark unhold kubelet kubectl >/dev/null; apt-get install -y -qq kubelet=1.37.2-1.1 kubectl=1.37.2-1.1 >/dev/null; apt-mark hold kubelet kubectl >/dev/null
 systemctl daemon-reload; systemctl restart kubelet
-for i in $(seq 1 60); do kubectl uncordon cks-cp >/dev/null 2>&1 && break; sleep 2; done
+for i in $(seq 1 60); do kubectl uncordon $CP >/dev/null 2>&1 && break; sleep 2; done
 EOF
 }
 
@@ -176,7 +176,7 @@ setup_m7() {
   w1_sh 'DEBIAN_FRONTEND=noninteractive apt-get install -y -qq lighttpd >/dev/null 2>&1; systemctl enable --now lighttpd >/dev/null 2>&1; ss -tln | grep -q ":80 " && echo "  lighttpd listens on :80"'
 }
 score_m7() {
-  check_w1 "nothing listens on TCP port 80 on cks-w1" "! ss -tln | grep -q ':80 '"
+  check_w1 "nothing listens on TCP port 80 on $W1" "! ss -tln | grep -q ':80 '"
   check_w1 "the package that served it is removed" "! dpkg -l lighttpd 2>/dev/null | grep -q '^ii'"
 }
 solve_m7() { w1_sh 'systemctl disable --now lighttpd >/dev/null 2>&1; apt-get purge -y -qq lighttpd >/dev/null'; }

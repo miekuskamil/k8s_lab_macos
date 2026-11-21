@@ -43,12 +43,12 @@ EOF
 }
 score_m1() {
   check_cp "Deployment render has 2 ready pods" "kubectl -n k2-sched rollout status deploy render --timeout=10s && kubectl -n k2-sched get deploy render -o jsonpath='{.status.readyReplicas}' | grep -qx 2"
-  check_cp "they run on cks-w1" "[ \"\$(kubectl -n k2-sched get pod -l app=render --field-selector=status.phase=Running -o jsonpath='{.items[*].spec.nodeName}')\" = 'cks-w1 cks-w1' ]"
+  check_cp "they run on $W1" "[ \"\$(kubectl -n k2-sched get pod -l app=render --field-selector=status.phase=Running -o jsonpath='{.items[*].spec.nodeName}')\" = '$W1 $W1' ]"
   check_json "each pod requests 64Mi memory" "kubectl -n k2-sched get deploy render -o json" \
     'p["spec"]["template"]["spec"]["containers"][0]["resources"]["requests"]["memory"]=="64Mi"'
 }
 solve_m1() {
-  cp_sh "kubectl -n k2-sched patch deploy render --type=json -p='[{\"op\":\"replace\",\"path\":\"/spec/template/spec/nodeSelector\",\"value\":{\"kubernetes.io/hostname\":\"cks-w1\"}},{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/resources/requests/memory\",\"value\":\"64Mi\"}]'
+  cp_sh "kubectl -n k2-sched patch deploy render --type=json -p='[{\"op\":\"replace\",\"path\":\"/spec/template/spec/nodeSelector\",\"value\":{\"kubernetes.io/hostname\":\"$W1\"}},{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/resources/requests/memory\",\"value\":\"64Mi\"}]'
     kubectl -n k2-sched rollout status deploy render --timeout=120s"
 }
 
@@ -62,13 +62,13 @@ score_m2() {
     "kubectl -n k2-crash rollout status deploy poller --timeout=10s && sleep 20 && kubectl -n k2-crash get pod -l app=poller --field-selector=status.phase=Running -o jsonpath='{.items[*].status.containerStatuses[0].restartCount}' | grep -qx 0"
   check_cp "its container polls every 10 seconds in a loop that logs 'polling'" \
     "kubectl -n k2-crash logs deploy/poller | grep -q polling && kubectl -n k2-crash get deploy poller -o yaml | grep -q 'while'"
-  check_cp "/opt/ckad/m2/2/reason.txt names why the old pods restarted" "grep -qiE 'completed|exit code 0|exited' /opt/ckad/m2/2/reason.txt"
+  check_cp "/opt/apps/m2/2/reason.txt names why the old pods restarted" "grep -qiE 'completed|exit code 0|exited' /opt/apps/m2/2/reason.txt"
 }
 solve_m2() {
-  cp_sh "mkdir -p /opt/ckad/m2/2
+  cp_sh "mkdir -p /opt/apps/m2/2
     for i in \$(seq 1 30); do kubectl -n k2-crash get pod -l app=poller -o jsonpath='{.items[0].status.containerStatuses[0].lastState.terminated.reason}' | grep -q . && break; sleep 2; done
-    kubectl -n k2-crash get pod -l app=poller -o jsonpath='{.items[0].status.containerStatuses[0].lastState.terminated.reason} exit code {.items[0].status.containerStatuses[0].lastState.terminated.exitCode}' > /opt/ckad/m2/2/reason.txt
-    cat /opt/ckad/m2/2/reason.txt
+    kubectl -n k2-crash get pod -l app=poller -o jsonpath='{.items[0].status.containerStatuses[0].lastState.terminated.reason} exit code {.items[0].status.containerStatuses[0].lastState.terminated.exitCode}' > /opt/apps/m2/2/reason.txt
+    cat /opt/apps/m2/2/reason.txt
     kubectl -n k2-crash patch deploy poller --type=json -p='[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/command\",\"value\":[\"sh\",\"-c\",\"while true; do echo polling; sleep 10; done\"]}]'
     kubectl -n k2-crash rollout status deploy poller --timeout=120s"
   settled k2-crash poller 1
@@ -176,19 +176,19 @@ EOF
 setup_m7() {
   charts_ready || return 1
   ns_new k2-helm
-  cp_sh "helm -n k2-helm install portal oci://registry.ckad:5000/charts/webapp --version 0.1.0 --plain-http --set replicaCount=2 --wait --timeout 120s >/dev/null 2>&1
-    helm -n k2-helm upgrade portal oci://registry.ckad:5000/charts/webapp --version 0.2.0 --plain-http --set image.repository=docker.io/library/ngnix --wait --timeout 10s >/dev/null 2>&1; true"
+  cp_sh "helm -n k2-helm install portal oci://registry.practice:5000/charts/webapp --version 0.1.0 --plain-http --set replicaCount=2 --wait --timeout 120s >/dev/null 2>&1
+    helm -n k2-helm upgrade portal oci://registry.practice:5000/charts/webapp --version 0.2.0 --plain-http --set image.repository=docker.io/library/ngnix --wait --timeout 10s >/dev/null 2>&1; true"
 }
 score_m7() {
   check_cp "the newest revision of portal is deployed from chart 0.2.0 with nginx" \
     "helm -n k2-helm history portal -o json | python3 -c 'import json,sys; h=json.load(sys.stdin)[-1]; sys.exit(0 if h[\"status\"]==\"deployed\" and h[\"chart\"]==\"webapp-0.2.0\" else 1)' && kubectl -n k2-helm get deploy portal-webapp -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -q '/nginx:'"
   check_cp "it runs 2 ready pods" "kubectl -n k2-helm rollout status deploy portal-webapp --timeout=10s && kubectl -n k2-helm get deploy portal-webapp -o jsonpath='{.status.readyReplicas}' | grep -qx 2"
-  check_cp "/opt/ckad/m2/7/failed.txt names the revision that failed" "grep -qx 2 /opt/ckad/m2/7/failed.txt"
+  check_cp "/opt/apps/m2/7/failed.txt names the revision that failed" "grep -qx 2 /opt/apps/m2/7/failed.txt"
 }
 solve_m7() {
-  cp_sh "mkdir -p /opt/ckad/m2/7
-    helm -n k2-helm history portal -o json | python3 -c 'import json,sys; print([h[\"revision\"] for h in json.load(sys.stdin) if h[\"status\"]==\"failed\"][-1])' > /opt/ckad/m2/7/failed.txt
-    helm -n k2-helm upgrade portal oci://registry.ckad:5000/charts/webapp --version 0.2.0 --plain-http --set replicaCount=2
+  cp_sh "mkdir -p /opt/apps/m2/7
+    helm -n k2-helm history portal -o json | python3 -c 'import json,sys; print([h[\"revision\"] for h in json.load(sys.stdin) if h[\"status\"]==\"failed\"][-1])' > /opt/apps/m2/7/failed.txt
+    helm -n k2-helm upgrade portal oci://registry.practice:5000/charts/webapp --version 0.2.0 --plain-http --set replicaCount=2
     kubectl -n k2-helm rollout status deploy portal-webapp --timeout=120s
     helm -n k2-helm history portal"
 }
@@ -196,12 +196,12 @@ solve_m7() {
 # ---- 8. An overlay that won't build (6) -------------------------------------------------------------------
 setup_m8() {
   ns_new k2-kust
-  put_file /opt/ckad/m2/8/base/kustomization.yaml <<'EOF'
+  put_file /opt/apps/m2/8/base/kustomization.yaml <<'EOF'
 resources:
 - deployment.yaml
 - service.yaml
 EOF
-  put_file /opt/ckad/m2/8/base/deployment.yaml <<'EOF'
+  put_file /opt/apps/m2/8/base/deployment.yaml <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -218,7 +218,7 @@ spec:
       - name: nginx
         image: nginx:1.27-alpine
 EOF
-  put_file /opt/ckad/m2/8/base/service.yaml <<'EOF'
+  put_file /opt/apps/m2/8/base/service.yaml <<'EOF'
 apiVersion: v1
 kind: Service
 metadata:
@@ -227,7 +227,7 @@ spec:
   selector: {app: gateway}
   ports: [{port: 80}]
 EOF
-  put_file /opt/ckad/m2/8/overlays/live/kustomization.yaml <<'EOF'
+  put_file /opt/apps/m2/8/overlays/live/kustomization.yaml <<'EOF'
 resources:
 - ../base
 namespace: k2-kust
@@ -240,16 +240,16 @@ EOF
 score_m8() {
   check_cp "Deployment gateway-live in k2-kust has 2 ready pods" "kubectl -n k2-kust get deploy gateway-live -o jsonpath='{.status.readyReplicas}' | grep -qx 2"
   check_cp "Service gateway-live exists in k2-kust" "kubectl -n k2-kust get svc gateway-live"
-  check_cp "the overlay builds" "kubectl kustomize /opt/ckad/m2/8/overlays/live >/dev/null"
+  check_cp "the overlay builds" "kubectl kustomize /opt/apps/m2/8/overlays/live >/dev/null"
 }
 solve_m8() {
-  cp_sh "cd /opt/ckad/m2/8/overlays/live && sed -i 's|- ../base|- ../../base|; s|name: gateway-live|name: gateway|' kustomization.yaml && kubectl apply -k . && kubectl -n k2-kust rollout status deploy gateway-live --timeout=120s"
+  cp_sh "cd /opt/apps/m2/8/overlays/live && sed -i 's|- ../base|- ../../base|; s|name: gateway-live|name: gateway|' kustomization.yaml && kubectl apply -k . && kubectl -n k2-kust rollout status deploy gateway-live --timeout=120s"
 }
 
 # ---- 9. Old API versions (5) ------------------------------------------------------------------------------
 setup_m9() {
   ns_new k2-api
-  put_file /opt/ckad/m2/9/old.yaml <<'EOF'
+  put_file /opt/apps/m2/9/old.yaml <<'EOF'
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
@@ -287,10 +287,10 @@ score_m9() {
   check_cp "CronJob rotate exists in k2-api as batch/v1" "kubectl -n k2-api get cronjob.v1.batch rotate -o jsonpath='{.spec.schedule}' | grep -qx '0 \*/6 \* \* \*'"
   check_json "Ingress rotate uses the networking.k8s.io/v1 backend form, Prefix, Service rotate port 80, class nginx" "kubectl -n k2-api get ingress rotate -o json" \
     'x=p["spec"]["rules"][0]["http"]["paths"][0]; p["spec"].get("ingressClassName")=="nginx" and x["pathType"]=="Prefix" and x["backend"]["service"]=={"name":"rotate","port":{"number":80}}'
-  check_cp "/opt/ckad/m2/9/new.yaml has no beta versions" "test -s /opt/ckad/m2/9/new.yaml && ! grep -q beta /opt/ckad/m2/9/new.yaml"
+  check_cp "/opt/apps/m2/9/new.yaml has no beta versions" "test -s /opt/apps/m2/9/new.yaml && ! grep -q beta /opt/apps/m2/9/new.yaml"
 }
 solve_m9() {
-  put_file /opt/ckad/m2/9/new.yaml <<'EOF'
+  put_file /opt/apps/m2/9/new.yaml <<'EOF'
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -327,7 +327,7 @@ spec:
             port:
               number: 80
 EOF
-  cp_sh 'kubectl apply -f /opt/ckad/m2/9/new.yaml'
+  cp_sh 'kubectl apply -f /opt/apps/m2/9/new.yaml'
 }
 
 # ---- 10. Forbidden in the logs (7) ----------------------------------------------------------------------
@@ -497,30 +497,30 @@ EOF"
 # ---- 14. A Dockerfile that won't build (7) -----------------------------------------------------------------------
 setup_m14() {
   ns_new k2-image
-  put_file /opt/ckad/m2/14/Dockerfile <<'EOF'
+  put_file /opt/apps/m2/14/Dockerfile <<'EOF'
 FROM docker.io/library/busybox:1.36
 COPY src/serve.sh /usr/local/bin/serve.sh
 RUN chmod 755 /usr/local/bin/serve.sh
 EXPOSE 8080
 CMD ["serve.sh"]
 EOF
-  put_file /opt/ckad/m2/14/app/serve.sh <<'EOF'
+  put_file /opt/apps/m2/14/app/serve.sh <<'EOF'
 #!/bin/sh
 mkdir -p /tmp/www && echo "label v2" > /tmp/www/index.html
 exec httpd -f -p 8080 -h /tmp/www
 EOF
-  cp_sh "kubectl -n k2-image create deploy label --image=registry.ckad:5000/label:v1 --port=8080 >/dev/null"
+  cp_sh "kubectl -n k2-image create deploy label --image=registry.practice:5000/label:v1 --port=8080 >/dev/null"
 }
 score_m14() {
-  check_cp "the registry holds label:v2" "curl -fsS http://registry.ckad:5000/v2/label/tags/list | grep -q '\"v2\"'"
-  check_cp "Deployment label runs registry.ckad:5000/label:v2 and is ready" \
-    "kubectl -n k2-image get deploy label -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -qx registry.ckad:5000/label:v2 && kubectl -n k2-image rollout status deploy label --timeout=10s"
+  check_cp "the registry holds label:v2" "curl -fsS http://registry.practice:5000/v2/label/tags/list | grep -q '\"v2\"'"
+  check_cp "Deployment label runs registry.practice:5000/label:v2 and is ready" \
+    "kubectl -n k2-image get deploy label -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -qx registry.practice:5000/label:v2 && kubectl -n k2-image rollout status deploy label --timeout=10s"
   check_cp "the pod answers 'label v2' on 8080" "kubectl -n k2-image exec --pod-running-timeout=5s deploy/label -- wget -qO- localhost:8080 | grep -qx 'label v2'"
 }
 solve_m14() {
-  cp_sh "cd /opt/ckad/m2/14 && sed -i 's|COPY src/serve.sh|COPY app/serve.sh|' Dockerfile
-    podman build -q -t registry.ckad:5000/label:v2 . && podman push -q registry.ckad:5000/label:v2
-    kubectl -n k2-image set image deploy/label label=registry.ckad:5000/label:v2
+  cp_sh "cd /opt/apps/m2/14 && sed -i 's|COPY src/serve.sh|COPY app/serve.sh|' Dockerfile
+    podman build -q -t registry.practice:5000/label:v2 . && podman push -q registry.practice:5000/label:v2
+    kubectl -n k2-image set image deploy/label label=registry.practice:5000/label:v2
     kubectl -n k2-image rollout status deploy label --timeout=120s"
 }
 
@@ -564,7 +564,7 @@ solve_m15() {
 # ---- 16. From image to Ingress (8) -----------------------------------------------------------------------------------
 setup_m16() {
   ns_new k2-chain
-  put_file /opt/ckad/m2/16/Dockerfile <<'EOF'
+  put_file /opt/apps/m2/16/Dockerfile <<'EOF'
 FROM docker.io/library/busybox:1.36
 RUN mkdir -p /www && echo "status page" > /www/index.html
 USER 1000
@@ -572,16 +572,16 @@ CMD ["httpd", "-f", "-p", "8080", "-h", "/www"]
 EOF
 }
 score_m16() {
-  check_cp "Deployment status runs registry.ckad:5000/status:1 with 2 ready pods" \
-    "kubectl -n k2-chain get deploy status -o jsonpath='{.spec.template.spec.containers[0].image} {.status.readyReplicas}' | grep -qx 'registry.ckad:5000/status:1 2'"
+  check_cp "Deployment status runs registry.practice:5000/status:1 with 2 ready pods" \
+    "kubectl -n k2-chain get deploy status -o jsonpath='{.spec.template.spec.containers[0].image} {.status.readyReplicas}' | grep -qx 'registry.practice:5000/status:1 2'"
   check_cp "Service status sends port 80 to 8080" "kubectl -n k2-chain get svc status -o jsonpath='{.spec.ports[0].port}/{.spec.ports[0].targetPort}' | grep -qx 80/8080"
   check_cp "status.k2.local/ answers 'status page' through the ingress" \
     "for i in \$(seq 1 15); do curl -s -m 3 -H 'Host: status.k2.local' http://$W1IP:30080/ | grep -qx 'status page' && exit 0; sleep 2; done; exit 1"
   check_cp "the pods have a readiness probe on 8080" "kubectl -n k2-chain get deploy status -o jsonpath='{.spec.template.spec.containers[0].readinessProbe.httpGet.port}' | grep -qx 8080"
 }
 solve_m16() {
-  cp_sh "cd /opt/ckad/m2/16 && podman build -q -t registry.ckad:5000/status:1 . && podman push -q registry.ckad:5000/status:1
-    kubectl -n k2-chain create deploy status --image=registry.ckad:5000/status:1 --replicas=2 --port=8080
+  cp_sh "cd /opt/apps/m2/16 && podman build -q -t registry.practice:5000/status:1 . && podman push -q registry.practice:5000/status:1
+    kubectl -n k2-chain create deploy status --image=registry.practice:5000/status:1 --replicas=2 --port=8080
     kubectl -n k2-chain patch deploy status --type=json -p='[{\"op\":\"add\",\"path\":\"/spec/template/spec/containers/0/readinessProbe\",\"value\":{\"httpGet\":{\"path\":\"/\",\"port\":8080}}}]'
     kubectl -n k2-chain expose deploy status --port=80 --target-port=8080
     kubectl -n k2-chain create ingress status --class=nginx --rule='status.k2.local/*=status:80'

@@ -1,24 +1,24 @@
 # Helpers for the security task scripts. Sourced by task.sh and exams/*.sh; runs on your machine
-# (bash 3.2 is fine). Everything on the cluster goes through cluster/platform.sh: "orb -m <node>
-# -u root" on OrbStack, ssh and sudo with CKS_PLATFORM=vms.
+# (bash 3.2 is fine). Everything on the cluster goes through cluster/platform.sh: "docker exec"
+# on kind, "orb -m <node> -u root" on OrbStack, ssh and sudo with PRACTICE_PLATFORM=vms.
 
-CKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-. "$CKS_DIR/../cluster/platform.sh"
+SEC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+. "$SEC_DIR/../cluster/platform.sh"
 
 # Run a script from stdin as root on a node: oncp <<'EOF' ... EOF
-oncp() { node_script "$CKS_CP" "$@"; }
-onw1() { node_script "$CKS_W1" "$@"; }
+oncp() { node_script "$CP" "$@"; }
+onw1() { node_script "$W1" "$@"; }
 # Run one command line on a node and print its output.
-cp_sh() { node_sh "$CKS_CP" "$*"; }
-w1_sh() { node_sh "$CKS_W1" "$*"; }
+cp_sh() { node_sh "$CP" "$*"; }
+w1_sh() { node_sh "$W1" "$*"; }
 k() { node_kubectl "$@"; }
 # Some checks run in "bash -c", so that shell needs the helpers and the settings too.
-export CKS_PLATFORM CKS_CP CKS_W1 CKS_CP_HOST CKS_W1_HOST CKS_SSH_USER CKS_SSH_KEY CKS_SSH_OPTS
-export -f _cks_quote _cks_ssh node_sh node_script node_kubectl cp_sh w1_sh k
+export PRACTICE_PLATFORM PRACTICE_CP PRACTICE_W1 CP W1 PRACTICE_CP_HOST PRACTICE_W1_HOST PRACTICE_SSH_USER PRACTICE_SSH_KEY PRACTICE_SSH_OPTS
+export -f _pc_quote _pc_env _pc_ssh node_sh node_script node_kubectl cp_sh w1_sh k
 
 # The Lima VM (cluster/lima.sh) runs the Cilium tasks on a kernel of its own, and under
 # OrbStack the AppArmor and kernel module tasks as well.
-CKS_LIMA="${CKS_LIMA:-cks-lima}"
+CKS_LIMA="${PRACTICE_LIMA:-${CKS_LIMA:-cks-lima}}"
 onlima() { limactl shell --workdir / "$CKS_LIMA" sudo bash -s "$@"; }
 lima_sh() { limactl shell --workdir / "$CKS_LIMA" sudo bash -c "$*"; }
 kl() { limactl shell --workdir / "$CKS_LIMA" sudo kubectl "$@"; }
@@ -32,20 +32,20 @@ need_lima() {
 
 # The AppArmor and kernel module tasks need a kernel that belongs to one machine. OrbStack's
 # shared kernel has no AppArmor, so there they run on the Lima VM. A real VM has a kernel of its
-# own, so with CKS_PLATFORM=vms they run on cks-w1, where the pods land. The scripts these
-# helpers run call kubectl on the node, so on cks-w1 they get the admin kubeconfig in a
+# own, so with PRACTICE_PLATFORM=vms they run on the worker, where the pods land. The scripts these
+# helpers run call kubectl on the node, so on the worker they get the admin kubeconfig in a
 # temporary file that the script deletes when it ends.
-if [ "$CKS_PLATFORM" = vms ]; then
-  _cks_admin_prelude() {
+if [ "$PRACTICE_PLATFORM" = vms ]; then
+  _pc_admin_prelude() {
     # ssh reads stdin, which holds the caller's script here, so it gets /dev/null instead.
-    [ -n "${_CKS_ADMIN_CONF:-}" ] || _CKS_ADMIN_CONF="$(cp_sh 'cat /etc/kubernetes/admin.conf' </dev/null)"
+    [ -n "${_PC_ADMIN_CONF:-}" ] || _PC_ADMIN_CONF="$(cp_sh 'cat /etc/kubernetes/admin.conf' </dev/null)"
     echo 'KUBECONFIG="$(mktemp)"; export KUBECONFIG; trap '"'"'rm -f "$KUBECONFIG"'"'"' EXIT'
-    echo "cat > \"\$KUBECONFIG\" <<'CKS_ADMIN_CONF'"
-    printf '%s\n' "$_CKS_ADMIN_CONF"
-    echo 'CKS_ADMIN_CONF'
+    echo "cat > \"\$KUBECONFIG\" <<'PC_ADMIN_CONF'"
+    printf '%s\n' "$_PC_ADMIN_CONF"
+    echo 'PC_ADMIN_CONF'
   }
-  onkern() { { _cks_admin_prelude; cat; } | onw1 "$@"; }
-  kern_sh() { { _cks_admin_prelude; printf '%s\n' "$*"; } | onw1; }
+  onkern() { { _pc_admin_prelude; cat; } | onw1 "$@"; }
+  kern_sh() { { _pc_admin_prelude; printf '%s\n' "$*"; } | onw1; }
   need_kernel() { :; }
 else
   onkern() { onlima "$@"; }
@@ -69,7 +69,7 @@ check() {
     [ -n "$FIRST_OK" ] || FIRST_OK=no
   fi
 }
-# Like check, but the command runs on cks-cp (or cks-w1) as root.
+# Like check, but the command runs on the control plane (or the worker) as root.
 check_cp() { local what="$1"; shift; check "$what" cp_sh "$*"; }
 check_w1() { local what="$1"; shift; check "$what" w1_sh "$*"; }
 check_lima() { local what="$1"; shift; check "$what" lima_sh "$*"; }
@@ -81,7 +81,7 @@ wait_api() {
 
 # Wait until a static pod's mirror pod is Ready again: wait_static kube-scheduler
 wait_static() {
-  cp_sh "for i in \$(seq 1 60); do kubectl -n kube-system get pod $1-cks-cp -o jsonpath='{.status.conditions[?(@.type==\"Ready\")].status}' 2>/dev/null | grep -qx True && exit 0; sleep 3; done; exit 1"
+  cp_sh "for i in \$(seq 1 60); do kubectl -n kube-system get pod $1-$CP -o jsonpath='{.status.conditions[?(@.type==\"Ready\")].status}' 2>/dev/null | grep -qx True && exit 0; sleep 3; done; exit 1"
 }
 
 # Mount a host folder into the API server pod: apiserver_mount auth-config /etc/kubernetes/auth
@@ -93,7 +93,7 @@ apiserver_mount() {
     sed -i 's|^  volumes:\$|  volumes:\n  - hostPath:\n      path: $2\n      type: DirectoryOrCreate\n    name: $1|' \$f"
 }
 
-# Edit a flag in a static pod manifest on cks-cp: set_flag kube-apiserver --profiling false
+# Edit a flag in a static pod manifest on the control plane: set_flag kube-apiserver --profiling false
 # Adds the flag when missing, replaces its value when present.
 set_flag() {
   cp_sh "f=/etc/kubernetes/manifests/$1.yaml

@@ -4,12 +4,12 @@
 # ---- Task 1: a ConfigMap from a file and a literal ------------------------------------------
 setup_4_1() {
   ns_fresh config
-  put_file /opt/ckad/4.1/app.properties <<'EOF'
+  put_file /opt/apps/4.1/app.properties <<'EOF'
 shop.currency=EUR
 shop.page-size=20
 shop.cache=on
 EOF
-  cp_sh 'cat /opt/ckad/4.1/app.properties'
+  cp_sh 'cat /opt/apps/4.1/app.properties'
 }
 check_4_1() {
   check_json "ConfigMap app-config has the keys app.properties and LOG_LEVEL=debug" "kubectl -n config get cm app-config -o json" \
@@ -18,7 +18,7 @@ check_4_1() {
   check_cp "pod app reads /etc/app/app.properties" "kubectl -n config exec app -- cat /etc/app/app.properties | grep -q shop.page-size=20"
 }
 solve_4_1() {
-  put_file /opt/ckad/4.1/pod.yaml <<'EOF'
+  put_file /opt/apps/4.1/pod.yaml <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -44,8 +44,8 @@ spec:
       name: app-config
 EOF
   shown <<'EOF'
-k -n config create cm app-config --from-file=/opt/ckad/4.1/app.properties --from-literal=LOG_LEVEL=debug
-k apply -f /opt/ckad/4.1/pod.yaml
+k -n config create cm app-config --from-file=/opt/apps/4.1/app.properties --from-literal=LOG_LEVEL=debug
+k apply -f /opt/apps/4.1/pod.yaml
 k -n config wait pod app --for=condition=Ready
 k -n config exec app -- printenv LOG_LEVEL
 k -n config exec app -- ls /etc/app
@@ -62,7 +62,7 @@ check_4_2() {
   check_cp "the password is not in the environment" "! kubectl -n secrets exec db-client -- env | grep -q S3cr3t-pw"
 }
 solve_4_2() {
-  put_file /opt/ckad/4.2/pod.yaml <<'EOF'
+  put_file /opt/apps/4.2/pod.yaml <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -94,7 +94,7 @@ spec:
 EOF
   shown <<'EOF'
 k -n secrets create secret generic db-credentials --from-literal=user=admin --from-literal=password=S3cr3t-pw
-k apply -f /opt/ckad/4.2/pod.yaml
+k apply -f /opt/apps/4.2/pod.yaml
 k -n secrets wait pod db-client --for=condition=Ready
 k -n secrets exec db-client -- printenv DB_USER
 k -n secrets exec db-client -- ls -lL /etc/db
@@ -121,9 +121,9 @@ check_4_3() {
 }
 solve_4_3() {
   shown <<'EOF'
-k -n config-roll create cm web-config-v2 --from-literal=COLOR=green $do > /opt/ckad/4.3-cm.yaml
-echo 'immutable: true' >> /opt/ckad/4.3-cm.yaml
-k apply -f /opt/ckad/4.3-cm.yaml
+k -n config-roll create cm web-config-v2 --from-literal=COLOR=green $do > /opt/apps/4.3-cm.yaml
+echo 'immutable: true' >> /opt/apps/4.3-cm.yaml
+k apply -f /opt/apps/4.3-cm.yaml
 k -n config-roll set env deploy/web --keys=COLOR --from=configmap/web-config-v2
 k -n config-roll rollout status deploy web
 EOF
@@ -168,7 +168,7 @@ check_4_5() {
   check_cp "a pod that asks for 512Mi is refused" "! kubectl -n limits run big --image=busybox:1.36 --dry-run=server --overrides='{\"spec\":{\"containers\":[{\"name\":\"big\",\"image\":\"busybox:1.36\",\"resources\":{\"limits\":{\"memory\":\"512Mi\"}}}]}}' -- sleep 1"
 }
 solve_4_5() {
-  put_file /opt/ckad/4.5/limitrange.yaml <<'EOF'
+  put_file /opt/apps/4.5/limitrange.yaml <<'EOF'
 apiVersion: v1
 kind: LimitRange
 metadata:
@@ -187,7 +187,7 @@ spec:
       memory: 256Mi
 EOF
   shown <<'EOF'
-k apply -f /opt/ckad/4.5/limitrange.yaml
+k apply -f /opt/apps/4.5/limitrange.yaml
 k -n limits run plain --image=busybox:1.36 -- sleep 1d
 k -n limits get pod plain -o jsonpath='{.spec.containers[0].resources}{"\n"}'
 k -n limits describe limitrange container-defaults
@@ -197,7 +197,7 @@ EOF
 # ---- Task 6: a ResourceQuota for a team ---------------------------------------------------------------------
 setup_4_6() {
   ns_fresh team-a
-  cp_sh 'rm -rf /opt/ckad/4.6; mkdir -p /opt/ckad/4.6
+  cp_sh 'rm -rf /opt/apps/4.6; mkdir -p /opt/apps/4.6
     kubectl -n team-a create deploy filler --image=busybox:1.36 --replicas=2 -- sleep 1d >/dev/null
     kubectl -n team-a set resources deploy filler --requests=cpu=50m,memory=32Mi --limits=cpu=100m,memory=64Mi >/dev/null
     kubectl -n team-a rollout status deploy filler --timeout=120s'
@@ -208,15 +208,15 @@ check_4_6() {
     'h=p["spec"]["hard"]; h=={"pods":"5","requests.cpu":"1","requests.memory":"1Gi","limits.cpu":"2","limits.memory":"2Gi","services":"4"}'
   check_cp "Deployment filler asks for 6 replicas and runs 5" \
     "for i in \$(seq 1 30); do kubectl -n team-a get deploy filler -o jsonpath='{.spec.replicas} {.status.readyReplicas}' | grep -qx '6 5' && exit 0; sleep 2; done; exit 1"
-  check_cp "/opt/ckad/4.6/reason.txt holds the quota's refusal" "grep -q 'exceeded quota: team-a-quota' /opt/ckad/4.6/reason.txt"
+  check_cp "/opt/apps/4.6/reason.txt holds the quota's refusal" "grep -q 'exceeded quota: team-a-quota' /opt/apps/4.6/reason.txt"
 }
 solve_4_6() {
   shown <<'EOF'
 k -n team-a create quota team-a-quota --hard=pods=5,requests.cpu=1,requests.memory=1Gi,limits.cpu=2,limits.memory=2Gi,services=4
 k -n team-a scale deploy filler --replicas=6
 k -n team-a get deploy filler
-k -n team-a events --types=Warning | grep 'exceeded quota' | tail -1 > /opt/ckad/4.6/reason.txt
-cat /opt/ckad/4.6/reason.txt
+k -n team-a events --types=Warning | grep 'exceeded quota' | tail -1 > /opt/apps/4.6/reason.txt
+cat /opt/apps/4.6/reason.txt
 k -n team-a describe quota team-a-quota
 EOF
 }
@@ -224,7 +224,7 @@ EOF
 # ---- Task 7: ServiceAccounts and their tokens -------------------------------------------------------------
 setup_4_7() {
   ns_fresh sa-apps
-  cp_sh 'rm -rf /opt/ckad/4.7; mkdir -p /opt/ckad/4.7; kubectl config delete-user ckad-reporter >/dev/null 2>&1
+  cp_sh 'rm -rf /opt/apps/4.7; mkdir -p /opt/apps/4.7; kubectl config delete-user ckad-reporter >/dev/null 2>&1
     kubectl -n sa-apps create deploy reporter --image=busybox:1.36 -- sleep 1d >/dev/null
     kubectl -n sa-apps create deploy static-site --image=nginx:1.27-alpine >/dev/null
     kubectl -n sa-apps rollout status deploy reporter --timeout=120s >/dev/null
@@ -239,8 +239,8 @@ check_4_7() {
   check_cp "static-site's pods mount no token" \
     "kubectl -n sa-apps rollout status deploy static-site --timeout=60s && ! kubectl -n sa-apps exec deploy/static-site -- ls /var/run/secrets/kubernetes.io/serviceaccount/token"
   # A TokenReview asks the API server whose token this is.
-  check_cp "/opt/ckad/4.7/token.txt authenticates as reporter" \
-    "printf '{\"apiVersion\":\"authentication.k8s.io/v1\",\"kind\":\"TokenReview\",\"spec\":{\"token\":\"%s\"}}' \$(cat /opt/ckad/4.7/token.txt) | kubectl create -f - -o jsonpath='{.status.user.username}' | grep -qx system:serviceaccount:sa-apps:reporter"
+  check_cp "/opt/apps/4.7/token.txt authenticates as reporter" \
+    "printf '{\"apiVersion\":\"authentication.k8s.io/v1\",\"kind\":\"TokenReview\",\"spec\":{\"token\":\"%s\"}}' \$(cat /opt/apps/4.7/token.txt) | kubectl create -f - -o jsonpath='{.status.user.username}' | grep -qx system:serviceaccount:sa-apps:reporter"
   check_cp "the kubeconfig has a user ckad-reporter with that token" \
     "kubectl --user=ckad-reporter auth whoami -o jsonpath='{.status.userInfo.username}' | grep -qx system:serviceaccount:sa-apps:reporter"
 }
@@ -249,8 +249,8 @@ solve_4_7() {
 k -n sa-apps create sa reporter
 k -n sa-apps set serviceaccount deploy reporter reporter
 k -n sa-apps patch deploy static-site -p '{"spec":{"template":{"spec":{"automountServiceAccountToken":false}}}}'
-k -n sa-apps create token reporter --duration=2h > /opt/ckad/4.7/token.txt
-k config set-credentials ckad-reporter --token=$(cat /opt/ckad/4.7/token.txt)
+k -n sa-apps create token reporter --duration=2h > /opt/apps/4.7/token.txt
+k config set-credentials ckad-reporter --token=$(cat /opt/apps/4.7/token.txt)
 k --user=ckad-reporter auth whoami
 k --user=ckad-reporter -n sa-apps get pods
 k -n sa-apps rollout status deploy reporter
@@ -354,7 +354,7 @@ check_4_10() {
     "kubectl -n secure exec deploy/api -- sh -c 'sleep 6; test -s /tmp/heartbeat && ! touch /etc/x 2>/dev/null && ! touch /x 2>/dev/null'"
 }
 solve_4_10() {
-  put_file /opt/ckad/4.10/patch.yaml <<'EOF'
+  put_file /opt/apps/4.10/patch.yaml <<'EOF'
 spec:
   template:
     spec:
@@ -377,7 +377,7 @@ spec:
         emptyDir: {}
 EOF
   shown <<'EOF'
-k -n secure patch deploy api --patch-file /opt/ckad/4.10/patch.yaml
+k -n secure patch deploy api --patch-file /opt/apps/4.10/patch.yaml
 k -n secure rollout status deploy api
 EOF
   settled secure api 1
@@ -390,7 +390,7 @@ EOF
 
 # ---- Task 11: use a CustomResourceDefinition --------------------------------------------------------------------
 setup_4_11() {
-  cp_sh 'kubectl delete crd backups.ckad.io --ignore-not-found >/dev/null; rm -rf /opt/ckad/4.11; mkdir -p /opt/ckad/4.11'
+  cp_sh 'kubectl delete crd backups.ckad.io --ignore-not-found >/dev/null; rm -rf /opt/apps/4.11; mkdir -p /opt/apps/4.11'
   ns_fresh crd-demo crd-other
   cp_sh "kubectl apply -f - >/dev/null" <<'EOF'
 apiVersion: apiextensions.k8s.io/v1
@@ -445,12 +445,12 @@ EOF
 check_4_11() {
   check_json "Backup nightly in crd-demo: 0 2 * * *, target postgres, kept 7 days" "kubectl -n crd-demo get backup nightly -o json" \
     'p["spec"]=={"schedule":"0 2 * * *","target":"postgres","retentionDays":7}'
-  check_cp "/opt/ckad/4.11/backups.txt lists the Backups of every namespace" \
-    "grep -q weekly /opt/ckad/4.11/backups.txt && grep -q nightly /opt/ckad/4.11/backups.txt"
-  check_cp "/opt/ckad/4.11/max-retention.txt holds the largest retentionDays allowed" "grep -qx 30 /opt/ckad/4.11/max-retention.txt"
+  check_cp "/opt/apps/4.11/backups.txt lists the Backups of every namespace" \
+    "grep -q weekly /opt/apps/4.11/backups.txt && grep -q nightly /opt/apps/4.11/backups.txt"
+  check_cp "/opt/apps/4.11/max-retention.txt holds the largest retentionDays allowed" "grep -qx 30 /opt/apps/4.11/max-retention.txt"
 }
 solve_4_11() {
-  put_file /opt/ckad/4.11/nightly.yaml <<'EOF'
+  put_file /opt/apps/4.11/nightly.yaml <<'EOF'
 apiVersion: ckad.io/v1
 kind: Backup
 metadata:
@@ -465,10 +465,10 @@ EOF
 k api-resources --api-group=ckad.io
 k explain backup.spec
 k get crd backups.ckad.io -o jsonpath='{.spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.retentionDays}{"\n"}'
-echo 30 > /opt/ckad/4.11/max-retention.txt
-k apply -f /opt/ckad/4.11/nightly.yaml
-k get backups -A > /opt/ckad/4.11/backups.txt
-cat /opt/ckad/4.11/backups.txt
+echo 30 > /opt/apps/4.11/max-retention.txt
+k apply -f /opt/apps/4.11/nightly.yaml
+k get backups -A > /opt/apps/4.11/backups.txt
+cat /opt/apps/4.11/backups.txt
 EOF
 }
 
@@ -485,7 +485,7 @@ check_4_12() {
   check_cp "the pod answers on port 8080" "kubectl -n restricted-apps exec deploy/web -- wget -qO- http://localhost:8080 | grep -qx hello"
 }
 solve_4_12() {
-  put_file /opt/ckad/4.12/patch.yaml <<'EOF'
+  put_file /opt/apps/4.12/patch.yaml <<'EOF'
 spec:
   template:
     spec:
@@ -504,7 +504,7 @@ EOF
   shown <<'EOF'
 k -n restricted-apps get deploy web
 k -n restricted-apps describe rs -l app=web | grep FailedCreate | tail -1
-k -n restricted-apps patch deploy web --patch-file /opt/ckad/4.12/patch.yaml
+k -n restricted-apps patch deploy web --patch-file /opt/apps/4.12/patch.yaml
 k -n restricted-apps rollout status deploy web
 k -n restricted-apps exec deploy/web -- wget -qO- http://localhost:8080
 EOF

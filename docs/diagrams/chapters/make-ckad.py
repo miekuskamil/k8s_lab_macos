@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the diagrams for the application modules (platform-engineering/practice-cluster.md and modules 33 to 37) with the kit in ../bbg.py.
 
-  ckad-practice-cluster   the CKS machines with the CKAD extras on top (README)
+  ckad-practice-cluster   the practice cluster with the application extras (README)
   ckad-image-flow         Dockerfile to registry to node, the four steps of tasks 1 and 2 (01)
   ckad-pod-patterns       init container, native sidecar and app in one pod (01)
   ckad-rolling-update     a Deployment moving pods from one ReplicaSet to the next (02)
@@ -25,29 +25,29 @@ OUT = Path(__file__).resolve().parent
 
 def practice_cluster():
     c = Canvas(1600, 900)
-    c.title("The CKAD", "practice cluster")
-    c.subtitle("The CKS cluster, plus helm, podman, a registry and metrics-server.")
+    c.title("The application", "extras")
+    c.subtitle("The practice cluster with helm, podman, a registry and metrics-server.")
 
     c.frame(40, 150, 1520, 720, "Your Mac", "host")
-    you = c.node(70, 220, 200, 110, SLATE, "terminal", "terminal", "task.sh, orb")
+    you = c.node(70, 220, 200, 110, SLATE, "terminal", "terminal", "./lab.sh practice")
 
-    c.frame(350, 200, 1180, 640, "OrbStack, or two VMs", "plain", icon="box")
-    cp = c.frame(380, 250, 560, 560, "cks-cp: control plane", "node")
+    c.frame(350, 200, 1180, 640, "Docker engine", "plain", icon="box")
+    cp = c.frame(380, 250, 560, 420, "practice-control-plane", "node")
     c.box(405, 300, 510, 80, PURPLE, "static pods", "API server, etcd, scheduler")
-    tools = c.frame(405, 410, 510, 230, "added by extras.sh", "group")
+    tools = c.frame(405, 410, 510, 230, "in the node image", "group")
     c.box(430, 455, 220, 70, SLATE, "helm 4.3.1", size=17)
     c.box(670, 455, 220, 70, SLATE, "podman", "build, push", size=17)
     c.box(430, 545, 220, 70, SLATE, "kubectl-convert", size=16)
-    reg = c.node(405, 670, 510, 110, ORANGE, "registry.ckad:5000", "db", "systemd service, port 5000", size=20)
+    reg = c.node(380, 700, 440, 100, ORANGE, "registry.practice:5000", "db", "container practice-registry", size=20)
 
-    w1 = c.frame(980, 250, 520, 560, "cks-w1: worker", "node")
-    pods = c.box(1005, 300, 470, 90, SLATE, "your task pods", "every namespace ckad=task")
+    w1 = c.frame(980, 250, 520, 560, "practice-worker", "node")
+    pods = c.box(1005, 300, 470, 90, SLATE, "your task pods", "every namespace practice=task")
     ms = c.box(1005, 420, 225, 80, TEAL, "metrics-server", size=16)
     ing = c.box(1250, 420, 225, 80, BLUE, "ingress-nginx", "NodePort 30080", size=16)
-    ctd = c.node(1005, 670, 470, 110, TEAL, "containerd", "box", "pulls over plain HTTP")
+    ctd = c.node(1005, 700, 470, 100, TEAL, "containerd", "box", "pulls over plain HTTP")
 
-    c.connect(you, cp, "orb -m cks-cp", sa="right", sb="left", fa=0.5, fb=(275 - 250) / 560, pos="above")
-    c.connect(ctd, reg, "pull image", sa="left", sb="right", pos="above")
+    c.connect(you, cp, "shell", sa="right", sb="left", fa=0.5, fb=(275 - 250) / 420, pos="above")
+    c.connect(ctd, reg, "pull image", sa="left", sb="right", fa=0.5, fb=0.5, pos="above")
     c.connect(ctd, pods, "start", sa="top", sb="bottom", fa=0.5, fb=0.5, pos="right", at=(1240, 600))
     c.save(OUT, "ckad-practice-cluster")
 
@@ -57,15 +57,15 @@ def image_flow():
     c.title("From Dockerfile", "to a running pod")
     c.subtitle("The image travels by name: registry host, repository, tag.")
 
-    cp = c.frame(40, 150, 700, 560, "cks-cp", "node")
+    cp = c.frame(40, 150, 700, 560, "practice-control-plane", "node")
     df = c.node(70, 220, 300, 110, SLATE, "Dockerfile", "doc", "and greet.sh")
     pm = c.node(420, 220, 290, 110, SLATE, "podman", "terminal", "build, then push")
     store = c.frame(70, 400, 640, 140, "podman's local store", "plain", icon="layers")
     for i, t in enumerate(["busybox layer", "COPY layer", "RUN layer"]):
         c.box(95 + i * 205, 445, 185, 70, ORANGE, t, size=16)
-    reg = c.node(70, 580, 640, 100, ORANGE, "registry.ckad:5000", "db", "greeter:v1, greeter:v2")
+    reg = c.node(70, 580, 640, 100, ORANGE, "registry.practice:5000", "db", "greeter:v1, greeter:v2")
 
-    w1 = c.frame(800, 150, 760, 560, "cks-w1", "node")
+    w1 = c.frame(800, 150, 760, 560, "practice-worker", "node")
     kub = c.node(830, 220, 300, 110, TEAL, "kubelet", "server", "a pod needs the image")
     ctd = c.node(1200, 220, 330, 110, TEAL, "containerd", "box", "pulls the layers")
     pod = c.frame(830, 400, 330, 190, "pod greeter", "pod")
@@ -86,7 +86,7 @@ def pod_patterns():
     c.title("Several containers,", "one pod")
     c.subtitle("They share the pod's network and its volumes. The init list starts first, in order.")
 
-    c.frame(40, 150, 1520, 640, "", "node", right="Node cks-w1")
+    c.frame(40, 150, 1520, 640, "", "node", right="Node practice-worker")
     pod = c.frame(80, 190, 1440, 560, "pod pipeline", "pod")
     init = c.frame(110, 240, 720, 240, "initContainers, in order", "group")
     fetch = c.outline(140, 290, 280, 150, SLATE, "fetch", "box", sub="runs, exits 0", size=20)
@@ -161,7 +161,7 @@ def probes():
     c.title("Three probes,", "three reactions")
     c.subtitle("The kubelet asks; a Service and the kubelet itself act on the answers.")
 
-    c.frame(40, 150, 1060, 680, "", "node", right="Node cks-w1")
+    c.frame(40, 150, 1060, 680, "", "node", right="Node practice-worker")
     kub = c.node(80, 200, 300, 110, TEAL, "kubelet", "server", "runs every probe")
     pod = c.frame(470, 200, 590, 320, "pod api", "pod")
     ctr = c.box(500, 260, 530, 100, SLATE, "container", "httpd on :8080")
@@ -231,7 +231,7 @@ def requests_limits():
     c.connect(rq, ref, "over", sa="bottom", sb="top", pos="right")
     sch = c.node(1190, 230, 370, 110, PURPLE, "scheduler", "gear", "fits requests to nodes")
     c.connect(rq, sch, "stored", n=3, pos="above")
-    c.frame(380, 580, 1180, 200, "", "node", right="Node cks-w1")
+    c.frame(380, 580, 1180, 200, "", "node", right="Node practice-worker")
     ctr = c.box(420, 640, 420, 100, SLATE, "container", "requests 100m, limit 200m", size=18)
     ker = c.band(900, 630, 620, 120, GREEN, "kernel cgroups", "CPU above limit waits, memory above limit is killed",
                  size=18)
@@ -246,9 +246,9 @@ def ingress_path():
     c.title("One request", "through Ingress")
     c.subtitle("The Host header and the path pick a Service. The Service picks a ready pod.")
 
-    c.frame(40, 150, 300, 220, "cks-cp, or your browser", "host")
+    c.frame(40, 150, 300, 220, "practice-control-plane, or a browser", "host")
     cl = c.box(65, 220, 250, 100, SLATE, "curl", "Host: shop.ckad.local", size=18)
-    c.frame(380, 150, 1180, 640, "", "node", right="Node cks-w1")
+    c.frame(380, 150, 1180, 640, "", "node", right="Node practice-worker")
     np = c.box(420, 220, 240, 100, GREEN, "NodePort 30080", "kube-proxy", size=18)
     ctl = c.frame(720, 190, 380, 280, "pod ingress-nginx-controller", "pod")
     ng = c.box(745, 240, 330, 100, BLUE, "nginx", "rules from Ingress", size=18)

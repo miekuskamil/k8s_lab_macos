@@ -1,45 +1,48 @@
 # Domain 01, application design and build. Functions for task.sh: setup_1_N, check_1_N, solve_1_N.
 
-REG=registry.ckad:5000
+REG=registry.practice:5000
 # Forget a repository in the local registry and in podman, so a setup starts clean: reg_forget greeter
-reg_forget() { cp_sh "rm -rf /var/lib/ckad-registry/docker/registry/v2/repositories/$1; podman rmi -f \$(podman images -q $REG/$1) >/dev/null 2>&1; true"; }
+reg_forget() {
+  registry_sh "rm -rf \$REG_DATA/docker/registry/v2/repositories/$1"
+  cp_sh "podman rmi -f \$(podman images -q $REG/$1) >/dev/null 2>&1; true"
+}
 
 # ---- Task 1: build an image and push it ------------------------------------------------
 setup_1_1() {
   need_extras || return 1
   ns_fresh build
   reg_forget greeter
-  cp_sh 'rm -rf /opt/ckad/1.1'
-  put_file /opt/ckad/1.1/Dockerfile <<'EOF'
+  cp_sh 'rm -rf /opt/apps/1.1'
+  put_file /opt/apps/1.1/Dockerfile <<'EOF'
 FROM docker.io/library/busybox:1.36
 COPY greet.sh /usr/local/bin/greet.sh
 RUN chmod 755 /usr/local/bin/greet.sh
 ENV GREETING=hello
 CMD ["/usr/local/bin/greet.sh"]
 EOF
-  put_file /opt/ckad/1.1/greet.sh <<'EOF'
+  put_file /opt/apps/1.1/greet.sh <<'EOF'
 #!/bin/sh
 while true; do
   echo "$GREETING from $(hostname)"
   sleep 5
 done
 EOF
-  cp_sh 'ls -l /opt/ckad/1.1'
+  cp_sh 'ls -l /opt/apps/1.1'
 }
 check_1_1() {
   check_cp "the registry holds greeter:v1" "curl -fsS http://$REG/v2/greeter/tags/list | grep -q '\"v1\"'"
-  check_cp "/opt/ckad/1.1/greeter-v1.tar is an image archive" "tar -tf /opt/ckad/1.1/greeter-v1.tar | grep -q manifest.json"
+  check_cp "/opt/apps/1.1/greeter-v1.tar is an image archive" "tar -tf /opt/apps/1.1/greeter-v1.tar | grep -q manifest.json"
   check_cp "pod greeter in build runs $REG/greeter:v1" \
     "kubectl -n build get pod greeter -o jsonpath='{.spec.containers[0].image}' | grep -qx $REG/greeter:v1 && kubectl -n build wait pod greeter --for=condition=Ready --timeout=60s"
   check_cp "pod greeter logs 'hello from greeter'" "kubectl -n build logs greeter | grep -q 'hello from greeter'"
 }
 solve_1_1() {
   shown <<'EOF'
-cd /opt/ckad/1.1
-podman build -t registry.ckad:5000/greeter:v1 .
-podman push registry.ckad:5000/greeter:v1
-podman save -o greeter-v1.tar registry.ckad:5000/greeter:v1
-k -n build run greeter --image=registry.ckad:5000/greeter:v1
+cd /opt/apps/1.1
+podman build -t registry.practice:5000/greeter:v1 .
+podman push registry.practice:5000/greeter:v1
+podman save -o greeter-v1.tar registry.practice:5000/greeter:v1
+k -n build run greeter --image=registry.practice:5000/greeter:v1
 k -n build wait pod greeter --for=condition=Ready --timeout=90s
 k -n build logs greeter
 EOF
@@ -50,19 +53,19 @@ setup_1_2() {
   need_extras || return 1
   ns_fresh build-report
   reg_forget report
-  put_file /opt/ckad/1.2/Dockerfile <<'EOF'
+  put_file /opt/apps/1.2/Dockerfile <<'EOF'
 FROM docker.io/library/busybox:1.36
 ENV APP_COLOR=red
 COPY report.sh /report.sh
 CMD ["sh", "/report.sh"]
 EOF
-  put_file /opt/ckad/1.2/report.sh <<'EOF'
+  put_file /opt/apps/1.2/report.sh <<'EOF'
 while true; do
   echo "color=$APP_COLOR user=$(id -u)"
   sleep 5
 done
 EOF
-  cp_sh "cd /opt/ckad/1.2 && podman build -q -t $REG/report:v1 . >/dev/null && podman push -q $REG/report:v1
+  cp_sh "cd /opt/apps/1.2 && podman build -q -t $REG/report:v1 . >/dev/null && podman push -q $REG/report:v1
     kubectl -n build-report create deploy report --image=$REG/report:v1 2>/dev/null
     kubectl -n build-report rollout status deploy report --timeout=120s"
 }
@@ -75,13 +78,13 @@ check_1_2() {
     "kubectl -n build-report rollout status deploy report --timeout=90s && for i in \$(seq 1 30); do kubectl -n build-report logs deploy/report 2>/dev/null | grep -q 'color=blue user=1000' && exit 0; sleep 2; done; exit 1"
 }
 solve_1_2() {
-  cp_sh "cd /opt/ckad/1.2 && sed -i 's/APP_COLOR=red/APP_COLOR=blue/' Dockerfile && echo 'USER 1000' >> Dockerfile"
+  cp_sh "cd /opt/apps/1.2 && sed -i 's/APP_COLOR=red/APP_COLOR=blue/' Dockerfile && echo 'USER 1000' >> Dockerfile"
   shown <<'EOF'
-cd /opt/ckad/1.2
+cd /opt/apps/1.2
 cat Dockerfile
-podman build -t registry.ckad:5000/report:v2 .
-podman push registry.ckad:5000/report:v2
-k -n build-report set image deploy/report report=registry.ckad:5000/report:v2
+podman build -t registry.practice:5000/report:v2 .
+podman push registry.practice:5000/report:v2
+k -n build-report set image deploy/report report=registry.practice:5000/report:v2
 k -n build-report rollout status deploy report
 k -n build-report get pods
 EOF
@@ -95,7 +98,7 @@ EOF
 # ---- Task 3: an init container prepares the content -------------------------------------
 setup_1_3() {
   ns_fresh init-web
-  put_file /opt/ckad/1.3/web.yaml <<'EOF'
+  put_file /opt/apps/1.3/web.yaml <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -108,7 +111,7 @@ spec:
     ports:
     - containerPort: 80
 EOF
-  cp_sh 'cat /opt/ckad/1.3/web.yaml'
+  cp_sh 'cat /opt/apps/1.3/web.yaml'
 }
 check_1_3() {
   check_json "pod web has an init container prepare" "kubectl -n init-web get pod web -o json" \
@@ -117,7 +120,7 @@ check_1_3() {
   check_cp "nginx serves 'ready from init'" "kubectl -n init-web exec web -c nginx -- wget -qO- http://localhost/ | grep -q 'ready from init'"
 }
 solve_1_3() {
-  put_file /opt/ckad/1.3/web.yaml <<'EOF'
+  put_file /opt/apps/1.3/web.yaml <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -144,7 +147,7 @@ spec:
     emptyDir: {}
 EOF
   shown <<'EOF'
-k apply -f /opt/ckad/1.3/web.yaml
+k apply -f /opt/apps/1.3/web.yaml
 k -n init-web get pod web
 k -n init-web wait pod web --for=condition=Ready
 k -n init-web exec web -c nginx -- wget -qO- http://localhost/
@@ -189,7 +192,7 @@ check_1_4() {
   check_cp "container app still writes the log" "kubectl -n sidecar exec deploy/app -c app -- tail -1 /var/log/app/app.log | grep -q accepted"
 }
 solve_1_4() {
-  put_file /opt/ckad/1.4/patch.yaml <<'EOF'
+  put_file /opt/apps/1.4/patch.yaml <<'EOF'
 spec:
   template:
     spec:
@@ -203,7 +206,7 @@ spec:
           mountPath: /var/log/app
 EOF
   shown <<'EOF'
-k -n sidecar patch deploy app --patch-file /opt/ckad/1.4/patch.yaml
+k -n sidecar patch deploy app --patch-file /opt/apps/1.4/patch.yaml
 k -n sidecar rollout status deploy app
 k -n sidecar get pod -l app=app
 EOF
@@ -226,10 +229,10 @@ check_1_5() {
 }
 solve_1_5() {
   shown <<'EOF'
-mkdir -p /opt/ckad/1.5
-k -n batch create job checksum --image=busybox:1.36 $do -- sh -c 'echo "checksum done on $(hostname)"; sleep 3' > /opt/ckad/1.5/job.yaml
+mkdir -p /opt/apps/1.5
+k -n batch create job checksum --image=busybox:1.36 $do -- sh -c 'echo "checksum done on $(hostname)"; sleep 3' > /opt/apps/1.5/job.yaml
 EOF
-  put_file /opt/ckad/1.5/job.yaml <<'EOF'
+  put_file /opt/apps/1.5/job.yaml <<'EOF'
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -252,7 +255,7 @@ spec:
       restartPolicy: Never
 EOF
   shown <<'EOF'
-k apply -f /opt/ckad/1.5/job.yaml
+k apply -f /opt/apps/1.5/job.yaml
 k -n batch get pods -l job-type=checksum
 k -n batch wait job checksum --for=condition=Complete --timeout=120s
 k -n batch get job checksum
@@ -273,17 +276,17 @@ check_1_6() {
 }
 solve_1_6() {
   shown <<'EOF'
-mkdir -p /opt/ckad/1.6
-k -n batch-cron create cronjob cleanup --image=busybox:1.36 --schedule='*/30 * * * *' $do -- sh -c 'echo removed temporary files' > /opt/ckad/1.6/cj.yaml
+mkdir -p /opt/apps/1.6
+k -n batch-cron create cronjob cleanup --image=busybox:1.36 --schedule='*/30 * * * *' $do -- sh -c 'echo removed temporary files' > /opt/apps/1.6/cj.yaml
 EOF
-  cp_sh "cd /opt/ckad/1.6 && python3 - <<'PY'
+  cp_sh "cd /opt/apps/1.6 && python3 - <<'PY'
 p='cj.yaml'; s=open(p).read()
 s=s.replace('  schedule: ', '  concurrencyPolicy: Forbid\n  successfulJobsHistoryLimit: 2\n  failedJobsHistoryLimit: 4\n  startingDeadlineSeconds: 60\n  schedule: ')
 open(p,'w').write(s)
 PY"
   shown <<'EOF'
-grep -E 'concurrency|History|starting|schedule' /opt/ckad/1.6/cj.yaml
-k apply -f /opt/ckad/1.6/cj.yaml
+grep -E 'concurrency|History|starting|schedule' /opt/apps/1.6/cj.yaml
+k apply -f /opt/apps/1.6/cj.yaml
 k -n batch-cron create job cleanup-now --from=cronjob/cleanup
 k -n batch-cron wait job cleanup-now --for=condition=Complete
 k -n batch-cron logs job/cleanup-now
@@ -295,12 +298,12 @@ setup_1_7() { ns_fresh agents; }
 check_1_7() {
   check_cp "DaemonSet node-agent has a ready pod on both nodes" \
     "kubectl -n agents rollout status ds node-agent --timeout=90s && kubectl -n agents get ds node-agent -o jsonpath='{.status.numberReady}' | grep -qx 2"
-  check_cp "one of its pods runs on cks-cp" "kubectl -n agents get pod -l app=node-agent -o wide | grep -q cks-cp"
+  check_cp "one of its pods runs on $CP" "kubectl -n agents get pod -l app=node-agent -o wide | grep -q $CP"
   check_json "the container requests 10m CPU and 16Mi memory" "kubectl -n agents get ds node-agent -o json" \
     'p["spec"]["template"]["spec"]["containers"][0]["resources"]["requests"]=={"cpu":"10m","memory":"16Mi"}'
 }
 solve_1_7() {
-  put_file /opt/ckad/1.7/ds.yaml <<'EOF'
+  put_file /opt/apps/1.7/ds.yaml <<'EOF'
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -329,8 +332,8 @@ spec:
             memory: 16Mi
 EOF
   shown <<'EOF'
-k describe node cks-cp | grep Taints
-k apply -f /opt/ckad/1.7/ds.yaml
+k describe node $CP | grep Taints
+k apply -f /opt/apps/1.7/ds.yaml
 k -n agents rollout status ds node-agent
 k -n agents get pod -o wide
 EOF
@@ -345,10 +348,10 @@ check_1_8() {
     "kubectl -n storage get pvc data-claim -o jsonpath='{.status.phase} {.spec.volumeName}' | grep -qx 'Bound ckad-pv-data'"
   check_cp "pod writer mounts the claim at /data and is Ready" \
     "kubectl -n storage wait pod writer --for=condition=Ready --timeout=60s && kubectl -n storage get pod writer -o jsonpath='{.spec.volumes[*].persistentVolumeClaim.claimName}' | grep -qx data-claim"
-  check_w1 "the file lands on cks-w1 in /var/lib/ckad-data/visits.log" "grep -q visit /var/lib/ckad-data/visits.log"
+  check_w1 "the file lands on $W1 in /var/lib/ckad-data/visits.log" "grep -q visit /var/lib/ckad-data/visits.log"
 }
 solve_1_8() {
-  put_file /opt/ckad/1.8/storage.yaml <<'EOF'
+  put_file /opt/apps/1.8/storage.yaml <<'EOF'
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -393,12 +396,12 @@ spec:
       claimName: data-claim
 EOF
   shown <<'EOF'
-k apply -f /opt/ckad/1.8/storage.yaml
+k apply -f /opt/apps/1.8/storage.yaml
 k -n storage get pvc data-claim
 k -n storage wait pod writer --for=condition=Ready
 k -n storage get pod writer -o wide
 EOF
-  shown cks-w1 <<'EOF'
+  shown "$W1" <<'EOF'
 sleep 5
 cat /var/lib/ckad-data/visits.log
 EOF
@@ -436,11 +439,11 @@ check_1_9() {
 }
 solve_1_9() {
   shown <<'EOF'
-mkdir -p /opt/ckad/1.9
-k -n legacy get pod api -o yaml > /opt/ckad/1.9/pod.yaml
-k -n legacy create deploy api --image=nginx:1.27-alpine --replicas=3 $do > /opt/ckad/1.9/deploy.yaml
+mkdir -p /opt/apps/1.9
+k -n legacy get pod api -o yaml > /opt/apps/1.9/pod.yaml
+k -n legacy create deploy api --image=nginx:1.27-alpine --replicas=3 $do > /opt/apps/1.9/deploy.yaml
 EOF
-  put_file /opt/ckad/1.9/deploy.yaml <<'EOF'
+  put_file /opt/apps/1.9/deploy.yaml <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -473,7 +476,7 @@ spec:
             memory: 32Mi
 EOF
   shown <<'EOF'
-k apply -f /opt/ckad/1.9/deploy.yaml
+k apply -f /opt/apps/1.9/deploy.yaml
 k -n legacy delete pod api
 k -n legacy rollout status deploy api
 k -n legacy get pod --show-labels
@@ -492,7 +495,7 @@ check_1_10() {
     "kubectl -n etl exec pipeline -c transform -- wget -qO- http://localhost:8080/output.txt | grep -q '^ALPHA'"
 }
 solve_1_10() {
-  put_file /opt/ckad/1.10/pipeline.yaml <<'EOF'
+  put_file /opt/apps/1.10/pipeline.yaml <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -524,7 +527,7 @@ spec:
     emptyDir: {}
 EOF
   shown <<'EOF'
-k apply -f /opt/ckad/1.10/pipeline.yaml
+k apply -f /opt/apps/1.10/pipeline.yaml
 k -n etl wait pod pipeline --for=condition=Ready
 k -n etl get pod pipeline
 k -n etl exec pipeline -c transform -- wget -qO- http://localhost:8080/output.txt

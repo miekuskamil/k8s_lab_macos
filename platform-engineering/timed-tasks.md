@@ -30,17 +30,17 @@ In the test run on the live clusters, every task's check failed after its setup 
 
 ## Where you type
 
-Every command except `task.sh`, `practice-exam.sh` and the cluster scripts runs on a node, in a root shell. `orb -m cks-cp` or `orb -m cks-w1` opens a shell on a practice cluster node, and `sudo -i` then makes you root. `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell on the Lima VM that [module 44](kernel-and-host/README.md) needs. On your own VMs, `ssh` to the node and `sudo -i` instead.
+Every command except `task.sh`, `practice-exam.sh` and the `./lab.sh` commands runs on a node, in a root shell. `./lab.sh practice shell` opens that shell on the control plane, and `./lab.sh practice shell worker` opens it on the worker, already as root and with the `k` alias set. `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell on the Lima VM that [module 44](kernel-and-host/README.md) needs. On OrbStack machines or your own VMs the same command works too, because `./lab.sh` follows the platform setting that the [practice cluster page](practice-cluster.md#other-platforms-orbstack-machines-and-your-own-vms) describes.
 
-The course files sit in your Mac's home folder, and OrbStack and Lima both show that folder at the same path inside the machines, so `cd` to the repo inside the node and the paths in the text work there too. The tasks themselves need no repo files on the nodes. The application tasks keep their files under `/opt/ckad` on `cks-cp`, the way many teams keep a task's files under a folder like `/opt/course`.
+The tasks need no repo files on the nodes, because each setup writes what its task needs onto the node itself. The application tasks keep their files under `/opt/apps` on `practice-control-plane`, the way many teams keep a task's files under a folder like `/opt/course`.
 
-The command blocks are terminal transcripts, where each prompt line holds a command and the lines under it hold the real output of the test run. The prompt says where to type: `$` is your Mac, in the repo folder, while `root@cks-cp:~#`, `root@cks-w1:~#` and `root@cks-lima:~#` are root shells on the nodes. A line with only `...` marks output the transcript leaves out, and pod names, IP addresses, container IDs, ages, digests and keys differ on your run.
+The command blocks are terminal transcripts, where each prompt line holds a command and the lines under it hold the real output of the test run. The prompt says where to type: `$` is your Mac, in the repo folder, while `root@practice-control-plane:~#`, `root@practice-worker:~#` and `root@cks-lima:~#` are root shells on the nodes. A line with only `...` marks output the transcript leaves out, and pod names, IP addresses, container IDs, ages, digests and keys differ on your run.
 
 ## An order through the modules
 
 The application modules 33 to 37 take about three weeks at an hour a day:
 
-1. Build the cluster and the extras: `./platform-engineering/practice/cluster/create.sh`, then `./platform-engineering/practice/app-extras/extras.sh`.
+1. Build the cluster and the extras: `./lab.sh practice up`, then `./platform-engineering/practice/app-extras/extras.sh`.
 2. Work through modules 33 to 37 in order. Module 33 teaches pods and workloads that every later task builds on, and module 37 assumes the Services of module 35's debugging task. For each module, read the theory, then do each task against its time budget.
 3. Reset between modules with `./platform-engineering/practice/app-extras/reset.sh`.
 4. Repeat the tasks you needed the solution for, a few days later, until each one fits its budget.
@@ -48,9 +48,9 @@ The application modules 33 to 37 take about three weeks at an hour a day:
 
 The security modules 38 to 44 take about four weeks at an hour a day:
 
-1. Build both clusters: `./platform-engineering/practice/cluster/create.sh`, then `./platform-engineering/practice/cluster/lima.sh create`.
+1. Build both clusters: `./lab.sh practice up`, then `./platform-engineering/practice/cluster/lima.sh create`.
 2. Work through modules 38 to 43 in order, and take each task of module 44 after the module it comes from. Module 39 teaches the static pod repairs that every later API server edit relies on, and module 43 builds on audit logging and Falco basics from its own first tasks.
-3. Reset between modules with `./platform-engineering/practice/cluster/reset.sh`, and with `./platform-engineering/practice/cluster/lima.sh reset` after module 44's tasks, because some tasks change the API server, upgrade the cluster or load kernel profiles.
+3. Reset between modules with `./lab.sh practice reset`, and with `./platform-engineering/practice/cluster/lima.sh reset` after module 44's tasks, because some tasks change the API server, upgrade the cluster or load kernel profiles.
 4. Repeat the tasks you needed the solution for, a few days later, until each one fits its budget.
 5. Take practice exams 4, 5 and 6 in order, each on freshly reset clusters and with its 2-hour clock. Leave a few days between them, and aim for 80 points or more on exam 6 inside the time.
 

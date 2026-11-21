@@ -8,13 +8,13 @@ The real exam gives you 2 hours for 15 to 20 tasks, and this practice exam gives
 
 ## Rules
 
-1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./platform-engineering/practice-exam.sh setup 1`. In the test run, the reset took 45 seconds and the setup 27 seconds, because the nodes already had the images; on a new cluster the first run also downloads them.
+1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./platform-engineering/practice-exam.sh setup 1`. In the test run, the reset took between 42 and 50 seconds and the setup 6 seconds, because the nodes already had the images; on a new cluster the first run also downloads them.
 2. The clock starts when `setup.sh` ends, because it writes the start time, and `score.sh` prints the minutes since then and flags a run over 120 minutes.
-3. Work only on `cks-cp`, in a root shell from `orb -m cks-cp` and `sudo -i`, and use only the documentation the exam allows: kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
+3. Work only on `practice-control-plane`, in the root shell that `./lab.sh practice shell` opens, and use only the documentation the exam allows: kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
 4. Don't open the solutions while the timer runs, because the score only means something when you worked without them.
 5. When time is up, score from your Mac with `./platform-engineering/practice-exam.sh score 1`, or score single tasks with `./platform-engineering/practice-exam.sh score 1 4 9`.
 
-Task files sit in `/opt/ckad/m1/N` on `cks-cp`, where N is the task's number. Every task names its namespace, and the namespaces already exist.
+Task files sit in `/opt/apps/m1/N` on `practice-control-plane`, where N is the task's number. Every task names its namespace, and the namespaces already exist.
 
 ## Tasks
 
@@ -39,17 +39,17 @@ Task files sit in `/opt/ckad/m1/N` on `cks-cp`, where N is the task's number. Ev
 
 ### Task 1: Build, push and run an image (8 points)
 
-> `/opt/ckad/m1/1` holds a Dockerfile. Build it as `registry.ckad:5000/ticker:1.0`, push it, and also save it to `/opt/ckad/m1/1/ticker.tar`. Then run it as Deployment `ticker` with 2 replicas in namespace `k1-build`.
+> `/opt/apps/m1/1` holds a Dockerfile. Build it as `registry.practice:5000/ticker:1.0`, push it, and also save it to `/opt/apps/m1/1/ticker.tar`. Then run it as Deployment `ticker` with 2 replicas in namespace `k1-build`.
 
 <details>
 <summary>Solution</summary>
 
 ```bash
-cd /opt/ckad/m1/1
-podman build -t registry.ckad:5000/ticker:1.0 .
-podman push registry.ckad:5000/ticker:1.0
-podman save -o ticker.tar registry.ckad:5000/ticker:1.0
-k -n k1-build create deploy ticker --image=registry.ckad:5000/ticker:1.0 --replicas=2
+cd /opt/apps/m1/1
+podman build -t registry.practice:5000/ticker:1.0 .
+podman push registry.practice:5000/ticker:1.0
+podman save -o ticker.tar registry.practice:5000/ticker:1.0
+k -n k1-build create deploy ticker --image=registry.practice:5000/ticker:1.0 --replicas=2
 k -n k1-build logs deploy/ticker
 ```
 
@@ -59,7 +59,7 @@ The image's `WORKDIR /app` makes `ticker.sh` a path relative to `/app`, which is
 
 ### Task 2: A log sidecar (6 points)
 
-> `/opt/ckad/m1/2/audit.yaml` describes pod `audit` in namespace `k1-pods`, whose container `app` writes to `/var/log/audit.log`. Add a native sidecar `log-tail` (image `busybox:1.36`) that runs `tail -F /var/log/audit.log`, with an emptyDir volume shared by both containers at `/var/log`, and create the pod.
+> `/opt/apps/m1/2/audit.yaml` describes pod `audit` in namespace `k1-pods`, whose container `app` writes to `/var/log/audit.log`. Add a native sidecar `log-tail` (image `busybox:1.36`) that runs `tail -F /var/log/audit.log`, with an emptyDir volume shared by both containers at `/var/log`, and create the pod.
 
 <details>
 <summary>Solution</summary>
@@ -83,7 +83,7 @@ spec:
     emptyDir: {}
 ```
 
-Then `k apply -f /opt/ckad/m1/2/audit.yaml` and `k -n k1-pods logs audit -c log-tail`.
+Then `k apply -f /opt/apps/m1/2/audit.yaml` and `k -n k1-pods logs audit -c log-tail`.
 
 </details>
 
@@ -123,7 +123,7 @@ k -n k1-batch create job report-now --from=cronjob/report
 
 ### Task 4: Update, then roll back (6 points)
 
-> Deployment `store` in namespace `k1-roll` runs `nginx:1.27-alpine`. Update it to `nginx:1.28-alpine` with the change cause `image 1.28`, save its rollout history to `/opt/ckad/m1/4/history.txt`, then roll it back to the previous version.
+> Deployment `store` in namespace `k1-roll` runs `nginx:1.27-alpine`. Update it to `nginx:1.28-alpine` with the change cause `image 1.28`, save its rollout history to `/opt/apps/m1/4/history.txt`, then roll it back to the previous version.
 
 <details>
 <summary>Solution</summary>
@@ -132,8 +132,8 @@ k -n k1-batch create job report-now --from=cronjob/report
 k -n k1-roll set image deploy/store nginx=nginx:1.28-alpine
 k -n k1-roll annotate deploy store kubernetes.io/change-cause='image 1.28'
 k -n k1-roll rollout status deploy store
-mkdir -p /opt/ckad/m1/4
-k -n k1-roll rollout history deploy store > /opt/ckad/m1/4/history.txt
+mkdir -p /opt/apps/m1/4
+k -n k1-roll rollout history deploy store > /opt/apps/m1/4/history.txt
 k -n k1-roll rollout undo deploy store
 ```
 
@@ -154,14 +154,14 @@ Copy `checkout-v1` with `k -n k1-canary get deploy checkout-v1 -o yaml`, rename 
 
 ### Task 6: A Helm release (6 points)
 
-> In namespace `k1-helm`, install chart `oci://registry.ckad:5000/charts/webapp` version 0.2.0 as release `catalog`, with the values in `/opt/ckad/m1/6/values.yaml` and, on top, `image.pullPolicy=Always`.
+> In namespace `k1-helm`, install chart `oci://registry.practice:5000/charts/webapp` version 0.2.0 as release `catalog`, with the values in `/opt/apps/m1/6/values.yaml` and, on top, `image.pullPolicy=Always`.
 
 <details>
 <summary>Solution</summary>
 
 ```bash
-helm -n k1-helm install catalog oci://registry.ckad:5000/charts/webapp --version 0.2.0 --plain-http \
-  -f /opt/ckad/m1/6/values.yaml --set image.pullPolicy=Always
+helm -n k1-helm install catalog oci://registry.practice:5000/charts/webapp --version 0.2.0 --plain-http \
+  -f /opt/apps/m1/6/values.yaml --set image.pullPolicy=Always
 helm -n k1-helm get values catalog
 ```
 
@@ -171,7 +171,7 @@ helm -n k1-helm get values catalog
 
 ### Task 7: A Kustomize overlay (6 points)
 
-> `/opt/ckad/m1/7/base` holds Deployment `frontend`. Create an overlay in `/opt/ckad/m1/7/overlays/qa` that deploys it to namespace `k1-kust` as `qa-frontend` with 2 replicas, the label `stage=qa` on the pods, and a generated ConfigMap `frontend-settings` with `STAGE=qa` that the container reads with `envFrom`. Apply it.
+> `/opt/apps/m1/7/base` holds Deployment `frontend`. Create an overlay in `/opt/apps/m1/7/overlays/qa` that deploys it to namespace `k1-kust` as `qa-frontend` with 2 replicas, the label `stage=qa` on the pods, and a generated ConfigMap `frontend-settings` with `STAGE=qa` that the container reads with `envFrom`. Apply it.
 
 <details>
 <summary>Solution</summary>
@@ -204,7 +204,7 @@ patches:
     name: frontend
 ```
 
-`k apply -k /opt/ckad/m1/7/overlays/qa`. Kustomize rewrites the reference `frontend-settings` to the generated name with prefix and hash, such as `qa-frontend-settings-6k2h8f9c4t`.
+`k apply -k /opt/apps/m1/7/overlays/qa`. Kustomize rewrites the reference `frontend-settings` to the generated name with prefix and hash, such as `qa-frontend-settings-6k2h8f9c4t`.
 
 </details>
 
@@ -232,16 +232,16 @@ Add both with `k -n k1-probe edit deploy api` under the container, then `k -n k1
 
 ### Task 9: Why the pod crashes (5 points)
 
-> In namespace `k1-logs`, one Deployment's pod keeps crashing. Write its error line, the one that starts with `ERROR`, to `/opt/ckad/m1/9/error.txt`, and the exit code of its last crash to `/opt/ckad/m1/9/exit-code.txt`.
+> In namespace `k1-logs`, one Deployment's pod keeps crashing. Write its error line, the one that starts with `ERROR`, to `/opt/apps/m1/9/error.txt`, and the exit code of its last crash to `/opt/apps/m1/9/exit-code.txt`.
 
 <details>
 <summary>Solution</summary>
 
 ```bash
 k -n k1-logs get pods
-mkdir -p /opt/ckad/m1/9
-k -n k1-logs logs deploy/importer --previous | grep ERROR > /opt/ckad/m1/9/error.txt
-k -n k1-logs get pod -l app=importer -o jsonpath='{.items[0].status.containerStatuses[0].lastState.terminated.exitCode}' > /opt/ckad/m1/9/exit-code.txt
+mkdir -p /opt/apps/m1/9
+k -n k1-logs logs deploy/importer --previous | grep ERROR > /opt/apps/m1/9/error.txt
+k -n k1-logs get pod -l app=importer -o jsonpath='{.items[0].status.containerStatuses[0].lastState.terminated.exitCode}' > /opt/apps/m1/9/exit-code.txt
 ```
 
 `k describe pod` shows the same exit code under `Last State: Terminated`. When the pod sits in `Error`, use `k logs` without `--previous`, as [module 35](35-observing-and-debugging-applications.md#concept-logs-events-and-metrics) explains.
@@ -250,14 +250,14 @@ k -n k1-logs get pod -l app=importer -o jsonpath='{.items[0].status.containerSta
 
 ### Task 10: The hungriest pod (4 points)
 
-> Write the name of the pod in namespace `k1-top` that uses the most memory into `/opt/ckad/m1/10/pod.txt`.
+> Write the name of the pod in namespace `k1-top` that uses the most memory into `/opt/apps/m1/10/pod.txt`.
 
 <details>
 <summary>Solution</summary>
 
 ```bash
 k -n k1-top top pod --sort-by=memory
-mkdir -p /opt/ckad/m1/10 && echo large > /opt/ckad/m1/10/pod.txt
+mkdir -p /opt/apps/m1/10 && echo large > /opt/apps/m1/10/pod.txt
 ```
 
 Each pod writes a file into an emptyDir with `medium: Memory`, and memory-backed files count as the container's memory, so `large` shows about 96Mi.
@@ -373,7 +373,7 @@ k auth can-i watch configmaps -n k1-rbac --as=system:serviceaccount:k1-rbac:conf
 ```bash
 k -n k1-web expose deploy docs --port=80 --target-port=8080
 k -n k1-web create ingress docs --class=nginx --rule='docs.k1.local/*=docs:80'
-curl -s -H 'Host: docs.k1.local' http://$(k get node cks-w1 -o jsonpath='{.status.addresses[0].address}'):30080/
+curl -s -H 'Host: docs.k1.local' http://$(k get node practice-worker -o jsonpath='{.status.addresses[0].address}'):30080/
 ```
 
 </details>

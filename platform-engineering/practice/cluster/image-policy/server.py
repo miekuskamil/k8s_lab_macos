@@ -3,7 +3,7 @@
 
 The API server POSTs an ImageReview for every new pod. This server allows the pod
 only if every image comes from an allowed registry prefix and has a tag other than
-"latest" (or a digest). It listens on https://localhost:8443 on cks-cp.
+"latest" (or a digest). It listens on https://localhost:8443 on $CP.
 
 Allowed prefixes come from /etc/image-policy/allowed-registries, one per line.
 """

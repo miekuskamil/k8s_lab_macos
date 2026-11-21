@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs as root on cks-cp. Installs the image policy back end as a systemd service,
+# Runs as root on the control plane. Installs the image policy back end as a systemd service,
 # with its own CA and a server certificate for "localhost", and writes the kubeconfig
 # the API server needs to reach it. It doesn't switch the API server over: that is the task.
 set -euo pipefail
@@ -21,7 +21,7 @@ fi
 
 cat > /etc/systemd/system/image-policy.service <<'EOF'
 [Unit]
-Description=ImagePolicyWebhook back end for the CKS practice cluster
+Description=ImagePolicyWebhook back end for the practice cluster
 After=network-online.target
 
 [Service]

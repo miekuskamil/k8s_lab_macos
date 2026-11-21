@@ -114,7 +114,7 @@ RBAC has no deny rules because a list of grants is easy to audit: reading the bi
 
 ## Task 1: A ConfigMap from a file and a literal
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 36.1
@@ -125,7 +125,7 @@ shop.cache=on
 ```
 
 > In namespace `config`:
-> 1. Create a ConfigMap `app-config` with the file `/opt/ckad/4.1/app.properties` as the key `app.properties`, and the key `LOG_LEVEL` with the value `debug`.
+> 1. Create a ConfigMap `app-config` with the file `/opt/apps/4.1/app.properties` as the key `app.properties`, and the key `LOG_LEVEL` with the value `debug`.
 > 2. Create a pod `app` (image `busybox:1.36`, command `sleep 1d`) that gets `LOG_LEVEL` as an environment variable from the ConfigMap and sees the whole ConfigMap as files in `/etc/app`.
 
 <details>
@@ -155,15 +155,15 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k -n config create cm app-config --from-file=/opt/ckad/4.1/app.properties --from-literal=LOG_LEVEL=debug
+root@practice-control-plane:~# k -n config create cm app-config --from-file=/opt/apps/4.1/app.properties --from-literal=LOG_LEVEL=debug
 configmap/app-config created
-root@cks-cp:~# k apply -f /opt/ckad/4.1/pod.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/4.1/pod.yaml
 pod/app created
-root@cks-cp:~# k -n config wait pod app --for=condition=Ready
+root@practice-control-plane:~# k -n config wait pod app --for=condition=Ready
 pod/app condition met
-root@cks-cp:~# k -n config exec app -- printenv LOG_LEVEL
+root@practice-control-plane:~# k -n config exec app -- printenv LOG_LEVEL
 debug
-root@cks-cp:~# k -n config exec app -- ls /etc/app
+root@practice-control-plane:~# k -n config exec app -- ls /etc/app
 LOG_LEVEL
 app.properties
 ```
@@ -183,7 +183,7 @@ $ ./platform-engineering/task.sh check 36.1
 
 ## Task 2: A Secret as an environment variable and as a file
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 > In namespace `secrets`:
 > 1. Create a Secret `db-credentials` with `user=admin` and `password=S3cr3t-pw`.
@@ -221,15 +221,15 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k -n secrets create secret generic db-credentials --from-literal=user=admin --from-literal=password=S3cr3t-pw
+root@practice-control-plane:~# k -n secrets create secret generic db-credentials --from-literal=user=admin --from-literal=password=S3cr3t-pw
 secret/db-credentials created
-root@cks-cp:~# k apply -f /opt/ckad/4.2/pod.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/4.2/pod.yaml
 pod/db-client created
-root@cks-cp:~# k -n secrets wait pod db-client --for=condition=Ready
+root@practice-control-plane:~# k -n secrets wait pod db-client --for=condition=Ready
 pod/db-client condition met
-root@cks-cp:~# k -n secrets exec db-client -- printenv DB_USER
+root@practice-control-plane:~# k -n secrets exec db-client -- printenv DB_USER
 admin
-root@cks-cp:~# k -n secrets exec db-client -- ls -lL /etc/db
+root@practice-control-plane:~# k -n secrets exec db-client -- ls -lL /etc/db
 total 4
 -r--------    1 root     root             9 Nov 20 10:47 password
 ```
@@ -250,7 +250,7 @@ $ ./platform-engineering/task.sh check 36.2
 
 ## Task 3: New configuration in an immutable ConfigMap
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 36.3
@@ -271,19 +271,19 @@ deployment.apps/web   2/2     2            2           1s
 `kubectl create cm` has no flag for `immutable`, so generate the YAML and add the field at the top level. `kubectl set env --from` then points the variable at the new ConfigMap, which changes the template and rolls out new pods:
 
 ```console
-root@cks-cp:~# k -n config-roll create cm web-config-v2 --from-literal=COLOR=green $do > /opt/ckad/4.3-cm.yaml
-root@cks-cp:~# echo 'immutable: true' >> /opt/ckad/4.3-cm.yaml
-root@cks-cp:~# k apply -f /opt/ckad/4.3-cm.yaml
+root@practice-control-plane:~# k -n config-roll create cm web-config-v2 --from-literal=COLOR=green $do > /opt/apps/4.3-cm.yaml
+root@practice-control-plane:~# echo 'immutable: true' >> /opt/apps/4.3-cm.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/4.3-cm.yaml
 configmap/web-config-v2 created
-root@cks-cp:~# k -n config-roll set env deploy/web --keys=COLOR --from=configmap/web-config-v2
+root@practice-control-plane:~# k -n config-roll set env deploy/web --keys=COLOR --from=configmap/web-config-v2
 deployment.apps/web env updated
-root@cks-cp:~# k -n config-roll rollout status deploy web
+root@practice-control-plane:~# k -n config-roll rollout status deploy web
 ...
 deployment "web" successfully rolled out
-root@cks-cp:~# k -n config-roll logs -l app=web --tail=1
+root@practice-control-plane:~# k -n config-roll logs -l app=web --tail=1
 color=green
 color=green
-root@cks-cp:~# k -n config-roll patch cm web-config-v2 -p '{"data":{"COLOR":"blue"}}'
+root@practice-control-plane:~# k -n config-roll patch cm web-config-v2 -p '{"data":{"COLOR":"blue"}}'
 The ConfigMap "web-config-v2" is invalid: data: Forbidden: field is immutable when `immutable` is set
 ```
 
@@ -303,7 +303,7 @@ $ ./platform-engineering/task.sh check 36.3
 
 ## Task 4: A Deployment that a quota keeps from starting
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 36.4
@@ -320,9 +320,9 @@ worker   0/3     0            0           3s
 No pod exists, so the reason sits in the events of the ReplicaSet that tried to create them:
 
 ```console
-root@cks-cp:~# k -n quota-team events --types=Warning | tail -1
+root@practice-control-plane:~# k -n quota-team events --types=Warning | tail -1
 11s (x6 over 91s)   Warning   FailedCreate   ReplicaSet/worker-84fb7df9d5   (combined from similar events): Error creating: pods "worker-84fb7df9d5-2kx5g" is forbidden: failed quota: compute: must specify limits.cpu for: busybox; limits.memory for: busybox; requests.cpu for: busybox; requests.memory for: busybox
-root@cks-cp:~# k -n quota-team describe quota compute
+root@practice-control-plane:~# k -n quota-team describe quota compute
 Name:            compute
 Namespace:       quota-team
 Resource         Used  Hard
@@ -331,12 +331,12 @@ limits.cpu       0     1
 limits.memory    0     1Gi
 requests.cpu     0     500m
 requests.memory  0     512Mi
-root@cks-cp:~# k -n quota-team set resources deploy worker --requests=cpu=100m,memory=64Mi --limits=cpu=200m,memory=128Mi
+root@practice-control-plane:~# k -n quota-team set resources deploy worker --requests=cpu=100m,memory=64Mi --limits=cpu=200m,memory=128Mi
 deployment.apps/worker resource requirements updated
-root@cks-cp:~# k -n quota-team rollout status deploy worker
+root@practice-control-plane:~# k -n quota-team rollout status deploy worker
 ...
 deployment "worker" successfully rolled out
-root@cks-cp:~# k -n quota-team describe quota compute | tail -5
+root@practice-control-plane:~# k -n quota-team describe quota compute | tail -5
 --------         ----   ----
 limits.cpu       600m   1
 limits.memory    384Mi  1Gi
@@ -359,7 +359,7 @@ $ ./platform-engineering/task.sh check 36.4
 
 ## Task 5: Defaults for every container with a LimitRange
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 > In namespace `limits`, create a LimitRange `container-defaults` that gives every container a default limit of 200m CPU and 128Mi memory, a default request of 50m CPU and 64Mi memory, and allows at most 256Mi memory. Then create a pod `plain` (image `busybox:1.36`, command `sleep 1d`) without any resources and show that it got the defaults.
 
@@ -386,13 +386,13 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k apply -f /opt/ckad/4.5/limitrange.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/4.5/limitrange.yaml
 limitrange/container-defaults created
-root@cks-cp:~# k -n limits run plain --image=busybox:1.36 -- sleep 1d
+root@practice-control-plane:~# k -n limits run plain --image=busybox:1.36 -- sleep 1d
 pod/plain created
-root@cks-cp:~# k -n limits get pod plain -o jsonpath='{.spec.containers[0].resources}{"\n"}'
+root@practice-control-plane:~# k -n limits get pod plain -o jsonpath='{.spec.containers[0].resources}{"\n"}'
 {"limits":{"cpu":"200m","memory":"128Mi"},"requests":{"cpu":"50m","memory":"64Mi"}}
-root@cks-cp:~# k -n limits describe limitrange container-defaults
+root@practice-control-plane:~# k -n limits describe limitrange container-defaults
 Name:       container-defaults
 Namespace:  limits
 Type        Resource  Min  Max    Default Request  Default Limit  Max Limit/Request Ratio
@@ -416,11 +416,11 @@ $ ./platform-engineering/task.sh check 36.5
 
 ## Task 6: A ResourceQuota for a team
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 > In namespace `team-a`:
 > 1. Create a ResourceQuota `team-a-quota` that allows at most 5 pods, 1 CPU and 1Gi memory of requests, 2 CPUs and 2Gi memory of limits, and 4 Services.
-> 2. Scale Deployment `filler` to 6 replicas, and write the event that explains why only 5 run into `/opt/ckad/4.6/reason.txt`.
+> 2. Scale Deployment `filler` to 6 replicas, and write the event that explains why only 5 run into `/opt/apps/4.6/reason.txt`.
 
 <details>
 <summary>Solution</summary>
@@ -428,14 +428,14 @@ $ ./platform-engineering/task.sh check 36.5
 `kubectl create quota` takes every limit in one `--hard` list:
 
 ```console
-root@cks-cp:~# k -n team-a create quota team-a-quota --hard=pods=5,requests.cpu=1,requests.memory=1Gi,limits.cpu=2,limits.memory=2Gi,services=4
+root@practice-control-plane:~# k -n team-a create quota team-a-quota --hard=pods=5,requests.cpu=1,requests.memory=1Gi,limits.cpu=2,limits.memory=2Gi,services=4
 resourcequota/team-a-quota created
-root@cks-cp:~# k -n team-a scale deploy filler --replicas=6
+root@practice-control-plane:~# k -n team-a scale deploy filler --replicas=6
 deployment.apps/filler scaled
-root@cks-cp:~# k -n team-a events --types=Warning | grep 'exceeded quota' | tail -1 > /opt/ckad/4.6/reason.txt
-root@cks-cp:~# cat /opt/ckad/4.6/reason.txt
+root@practice-control-plane:~# k -n team-a events --types=Warning | grep 'exceeded quota' | tail -1 > /opt/apps/4.6/reason.txt
+root@practice-control-plane:~# cat /opt/apps/4.6/reason.txt
 0s          Warning   FailedCreate   ReplicaSet/filler-7c76885b6b   Error creating: pods "filler-7c76885b6b-4q9jj" is forbidden: exceeded quota: team-a-quota, requested: pods=1, used: pods=5, limited: pods=5
-root@cks-cp:~# k -n team-a describe quota team-a-quota
+root@practice-control-plane:~# k -n team-a describe quota team-a-quota
 Name:            team-a-quota
 Namespace:       team-a
 Resource         Used   Hard
@@ -457,13 +457,13 @@ $ ./platform-engineering/task.sh check 36.6
 == check task 36.6
   PASS  ResourceQuota team-a-quota: 5 pods, 1 CPU and 1Gi requested, 2 CPU and 2Gi limits, 4 Services
   PASS  Deployment filler asks for 6 replicas and runs 5
-  PASS  /opt/ckad/4.6/reason.txt holds the quota's refusal
+  PASS  /opt/apps/4.6/reason.txt holds the quota's refusal
 == task 36.6: 3 passed, 0 failed
 ```
 
 ## Task 7: ServiceAccounts and their tokens
 
-**Time budget:** 7 minutes. **Host:** `cks-cp`.
+**Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 36.7
@@ -479,30 +479,30 @@ serviceaccount/default   5s
 > In namespace `sa-apps`:
 > 1. Create a ServiceAccount `reporter` and make Deployment `reporter` run as it.
 > 2. Deployment `static-site` never calls the API; make sure its pods mount no token at all.
-> 3. Create a token for `reporter`, valid for 2 hours, in `/opt/ckad/4.7/token.txt`, and add it to root's kubeconfig as the user `ckad-reporter`.
+> 3. Create a token for `reporter`, valid for 2 hours, in `/opt/apps/4.7/token.txt`, and add it to root's kubeconfig as the user `ckad-reporter`.
 
 <details>
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# k -n sa-apps create sa reporter
+root@practice-control-plane:~# k -n sa-apps create sa reporter
 serviceaccount/reporter created
-root@cks-cp:~# k -n sa-apps set serviceaccount deploy reporter reporter
+root@practice-control-plane:~# k -n sa-apps set serviceaccount deploy reporter reporter
 deployment.apps/reporter serviceaccount updated
-root@cks-cp:~# k -n sa-apps patch deploy static-site -p '{"spec":{"template":{"spec":{"automountServiceAccountToken":false}}}}'
+root@practice-control-plane:~# k -n sa-apps patch deploy static-site -p '{"spec":{"template":{"spec":{"automountServiceAccountToken":false}}}}'
 deployment.apps/static-site patched
-root@cks-cp:~# k -n sa-apps create token reporter --duration=2h > /opt/ckad/4.7/token.txt
-root@cks-cp:~# k config set-credentials ckad-reporter --token=$(cat /opt/ckad/4.7/token.txt)
+root@practice-control-plane:~# k -n sa-apps create token reporter --duration=2h > /opt/apps/4.7/token.txt
+root@practice-control-plane:~# k config set-credentials ckad-reporter --token=$(cat /opt/apps/4.7/token.txt)
 User "ckad-reporter" set.
-root@cks-cp:~# k --user=ckad-reporter auth whoami
+root@practice-control-plane:~# k --user=ckad-reporter auth whoami
 ATTRIBUTE                                           VALUE
 Username                                            system:serviceaccount:sa-apps:reporter
 UID                                                 3767b2a5-00d8-4ef3-9ce0-1180047f37d8
 Groups                                              [system:serviceaccounts system:serviceaccounts:sa-apps system:authenticated]
 Extra: authentication.kubernetes.io/credential-id   [JTI=b8f60952-db4a-443b-8117-b163971a0cb0]
-root@cks-cp:~# k --user=ckad-reporter -n sa-apps get pods
+root@practice-control-plane:~# k --user=ckad-reporter -n sa-apps get pods
 Error from server (Forbidden): pods is forbidden: User "system:serviceaccount:sa-apps:reporter" cannot list resource "pods" in API group "" in the namespace "sa-apps"
-root@cks-cp:~# k -n sa-apps exec deploy/static-site -- ls /var/run/secrets/kubernetes.io/serviceaccount
+root@practice-control-plane:~# k -n sa-apps exec deploy/static-site -- ls /var/run/secrets/kubernetes.io/serviceaccount
 ls: /var/run/secrets/kubernetes.io/serviceaccount: No such file or directory
 command terminated with exit code 1
 ```
@@ -517,14 +517,14 @@ $ ./platform-engineering/task.sh check 36.7
   PASS  Deployment reporter runs as ServiceAccount reporter
   PASS  the reporter pod's token names system:serviceaccount:sa-apps:reporter
   PASS  static-site's pods mount no token
-  PASS  /opt/ckad/4.7/token.txt authenticates as reporter
+  PASS  /opt/apps/4.7/token.txt authenticates as reporter
   PASS  the kubeconfig has a user ckad-reporter with that token
 == task 36.7: 5 passed, 0 failed
 ```
 
 ## Task 8: A Role for a CI pipeline
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 > In namespace `ci`, create a ServiceAccount `deployer` that may get, list, watch, create, update and patch Deployments, and get and list pods and their logs, in `ci` only. It must not delete Deployments or read Secrets.
 
@@ -534,9 +534,9 @@ $ ./platform-engineering/task.sh check 36.7
 `kubectl create role` writes one rule per command, so create the role for Deployments, then add a second rule for pods with `k -n ci edit role deployer`:
 
 ```console
-root@cks-cp:~# k -n ci create sa deployer
+root@practice-control-plane:~# k -n ci create sa deployer
 serviceaccount/deployer created
-root@cks-cp:~# k -n ci create role deployer --verb=get,list,watch,create,update,patch --resource=deployments
+root@practice-control-plane:~# k -n ci create role deployer --verb=get,list,watch,create,update,patch --resource=deployments
 role.rbac.authorization.k8s.io/deployer created
 ```
 
@@ -551,13 +551,13 @@ rules:
 ```
 
 ```console
-root@cks-cp:~# k -n ci create rolebinding deployer --role=deployer --serviceaccount=ci:deployer
+root@practice-control-plane:~# k -n ci create rolebinding deployer --role=deployer --serviceaccount=ci:deployer
 rolebinding.rbac.authorization.k8s.io/deployer created
-root@cks-cp:~# k auth can-i patch deployments -n ci --as=system:serviceaccount:ci:deployer
+root@practice-control-plane:~# k auth can-i patch deployments -n ci --as=system:serviceaccount:ci:deployer
 yes
-root@cks-cp:~# k auth can-i get pods/log -n ci --as=system:serviceaccount:ci:deployer
+root@practice-control-plane:~# k auth can-i get pods/log -n ci --as=system:serviceaccount:ci:deployer
 yes
-root@cks-cp:~# k auth can-i delete deployments -n ci --as=system:serviceaccount:ci:deployer
+root@practice-control-plane:~# k auth can-i delete deployments -n ci --as=system:serviceaccount:ci:deployer
 no
 ```
 
@@ -577,7 +577,7 @@ $ ./platform-engineering/task.sh check 36.8
 
 ## Task 9: The logs say 403
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 36.9
@@ -593,14 +593,14 @@ $ ./platform-engineering/task.sh setup 36.9
 A 403 means the API server knows who calls and refuses the request, so the fix is RBAC, in the namespace whose pods the watcher reads:
 
 ```console
-root@cks-cp:~# k -n observer logs watcher --tail=2
+root@practice-control-plane:~# k -n observer logs watcher --tail=2
 11:02:42 wget: server returned error: HTTP/1.1 403 Forbidden
 11:02:47 wget: server returned error: HTTP/1.1 403 Forbidden
-root@cks-cp:~# k -n shop-front create role pod-reader --verb=get,list --resource=pods
+root@practice-control-plane:~# k -n shop-front create role pod-reader --verb=get,list --resource=pods
 role.rbac.authorization.k8s.io/pod-reader created
-root@cks-cp:~# k -n shop-front create rolebinding watcher-reads-pods --role=pod-reader --serviceaccount=observer:watcher
+root@practice-control-plane:~# k -n shop-front create rolebinding watcher-reads-pods --role=pod-reader --serviceaccount=observer:watcher
 rolebinding.rbac.authorization.k8s.io/watcher-reads-pods created
-root@cks-cp:~# k -n observer logs watcher --tail=1
+root@practice-control-plane:~# k -n observer logs watcher --tail=1
 11:02:52 listed 2 running pods in shop-front
 ```
 
@@ -619,7 +619,7 @@ $ ./platform-engineering/task.sh check 36.9
 
 ## Task 10: A security context, field by field
 
-**Time budget:** 7 minutes. **Host:** `cks-cp`.
+**Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 36.10
@@ -658,17 +658,17 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k -n secure patch deploy api --patch-file /opt/ckad/4.10/patch.yaml
+root@practice-control-plane:~# k -n secure patch deploy api --patch-file /opt/apps/4.10/patch.yaml
 deployment.apps/api patched
-root@cks-cp:~# k -n secure rollout status deploy api
+root@practice-control-plane:~# k -n secure rollout status deploy api
 ...
 deployment "api" successfully rolled out
-root@cks-cp:~# k -n secure exec deploy/api -- id
+root@practice-control-plane:~# k -n secure exec deploy/api -- id
 uid=1000 gid=3000 groups=2000,3000
-root@cks-cp:~# k -n secure exec deploy/api -- touch /etc/x
+root@practice-control-plane:~# k -n secure exec deploy/api -- touch /etc/x
 touch: /etc/x: Read-only file system
 command terminated with exit code 1
-root@cks-cp:~# k -n secure exec deploy/api -- ls -ln /tmp
+root@practice-control-plane:~# k -n secure exec deploy/api -- ls -ln /tmp
 total 4
 -rw-r--r--    1 1000     2000            29 Nov 20 10:52 heartbeat
 ```
@@ -688,7 +688,7 @@ $ ./platform-engineering/task.sh check 36.10
 
 ## Task 11: Use a CustomResourceDefinition
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 36.11
@@ -697,9 +697,9 @@ backups.ckad.io                                         Namespaced   v1(storage)
 ```
 
 > The cluster has a CRD for `Backup` objects in the group `ckad.io`.
-> 1. Find the highest `retentionDays` its schema allows and write the number into `/opt/ckad/4.11/max-retention.txt`.
+> 1. Find the highest `retentionDays` its schema allows and write the number into `/opt/apps/4.11/max-retention.txt`.
 > 2. In namespace `crd-demo`, create a Backup `nightly` that runs at `0 2 * * *`, copies the database `postgres`, and keeps backups for 7 days.
-> 3. Write the list of Backups in every namespace into `/opt/ckad/4.11/backups.txt`.
+> 3. Write the list of Backups in every namespace into `/opt/apps/4.11/backups.txt`.
 
 <details>
 <summary>Solution</summary>
@@ -707,10 +707,10 @@ backups.ckad.io                                         Namespaced   v1(storage)
 Discover the type first: its name, short name and version, then its fields:
 
 ```console
-root@cks-cp:~# k api-resources --api-group=ckad.io
+root@practice-control-plane:~# k api-resources --api-group=ckad.io
 NAME      SHORTNAMES   APIVERSION   NAMESPACED   KIND
 backups   bk           ckad.io/v1   true         Backup
-root@cks-cp:~# k explain backup.spec
+root@practice-control-plane:~# k explain backup.spec
 GROUP:      ckad.io
 KIND:       Backup
 VERSION:    v1
@@ -727,9 +727,9 @@ FIELDS:
   target	<string> -required-
     The database the backup copies.
 
-root@cks-cp:~# k get crd backups.ckad.io -o jsonpath='{.spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.retentionDays}{"\n"}'
+root@practice-control-plane:~# k get crd backups.ckad.io -o jsonpath='{.spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.retentionDays}{"\n"}'
 {"description":"How many days a backup is kept.","maximum":30,"minimum":1,"type":"integer"}
-root@cks-cp:~# echo 30 > /opt/ckad/4.11/max-retention.txt
+root@practice-control-plane:~# echo 30 > /opt/apps/4.11/max-retention.txt
 ```
 
 `kubectl explain` shows the descriptions but not the limits, so the schema itself in the CRD answers part 1. Then write the object with the field names that `explain` listed:
@@ -747,10 +747,10 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k apply -f /opt/ckad/4.11/nightly.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/4.11/nightly.yaml
 backup.ckad.io/nightly created
-root@cks-cp:~# k get backups -A > /opt/ckad/4.11/backups.txt
-root@cks-cp:~# cat /opt/ckad/4.11/backups.txt
+root@practice-control-plane:~# k get backups -A > /opt/apps/4.11/backups.txt
+root@practice-control-plane:~# cat /opt/apps/4.11/backups.txt
 NAMESPACE   NAME      SCHEDULE    TARGET      KEEP
 crd-demo    nightly   0 2 * * *   postgres    7
 crd-other   weekly    0 3 * * 0   orders-db   30
@@ -764,14 +764,14 @@ The columns `SCHEDULE`, `TARGET` and `KEEP` come from the CRD's `additionalPrint
 $ ./platform-engineering/task.sh check 36.11
 == check task 36.11
   PASS  Backup nightly in crd-demo: 0 2 * * *, target postgres, kept 7 days
-  PASS  /opt/ckad/4.11/backups.txt lists the Backups of every namespace
-  PASS  /opt/ckad/4.11/max-retention.txt holds the largest retentionDays allowed
+  PASS  /opt/apps/4.11/backups.txt lists the Backups of every namespace
+  PASS  /opt/apps/4.11/max-retention.txt holds the largest retentionDays allowed
 == task 36.11: 3 passed, 0 failed
 ```
 
 ## Task 12: A namespace that enforces the restricted standard
 
-**Time budget:** 7 minutes. **Host:** `cks-cp`.
+**Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 36.12
@@ -789,7 +789,7 @@ web    0/1     0            0           3s
 The Deployment exists, so the API server accepted it, but its ReplicaSet fails to create pods, and the reason sits in the ReplicaSet's events:
 
 ```console
-root@cks-cp:~# k -n restricted-apps describe rs -l app=web | grep FailedCreate | tail -1
+root@practice-control-plane:~# k -n restricted-apps describe rs -l app=web | grep FailedCreate | tail -1
   Warning  FailedCreate  71s (x6 over 2m31s)  replicaset-controller  (combined from similar events): Error creating: pods "web-774b4f4598-7j8th" is forbidden: violates PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "busybox" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "busybox" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "busybox" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "busybox" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
 ```
 
@@ -813,12 +813,12 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k -n restricted-apps patch deploy web --patch-file /opt/ckad/4.12/patch.yaml
+root@practice-control-plane:~# k -n restricted-apps patch deploy web --patch-file /opt/apps/4.12/patch.yaml
 deployment.apps/web patched
-root@cks-cp:~# k -n restricted-apps rollout status deploy web
+root@practice-control-plane:~# k -n restricted-apps rollout status deploy web
 Waiting for deployment "web" rollout to finish: 0 of 1 updated replicas are available...
 deployment "web" successfully rolled out
-root@cks-cp:~# k -n restricted-apps exec deploy/web -- wget -qO- http://localhost:8080
+root@practice-control-plane:~# k -n restricted-apps exec deploy/web -- wget -qO- http://localhost:8080
 hello
 ```
 

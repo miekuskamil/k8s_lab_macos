@@ -6,12 +6,12 @@
 <rect x="40.0" y="150.0" width="300.0" height="220.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
 <rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
 <polyline points="57.5,181.0 76.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">cks-cp, or your browser</text>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">practice-control-plane, or a browser</text>
 <rect x="65.0" y="220.0" width="250.0" height="100.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
 <text x="190.0" y="262.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">curl</text>
 <text x="190.0" y="283.3" font-size="17.0" fill="#475569" text-anchor="middle">Host: shop.ckad.local</text>
 <rect x="380.0" y="150.0" width="1180.0" height="640.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
-<text x="1542.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">Node cks-w1</text>
+<text x="1542.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">Node practice-worker</text>
 <rect x="420.0" y="220.0" width="240.0" height="100.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
 <text x="540.0" y="262.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">NodePort 30080</text>
 <text x="540.0" y="283.3" font-size="17.0" fill="#475569" text-anchor="middle">kube-proxy</text>

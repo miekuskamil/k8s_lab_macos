@@ -2,7 +2,7 @@
 
 > New to a term here, like Lima or AppArmor? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-This domain sits outside the four levels, because its tasks need something the rest of the course never asks for: a Linux kernel that belongs to one machine. The practice cluster runs on OrbStack machines, which share one kernel with each other and with OrbStack's Docker engine. That kernel has no AppArmor and no WireGuard module, it refuses to load kernel modules from a machine, and Cilium would rewire the network of every machine at once if it loaded its programs there. So the seven tasks that change the kernel run on a virtual machine with a kernel of its own, and they sit together in one module.
+This domain sits outside the four levels, because its tasks need something the rest of the course never asks for: a Linux kernel that belongs to one machine. The practice cluster runs on two kind nodes, which are containers that share one kernel with each other and with every other container in the Docker engine. That kernel has no AppArmor and no WireGuard module, it refuses to load kernel modules from a container, and Cilium would rewire the network of every container at once if it loaded its programs there. So the seven tasks that change the kernel run on a virtual machine with a kernel of its own, and they sit together in one module.
 
 | Module | You learn | Tools you use |
 |---|---|---|
@@ -10,7 +10,7 @@ This domain sits outside the four levels, because its tasks need something the r
 
 Take module 44 after the module each task comes from: the Cilium tasks after [module 38](../2-intermediate/38-setting-up-a-secure-cluster.md), the kernel module task after [module 40](../3-advanced/40-hardening-nodes.md), the WireGuard task after [module 41](../3-advanced/41-hardening-workloads.md), and the AppArmor tasks after [module 43](../3-advanced/43-runtime-security-and-auditing.md). Practice exams 5 and 6 each hold one Cilium task and one AppArmor or kernel module task, so they need the VM as well.
 
-gVisor and Falco stay on the OrbStack cluster. gVisor runs its own user-space kernel inside the sandbox, and Falco only watches system calls, so neither needs a kernel to itself, and both passed their test runs on OrbStack.
+gVisor and Falco stay on the practice cluster. gVisor runs its own user-space kernel inside the sandbox, and Falco only watches system calls, so neither needs a kernel to itself, and both passed their test runs on kind.
 
 ## The VM you need
 

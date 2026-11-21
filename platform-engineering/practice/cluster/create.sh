@@ -1,34 +1,35 @@
 #!/usr/bin/env bash
-# Builds the practice cluster on two nodes, OrbStack machines by default:
-#   cks-cp  control plane (kubeadm, etcd, Calico), plus etcdctl, trivy, kube-bench, kubesec
-#   cks-w1  worker, plus gVisor (runsc) and Falco
+# Builds the practice cluster on two nodes. ./lab.sh practice up runs it.
+#   kind (the default)   two Docker containers, practice-control-plane and practice-worker: see kind/kind.sh
+#   orbstack or vms      two Linux machines, cks-cp and cks-w1, built below:
+#     cks-cp  control plane (kubeadm, etcd, Calico), plus etcdctl, trivy, kube-bench, kubesec
+#     cks-w1  worker, plus gVisor (runsc) and Falco
 # Safe to run again: every step skips what is already done.
 # Usage: ./platform-engineering/practice/cluster/create.sh
-#        CKS_PLATFORM=vms ./platform-engineering/practice/cluster/create.sh   on two Ubuntu 24.04 VMs over SSH (see platform.sh)
+#        PRACTICE_PLATFORM=orbstack ./platform-engineering/practice/cluster/create.sh   on two OrbStack machines
+#        PRACTICE_PLATFORM=vms ./platform-engineering/practice/cluster/create.sh        on two Ubuntu 24.04 VMs over SSH (see platform.sh)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
+. "$HERE/platform.sh"
+[ "$PRACTICE_PLATFORM" = kind ] && exec "$HERE/kind/kind.sh" create
 K8S_VERSION="${K8S_VERSION:-1.37.1}"
 CALICO_VERSION="${CALICO_VERSION:-3.32.3}"
 INGRESS_NGINX_VERSION="${INGRESS_NGINX_VERSION:-1.15.1}"
-CP=cks-cp
-W1=cks-w1
-. "$HERE/platform.sh"
 
 say() { printf '\n=== %s\n' "$*"; }
-on() { local m="$1"; shift; node_sh "$m" "$*"; }
 
 say "1/7 machines"
 for m in "$CP" "$W1"; do
-  if [ "$CKS_PLATFORM" = vms ]; then
+  if [ "$PRACTICE_PLATFORM" = vms ]; then
     # The VMs exist already. Each needs SSH, passwordless sudo and the node's name as hostname,
-    # because kubeadm names a node after its host and the tasks expect cks-cp and cks-w1.
-    on "$m" true </dev/null || { echo "no SSH to $m as $CKS_SSH_USER with passwordless sudo: $(node_shell_hint "$m")"; exit 1; }
+    # because kubeadm names a node after its host and the tasks use the names in $CP and $W1.
+    on "$m" true </dev/null || { echo "no SSH to $m as $PRACTICE_SSH_USER with passwordless sudo: $(node_shell_hint "$m")"; exit 1; }
     on "$m" "command -v cloud-init >/dev/null && cloud-init status --wait >/dev/null 2>&1
       if [ \"\$(hostname)\" != $m ]; then
         hostnamectl set-hostname $m
         grep -q ' $m\$' /etc/hosts || echo '127.0.1.1 $m' >> /etc/hosts
-        mkdir -p /etc/cloud/cloud.cfg.d && echo 'preserve_hostname: true' > /etc/cloud/cloud.cfg.d/99-cks-hostname.cfg
+        mkdir -p /etc/cloud/cloud.cfg.d && echo 'preserve_hostname: true' > /etc/cloud/cloud.cfg.d/99-practice-hostname.cfg
       fi
       echo \"$m is up: \$(. /etc/os-release; echo \$PRETTY_NAME), \$(dpkg --print-architecture), kernel \$(uname -r)\""
   elif orb list | awk '{print $1}' | grep -qx "$m"; then
@@ -50,7 +51,7 @@ for m in "$CP" "$W1"; do
 done
 
 say "3/7 kubeadm init on $CP"
-if [ "$CKS_PLATFORM" = vms ]; then
+if [ "$PRACTICE_PLATFORM" = vms ]; then
   # The address the node uses to reach the outside, whatever its network card is called.
   CP_IP="$(on "$CP" "ip -4 -o route get 1.1.1.1 | sed 's/.* src \([0-9.]*\).*/\1/'")"
 else
@@ -59,12 +60,12 @@ fi
 if on "$CP" "test -f /etc/kubernetes/admin.conf"; then
   echo "already initialised"
 else
-  sed -e "s/__CP_IP__/$CP_IP/g" -e "s/__K8S_VERSION__/$K8S_VERSION/" "$HERE/kubeadm-config.yaml" \
+  sed -e "s/__CP_IP__/$CP_IP/g" -e "s/__CP_NAME__/$CP/" -e "s/__K8S_VERSION__/$K8S_VERSION/" "$HERE/kubeadm-config.yaml" \
     | on "$CP" "mkdir -p /etc/kubeadm && cat > /etc/kubeadm/config.yaml && kubeadm init --config /etc/kubeadm/config.yaml >/var/log/kubeadm-init.log 2>&1 || { tail -30 /var/log/kubeadm-init.log; exit 1; }"
 fi
 # kubectl works for root and for the default user, like on an exam node.
 on "$CP" 'mkdir -p /root/.kube && cp /etc/kubernetes/admin.conf /root/.kube/config
-  H=$(getent passwd '"$CKS_NODE_USER"' | cut -d: -f6); mkdir -p "$H/.kube" && cp /etc/kubernetes/admin.conf "$H/.kube/config" && chown -R '"$CKS_NODE_USER:$CKS_NODE_USER"' "$H/.kube"
+  H=$(getent passwd '"$PRACTICE_NODE_USER"' | cut -d: -f6); mkdir -p "$H/.kube" && cp /etc/kubernetes/admin.conf "$H/.kube/config" && chown -R '"$PRACTICE_NODE_USER:$PRACTICE_NODE_USER"' "$H/.kube"
   grep -q "alias k=kubectl" /etc/bash.bashrc || printf "alias k=kubectl\nsource <(kubectl completion bash)\ncomplete -o default -F __start_kubectl k\nexport do=\"--dry-run=client -o yaml\"\n" >> /etc/bash.bashrc'
 
 say "4/7 Calico $CALICO_VERSION (enforces NetworkPolicy)"

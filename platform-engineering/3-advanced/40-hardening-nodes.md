@@ -67,7 +67,7 @@ The CIS benchmark for Linux lists modules that a server never needs and asks you
 
 Use both lines. The file stops future loads only, so also unload a module that is already in with `modprobe -r dccp`, and use `modprobe -n -v dccp` to see what a load would do without doing it.
 
-OrbStack machines share one kernel and may not load modules, so this task runs on a VM, as [module 44, task 4](../kernel-and-host/44-kernel-and-host-security.md#task-4-keep-a-kernel-module-out).
+The kind nodes share one kernel with every container on your Mac and may not load modules, so this task runs on a VM, as [module 44, task 4](../kernel-and-host/44-kernel-and-host-security.md#task-4-keep-a-kernel-module-out).
 
 **What this stops.** A blocked module stops an unprivileged process from pulling buggy code into the kernel that every pod shares.
 
@@ -97,7 +97,7 @@ A user who needs no root keeps the account but loses both grants, because removi
 
 **What this stops.** Fewer root users means fewer accounts whose stolen password or key turns into root on a node, and from there into every container on it.
 
-**Exam traps.** In task 2, the group membership was the obvious grant and a `NOPASSWD:ALL` file in `/etc/sudoers.d/cks-dev` was the hidden one. `sudo -l -U cks-dev` shows the effective rights after the fix, and the test run ended with `User cks-dev is not allowed to run sudo on cks-w1.`
+**Exam traps.** In task 2, the group membership was the obvious grant and a `NOPASSWD:ALL` file in `/etc/sudoers.d/cks-dev` was the hidden one. `sudo -l -U cks-dev` shows the effective rights after the fix, and the test run ended with `User cks-dev is not allowed to run sudo on practice-worker.`
 
 ## Concept: kubeconfig files are keys
 
@@ -129,7 +129,7 @@ The label prefix exists for a reason. Admins use labels under it to steer sensit
 
 **What this stops.** Together, the two layers turn "root on one node" into "root on one node and the Secrets of the pods already there", instead of "every Secret in the cluster". They also stop a node from lying about itself to attract sensitive pods.
 
-**Exam traps.** The test run measured both layers. With NodeRestriction off, the kubelet of `cks-w1` still failed to touch `cks-cp`, because the Node authorizer refused the read first with `node 'cks-w1' cannot read 'cks-cp', only its own Node object`, which is why one check in task 3 passes even before the fix. But the kubelet set `node-restriction.kubernetes.io/cks=1` on itself without complaint, and with NodeRestriction back the same label failed with `is not allowed to modify labels: node-restriction.kubernetes.io/cks`. Also remove `AlwaysAdmit` when you find it, because that old plugin admits everything.
+**Exam traps.** The test run measured both layers. With NodeRestriction off, the kubelet of `practice-worker` still failed to touch `practice-control-plane`, because the Node authorizer refused the read first with `node 'practice-worker' cannot read 'practice-control-plane', only its own Node object`, which is why one check in task 3 passes even before the fix. But the kubelet set `node-restriction.kubernetes.io/practice=1` on itself without complaint, and with NodeRestriction back the same label failed with `is not allowed to modify labels: node-restriction.kubernetes.io/practice`. Also remove `AlwaysAdmit` when you find it, because that old plugin admits everything.
 
 ## The bigger picture: defence in depth on the node
 
@@ -141,7 +141,7 @@ Real platform teams go further than hand-tuning each node. They build node image
 
 **Why remove packages instead of only stopping services?** A stopped service waits on disk for the next upgrade, reboot script or tired admin to start it again, while a removed package is gone.
 
-**Why does Kubernetes split the kubelet's limits across two components?** Authorization sees the request and not the object, so "update Node cks-w1" looks the same whether it changes a status field or adds a protected label. Only admission reads the object, which means the label rule has to live there.
+**Why does Kubernetes split the kubelet's limits across two components?** Authorization sees the request and not the object, so "update Node practice-worker" looks the same whether it changes a status field or adds a protected label. Only admission reads the object, which means the label rule has to live there.
 
 **Why not just revoke a leaked client certificate?** Kubernetes never built certificate revocation into the API server. Short-lived credentials, such as bound tokens and OIDC logins, avoid the problem, which is why production clusters keep long-lived client certificates for break-glass use only.
 
@@ -149,7 +149,7 @@ Real platform teams go further than hand-tuning each node. They build node image
 
 ## Task 1: Remove a service nobody needs
 
-**Time budget:** 4 minutes. **Host:** `cks-w1`.
+**Time budget:** 4 minutes. **Host:** `practice-worker`.
 
 ```console
 $ ./platform-engineering/task.sh setup 40.1
@@ -157,21 +157,21 @@ $ ./platform-engineering/task.sh setup 40.1
 LISTEN 0      32                 *:21               *:*    users:(("vsftpd",pid=68941,fd=3))     
 ```
 
-> Something on `cks-w1` listens on TCP port 21. Find the program and the package it comes from, stop it for good, and remove the package.
+> Something on `practice-worker` listens on TCP port 21. Find the program and the package it comes from, stop it for good, and remove the package.
 
 <details>
 <summary>Solution</summary>
 
 ```console
-root@cks-w1:~# ss -tlnp | grep ':21 '
+root@practice-worker:~# ss -tlnp | grep ':21 '
 LISTEN 0      32                 *:21               *:*    users:(("vsftpd",pid=68941,fd=3))     
-root@cks-w1:~# dpkg -S /usr/sbin/vsftpd
+root@practice-worker:~# dpkg -S /usr/sbin/vsftpd
 vsftpd: /usr/sbin/vsftpd
-root@cks-w1:~# systemctl disable --now vsftpd
+root@practice-worker:~# systemctl disable --now vsftpd
 Synchronizing state of vsftpd.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
 Executing: /usr/lib/systemd/systemd-sysv-install disable vsftpd
 Removed "/etc/systemd/system/multi-user.target.wants/vsftpd.service".
-root@cks-w1:~# apt-get purge -y vsftpd
+root@practice-worker:~# apt-get purge -y vsftpd
 ...
 The following packages were automatically installed and are no longer required:
   libdeflate0 ncurses-term openssh-sftp-server python3-blinker
@@ -188,7 +188,7 @@ Removing vsftpd (3.0.5-0ubuntu3.1)…
 ...
 Purging configuration files for vsftpd (3.0.5-0ubuntu3.1)…
 ...
-root@cks-w1:~# ss -tlnp | grep ':21 '        # prints nothing now
+root@practice-worker:~# ss -tlnp | grep ':21 '        # prints nothing now
 ```
 
 In the test run, `ss` showed `users:(("vsftpd",pid=41498,fd=3))` on `*:21`, and `dpkg -S` answered `vsftpd: /usr/sbin/vsftpd`. vsftpd is an FTP server, and FTP sends passwords in clear text, so it has no place on a Kubernetes node.
@@ -205,35 +205,35 @@ $ ./platform-engineering/task.sh check 40.1
 
 ## Task 2: A user with too much power
 
-**Time budget:** 4 minutes. **Host:** `cks-w1`.
+**Time budget:** 4 minutes. **Host:** `practice-worker`.
 
 ```console
 $ ./platform-engineering/task.sh setup 40.2
 == setup task 40.2
 ```
 
-> On `cks-w1`, user `cks-dev` must keep the account but lose every root right. User `old-admin` left the team: lock the account's password without deleting the user.
+> On `practice-worker`, user `cks-dev` must keep the account but lose every root right. User `old-admin` left the team: lock the account's password without deleting the user.
 
 <details>
 <summary>Solution</summary>
 
 ```console
-root@cks-w1:~# id cks-dev
+root@practice-worker:~# id cks-dev
 uid=1000(cks-dev) gid=1000(cks-dev) groups=1000(cks-dev),27(sudo)
-root@cks-w1:~# gpasswd -d cks-dev sudo
+root@practice-worker:~# gpasswd -d cks-dev sudo
 Removing user cks-dev from group sudo
-root@cks-w1:~# grep -rl cks-dev /etc/sudoers /etc/sudoers.d/
+root@practice-worker:~# grep -rl cks-dev /etc/sudoers /etc/sudoers.d/
 /etc/sudoers.d/cks-dev
-root@cks-w1:~# rm /etc/sudoers.d/cks-dev
-root@cks-w1:~# passwd -l old-admin
+root@practice-worker:~# rm /etc/sudoers.d/cks-dev
+root@practice-worker:~# passwd -l old-admin
 passwd: password changed.
-root@cks-w1:~# sudo -l -U cks-dev
-User cks-dev is not allowed to run sudo on cks-w1.
-root@cks-w1:~# passwd -S old-admin
+root@practice-worker:~# sudo -l -U cks-dev
+User cks-dev is not allowed to run sudo on practice-worker.
+root@practice-worker:~# passwd -S old-admin
 old-admin L 2026-11-14 0 99999 7 -1
 ```
 
-The `grep` finds the second grant, a `NOPASSWD:ALL` line in `/etc/sudoers.d/cks-dev`, which keeps working when you remove only the group membership. In the test run, `sudo -l -U cks-dev` ended with `User cks-dev is not allowed to run sudo on cks-w1.`, and `passwd -S old-admin` showed `L` in the second column.
+The `grep` finds the second grant, a `NOPASSWD:ALL` line in `/etc/sudoers.d/cks-dev`, which keeps working when you remove only the group membership. In the test run, `sudo -l -U cks-dev` ended with `User cks-dev is not allowed to run sudo on practice-worker.`, and `passwd -S old-admin` showed `L` in the second column.
 
 </details>
 
@@ -249,7 +249,7 @@ $ ./platform-engineering/task.sh check 40.2
 
 ## Task 3: Limit what a kubelet may change
 
-**Time budget:** 6 minutes. **Hosts:** `cks-cp`, and `cks-w1` to test.
+**Time budget:** 6 minutes. **Hosts:** `practice-control-plane`, and `practice-worker` to test.
 
 ```console
 $ ./platform-engineering/task.sh setup 40.3
@@ -259,25 +259,25 @@ $ ./platform-engineering/task.sh setup 40.3
 
 > Someone changed the API server's admission plugins. Restore them so that a kubelet may change only its own Node object and may not set `node-restriction.kubernetes.io/` labels. Remove any plugin that admits everything.
 
-First test with the kubelet's own credentials on `cks-w1`, to see what a stolen node identity gets today:
+First test with the kubelet's own credentials on `practice-worker`, to see what a stolen node identity gets today:
 
 ```console
-root@cks-w1:~# kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node cks-w1 node-restriction.kubernetes.io/cks=1
-node/cks-w1 labeled
-root@cks-w1:~# kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node cks-w1 node-restriction.kubernetes.io/cks-
-node/cks-w1 unlabeled
+root@practice-worker:~# kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node practice-worker node-restriction.kubernetes.io/practice=1
+node/practice-worker labeled
+root@practice-worker:~# kubectl --kubeconfig /etc/kubernetes/kubelet.conf label node practice-worker node-restriction.kubernetes.io/practice-
+node/practice-worker unlabeled
 ```
 
 <details>
 <summary>Solution</summary>
 
-Then fix the API server's admission plugins on `cks-cp`:
+Then fix the API server's admission plugins on `practice-control-plane`:
 
 ```console
-root@cks-cp:~# grep admission-plugins /etc/kubernetes/manifests/kube-apiserver.yaml
+root@practice-control-plane:~# grep admission-plugins /etc/kubernetes/manifests/kube-apiserver.yaml
     - --enable-admission-plugins=AlwaysAdmit
-root@cks-cp:~# cp /etc/kubernetes/manifests/kube-apiserver.yaml /root/
-root@cks-cp:~# vim /etc/kubernetes/manifests/kube-apiserver.yaml
+root@practice-control-plane:~# cp /etc/kubernetes/manifests/kube-apiserver.yaml /root/
+root@practice-control-plane:~# vim /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
 The transcript leaves out the editor session.
@@ -288,7 +288,7 @@ Change the line to this value:
     - --enable-admission-plugins=NodeRestriction
 ```
 
-`AlwaysAdmit` admits every request, and Kubernetes deprecated it years ago. The default plugins, such as `ServiceAccount` and `LimitRanger`, stay on without being listed. Wait for the API server, then repeat the test on `cks-w1`, where the label command now fails with `is not allowed to modify labels: node-restriction.kubernetes.io/cks`.
+`AlwaysAdmit` admits every request, and Kubernetes deprecated it years ago. The default plugins, such as `ServiceAccount` and `LimitRanger`, stay on without being listed. Wait for the API server, then repeat the test on `practice-worker`, where the label command now fails with `is not allowed to modify labels: node-restriction.kubernetes.io/practice`.
 
 </details>
 
@@ -297,8 +297,8 @@ $ ./platform-engineering/task.sh check 40.3
 == check task 40.3
   PASS  the API server enables NodeRestriction
   PASS  the API server no longer enables AlwaysAdmit
-  PASS  cks-w1's kubelet may not label node cks-cp (the Node authorizer already blocks this)
-  PASS  cks-w1's kubelet may not set a node-restriction label on itself
+  PASS  practice-worker's kubelet may not label node practice-control-plane (the Node authorizer already blocks this)
+  PASS  practice-worker's kubelet may not set a node-restriction label on itself
 == task 40.3: 4 passed, 0 failed
 ```
 
@@ -306,7 +306,7 @@ In the test run, the third check passed even before the fix, for the reason the 
 
 ## Task 4: A listener that hides
 
-**Time budget:** 5 minutes. **Host:** `cks-w1`.
+**Time budget:** 5 minutes. **Host:** `practice-worker`.
 
 ```console
 $ ./platform-engineering/task.sh setup 40.4
@@ -314,17 +314,17 @@ $ ./platform-engineering/task.sh setup 40.4
 LISTEN 0      5                  *:4444             *:*    users:(("sysmond",pid=71147,fd=5))    
 ```
 
-> Something on `cks-w1` listens on TCP port 4444. No package owns it. Stop it for good: the process, whatever starts it at boot, and its binary. Leave the system's packages alone.
+> Something on `practice-worker` listens on TCP port 4444. No package owns it. Stop it for good: the process, whatever starts it at boot, and its binary. Leave the system's packages alone.
 
 <details>
 <summary>Solution</summary>
 
 ```console
-root@cks-w1:~# ss -tlnp | grep ':4444 '
+root@practice-worker:~# ss -tlnp | grep ':4444 '
 LISTEN 0      5                  *:4444             *:*    users:(("sysmond",pid=71147,fd=5))    
-root@cks-w1:~# ls -l /proc/<pid>/exe
+root@practice-worker:~# ls -l /proc/<pid>/exe
 lrwxrwxrwx 1 root root 0 Nov 14 23:49 /proc/71147/exe -> /usr/local/lib/.sysmon/sysmond
-root@cks-w1:~# systemctl status <pid> | head -1
+root@practice-worker:~# systemctl status <pid> | head -1
 ● sysmon.service - System monitor agent
 ```
 
@@ -333,11 +333,11 @@ The transcript ran the last two commands with the PID that `ss` printed.
 In the test run, `ss` showed `users:(("sysmond",pid=33256,fd=5))`, the link pointed to `/usr/local/lib/.sysmon/sysmond`, and `systemctl status` named `sysmon.service`. The unit file shows what it does, `sysmond TCP-LISTEN:4444,fork,reuseaddr EXEC:/bin/sh`, which is a copy of `socat` handing a root shell to anybody who connects. `dpkg -S /usr/local/lib/.sysmon/sysmond` finds no package, and that is the giveaway.
 
 ```console
-root@cks-w1:~# systemctl disable --now sysmon
+root@practice-worker:~# systemctl disable --now sysmon
 Removed "/etc/systemd/system/multi-user.target.wants/sysmon.service".
-root@cks-w1:~# rm /etc/systemd/system/sysmon.service
-root@cks-w1:~# systemctl daemon-reload
-root@cks-w1:~# rm -rf /usr/local/lib/.sysmon
+root@practice-worker:~# rm /etc/systemd/system/sysmon.service
+root@practice-worker:~# systemctl daemon-reload
+root@practice-worker:~# rm -rf /usr/local/lib/.sysmon
 ```
 
 Kill only the process, and `Restart=always` starts it again a moment later. Delete only the binary, and the next boot fails to start it, but the unit stays behind as a clue for the next attacker. So remove all three: the process, the unit and the binary.
@@ -356,7 +356,7 @@ $ ./platform-engineering/task.sh check 40.4
 
 ## Task 5: Harden sshd
 
-**Time budget:** 4 minutes. **Host:** `cks-w1`.
+**Time budget:** 4 minutes. **Host:** `practice-worker`.
 
 ```console
 $ ./platform-engineering/task.sh setup 40.5
@@ -365,7 +365,7 @@ permitrootlogin yes
 passwordauthentication yes
 ```
 
-> On `cks-w1`, sshd must refuse root logins and password logins. It must keep running.
+> On `practice-worker`, sshd must refuse root logins and password logins. It must keep running.
 
 <details>
 <summary>Solution</summary>
@@ -373,10 +373,10 @@ passwordauthentication yes
 Ask sshd what it uses before you edit anything, then find where each value comes from:
 
 ```console
-root@cks-w1:~# sshd -T | grep -E '^(permitrootlogin|passwordauthentication) '
+root@practice-worker:~# sshd -T | grep -E '^(permitrootlogin|passwordauthentication) '
 permitrootlogin yes
 passwordauthentication yes
-root@cks-w1:~# grep -rnE '^(PermitRootLogin|PasswordAuthentication)' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/
+root@practice-worker:~# grep -rnE '^(PermitRootLogin|PasswordAuthentication)' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/
 /etc/ssh/sshd_config.d/10-legacy.conf:1:PermitRootLogin yes
 /etc/ssh/sshd_config.d/10-legacy.conf:2:PasswordAuthentication yes
 ```
@@ -384,8 +384,8 @@ root@cks-w1:~# grep -rnE '^(PermitRootLogin|PasswordAuthentication)' /etc/ssh/ss
 In the test run, both lines came from `/etc/ssh/sshd_config.d/10-legacy.conf`. Change them there to `PermitRootLogin no` and `PasswordAuthentication no`, then test the syntax and restart the service:
 
 ```console
-root@cks-w1:~# sshd -t && systemctl restart ssh
-root@cks-w1:~# sshd -T | grep -E '^(permitrootlogin|passwordauthentication) '
+root@practice-worker:~# sshd -t && systemctl restart ssh
+root@practice-worker:~# sshd -T | grep -E '^(permitrootlogin|passwordauthentication) '
 permitrootlogin no
 passwordauthentication no
 ```
@@ -405,17 +405,17 @@ $ ./platform-engineering/task.sh check 40.5
 
 ## Task 6: Admin credentials lying around
 
-**Time budget:** 4 minutes. **Host:** `cks-w1`.
+**Time budget:** 4 minutes. **Host:** `practice-worker`.
 
 ```console
 $ ./platform-engineering/task.sh setup 40.6
 == setup task 40.6
-  kubectl auth can-i "*" "*" as cks-ops on cks-w1: yes
+  kubectl auth can-i "*" "*" as cks-ops on practice-worker: yes
 ```
 
-The setup shows what the leak gives away, which in the test run was `kubectl auth can-i "*" "*" as cks-ops on cks-w1: yes`.
+The setup shows what the leak gives away, which in the test run was `kubectl auth can-i "*" "*" as cks-ops on practice-worker: yes`.
 
-> Somebody copied the cluster's admin kubeconfig onto the worker `cks-w1`. Remove every copy from the node. Keep user `cks-ops`. Also make `/etc/kubernetes/kubelet.conf` readable by root only.
+> Somebody copied the cluster's admin kubeconfig onto the worker `practice-worker`. Remove every copy from the node. Keep user `cks-ops`. Also make `/etc/kubernetes/kubelet.conf` readable by root only.
 
 <details>
 <summary>Solution</summary>
@@ -423,11 +423,11 @@ The setup shows what the leak gives away, which in the test run was `kubectl aut
 An admin kubeconfig embeds its certificate as `client-certificate-data`, while the kubelet's own file points to a certificate file instead, so a search for the embedded form finds exactly the copies:
 
 ```console
-root@cks-w1:~# grep -rlsE 'client-certificate-data' /home /root /var/backups /tmp /etc
+root@practice-worker:~# grep -rlsE 'client-certificate-data' /home /root /var/backups /tmp /etc
 /home/cks-ops/.kube/config
 /var/backups/k8s/admin.conf.bak
-root@cks-w1:~# rm /home/cks-ops/.kube/config /var/backups/k8s/admin.conf.bak
-root@cks-w1:~# chmod 600 /etc/kubernetes/kubelet.conf && chown root:root /etc/kubernetes/kubelet.conf
+root@practice-worker:~# rm /home/cks-ops/.kube/config /var/backups/k8s/admin.conf.bak
+root@practice-worker:~# chmod 600 /etc/kubernetes/kubelet.conf && chown root:root /etc/kubernetes/kubelet.conf
 ```
 
 In the test run, the search found `/home/cks-ops/.kube/config` and `/var/backups/k8s/admin.conf.bak`. The theory explains why deleting the files is only the first half of a real response, because the certificate inside stays valid until it expires.
@@ -437,7 +437,7 @@ In the test run, the search found `/home/cks-ops/.kube/config` and `/var/backups
 ```console
 $ ./platform-engineering/task.sh check 40.6
 == check task 40.6
-  PASS  no file on cks-w1 holds the admin client certificate any more
+  PASS  no file on practice-worker holds the admin client certificate any more
   PASS  user cks-ops still exists
   PASS  /etc/kubernetes/kubelet.conf is 600 and owned by root
 == task 40.6: 3 passed, 0 failed
@@ -449,4 +449,4 @@ The kernel module task needs a kernel that belongs to one machine, so it sits in
 
 ## Clean up
 
-Task 3 restarts the API server twice, once in the setup and once in your fix. `./platform-engineering/practice/cluster/reset.sh` also wipes the users, units and packages of tasks 1 to 6.
+Task 3 restarts the API server twice, once in the setup and once in your fix. `./lab.sh practice reset` also wipes the users, units and packages of tasks 1 to 6.

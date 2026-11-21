@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Seeds the starting state of all 17 tasks of a practice exam and starts its 2-hour clock.
 # Run it on your Mac, on a fresh cluster:
-#   ./platform-engineering/practice/cluster/reset.sh && ./platform-engineering/practice-exam.sh setup 4          practice exam 4
-#   ./platform-engineering/practice/cluster/reset.sh && ./platform-engineering/practice/cluster/lima.sh reset && ./platform-engineering/practice-exam.sh setup 5
+#   ./lab.sh practice reset && ./platform-engineering/practice-exam.sh setup 4          practice exam 4
+#   ./lab.sh practice reset && ./platform-engineering/practice/cluster/lima.sh reset && ./platform-engineering/practice-exam.sh setup 5
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 MOCK="${MOCK:-1}"
@@ -11,10 +11,10 @@ for f in "$HERE"/../tasks/0*.sh; do . "$f"; done      # mocks 2 and 3 reuse help
 . "$HERE/tasks.sh"
 [ "$MOCK" = 1 ] || . "$HERE/tasks-$MOCK.sh"
 
-v="$(k get node cks-cp -o jsonpath='{.status.nodeInfo.kubeletVersion}' 2>/dev/null)"
+v="$(k get node $CP -o jsonpath='{.status.nodeInfo.kubeletVersion}' 2>/dev/null)"
 if [ "$v" != v1.37.1 ]; then
-  echo "cks-cp runs '$v', and the practice exam needs a fresh cluster at v1.37.1."
-  echo "Run ./platform-engineering/practice/cluster/reset.sh first."
+  echo "$CP runs '$v', and the practice exam needs a fresh cluster at v1.37.1."
+  echo "Run ./lab.sh practice reset first."
   exit 1
 fi
 if [ "${MOCK_NEEDS_LIMA:-no}" = yes ] && ! need_lima; then exit 1; fi

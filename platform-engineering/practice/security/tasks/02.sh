@@ -107,15 +107,15 @@ EOF
 # ---- Task 4: upgrade the cluster with kubeadm ----------------------------------------
 setup_2_4() {
   k get nodes
-  echo "  the cluster must run v1.37.1 for this task; ./platform-engineering/practice/cluster/reset.sh puts it back there"
+  echo "  the cluster must run v1.37.1 for this task; ./lab.sh practice reset puts it back there"
 }
 check_2_4() {
-  check_cp "cks-cp kubelet reports v1.37.2" "kubectl get node cks-cp -o jsonpath='{.status.nodeInfo.kubeletVersion}' | grep -qx v1.37.2"
-  check_cp "cks-w1 kubelet reports v1.37.2" "kubectl get node cks-w1 -o jsonpath='{.status.nodeInfo.kubeletVersion}' | grep -qx v1.37.2"
+  check_cp "$CP kubelet reports v1.37.2" "kubectl get node $CP -o jsonpath='{.status.nodeInfo.kubeletVersion}' | grep -qx v1.37.2"
+  check_cp "$W1 kubelet reports v1.37.2" "kubectl get node $W1 -o jsonpath='{.status.nodeInfo.kubeletVersion}' | grep -qx v1.37.2"
   check_cp "the API server runs image v1.37.2" \
     "kubectl -n kube-system get pod -l component=kube-apiserver -o jsonpath='{.items[0].spec.containers[0].image}' | grep -q ':v1.37.2\$'"
   check_cp "both nodes are schedulable" "! kubectl get nodes -o jsonpath='{.items[*].spec.unschedulable}' | grep -q true"
-  check_w1 "kubeadm, kubelet and kubectl stay on hold on cks-w1" "apt-mark showhold | grep -c -E '^(kubeadm|kubelet|kubectl)\$' | grep -qx 3"
+  check_w1 "kubeadm, kubelet and kubectl stay on hold on $W1" "apt-mark showhold | grep -c -E '^(kubeadm|kubelet|kubectl)\$' | grep -qx 3"
 }
 solve_2_4() {
   oncp <<'EOF'
@@ -125,13 +125,13 @@ apt-get install -y -qq kubeadm=1.37.2-1.1 >/dev/null
 apt-mark hold kubeadm >/dev/null
 kubeadm upgrade plan v1.37.2 | grep -E 'kube-apiserver|You can now apply' | head -3
 kubeadm upgrade apply v1.37.2 -y 2>&1 | tail -2
-kubectl drain cks-cp --ignore-daemonsets --delete-emptydir-data
+kubectl drain $CP --ignore-daemonsets --delete-emptydir-data
 apt-mark unhold kubelet kubectl >/dev/null
 apt-get install -y -qq kubelet=1.37.2-1.1 kubectl=1.37.2-1.1 >/dev/null
 apt-mark hold kubelet kubectl >/dev/null
 systemctl daemon-reload && systemctl restart kubelet
-for i in $(seq 1 60); do kubectl uncordon cks-cp 2>/dev/null && break; sleep 2; done
-kubectl drain cks-w1 --ignore-daemonsets --delete-emptydir-data --force
+for i in $(seq 1 60); do kubectl uncordon $CP 2>/dev/null && break; sleep 2; done
+kubectl drain $W1 --ignore-daemonsets --delete-emptydir-data --force
 EOF
   onw1 <<'EOF'
 set -e
@@ -143,7 +143,7 @@ apt-mark hold kubeadm kubelet kubectl >/dev/null
 systemctl daemon-reload && systemctl restart kubelet
 EOF
   oncp <<'EOF'
-kubectl uncordon cks-w1
+kubectl uncordon $W1
 kubectl wait node --all --for=condition=Ready --timeout=120s
 kubectl get nodes
 EOF
@@ -325,9 +325,9 @@ done
 kubectl -n legacy create secret generic app-config --from-literal=mode=prod 2>/dev/null
 for i in $(seq 1 30); do kubectl -n legacy get secret old-ci-token -o jsonpath='{.data.token}' | grep -q . && break; sleep 1; done
 # Keep a copy of one old token where the check finds it, then use it once.
-mkdir -p /opt/cks-check && kubectl -n legacy get secret old-ci-token -o jsonpath='{.data.token}' | base64 -d > /opt/cks-check/legacy-token
+mkdir -p /opt/security-check && kubectl -n legacy get secret old-ci-token -o jsonpath='{.data.token}' | base64 -d > /opt/security-check/legacy-token
 IP=$(hostname -I | cut -d' ' -f1)
-echo "  old-ci's legacy token against the API: $(curl -sk -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $(cat /opt/cks-check/legacy-token)" https://$IP:6443/api)"
+echo "  old-ci's legacy token against the API: $(curl -sk -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $(cat /opt/security-check/legacy-token)" https://$IP:6443/api)"
 sleep 2
 kubectl -n legacy get secret old-ci-token -o jsonpath='  label legacy-token-last-used: {.metadata.labels.kubernetes\.io/legacy-token-last-used}{"\n"}'
 EOF
@@ -337,7 +337,7 @@ check_2_8() {
     "kubectl -n legacy get secrets --field-selector type=kubernetes.io/service-account-token --no-headers 2>&1 | grep -q 'No resources found'"
   # The API server caches token lookups for a few seconds, so poll.
   check_cp "old-ci's old token no longer authenticates (401)" \
-    "for i in \$(seq 1 30); do curl -sk -o /dev/null -w '%{http_code}' -H \"Authorization: Bearer \$(cat /opt/cks-check/legacy-token)\" https://\$(hostname -I | cut -d' ' -f1):6443/api | grep -qx 401 && exit 0; sleep 2; done; exit 1"
+    "for i in \$(seq 1 30); do curl -sk -o /dev/null -w '%{http_code}' -H \"Authorization: Bearer \$(cat /opt/security-check/legacy-token)\" https://\$(hostname -I | cut -d' ' -f1):6443/api | grep -qx 401 && exit 0; sleep 2; done; exit 1"
   check_cp "both ServiceAccounts and Secret app-config still exist" \
     "kubectl -n legacy get sa old-ci old-batch && kubectl -n legacy get secret app-config"
 }
@@ -346,7 +346,7 @@ solve_2_8() {
 kubectl get secrets -A --field-selector type=kubernetes.io/service-account-token
 kubectl -n legacy delete secret --field-selector type=kubernetes.io/service-account-token
 IP=$(hostname -I | cut -d' ' -f1); s=$(date +%s)
-for i in $(seq 1 60); do [ "$(curl -sk -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $(cat /opt/cks-check/legacy-token)" https://$IP:6443/api)" = 401 ] && break; sleep 1; done
+for i in $(seq 1 60); do [ "$(curl -sk -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $(cat /opt/security-check/legacy-token)" https://$IP:6443/api)" = 401 ] && break; sleep 1; done
 echo "the old token got 401 after $(( $(date +%s) - s )) seconds"
 EOF
 }
@@ -425,8 +425,8 @@ kubectl -n default create deploy canary --image=nginx:1.27-alpine
 EOF
 }
 check_2_11() {
-  check_cp "kube-scheduler runs and is Ready" "kubectl -n kube-system wait pod kube-scheduler-cks-cp --for=condition=Ready --timeout=30s"
-  check_cp "kube-controller-manager runs and is Ready" "kubectl -n kube-system wait pod kube-controller-manager-cks-cp --for=condition=Ready --timeout=30s"
+  check_cp "kube-scheduler runs and is Ready" "kubectl -n kube-system wait pod kube-scheduler-$CP --for=condition=Ready --timeout=30s"
+  check_cp "kube-controller-manager runs and is Ready" "kubectl -n kube-system wait pod kube-controller-manager-$CP --for=condition=Ready --timeout=30s"
   check_cp "Deployment canary has a ready pod" "kubectl -n default rollout status deploy canary --timeout=90s"
   check_cp "the manifests use scheduler.conf and --cluster-signing-key-file" \
     "grep -q -- '--kubeconfig=/etc/kubernetes/scheduler.conf\$' /etc/kubernetes/manifests/kube-scheduler.yaml && grep -q -- '--cluster-signing-key-file=' /etc/kubernetes/manifests/kube-controller-manager.yaml"

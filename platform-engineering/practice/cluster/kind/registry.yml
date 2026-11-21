@@ -1,0 +1,13 @@
+# The local registry's settings, the same ones app-extras/extras-node.sh gives the registry service
+# on an OrbStack or VM control plane. It keeps no blob cache, so the application reset may delete
+# files under /var/lib/registry while the registry runs.
+version: 0.1
+log:
+  level: warn
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+  delete:
+    enabled: true
+http:
+  addr: :5000

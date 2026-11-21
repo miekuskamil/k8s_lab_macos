@@ -181,24 +181,24 @@ EOF
 # ---- Task 5: verify a platform binary ------------------------------------------------
 setup_1_5() {
   oncp <<'EOF'
-mkdir -p /opt/cks/bin && cd /opt/cks/bin
+mkdir -p /opt/security/bin && cd /opt/security/bin
 for b in kubectl kube-proxy; do
   [ -f "$b" ] || curl -fsSL -o "$b" "https://dl.k8s.io/release/v1.37.1/bin/linux/$(dpkg --print-architecture)/$b"
 done
 chmod 755 kubectl kube-proxy
 # Someone "patched" kube-proxy: one extra byte changes the checksum.
 tail -c 3 kube-proxy | grep -qa cks || printf 'cks' >> kube-proxy
-ls -l /opt/cks/bin
+ls -l /opt/security/bin
 EOF
 }
 check_1_5() {
-  check "the tampered kube-proxy is gone" cp_sh 'test ! -e /opt/cks/bin/kube-proxy'
+  check "the tampered kube-proxy is gone" cp_sh 'test ! -e /opt/security/bin/kube-proxy'
   check "kubectl stays, and matches the official v1.37.1 sha512" \
-    cp_sh 'cd /opt/cks/bin && echo "$(curl -fsSL https://dl.k8s.io/release/v1.37.1/bin/linux/$(dpkg --print-architecture)/kubectl.sha512) kubectl" | sha512sum -c'
+    cp_sh 'cd /opt/security/bin && echo "$(curl -fsSL https://dl.k8s.io/release/v1.37.1/bin/linux/$(dpkg --print-architecture)/kubectl.sha512) kubectl" | sha512sum -c'
 }
 solve_1_5() {
   oncp <<'EOF'
-cd /opt/cks/bin
+cd /opt/security/bin
 for b in kubectl kube-proxy; do
   echo "$(curl -fsSL https://dl.k8s.io/release/v1.37.1/bin/linux/$(dpkg --print-architecture)/$b.sha512) $b" | sha512sum -c || rm -f "$b"
 done
@@ -535,7 +535,7 @@ solve_1_12() {
   wait_static etcd; wait_static kube-apiserver
 }
 
-# ---- Task 13: harden the kubelet on cks-w1 -----------------------------------------------
+# ---- Task 13: harden the kubelet on the worker -----------------------------------------------
 setup_1_13() {
   onw1 <<'EOF'
 f=/var/lib/kubelet/config.yaml
@@ -561,8 +561,8 @@ check_1_13() {
   check_w1 "the kubelet config sets authorization mode Webhook" \
     "grep -A1 '^authorization:' /var/lib/kubelet/config.yaml | grep -q 'mode: Webhook'"
   check_w1 "the kubelet refuses TLS 1.2" "! echo | timeout 5 openssl s_client -connect 127.0.0.1:10250 -tls1_2 2>/dev/null | grep -q 'Cipher is [A-Z]'"
-  check_cp "cks-w1 is Ready and kubectl logs still works for its pods" \
-    "kubectl wait node cks-w1 --for=condition=Ready --timeout=60s && kubectl -n kube-system logs \$(kubectl -n kube-system get pod -l k8s-app=calico-node --field-selector spec.nodeName=cks-w1 -o name) --tail=1"
+  check_cp "$W1 is Ready and kubectl logs still works for its pods" \
+    "kubectl wait node $W1 --for=condition=Ready --timeout=60s && kubectl -n kube-system logs \$(kubectl -n kube-system get pod -l k8s-app=calico-node --field-selector spec.nodeName=$W1 -o name) --tail=1"
 }
 solve_1_13() {
   onw1 <<'EOF'

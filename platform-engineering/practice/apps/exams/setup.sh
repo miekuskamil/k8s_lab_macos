@@ -11,14 +11,14 @@ NS_LABEL=mock
 for f in "$HERE"/../tasks/0*.sh; do . "$f"; done      # the mocks reuse helpers from the domain tasks
 if [ "$MOCK" = 1 ]; then . "$HERE/tasks.sh"; else . "$HERE/tasks-$MOCK.sh"; fi
 
-v="$(k get node cks-cp -o jsonpath='{.status.nodeInfo.kubeletVersion}' 2>/dev/null)"
+v="$(k get node $CP -o jsonpath='{.status.nodeInfo.kubeletVersion}' 2>/dev/null)"
 if [ "$v" != v1.37.1 ]; then
-  echo "cks-cp runs '$v', and the practice exam needs the practice cluster at v1.37.1."
-  echo "Run ./platform-engineering/practice/cluster/reset.sh and ./platform-engineering/practice/app-extras/extras.sh first."
+  echo "$CP runs '$v', and the practice exam needs the practice cluster at v1.37.1."
+  echo "Run ./lab.sh practice reset and ./platform-engineering/practice/app-extras/extras.sh first."
   exit 1
 fi
 need_extras || exit 1
-if [ -n "$(k get ns -l ckad -o name 2>/dev/null)" ]; then
+if [ -n "$(k get ns -l practice -o name 2>/dev/null)" ]; then
   echo "Namespaces from earlier application tasks or practice exams are still there. Run ./platform-engineering/practice/app-extras/reset.sh first."
   exit 1
 fi

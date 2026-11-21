@@ -4,7 +4,7 @@
 <text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Three probes, <tspan fill="#7c3aed">three reactions</tspan></text>
 <text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">The kubelet asks; a Service and the kubelet itself act on the answers.</text>
 <rect x="40.0" y="150.0" width="1060.0" height="680.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
-<text x="1082.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">Node cks-w1</text>
+<text x="1082.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">Node practice-worker</text>
 <rect x="80.0" y="200.0" width="300.0" height="110.0" rx="14.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
 <rect x="96.0" y="233.0" width="44.0" height="44.0" rx="10.0" fill="#0891b2" stroke="none"/>
 <rect x="106.5" y="243.5" width="23.0" height="6.4" rx="1.9" fill="none" stroke="#ffffff" stroke-width="1.4080000000000001"/>

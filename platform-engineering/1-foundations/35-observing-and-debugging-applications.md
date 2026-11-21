@@ -29,7 +29,7 @@ So the kubelet asks the app directly, with a [probe](../glossary.md#probe): a sm
 | [liveness](../glossary.md#liveness-probe) | is the process still healthy, or stuck for good? | the kubelet kills the container and starts it again |
 | [startup](../glossary.md#startup-probe) | has a slow app finished starting? | the kubelet keeps waiting, and kills it after `failureThreshold × periodSeconds` |
 
-![The kubelet on cks-w1 runs the three probes against one container: startup first, then readiness and liveness side by side. A failed readiness probe removes the pod from the Service's endpoints, a failed liveness probe restarts the container](../../docs/diagrams/chapters/ckad-probes.svg)
+![The kubelet on practice-worker runs the three probes against one container: startup first, then readiness and liveness side by side. A failed readiness probe removes the pod from the Service's endpoints, a failed liveness probe restarts the container](../../docs/diagrams/chapters/ckad-probes.svg)
 
 The figure shows the order on one pod, which follows from the startup probe's job:
 
@@ -64,7 +64,7 @@ Modern images often ship without a shell, because every extra binary in an image
 
 `kubectl debug` adds a way back in without restarting the pod. It appends an [ephemeral container](../glossary.md#ephemeral-container), a temporary container with an image you choose, such as `busybox`, to the running pod. With `--target=app`, the new container joins the process namespace of the container `app`, so `ps` inside the debugger lists the app's processes, and `/proc/1/root` shows the app's file system. The pod keeps running the whole time, and the ephemeral container stays in its spec until the pod goes away, because a pod's container list never shrinks.
 
-Two more forms of `kubectl debug` help in other situations. `kubectl debug POD -it --copy-to=POD-debug --container=app --image=busybox -- sh` makes a copy of the pod with a changed container, which helps when the original crashes too fast to inspect. `kubectl debug node/cks-w1 -it --image=busybox` starts a pod on the node with the node's file system mounted at `/host`, which replaces an `ssh` to the node.
+Two more forms of `kubectl debug` help in other situations. `kubectl debug POD -it --copy-to=POD-debug --container=app --image=busybox -- sh` makes a copy of the pod with a changed container, which helps when the original crashes too fast to inspect. `kubectl debug node/practice-worker -it --image=busybox` starts a pod on the node with the node's file system mounted at `/host`, which replaces an `ssh` to the node.
 
 ## Concept: API versions come and go
 
@@ -98,7 +98,7 @@ Kubernetes removes old API versions instead of serving them forever because ever
 
 ## Task 1: Readiness, liveness and startup probes
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 35.1
@@ -143,12 +143,12 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k -n probes patch deploy api --patch-file /opt/ckad/3.1/probes.yaml
+root@practice-control-plane:~# k -n probes patch deploy api --patch-file /opt/apps/3.1/probes.yaml
 deployment.apps/api patched
-root@cks-cp:~# k -n probes rollout status deploy api
+root@practice-control-plane:~# k -n probes rollout status deploy api
 ...
 deployment "api" successfully rolled out
-root@cks-cp:~# k -n probes describe pod -l app=api | grep -E 'Liveness|Readiness|Startup' | sort -u
+root@practice-control-plane:~# k -n probes describe pod -l app=api | grep -E 'Liveness|Readiness|Startup' | sort -u
     Liveness:       tcp-socket :8080 delay=0s timeout=1s period=10s successThreshold=1 failureThreshold=3
     Readiness:      http-get http://:8080/ready delay=0s timeout=1s period=5s successThreshold=1 failureThreshold=3
     Startup:        http-get http://:8080/live delay=0s timeout=1s period=2s successThreshold=1 failureThreshold=30
@@ -170,7 +170,7 @@ $ ./platform-engineering/task.sh check 35.1
 
 ## Task 2: Probes that kill a healthy app
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 35.2
@@ -188,11 +188,11 @@ shop-65d9d5cd87-jt2jc   0/1     Running   2 (7s ago)   25s
 The warning events name both faults: the readiness probe asks for a page that doesn't exist, and the liveness probe calls a port where nothing listens:
 
 ```console
-root@cks-cp:~# k -n probes-fix get pods
+root@practice-control-plane:~# k -n probes-fix get pods
 NAME                    READY   STATUS             RESTARTS      AGE
 shop-65d9d5cd87-9b46d   0/1     Running            5 (57s ago)   2m15s
 shop-65d9d5cd87-jt2jc   0/1     CrashLoopBackOff   5 (30s ago)   2m15s
-root@cks-cp:~# k -n probes-fix events --types=Warning | tail -3
+root@practice-control-plane:~# k -n probes-fix events --types=Warning | tail -3
 96s (x4 over 2m14s)     Warning   Unhealthy   Pod/shop-65d9d5cd87-9b46d   Readiness probe failed: Get "http://10.244.135.191:80/healthz": dial tcp 10.244.135.191:80: connect: connection refused
 96s (x13 over 2m14s)    Warning   Unhealthy   Pod/shop-65d9d5cd87-9b46d   Readiness probe failed: HTTP probe failed with statuscode: 404
 94s (x4 over 2m14s)     Warning   Unhealthy   Pod/shop-65d9d5cd87-jt2jc   Readiness probe failed: Get "http://10.244.135.143:80/healthz": dial tcp 10.244.135.143:80: connect: connection refused
@@ -201,12 +201,12 @@ root@cks-cp:~# k -n probes-fix events --types=Warning | tail -3
 `k -n probes-fix get deploy shop -o yaml` shows the liveness probe on port 8080, and the 404 above shows that `/healthz` doesn't exist in nginx. One JSON patch changes exactly those two fields:
 
 ```console
-root@cks-cp:~# k -n probes-fix patch deploy shop --type=json -p '[{"op":"replace","path":"/spec/template/spec/containers/0/livenessProbe/httpGet/port","value":80},{"op":"replace","path":"/spec/template/spec/containers/0/readinessProbe/httpGet/path","value":"/"}]'
+root@practice-control-plane:~# k -n probes-fix patch deploy shop --type=json -p '[{"op":"replace","path":"/spec/template/spec/containers/0/livenessProbe/httpGet/port","value":80},{"op":"replace","path":"/spec/template/spec/containers/0/readinessProbe/httpGet/path","value":"/"}]'
 deployment.apps/shop patched
-root@cks-cp:~# k -n probes-fix rollout status deploy shop
+root@practice-control-plane:~# k -n probes-fix rollout status deploy shop
 ...
 deployment "shop" successfully rolled out
-root@cks-cp:~# k -n probes-fix get pods
+root@practice-control-plane:~# k -n probes-fix get pods
 NAME                    READY   STATUS    RESTARTS   AGE
 shop-558bfcf96f-n9lzf   1/1     Running   0          5s
 shop-558bfcf96f-v62b5   1/1     Running   0          3s
@@ -227,7 +227,7 @@ $ ./platform-engineering/task.sh check 35.2
 
 ## Task 3: Logs of a container that crashed
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 35.3
@@ -237,7 +237,7 @@ billing-84d5744958-6blzl   0/1     Error    1 (18s ago)   31s
 ```
 
 > The pod of Deployment `billing` in namespace `logs` keeps crashing.
-> 1. Save the log of a run that crashed to `/opt/ckad/3.3/crash.log`.
+> 1. Save the log of a run that crashed to `/opt/apps/3.3/crash.log`.
 > 2. Fix the cause: the app expects `DB_URL=postgres://db.logs:5432/billing`.
 
 <details>
@@ -246,19 +246,19 @@ billing-84d5744958-6blzl   0/1     Error    1 (18s ago)   31s
 The container runs for 12 seconds before it crashes, so it spends most of its time `Running`, and then `--previous` shows the crashed run:
 
 ```console
-root@cks-cp:~# k -n logs get pods
+root@practice-control-plane:~# k -n logs get pods
 NAME                       READY   STATUS    RESTARTS      AGE
 billing-84d5744958-6blzl   1/1     Running   3 (27s ago)   79s
-root@cks-cp:~# k -n logs logs deploy/billing --previous
+root@practice-control-plane:~# k -n logs logs deploy/billing --previous
 starting billing
 FATAL: environment variable DB_URL is not set
-root@cks-cp:~# k -n logs logs deploy/billing --previous > /opt/ckad/3.3/crash.log
-root@cks-cp:~# k -n logs set env deploy/billing DB_URL=postgres://db.logs:5432/billing
+root@practice-control-plane:~# k -n logs logs deploy/billing --previous > /opt/apps/3.3/crash.log
+root@practice-control-plane:~# k -n logs set env deploy/billing DB_URL=postgres://db.logs:5432/billing
 deployment.apps/billing env updated
-root@cks-cp:~# k -n logs rollout status deploy billing
+root@practice-control-plane:~# k -n logs rollout status deploy billing
 ...
 deployment "billing" successfully rolled out
-root@cks-cp:~# k -n logs logs deploy/billing
+root@practice-control-plane:~# k -n logs logs deploy/billing
 starting billing
 connected to postgres://db.logs:5432/billing
 ```
@@ -270,14 +270,14 @@ In the test run's first attempt, the pod showed `Error` at that moment, and `--p
 ```console
 $ ./platform-engineering/task.sh check 35.3
 == check task 35.3
-  PASS  /opt/ckad/3.3/crash.log holds the crash message
+  PASS  /opt/apps/3.3/crash.log holds the crash message
   PASS  billing's pod is ready and logs 'connected to postgres://db.logs:5432/billing'
 == task 35.3: 2 passed, 0 failed
 ```
 
 ## Task 4: Which pod uses the most CPU
 
-**Time budget:** 3 minutes. **Host:** `cks-cp`.
+**Time budget:** 3 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 35.4
@@ -288,20 +288,20 @@ calc-b   1/1     Running   0          22s
 calc-c   1/1     Running   0          22s
 ```
 
-> 1. Write a command into `/opt/ckad/3.4/top.sh` that lists the pods of namespace `metrics-load` with their CPU use, busiest first.
-> 2. Write the name of the pod that uses the most CPU into `/opt/ckad/3.4/top-pod.txt`.
+> 1. Write a command into `/opt/apps/3.4/top.sh` that lists the pods of namespace `metrics-load` with their CPU use, busiest first.
+> 2. Write the name of the pod that uses the most CPU into `/opt/apps/3.4/top-pod.txt`.
 
 <details>
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# echo 'kubectl -n metrics-load top pod --sort-by=cpu' > /opt/ckad/3.4/top.sh
-root@cks-cp:~# bash /opt/ckad/3.4/top.sh
+root@practice-control-plane:~# echo 'kubectl -n metrics-load top pod --sort-by=cpu' > /opt/apps/3.4/top.sh
+root@practice-control-plane:~# bash /opt/apps/3.4/top.sh
 NAME     CPU(cores)   MEMORY(bytes)   
 calc-b   150m         0Mi             
 calc-c   40m          0Mi             
 calc-a   1m           0Mi             
-root@cks-cp:~# echo calc-b > /opt/ckad/3.4/top-pod.txt
+root@practice-control-plane:~# echo calc-b > /opt/apps/3.4/top-pod.txt
 ```
 
 `calc-b` and `calc-c` both run an endless loop, and each uses exactly its CPU limit, 150m and 40m, because the kernel stops a container's processes once they reach the limit in each scheduling period. Write `kubectl` in full in a script, because the `k` alias exists only in interactive shells.
@@ -311,14 +311,14 @@ root@cks-cp:~# echo calc-b > /opt/ckad/3.4/top-pod.txt
 ```console
 $ ./platform-engineering/task.sh check 35.4
 == check task 35.4
-  PASS  /opt/ckad/3.4/top-pod.txt names calc-b
-  PASS  /opt/ckad/3.4/top.sh lists the pods of metrics-load, busiest first
+  PASS  /opt/apps/3.4/top-pod.txt names calc-b
+  PASS  /opt/apps/3.4/top.sh lists the pods of metrics-load, busiest first
 == task 35.4: 2 passed, 0 failed
 ```
 
 ## Task 5: Debug a container that has no shell
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 35.5
@@ -326,7 +326,7 @@ $ ./platform-engineering/task.sh setup 35.5
 error: Internal error occurred: Internal error occurred: error executing command in container: failed to exec in container: failed to start exec "7f521802c9d96c0d7ec604ee860deaeb445631822dd6b7d845d33053a46a8f32": OCI runtime exec failed: exec failed: unable to start container process: exec: "sh": executable file not found in $PATH
 ```
 
-> The container `app` of pod `vault` in namespace `debugging` has no shell. Without restarting the pod, attach an ephemeral container `debugger` with image `busybox:1.36` that sees `app`'s processes, and write the command line of `app`'s process into `/opt/ckad/3.5/process.txt`.
+> The container `app` of pod `vault` in namespace `debugging` has no shell. Without restarting the pod, attach an ephemeral container `debugger` with image `busybox:1.36` that sees `app`'s processes, and write the command line of `app`'s process into `/opt/apps/3.5/process.txt`.
 
 <details>
 <summary>Solution</summary>
@@ -334,17 +334,17 @@ error: Internal error occurred: Internal error occurred: error executing command
 Without `-it`, `kubectl debug` starts the debugger and returns at once, so give it a command that keeps it alive, then `exec` into it like into any container:
 
 ```console
-root@cks-cp:~# k -n debugging debug vault --image=busybox:1.36 --target=app -c debugger -- sleep 1d
+root@practice-control-plane:~# k -n debugging debug vault --image=busybox:1.36 --target=app -c debugger -- sleep 1d
 Targeting container "app". If you don't see processes from this container it may be because the container runtime doesn't support this feature.
-root@cks-cp:~# k -n debugging wait pod vault --for=jsonpath='{.status.ephemeralContainerStatuses[0].state.running}' --timeout=60s
+root@practice-control-plane:~# k -n debugging wait pod vault --for=jsonpath='{.status.ephemeralContainerStatuses[0].state.running}' --timeout=60s
 pod/vault condition met
-root@cks-cp:~# k -n debugging exec vault -c debugger -- ps
+root@practice-control-plane:~# k -n debugging exec vault -c debugger -- ps
 PID   USER     TIME  COMMAND
     1 65535     0:00 /pause
    13 root      0:00 sleep 1d
    19 root      0:00 ps
-root@cks-cp:~# k -n debugging exec vault -c debugger -- ps -o args | grep -v -E 'ps|sleep|COMMAND' > /opt/ckad/3.5/process.txt
-root@cks-cp:~# cat /opt/ckad/3.5/process.txt
+root@practice-control-plane:~# k -n debugging exec vault -c debugger -- ps -o args | grep -v -E 'ps|sleep|COMMAND' > /opt/apps/3.5/process.txt
+root@practice-control-plane:~# cat /opt/apps/3.5/process.txt
 /pause
 ```
 
@@ -356,14 +356,14 @@ Process 1 belongs to `app` and runs as user 65535, while the debugger's own proc
 $ ./platform-engineering/task.sh check 35.5
 == check task 35.5
   PASS  pod vault has an ephemeral container debugger (busybox:1.36) that targets app
-  PASS  /opt/ckad/3.5/process.txt holds the command of app's process
+  PASS  /opt/apps/3.5/process.txt holds the command of app's process
   PASS  pod vault was not restarted or replaced
 == task 35.5: 3 passed, 0 failed
 ```
 
 ## Task 6: Pods that stay Pending
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 35.6
@@ -373,7 +373,7 @@ report-5bc98b878c-c6d24   0/1     Pending   0          3s
 report-5bc98b878c-dcxlw   0/1     Pending   0          3s
 ```
 
-> The two pods of Deployment `report` in namespace `pending` never start. They are meant to run on nodes labelled `ckad-disk=ssd`, which `cks-w1` is, and each needs 100m CPU and 64Mi memory. Make them run on `cks-w1`, and keep the nodeSelector.
+> The two pods of Deployment `report` in namespace `pending` never start. They are meant to run on nodes labelled `practice-disk=ssd`, which `practice-worker` is, and each needs 100m CPU and 64Mi memory. Make them run on `practice-worker`, and keep the nodeSelector.
 
 <details>
 <summary>Solution</summary>
@@ -381,46 +381,46 @@ report-5bc98b878c-dcxlw   0/1     Pending   0          3s
 The scheduler explains a `Pending` pod in a `FailedScheduling` event, with one reason per node:
 
 ```console
-root@cks-cp:~# k -n pending events --types=Warning | tail -1
+root@practice-control-plane:~# k -n pending events --types=Warning | tail -1
 93s         Warning   FailedScheduling   Pod/report-5bc98b878c-dcxlw   0/2 nodes are available: 1 node(s) didn't match Pod's node affinity/selector, 1 node(s) had untolerated taint(s). preemption: 0/2 nodes are available: 2 Preemption is not helpful for scheduling.
-root@cks-cp:~# k get nodes -L ckad-disk
+root@practice-control-plane:~# k get nodes -L practice-disk
 NAME     STATUS   ROLES           AGE   VERSION   CKAD-DISK
-cks-cp   Ready    control-plane   50m   v1.37.1
-cks-w1   Ready    <none>          50m   v1.37.1
-root@cks-cp:~# k label node cks-w1 ckad-disk=ssd
-node/cks-w1 labeled
+practice-control-plane   Ready    control-plane   50m   v1.37.1
+practice-worker   Ready    <none>          50m   v1.37.1
+root@practice-control-plane:~# k label node practice-worker practice-disk=ssd
+node/practice-worker labeled
 ```
 
 The label alone isn't enough, which `k -n pending describe pod` shows next: with the selector satisfied, the event changes to `1 Insufficient cpu`, because each pod asks for 40 whole CPUs. The scheduler names only the first filter that rejects each node, so a second fault appears only after the first one is gone:
 
 ```console
-root@cks-cp:~# k -n pending set resources deploy report --requests=cpu=100m,memory=64Mi
+root@practice-control-plane:~# k -n pending set resources deploy report --requests=cpu=100m,memory=64Mi
 deployment.apps/report resource requirements updated
-root@cks-cp:~# k -n pending rollout status deploy report
+root@practice-control-plane:~# k -n pending rollout status deploy report
 ...
 deployment "report" successfully rolled out
-root@cks-cp:~# k -n pending get pods -o wide
+root@practice-control-plane:~# k -n pending get pods -o wide
 NAME                      READY   STATUS    RESTARTS   AGE   IP               NODE     NOMINATED NODE   READINESS GATES
-report-57cbc8947d-qhbjv   1/1     Running   0          2s    10.244.135.168   cks-w1   <none>           <none>
-report-57cbc8947d-vfc8x   1/1     Running   0          1s    10.244.135.169   cks-w1   <none>           <none>
+report-57cbc8947d-qhbjv   1/1     Running   0          2s    10.244.135.168   practice-worker   <none>           <none>
+report-57cbc8947d-vfc8x   1/1     Running   0          1s    10.244.135.169   practice-worker   <none>           <none>
 ```
 
-`cks-cp` fails for a third reason, its taint, which is why the event counts `0/2` nodes. Another test run hit a fourth: `1 Too many pods`, after more than 100 task pods had piled up on `cks-w1` without a reset, because a node runs at most 110 pods by default.
+`practice-control-plane` fails for a third reason, its taint, which is why the event counts `0/2` nodes. Another test run hit a fourth: `1 Too many pods`, after more than 100 task pods had piled up on `practice-worker` without a reset, because a node runs at most 110 pods by default.
 
 </details>
 
 ```console
 $ ./platform-engineering/task.sh check 35.6
 == check task 35.6
-  PASS  node cks-w1 carries the label ckad-disk=ssd
+  PASS  node practice-worker carries the label practice-disk=ssd
   PASS  the nodeSelector stays, and each pod requests 100m CPU
-  PASS  both pods run on cks-w1
+  PASS  both pods run on practice-worker
 == task 35.6: 3 passed, 0 failed
 ```
 
 ## Task 7: Manifests written for APIs that no longer exist
 
-**Time budget:** 8 minutes. **Host:** `cks-cp`.
+**Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 35.7
@@ -430,7 +430,7 @@ no matches for kind "HorizontalPodAutoscaler" in version "autoscaling/v2beta1"
 no matches for kind "PodDisruptionBudget" in version "policy/v1beta1"
 ```
 
-> `/opt/ckad/3.7/legacy.yaml` holds a Deployment, a PodDisruptionBudget and a HorizontalPodAutoscaler for namespace `upgrade`, written for API versions that Kubernetes 1.37 no longer serves. Write a version of the file for the current APIs to `/opt/ckad/3.7/current.yaml`, keeping every setting, and apply it.
+> `/opt/apps/3.7/legacy.yaml` holds a Deployment, a PodDisruptionBudget and a HorizontalPodAutoscaler for namespace `upgrade`, written for API versions that Kubernetes 1.37 no longer serves. Write a version of the file for the current APIs to `/opt/apps/3.7/current.yaml`, keeping every setting, and apply it.
 
 <details>
 <summary>Solution</summary>
@@ -438,13 +438,13 @@ no matches for kind "PodDisruptionBudget" in version "policy/v1beta1"
 Look up the current versions, try the convert plugin, and read the HPA's new metric format with `explain`:
 
 ```console
-root@cks-cp:~# k api-resources | grep -E '^(deployments|poddisruptionbudgets|horizontalpodautoscalers) '
+root@practice-control-plane:~# k api-resources | grep -E '^(deployments|poddisruptionbudgets|horizontalpodautoscalers) '
 deployments                         deploy       apps/v1                             true         Deployment
 horizontalpodautoscalers            hpa          autoscaling/v2                      true         HorizontalPodAutoscaler
 poddisruptionbudgets                pdb          policy/v1                           true         PodDisruptionBudget
-root@cks-cp:~# k convert -f /opt/ckad/3.7/legacy.yaml
-error: unable to decode "/opt/ckad/3.7/legacy.yaml": no kind "HorizontalPodAutoscaler" is registered for version "autoscaling/v2beta1" in scheme "pkg/api/legacyscheme/scheme.go:30"
-root@cks-cp:~# k explain hpa.spec.metrics.resource.target --api-version=autoscaling/v2 | grep -E '^ +[a-zA-Z]+\s+<'
+root@practice-control-plane:~# k convert -f /opt/apps/3.7/legacy.yaml
+error: unable to decode "/opt/apps/3.7/legacy.yaml": no kind "HorizontalPodAutoscaler" is registered for version "autoscaling/v2beta1" in scheme "pkg/api/legacyscheme/scheme.go:30"
+root@practice-control-plane:~# k explain hpa.spec.metrics.resource.target --api-version=autoscaling/v2 | grep -E '^ +[a-zA-Z]+\s+<'
   averageUtilization	<integer>
   averageValue	<Quantity>
   type	<string> -required-
@@ -487,11 +487,11 @@ spec:
 ```
 
 ```console
-root@cks-cp:~# k apply -f /opt/ckad/3.7/current.yaml
+root@practice-control-plane:~# k apply -f /opt/apps/3.7/current.yaml
 deployment.apps/catalog created
 poddisruptionbudget.policy/catalog created
 horizontalpodautoscaler.autoscaling/catalog created
-root@cks-cp:~# k -n upgrade get deploy,pdb,hpa
+root@practice-control-plane:~# k -n upgrade get deploy,pdb,hpa
 NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
 deployment.apps/catalog   2/2     2            2           1s
 
@@ -509,7 +509,7 @@ The HPA shows `<unknown>` until metrics-server has two samples of the new pods, 
 ```console
 $ ./platform-engineering/task.sh check 35.7
 == check task 35.7
-  PASS  /opt/ckad/3.7/current.yaml uses apps/v1, policy/v1 and autoscaling/v2 only
+  PASS  /opt/apps/3.7/current.yaml uses apps/v1, policy/v1 and autoscaling/v2 only
   PASS  the file applies cleanly (server dry run)
   PASS  Deployment catalog runs 2 ready pods in upgrade
   PASS  the HPA targets Deployment catalog at 70% CPU, 2 to 5 replicas
@@ -519,7 +519,7 @@ $ ./platform-engineering/task.sh check 35.7
 
 ## Task 8: A client that never reaches its backend
 
-**Time budget:** 8 minutes. **Host:** `cks-cp`.
+**Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 > In namespace `troubleshoot`, pod `client` gets no answer from `http://backend`. Make `wget -qO- http://backend` in `client` return `backend ok`, served by both pods of Deployment `backend`. Keep the Deployment's labels and keep a readiness probe on it.
 
@@ -529,18 +529,18 @@ $ ./platform-engineering/task.sh check 35.7
 Follow the request from the Service to the pods, and look at each link in turn. The EndpointSlice is empty, the pods are not ready, and the Service's selector and port need a look:
 
 ```console
-root@cks-cp:~# k -n troubleshoot get svc,endpointslice
+root@practice-control-plane:~# k -n troubleshoot get svc,endpointslice
 NAME              TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
 service/backend   ClusterIP   10.96.173.114   <none>        80/TCP    3s
 
 NAME                                           ADDRESSTYPE   PORTS     ENDPOINTS   AGE
 endpointslice.discovery.k8s.io/backend-ht7hd   IPv4          <unset>   <unset>     3s
-root@cks-cp:~# k -n troubleshoot get pods --show-labels
+root@practice-control-plane:~# k -n troubleshoot get pods --show-labels
 NAME                       READY   STATUS    RESTARTS   AGE   LABELS
 backend-67c7db7dc7-2r2c9   0/1     Running   0          3s    app=backend,pod-template-hash=67c7db7dc7
 backend-67c7db7dc7-d2t48   0/1     Running   0          3s    app=backend,pod-template-hash=67c7db7dc7
 client                     1/1     Running   0          3s    <none>
-root@cks-cp:~# k -n troubleshoot describe pod -l app=backend | grep Readiness | head -2
+root@practice-control-plane:~# k -n troubleshoot describe pod -l app=backend | grep Readiness | head -2
     Readiness:      http-get http://:8080/health delay=0s timeout=1s period=3s successThreshold=1 failureThreshold=3
     Readiness:      http-get http://:8080/health delay=0s timeout=1s period=3s successThreshold=1 failureThreshold=3
 ```
@@ -548,17 +548,17 @@ root@cks-cp:~# k -n troubleshoot describe pod -l app=backend | grep Readiness | 
 `k -n troubleshoot get svc backend -o yaml` shows the other two faults: the selector says `app: back-end` and the target port is 80, while the pods carry `app=backend` and listen on 8080. The readiness probe asks for `/health`, a file the server doesn't have. Fix all three:
 
 ```console
-root@cks-cp:~# k -n troubleshoot patch svc backend -p '{"spec":{"selector":{"app":"backend"},"ports":[{"port":80,"targetPort":8080}]}}'
+root@practice-control-plane:~# k -n troubleshoot patch svc backend -p '{"spec":{"selector":{"app":"backend"},"ports":[{"port":80,"targetPort":8080}]}}'
 service/backend patched
-root@cks-cp:~# k -n troubleshoot patch deploy backend --type=json -p '[{"op":"replace","path":"/spec/template/spec/containers/0/readinessProbe/httpGet/path","value":"/"}]'
+root@practice-control-plane:~# k -n troubleshoot patch deploy backend --type=json -p '[{"op":"replace","path":"/spec/template/spec/containers/0/readinessProbe/httpGet/path","value":"/"}]'
 deployment.apps/backend patched
-root@cks-cp:~# k -n troubleshoot rollout status deploy backend
+root@practice-control-plane:~# k -n troubleshoot rollout status deploy backend
 ...
 deployment "backend" successfully rolled out
-root@cks-cp:~# k -n troubleshoot get endpointslice
+root@practice-control-plane:~# k -n troubleshoot get endpointslice
 NAME            ADDRESSTYPE   PORTS   ENDPOINTS                                                 AGE
 backend-ht7hd   IPv4          8080    10.244.135.98,10.244.135.124,10.244.135.128 + 1 more...   4s
-root@cks-cp:~# k -n troubleshoot exec client -- wget -qO- http://backend
+root@practice-control-plane:~# k -n troubleshoot exec client -- wget -qO- http://backend
 backend ok
 ```
 
@@ -577,4 +577,4 @@ $ ./platform-engineering/task.sh check 35.8
 
 ## Clean up
 
-`./platform-engineering/practice/app-extras/reset.sh` deletes the task namespaces, removes the label `ckad-disk` from `cks-w1`, and removes metrics-server again, which task 4 installed.
+`./platform-engineering/practice/app-extras/reset.sh` deletes the task namespaces, removes the label `practice-disk` from `practice-worker`, and removes metrics-server again, which task 4 installed.

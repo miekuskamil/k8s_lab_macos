@@ -22,34 +22,34 @@ mock_title() {
 # ---- 1. Build, push and run an image (8) -------------------------------------------------
 setup_m1() {
   ns_new k1-build
-  put_file /opt/ckad/m1/1/Dockerfile <<'EOF'
+  put_file /opt/apps/m1/1/Dockerfile <<'EOF'
 FROM docker.io/library/busybox:1.36
 WORKDIR /app
 COPY ticker.sh .
 ENV INTERVAL=5
 CMD ["sh", "ticker.sh"]
 EOF
-  put_file /opt/ckad/m1/1/ticker.sh <<'EOF'
+  put_file /opt/apps/m1/1/ticker.sh <<'EOF'
 while true; do echo "tick from $(hostname) every ${INTERVAL}s"; sleep "$INTERVAL"; done
 EOF
 }
 score_m1() {
-  check_cp "the registry holds ticker:1.0" "curl -fsS http://registry.ckad:5000/v2/ticker/tags/list | grep -q '\"1.0\"'"
-  check_cp "Deployment ticker in k1-build runs registry.ckad:5000/ticker:1.0 with 2 ready pods" \
-    "kubectl -n k1-build get deploy ticker -o jsonpath='{.spec.template.spec.containers[0].image} {.status.readyReplicas}' | grep -qx 'registry.ckad:5000/ticker:1.0 2'"
+  check_cp "the registry holds ticker:1.0" "curl -fsS http://registry.practice:5000/v2/ticker/tags/list | grep -q '\"1.0\"'"
+  check_cp "Deployment ticker in k1-build runs registry.practice:5000/ticker:1.0 with 2 ready pods" \
+    "kubectl -n k1-build get deploy ticker -o jsonpath='{.spec.template.spec.containers[0].image} {.status.readyReplicas}' | grep -qx 'registry.practice:5000/ticker:1.0 2'"
   check_cp "its pods log 'tick from'" "kubectl -n k1-build logs deploy/ticker | grep -q 'tick from'"
-  check_cp "/opt/ckad/m1/1/ticker.tar holds the image" "tar -tf /opt/ckad/m1/1/ticker.tar | grep -q manifest.json"
+  check_cp "/opt/apps/m1/1/ticker.tar holds the image" "tar -tf /opt/apps/m1/1/ticker.tar | grep -q manifest.json"
 }
 solve_m1() {
-  cp_sh 'cd /opt/ckad/m1/1 && podman build -q -t registry.ckad:5000/ticker:1.0 . && podman push -q registry.ckad:5000/ticker:1.0 && podman save -q -o ticker.tar registry.ckad:5000/ticker:1.0
-    kubectl -n k1-build create deploy ticker --image=registry.ckad:5000/ticker:1.0 --replicas=2
+  cp_sh 'cd /opt/apps/m1/1 && podman build -q -t registry.practice:5000/ticker:1.0 . && podman push -q registry.practice:5000/ticker:1.0 && podman save -q -o ticker.tar registry.practice:5000/ticker:1.0
+    kubectl -n k1-build create deploy ticker --image=registry.practice:5000/ticker:1.0 --replicas=2
     kubectl -n k1-build rollout status deploy ticker --timeout=120s'
 }
 
 # ---- 2. A log sidecar (6) -------------------------------------------------------------------
 setup_m2() {
   ns_new k1-pods
-  put_file /opt/ckad/m1/2/audit.yaml <<'EOF'
+  put_file /opt/apps/m1/2/audit.yaml <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -71,7 +71,7 @@ score_m2() {
     "for i in \$(seq 1 15); do kubectl -n k1-pods logs audit -c log-tail 2>/dev/null | grep -q 'user login' && exit 0; sleep 2; done; exit 1"
 }
 solve_m2() {
-  put_file /opt/ckad/m1/2/audit.yaml <<'EOF'
+  put_file /opt/apps/m1/2/audit.yaml <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -95,7 +95,7 @@ spec:
   - name: logs
     emptyDir: {}
 EOF
-  cp_sh 'kubectl apply -f /opt/ckad/m1/2/audit.yaml && kubectl -n k1-pods wait pod audit --for=condition=Ready --timeout=90s'
+  cp_sh 'kubectl apply -f /opt/apps/m1/2/audit.yaml && kubectl -n k1-pods wait pod audit --for=condition=Ready --timeout=90s'
 }
 
 # ---- 3. A nightly CronJob (5) ---------------------------------------------------------------
@@ -125,15 +125,15 @@ setup_m4() {
 score_m4() {
   check_cp "Deployment store has three revisions and runs nginx:1.27-alpine again" \
     "[ \$(kubectl -n k1-roll get rs -l app=store --no-headers | wc -l) -ge 2 ] && kubectl -n k1-roll get deploy store -o jsonpath='{.metadata.annotations.deployment\.kubernetes\.io/revision} {.spec.template.spec.containers[0].image}' | grep -qx '3 nginx:1.27-alpine'"
-  check_cp "/opt/ckad/m1/4/history.txt holds the history with the 1.28 update" "grep -q 'image 1.28' /opt/ckad/m1/4/history.txt"
+  check_cp "/opt/apps/m1/4/history.txt holds the history with the 1.28 update" "grep -q 'image 1.28' /opt/apps/m1/4/history.txt"
   check_cp "both pods are ready" "kubectl -n k1-roll rollout status deploy store --timeout=10s"
 }
 solve_m4() {
-  cp_sh "mkdir -p /opt/ckad/m1/4
+  cp_sh "mkdir -p /opt/apps/m1/4
     kubectl -n k1-roll set image deploy/store nginx=nginx:1.28-alpine
     kubectl -n k1-roll annotate deploy store kubernetes.io/change-cause='image 1.28' --overwrite
     kubectl -n k1-roll rollout status deploy store --timeout=120s
-    kubectl -n k1-roll rollout history deploy store > /opt/ckad/m1/4/history.txt
+    kubectl -n k1-roll rollout history deploy store > /opt/apps/m1/4/history.txt
     kubectl -n k1-roll rollout undo deploy store
     kubectl -n k1-roll rollout status deploy store --timeout=120s"
 }
@@ -160,7 +160,7 @@ solve_m5() {
 setup_m6() {
   charts_ready || return 1
   ns_new k1-helm
-  put_file /opt/ckad/m1/6/values.yaml <<'EOF'
+  put_file /opt/apps/m1/6/values.yaml <<'EOF'
 replicaCount: 3
 service:
   type: NodePort
@@ -174,18 +174,18 @@ score_m6() {
   check_cp "the user values carry image.pullPolicy=Always" "helm -n k1-helm get values catalog -o json | grep -q '\"pullPolicy\":\"Always\"'"
 }
 solve_m6() {
-  cp_sh 'helm -n k1-helm install catalog oci://registry.ckad:5000/charts/webapp --version 0.2.0 --plain-http -f /opt/ckad/m1/6/values.yaml --set image.pullPolicy=Always
+  cp_sh 'helm -n k1-helm install catalog oci://registry.practice:5000/charts/webapp --version 0.2.0 --plain-http -f /opt/apps/m1/6/values.yaml --set image.pullPolicy=Always
     kubectl -n k1-helm rollout status deploy catalog-webapp --timeout=120s'
 }
 
 # ---- 7. A Kustomize overlay (6) ---------------------------------------------------------------------
 setup_m7() {
   ns_new k1-kust
-  put_file /opt/ckad/m1/7/base/kustomization.yaml <<'EOF'
+  put_file /opt/apps/m1/7/base/kustomization.yaml <<'EOF'
 resources:
 - deployment.yaml
 EOF
-  put_file /opt/ckad/m1/7/base/deployment.yaml <<'EOF'
+  put_file /opt/apps/m1/7/base/deployment.yaml <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -209,10 +209,10 @@ score_m7() {
   check_cp "its pods carry the label stage=qa" "kubectl -n k1-kust get deploy qa-frontend -o jsonpath='{.spec.template.metadata.labels.stage}' | grep -qx qa"
   check_cp "a ConfigMap qa-frontend-settings-<hash> holds STAGE=qa and feeds the pods' environment" \
     "cm=\$(kubectl -n k1-kust get deploy qa-frontend -o jsonpath='{.spec.template.spec.containers[0].envFrom[0].configMapRef.name}'); echo \$cm | grep -q '^qa-frontend-settings-' && kubectl -n k1-kust get cm \$cm -o jsonpath='{.data.STAGE}' | grep -qx qa"
-  check_cp "the overlay is in /opt/ckad/m1/7/overlays/qa" "test -f /opt/ckad/m1/7/overlays/qa/kustomization.yaml"
+  check_cp "the overlay is in /opt/apps/m1/7/overlays/qa" "test -f /opt/apps/m1/7/overlays/qa/kustomization.yaml"
 }
 solve_m7() {
-  put_file /opt/ckad/m1/7/overlays/qa/kustomization.yaml <<'EOF'
+  put_file /opt/apps/m1/7/overlays/qa/kustomization.yaml <<'EOF'
 resources:
 - ../../base
 namespace: k1-kust
@@ -239,7 +239,7 @@ patches:
     kind: Deployment
     name: frontend
 EOF
-  cp_sh 'kubectl apply -k /opt/ckad/m1/7/overlays/qa && kubectl -n k1-kust rollout status deploy qa-frontend --timeout=120s'
+  cp_sh 'kubectl apply -k /opt/apps/m1/7/overlays/qa && kubectl -n k1-kust rollout status deploy qa-frontend --timeout=120s'
 }
 
 # ---- 8. Probes for an API (6) ----------------------------------------------------------------------
@@ -268,16 +268,16 @@ setup_m9() {
     kubectl -n k1-logs create deploy exporter --image=busybox:1.36 -- sleep 1d >/dev/null"
 }
 score_m9() {
-  check_cp "/opt/ckad/m1/9/error.txt holds the error line" "grep -qx 'ERROR 42: file /data/import.csv not found' /opt/ckad/m1/9/error.txt"
-  check_cp "/opt/ckad/m1/9/exit-code.txt holds the exit code" "grep -qx 3 /opt/ckad/m1/9/exit-code.txt"
+  check_cp "/opt/apps/m1/9/error.txt holds the error line" "grep -qx 'ERROR 42: file /data/import.csv not found' /opt/apps/m1/9/error.txt"
+  check_cp "/opt/apps/m1/9/exit-code.txt holds the exit code" "grep -qx 3 /opt/apps/m1/9/exit-code.txt"
 }
 solve_m9() {
-  cp_sh "mkdir -p /opt/ckad/m1/9
+  cp_sh "mkdir -p /opt/apps/m1/9
     for i in \$(seq 1 40); do kubectl -n k1-logs get pod -l app=importer -o jsonpath='{.items[0].status.containerStatuses[0].lastState.terminated.exitCode}' | grep -q . && break; sleep 2; done
     P=\$(kubectl -n k1-logs get pod -l app=importer -o name)
-    { kubectl -n k1-logs logs \$P --previous; kubectl -n k1-logs logs \$P; } 2>/dev/null | grep -m1 ERROR > /opt/ckad/m1/9/error.txt
-    kubectl -n k1-logs get \$P -o jsonpath='{.status.containerStatuses[0].lastState.terminated.exitCode}' > /opt/ckad/m1/9/exit-code.txt
-    cat /opt/ckad/m1/9/*.txt"
+    { kubectl -n k1-logs logs \$P --previous; kubectl -n k1-logs logs \$P; } 2>/dev/null | grep -m1 ERROR > /opt/apps/m1/9/error.txt
+    kubectl -n k1-logs get \$P -o jsonpath='{.status.containerStatuses[0].lastState.terminated.exitCode}' > /opt/apps/m1/9/exit-code.txt
+    cat /opt/apps/m1/9/*.txt"
 }
 
 # ---- 10. The hungriest pod (4) -----------------------------------------------------------------------
@@ -304,12 +304,12 @@ EOF
   done
 }
 score_m10() {
-  check_cp "/opt/ckad/m1/10/pod.txt names the pod with the most memory in k1-top" "grep -qx large /opt/ckad/m1/10/pod.txt"
+  check_cp "/opt/apps/m1/10/pod.txt names the pod with the most memory in k1-top" "grep -qx large /opt/apps/m1/10/pod.txt"
 }
 solve_m10() {
-  cp_sh "mkdir -p /opt/ckad/m1/10
+  cp_sh "mkdir -p /opt/apps/m1/10
     for i in \$(seq 1 40); do [ \"\$(kubectl -n k1-top top pod --no-headers 2>/dev/null | wc -l)\" = 3 ] && break; sleep 3; done
-    kubectl -n k1-top top pod --sort-by=memory --no-headers | head -1 | awk '{print \$1}' > /opt/ckad/m1/10/pod.txt; cat /opt/ckad/m1/10/pod.txt"
+    kubectl -n k1-top top pod --sort-by=memory --no-headers | head -1 | awk '{print \$1}' > /opt/apps/m1/10/pod.txt; cat /opt/apps/m1/10/pod.txt"
 }
 
 # ---- 11. ConfigMap and Secret (8) ------------------------------------------------------------------------

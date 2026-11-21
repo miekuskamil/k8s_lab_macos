@@ -8,15 +8,15 @@ The real exam gives you 2 hours for 15 to 20 tasks on several clusters, and this
 
 ## Rules
 
-1. Start fresh with `./platform-engineering/practice/cluster/reset.sh`, then `./platform-engineering/practice-exam.sh setup 4`. In the test run, the setup took 8 seconds, because the node already had the images, while on new machines the first run also downloads them.
+1. Start fresh with `./lab.sh practice reset`, then `./platform-engineering/practice-exam.sh setup 4`. In the test run, the reset took 67 seconds and the setup 19 seconds, because the nodes already had the images, while on a new cluster the first run also downloads them.
 2. The clock starts when `setup.sh` ends, because it writes the start time, and `score.sh` prints the minutes since then and flags a run over 120 minutes.
-3. Work only on the nodes, through `orb -m cks-cp` and `orb -m cks-w1`, and use only the documentation the exam allows: kubernetes.io, and the docs of Falco, bom, etcd, ingress-nginx, Cilium and Istio.
+3. Work only on the nodes, through `./lab.sh practice shell` and `./lab.sh practice shell worker`, and use only the documentation the exam allows: kubernetes.io, and the docs of Falco, bom, etcd, ingress-nginx, Cilium and Istio.
 4. Don't open the solutions while the timer runs, because the score only means something when you worked without them.
 5. When time is up, score from your Mac with `./platform-engineering/practice-exam.sh score 4`, or score single tasks with `./platform-engineering/practice-exam.sh score 4 4 9`.
 
 **Do task 1 first.** `kubeadm upgrade apply` rewrites every static pod manifest from the cluster's stored configuration, so it wipes any API server flag you added before it. The real exam avoids this by giving the upgrade its own cluster, but this practice exam shares one cluster, so the order matters, and noticing that is part of the test.
 
-Each task names the host it runs on, and `kubectl` always runs on `cks-cp`.
+Each task names the host it runs on, and `kubectl` always runs on `practice-control-plane`.
 
 ## Tasks
 
@@ -42,31 +42,31 @@ Each task names the host it runs on, and `kubectl` always runs on `cks-cp`.
 
 ### Task 1: Upgrade the control plane (7 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
-> Upgrade the control plane node `cks-cp` from v1.37.1 to v1.37.2: kubeadm, the control plane components, the kubelet and kubectl. Drain the node first and make it schedulable afterwards. Leave `cks-w1` alone.
+> Upgrade the control plane node `practice-control-plane` from v1.37.1 to v1.37.2: kubeadm, the control plane components, the kubelet and kubectl. Drain the node first and make it schedulable afterwards. Leave `practice-worker` alone.
 
 <details>
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# apt-mark unhold kubeadm && apt-get update && apt-get install -y kubeadm=1.37.2-1.1 && apt-mark hold kubeadm
+root@practice-control-plane:~# apt-mark unhold kubeadm && apt-get update && apt-get install -y kubeadm=1.37.2-1.1 && apt-mark hold kubeadm
 Canceled hold on kubeadm.
 ...
 Unpacking kubeadm (1.37.2-1.1) over (1.37.1-1.1)…
 Setting up kubeadm (1.37.2-1.1)…
 kubeadm set on hold.
-root@cks-cp:~# kubeadm upgrade apply v1.37.2 -y
+root@practice-control-plane:~# kubeadm upgrade apply v1.37.2 -y
 ...
 [upgrade/preflight] You have chosen to upgrade the cluster version to "v1.37.2"
 ...
 [upgrade] SUCCESS! A control plane node of your cluster was upgraded to "v1.37.2".
 ...
-root@cks-cp:~# k drain cks-cp --ignore-daemonsets --delete-emptydir-data
-node/cks-cp cordoned
+root@practice-control-plane:~# k drain practice-control-plane --ignore-daemonsets --delete-emptydir-data
+node/practice-control-plane cordoned
 ...
-node/cks-cp drained
-root@cks-cp:~# apt-mark unhold kubelet kubectl && apt-get install -y kubelet=1.37.2-1.1 kubectl=1.37.2-1.1 && apt-mark hold kubelet kubectl
+node/practice-control-plane drained
+root@practice-control-plane:~# apt-mark unhold kubelet kubectl && apt-get install -y kubelet=1.37.2-1.1 kubectl=1.37.2-1.1 && apt-mark hold kubelet kubectl
 Canceled hold on kubelet.
 Canceled hold on kubectl.
 ...
@@ -74,9 +74,9 @@ Setting up kubectl (1.37.2-1.1)…
 Setting up kubelet (1.37.2-1.1)…
 kubelet set on hold.
 kubectl set on hold.
-root@cks-cp:~# systemctl daemon-reload && systemctl restart kubelet
-root@cks-cp:~# k uncordon cks-cp
-node/cks-cp uncordoned
+root@practice-control-plane:~# systemctl daemon-reload && systemctl restart kubelet
+root@practice-control-plane:~# k uncordon practice-control-plane
+node/practice-control-plane uncordoned
 ```
 
 The worker stays at 1.37.1, which is fine, because a kubelet older than the API server is within the skew rule. [module 39, task 4](../2-intermediate/39-hardening-access-to-the-api.md#task-4-upgrade-the-cluster-with-kubeadm) explains the steps.
@@ -85,7 +85,7 @@ The worker stays at 1.37.1, which is fine, because a kubelet older than the API 
 
 ### Task 2: Protect the database (7 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > In namespace `m-db`, pod `db` (label `app=db`) serves on port 80. Create a NetworkPolicy `db-ingress` so that `db` accepts TCP port 80 only from pods labelled `app=backend` in `m-db`, and no other ingress. Pods with the same label in other namespaces must not get in.
 
@@ -116,15 +116,15 @@ A `podSelector` alone in `from` matches pods in the policy's own namespace only,
 
 ### Task 3: CIS findings (6 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
-> kube-bench reports two failures you must fix on `cks-cp`: 1.4.1 (the scheduler's profiling) and 1.1.12 (the owner of etcd's data directory). Both components must keep running.
+> kube-bench reports two failures you must fix on `practice-control-plane`: 1.4.1 (the scheduler's profiling) and 1.1.12 (the owner of etcd's data directory). Both components must keep running.
 
 <details>
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# kube-bench run --targets master --check 1.4.1,1.1.12      # read the remediations
+root@practice-control-plane:~# kube-bench run --targets master --check 1.4.1,1.1.12      # read the remediations
 ...
 [FAIL] 1.1.12 Ensure that the etcd data directory ownership is set to etcd:etcd (Automated)
 ...
@@ -136,11 +136,11 @@ root@cks-cp:~# kube-bench run --targets master --check 1.4.1,1.1.12      # read 
 0 checks PASS
 2 checks FAIL
 ...
-root@cks-cp:~# vim /etc/kubernetes/manifests/kube-scheduler.yaml          # add - --profiling=false
-root@cks-cp:~# useradd -r -s /usr/sbin/nologin etcd
+root@practice-control-plane:~# vim /etc/kubernetes/manifests/kube-scheduler.yaml          # add - --profiling=false
+root@practice-control-plane:~# useradd -r -s /usr/sbin/nologin etcd
 useradd: user 'etcd' already exists
-root@cks-cp:~# chown -R etcd:etcd /var/lib/etcd
-root@cks-cp:~# kube-bench run --targets master --check 1.4.1,1.1.12
+root@practice-control-plane:~# chown -R etcd:etcd /var/lib/etcd
+root@practice-control-plane:~# kube-bench run --targets master --check 1.4.1,1.1.12
 ...
 [PASS] 1.1.12 Ensure that the etcd data directory ownership is set to etcd:etcd (Automated)
 ...
@@ -162,7 +162,7 @@ etcd keeps running, because its container runs as root, and the owner change doe
 
 ### Task 4: Ingress with TLS (4 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Namespace `m-web` runs Deployment and Service `site` on port 80. Serve it at `https://site.cks.local` through an Ingress `site` of class `nginx`, with the certificate and key in `/root/mock/site.crt` and `/root/mock/site.key`, stored in a TLS Secret `site-tls`.
 
@@ -170,11 +170,11 @@ etcd keeps running, because its container runs as root, and the owner change doe
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# k -n m-web create secret tls site-tls --cert=/root/mock/site.crt --key=/root/mock/site.key
+root@practice-control-plane:~# k -n m-web create secret tls site-tls --cert=/root/mock/site.crt --key=/root/mock/site.key
 secret/site-tls created
-root@cks-cp:~# k -n m-web create ingress site --class=nginx --rule="site.cks.local/*=site:80,tls=site-tls"
+root@practice-control-plane:~# k -n m-web create ingress site --class=nginx --rule="site.cks.local/*=site:80,tls=site-tls"
 ingress.networking.k8s.io/site created
-root@cks-cp:~# curl -sk --resolve site.cks.local:30443:127.0.0.1 https://site.cks.local:30443/ | head -4
+root@practice-control-plane:~# curl -sk --resolve site.cks.local:30443:127.0.0.1 https://site.cks.local:30443/ | head -4
 <!DOCTYPE html>
 <html>
 <head>
@@ -185,7 +185,7 @@ root@cks-cp:~# curl -sk --resolve site.cks.local:30443:127.0.0.1 https://site.ck
 
 ### Task 5: Take cluster-admin away (6 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > ServiceAccount `deployer` in `m-ops` holds `cluster-admin` through ClusterRoleBinding `deployer-admin`. Remove that binding. Give `deployer` only `get`, `list`, `watch`, `create`, `update` and `patch` on Deployments in `m-ops`, through a Role and a RoleBinding both named `deployer`.
 
@@ -193,13 +193,13 @@ root@cks-cp:~# curl -sk --resolve site.cks.local:30443:127.0.0.1 https://site.ck
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# k delete clusterrolebinding deployer-admin
+root@practice-control-plane:~# k delete clusterrolebinding deployer-admin
 clusterrolebinding.rbac.authorization.k8s.io "deployer-admin" deleted
-root@cks-cp:~# k -n m-ops create role deployer --verb=get,list,watch,create,update,patch --resource=deployments.apps
+root@practice-control-plane:~# k -n m-ops create role deployer --verb=get,list,watch,create,update,patch --resource=deployments.apps
 role.rbac.authorization.k8s.io/deployer created
-root@cks-cp:~# k -n m-ops create rolebinding deployer --role=deployer --serviceaccount=m-ops:deployer
+root@practice-control-plane:~# k -n m-ops create rolebinding deployer --role=deployer --serviceaccount=m-ops:deployer
 rolebinding.rbac.authorization.k8s.io/deployer created
-root@cks-cp:~# k auth can-i delete deployments -n m-ops --as=system:serviceaccount:m-ops:deployer    # no
+root@practice-control-plane:~# k auth can-i delete deployments -n m-ops --as=system:serviceaccount:m-ops:deployer    # no
 no
 ```
 
@@ -207,7 +207,7 @@ no
 
 ### Task 6: No token in the metrics pod (4 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Pod `metrics` in `m-ops` doesn't need the Kubernetes API. Change the pod itself, not its ServiceAccount, so that the kubelet mounts no API token into it. Keep the name.
 
@@ -215,12 +215,12 @@ no
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# k -n m-ops get pod metrics -o yaml > metrics.yaml
-root@cks-cp:~# vim metrics.yaml
-root@cks-cp:~# k -n m-ops replace --force -f metrics.yaml
+root@practice-control-plane:~# k -n m-ops get pod metrics -o yaml > metrics.yaml
+root@practice-control-plane:~# vim metrics.yaml
+root@practice-control-plane:~# k -n m-ops replace --force -f metrics.yaml
 pod "metrics" deleted from m-ops namespace
 pod/metrics replaced
-root@cks-cp:~# k -n m-ops exec metrics -- ls /var/run/secrets/kubernetes.io/serviceaccount/
+root@practice-control-plane:~# k -n m-ops exec metrics -- ls /var/run/secrets/kubernetes.io/serviceaccount/
 ls: /var/run/secrets/kubernetes.io/serviceaccount/: No such file or directory
 command terminated with exit code 1
 ```
@@ -233,24 +233,24 @@ In `metrics.yaml`, add `automountServiceAccountToken: false` under `spec`, and d
 
 ### Task 7: Remove a web server from a node (4 points)
 
-**Host:** `cks-w1`.
+**Host:** `practice-worker`.
 
-> Something on `cks-w1` listens on TCP port 80. Stop it for good and remove its package.
+> Something on `practice-worker` listens on TCP port 80. Stop it for good and remove its package.
 
 <details>
 <summary>Solution</summary>
 
 ```console
-root@cks-w1:~# ss -tlnp | grep ':80 '          # names the process: lighttpd
+root@practice-worker:~# ss -tlnp | grep ':80 '          # names the process: lighttpd
 LISTEN 0      1024         0.0.0.0:80         0.0.0.0:*    users:(("lighttpd",pid=88972,fd=5))   
 LISTEN 0      1024            [::]:80            [::]:*    users:(("lighttpd",pid=88972,fd=4))   
-root@cks-w1:~# dpkg -S "$(command -v lighttpd)"
+root@practice-worker:~# dpkg -S "$(command -v lighttpd)"
 lighttpd: /usr/sbin/lighttpd
-root@cks-w1:~# systemctl disable --now lighttpd
+root@practice-worker:~# systemctl disable --now lighttpd
 Synchronizing state of lighttpd.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
 Executing: /usr/lib/systemd/systemd-sysv-install disable lighttpd
 Removed "/etc/systemd/system/multi-user.target.wants/lighttpd.service".
-root@cks-w1:~# apt-get purge -y lighttpd
+root@practice-worker:~# apt-get purge -y lighttpd
 ...
 The following packages will be REMOVED:
   lighttpd* lighttpd-mod-deflate* lighttpd-mod-openssl*
@@ -265,28 +265,28 @@ Purging configuration files for lighttpd (1.4.74-1ubuntu3)…
 
 ### Task 8: An intern with root (4 points)
 
-**Host:** `cks-w1`.
+**Host:** `practice-worker`.
 
-> User `intern` on `cks-w1` must keep the account but lose every way to run commands as root through sudo.
+> User `intern` on `practice-worker` must keep the account but lose every way to run commands as root through sudo.
 
 <details>
 <summary>Solution</summary>
 
 ```console
-root@cks-w1:~# gpasswd -d intern sudo
+root@practice-worker:~# gpasswd -d intern sudo
 Removing user intern from group sudo
-root@cks-w1:~# grep -rl intern /etc/sudoers /etc/sudoers.d/
+root@practice-worker:~# grep -rl intern /etc/sudoers /etc/sudoers.d/
 /etc/sudoers.d/intern
-root@cks-w1:~# rm /etc/sudoers.d/intern
-root@cks-w1:~# sudo -l -U intern
-User intern is not allowed to run sudo on cks-w1.
+root@practice-worker:~# rm /etc/sudoers.d/intern
+root@practice-worker:~# sudo -l -U intern
+User intern is not allowed to run sudo on practice-worker.
 ```
 
 </details>
 
 ### Task 9: Restricted namespace (6 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Make namespace `m-secure` enforce the `restricted` Pod Security Standard. Deployment `api` must keep one ready pod under it, running as user 1000.
 
@@ -296,11 +296,11 @@ User intern is not allowed to run sudo on cks-w1.
 Label the namespace, then add to the pod template what the warning lists, as in [module 41, task 1](41-hardening-workloads.md#task-1-enforce-the-restricted-standard):
 
 ```console
-root@cks-cp:~# k label ns m-secure pod-security.kubernetes.io/enforce=restricted
+root@practice-control-plane:~# k label ns m-secure pod-security.kubernetes.io/enforce=restricted
 Warning: existing pods in namespace "m-secure" violate the new PodSecurity enforce level "restricted:latest"
 Warning: api-85c6769c7f-46w2c: allowPrivilegeEscalation != false, unrestricted capabilities, runAsNonRoot != true, seccompProfile
 namespace/m-secure labeled
-root@cks-cp:~# k -n m-secure edit deploy api
+root@practice-control-plane:~# k -n m-secure edit deploy api
 ```
 
 The transcript leaves out the editor session, which makes the change the YAML below shows.
@@ -322,7 +322,7 @@ The transcript leaves out the editor session, which makes the change the YAML be
 
 ### Task 10: Secrets encrypted with secretbox (7 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Encrypt Secrets at rest with the `secretbox` provider and a key named `mock`, configured in `/etc/kubernetes/enc/mock.yaml`. Secret `api-key` in `m-vault`, which already exists, must end up encrypted.
 
@@ -350,7 +350,7 @@ Add `--encryption-provider-config=/etc/kubernetes/enc/mock.yaml` with a mount fo
 
 ### Task 11: A sandboxed pod (5 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Create a RuntimeClass `sandboxed` for the handler `runsc`, and a pod `untrusted` in `m-sandbox` with image `busybox:1.36` and command `sleep 1d` that runs with it.
 
@@ -378,7 +378,7 @@ spec:
 
 ### Task 12: Vulnerable images (5 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Delete every pod in `m-scan` whose image has at least one CRITICAL vulnerability according to trivy. Keep the rest.
 
@@ -386,17 +386,17 @@ spec:
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# k -n m-scan get pods -o custom-columns=POD:.metadata.name,IMAGE:.spec.containers[0].image
+root@practice-control-plane:~# k -n m-scan get pods -o custom-columns=POD:.metadata.name,IMAGE:.spec.containers[0].image
 POD             IMAGE
 debug           busybox:1.36
 legacy-web      nginx:1.19.0
 session-store   redis:6.0.5
-root@cks-cp:~# for i in nginx:1.19.0 redis:6.0.5 busybox:1.36; do echo "$i $(trivy image -q --severity CRITICAL $i | grep Total)"; done
+root@practice-control-plane:~# for i in nginx:1.19.0 redis:6.0.5 busybox:1.36; do echo "$i $(trivy image -q --severity CRITICAL $i | grep Total)"; done
 nginx:1.19.0 Total: 44 (CRITICAL: 44)
 redis:6.0.5 Total: 17 (CRITICAL: 17)
 Total: 5 (CRITICAL: 5)
 busybox:1.36 
-root@cks-cp:~# k -n m-scan delete pod legacy-web session-store
+root@practice-control-plane:~# k -n m-scan delete pod legacy-web session-store
 pod "legacy-web" deleted from m-scan namespace
 pod "session-store" deleted from m-scan namespace
 ```
@@ -405,7 +405,7 @@ pod "session-store" deleted from m-scan namespace
 
 ### Task 13: Approved registries only (9 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > The image policy back end at `https://localhost:8443/review` decides which images may run. Its kubeconfig is `/etc/kubernetes/policy-webhook/kubeconfig.yaml`. Enable the ImagePolicyWebhook admission plugin with the admission configuration file `/etc/kubernetes/admission/mock-admission.yaml`, with TTLs of 50 seconds, a retry backoff of 500 ms, and pods refused when the back end doesn't answer.
 
@@ -415,7 +415,7 @@ pod "session-store" deleted from m-scan namespace
 The steps are the same as in [module 42, task 5](42-supply-chain-security.md#task-5-allow-only-approved-registries), with the file name `mock-admission.yaml`. Remember both mounts, `/etc/kubernetes/admission` and `/etc/kubernetes/policy-webhook`, because a missing one keeps the API server down. Then test an image the policy must refuse:
 
 ```console
-root@cks-cp:~# k run t --image=quay.io/evil/miner:1 --dry-run=server     # refused
+root@practice-control-plane:~# k run t --image=quay.io/evil/miner:1 --dry-run=server     # refused
 Error from server (Forbidden): pods "t" is forbidden: image policy webhook backend denied one or more images: image quay.io/evil/miner:1 is not from an allowed registry
 ```
 
@@ -423,7 +423,7 @@ Error from server (Forbidden): pods "t" is forbidden: image policy webhook backe
 
 ### Task 14: A smaller Node.js image (4 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Fix `/root/mock/build/Dockerfile`: base it on `node:22-alpine`, install no extra packages, and run as the image's `node` user. Don't build it.
 
@@ -442,7 +442,7 @@ CMD ["node", "server.js"]
 
 ### Task 15: Audit policy (8 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Turn on audit logging with the policy `/etc/kubernetes/audit/mock-policy.yaml`:
 >
@@ -478,27 +478,27 @@ The flags and the two mounts follow [module 43, task 1](43-runtime-security-and-
 
 ### Task 16: Falco finds a snooper (8 points)
 
-**Hosts:** `cks-w1`, then `cks-cp`.
+**Hosts:** `practice-worker`, then `practice-control-plane`.
 
-> One of the two Deployments in `m-runtime` keeps reading `/etc/shadow`. Use Falco on `cks-w1` to find which one. Write the Deployment's name to `/root/mock/snooper.txt` on `cks-cp`, and scale that Deployment to 0. Leave the other one alone.
+> One of the two Deployments in `m-runtime` keeps reading `/etc/shadow`. Use Falco on `practice-worker` to find which one. Write the Deployment's name to `/root/mock/snooper.txt` on `practice-control-plane`, and scale that Deployment to 0. Leave the other one alone.
 
 <details>
 <summary>Solution</summary>
 
-Start on `cks-w1`, where Falco runs, and filter its alerts by the file and the namespace:
+Start on `practice-worker`, where Falco runs, and filter its alerts by the file and the namespace:
 
 ```console
-root@cks-w1:~# journalctl -u falco-modern-bpf --since -10min | grep 'file=/etc/shadow' | grep 'k8s_ns_name=m-runtime' | tail -1
-Nov 15 20:38:21 cks-w1 falco[83315]: 20:38:21.937670546: Warning Sensitive file opened for reading by non-trusted program | file=/etc/shadow gparent=containerd-shim ggparent=<NA> gggparent=<NA> evt_type=openat user=root user_uid=0 user_loginuid=-1 process=cat proc_exepath=/bin/cat parent=sh command=cat /etc/shadow terminal=0 container_id=6698b5affca2 container_name=busybox container_image_repository=docker.io/library/busybox container_image_tag=1.36 k8s_pod_name=reporter-6b5d764586-xdrzz k8s_ns_name=m-runtime
+root@practice-worker:~# journalctl -u falco-modern-bpf --since -10min | grep 'file=/etc/shadow' | grep 'k8s_ns_name=m-runtime' | tail -1
+Nov 15 20:38:21 practice-worker falco[83315]: 20:38:21.937670546: Warning Sensitive file opened for reading by non-trusted program | file=/etc/shadow gparent=containerd-shim ggparent=<NA> gggparent=<NA> evt_type=openat user=root user_uid=0 user_loginuid=-1 process=cat proc_exepath=/bin/cat parent=sh command=cat /etc/shadow terminal=0 container_id=6698b5affca2 container_name=busybox container_image_repository=docker.io/library/busybox container_image_tag=1.36 k8s_pod_name=reporter-6b5d764586-xdrzz k8s_ns_name=m-runtime
 ```
 
-The alert comes from Falco's default rule `Sensitive file opened for reading by non-trusted program`, and it names the pod in `k8s_pod_name=`. On `cks-cp`, follow the pod to its Deployment and act on that, because scaling a ReplicaSet's pod away only brings a new one:
+The alert comes from Falco's default rule `Sensitive file opened for reading by non-trusted program`, and it names the pod in `k8s_pod_name=`. On `practice-control-plane`, follow the pod to its Deployment and act on that, because scaling a ReplicaSet's pod away only brings a new one:
 
 ```console
-root@cks-cp:~# k -n m-runtime get pod <pod> -o jsonpath='{.metadata.ownerReferences[0].name}'   # the ReplicaSet: reporter-<hash>
+root@practice-control-plane:~# k -n m-runtime get pod <pod> -o jsonpath='{.metadata.ownerReferences[0].name}'   # the ReplicaSet: reporter-<hash>
 reporter-6b5d764586
-root@cks-cp:~# echo reporter > /root/mock/snooper.txt
-root@cks-cp:~# k -n m-runtime scale deploy reporter --replicas=0
+root@practice-control-plane:~# echo reporter > /root/mock/snooper.txt
+root@practice-control-plane:~# k -n m-runtime scale deploy reporter --replicas=0
 deployment.apps/reporter scaled
 ```
 
@@ -508,7 +508,7 @@ The transcript ran the first command with the name of the reporter pod from the 
 
 ### Task 17: Harden a Deployment (6 points)
 
-**Host:** `cks-cp`.
+**Host:** `practice-control-plane`.
 
 > Deployment `app` in `m-hard` runs `busybox:1.36`. Make its container's root file system read-only, forbid privilege escalation, and give the container the runtime's default seccomp profile. It must keep running.
 

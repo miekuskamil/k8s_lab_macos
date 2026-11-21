@@ -4,7 +4,7 @@
 <text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">From syscall <tspan fill="#7c3aed">to alert</tspan></text>
 <text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Falco reads a copy of each event. It never blocks the call.</text>
 <rect x="40.0" y="150.0" width="1520.0" height="610.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
-<text x="1542.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">Node cks-w1</text>
+<text x="1542.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">Node practice-worker</text>
 <text x="70.0" y="200.0" font-size="17.0" fill="#475569" font-weight="700" text-anchor="start">user space</text>
 <rect x="80.0" y="220.0" width="330.0" height="160.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
 <polygon points="107.0,235.0 115.5,239.5 115.5,249.0 107.0,253.5 98.5,249.0 98.5,239.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>

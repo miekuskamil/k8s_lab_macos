@@ -1,10 +1,11 @@
-# kubeadm init reads this file on cks-cp. create.sh fills in the version and the address.
+# kubeadm init reads this file on the control plane of an OrbStack or VM cluster. create.sh fills
+# in the node name, the version and the address. kind/cluster.yaml carries the same settings for kind.
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: InitConfiguration
 localAPIEndpoint:
   advertiseAddress: __CP_IP__
 nodeRegistration:
-  name: cks-cp
+  name: __CP_NAME__
   criSocket: unix:///run/containerd/containerd.sock
   ignorePreflightErrors:
     - Swap                 # OrbStack machines share the host's zram swap
@@ -12,7 +13,7 @@ nodeRegistration:
 ---
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: ClusterConfiguration
-clusterName: cks
+clusterName: practice
 kubernetesVersion: v__K8S_VERSION__
 controlPlaneEndpoint: __CP_IP__:6443
 networking:

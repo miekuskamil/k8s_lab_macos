@@ -400,23 +400,23 @@ setup_4_9() {
   oncp <<'EOF'
 kubectl create ns sandbox-sched --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 for i in $(seq 1 30); do kubectl -n sandbox-sched get sa default >/dev/null 2>&1 && break; sleep 1; done
-kubectl label node cks-w1 cks-cp sandbox- >/dev/null 2>&1
+kubectl label node $W1 $CP sandbox- >/dev/null 2>&1
 kubectl delete runtimeclass gvisor-pinned --ignore-not-found >/dev/null
 kubectl -n sandbox-sched delete deploy scanner --ignore-not-found >/dev/null
 EOF
-  echo "  runsc on cks-w1: $(w1_sh 'command -v runsc')   runsc on cks-cp: $(cp_sh 'command -v runsc || echo none')"
+  echo "  runsc on $W1: $(w1_sh 'command -v runsc')   runsc on $CP: $(cp_sh 'command -v runsc || echo none')"
 }
 check_4_9() {
-  check_cp "cks-w1 carries the label sandbox=gvisor, cks-cp does not" \
-    "kubectl get node cks-w1 -o jsonpath='{.metadata.labels.sandbox}' | grep -qx gvisor && ! kubectl get node cks-cp -o jsonpath='{.metadata.labels.sandbox}' | grep -q ."
+  check_cp "$W1 carries the label sandbox=gvisor, $CP does not" \
+    "kubectl get node $W1 -o jsonpath='{.metadata.labels.sandbox}' | grep -qx gvisor && ! kubectl get node $CP -o jsonpath='{.metadata.labels.sandbox}' | grep -q ."
   check_cp "RuntimeClass gvisor-pinned uses runsc and schedules onto sandbox=gvisor" \
     "kubectl get runtimeclass gvisor-pinned -o jsonpath='{.handler}/{.scheduling.nodeSelector.sandbox}' | grep -qx runsc/gvisor"
-  check_cp "Deployment scanner has 3 ready pods, all on cks-w1, all under gVisor" \
-    "kubectl -n sandbox-sched rollout status deploy scanner --timeout=120s && [ \$(kubectl -n sandbox-sched get pods -l app=scanner -o jsonpath='{range .items[*]}{.spec.nodeName}{\"\\n\"}{end}' | sort -u) = cks-w1 ] && kubectl -n sandbox-sched exec deploy/scanner -- dmesg | grep -q gVisor"
+  check_cp "Deployment scanner has 3 ready pods, all on $W1, all under gVisor" \
+    "kubectl -n sandbox-sched rollout status deploy scanner --timeout=120s && [ \$(kubectl -n sandbox-sched get pods -l app=scanner -o jsonpath='{range .items[*]}{.spec.nodeName}{\"\\n\"}{end}' | sort -u) = $W1 ] && kubectl -n sandbox-sched exec deploy/scanner -- dmesg | grep -q gVisor"
 }
 solve_4_9() {
   oncp <<'EOF'
-kubectl label node cks-w1 sandbox=gvisor --overwrite
+kubectl label node $W1 sandbox=gvisor --overwrite
 kubectl apply -f - <<'YAML'
 apiVersion: node.k8s.io/v1
 kind: RuntimeClass

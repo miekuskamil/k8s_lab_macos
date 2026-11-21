@@ -73,7 +73,7 @@ Each mode also takes a version label, such as `pod-security.kubernetes.io/enforc
 **Exam traps.** Enforce never touches pods that already run, the same lesson the course's [module 26](../2-intermediate/26-kyverno-policy-as-code.md#concept-two-paths-to-a-verdict) teaches for Kyverno. A Deployment's existing pods keep running after you label the namespace, and the refusal hits the next pod the ReplicaSet creates, where it shows up only as an event on the ReplicaSet. A server-side dry run of the label lists the pods that would break the rule before you apply it:
 
 ```console
-root@cks-cp:~# k label --dry-run=server --overwrite ns secure-apps pod-security.kubernetes.io/enforce=restricted
+root@practice-control-plane:~# k label --dry-run=server --overwrite ns secure-apps pod-security.kubernetes.io/enforce=restricted
 Warning: existing pods in namespace "secure-apps" violate the new PodSecurity enforce level "restricted:latest"
 Warning: app-7459c748d4-h5vfj: allowPrivilegeEscalation != false, unrestricted capabilities, runAsNonRoot != true, seccompProfile
 namespace/secure-apps labeled (server dry run)
@@ -199,7 +199,7 @@ The diagram compares the two paths. On the left, runc, the normal runtime, lets 
 
 The cost is speed, because every syscall takes a longer path, and apps that do a lot of file or network work notice it. Teams therefore use sandboxes for untrusted code, such as CI jobs, customer plugins, scanners and anything else that runs code somebody else wrote.
 
-Kubernetes picks the runtime per pod with a **RuntimeClass**, whose `handler` names a runtime that containerd knows. The practice cluster's `cks-w1` has a `runsc` handler in `/etc/containerd/config.toml`, and a pod asks for it with `runtimeClassName`.
+Kubernetes picks the runtime per pod with a **RuntimeClass**, whose `handler` names a runtime that containerd knows. The practice cluster's `practice-worker` has a `runsc` handler in `/etc/containerd/config.toml`, and a pod asks for it with `runtimeClassName`.
 
 **What this stops.** A sandbox stops a kernel bug from turning a compromised container into a compromised node, which makes it the only control in this module that protects against bugs in the kernel itself.
 
@@ -218,7 +218,7 @@ NetworkPolicy decides who may talk, but it doesn't hide what they say, because t
 
 **mTLS** (mutual TLS) means both sides of a connection show a certificate, so each knows who the other is, while **WireGuard** is a small, fast VPN protocol built into the Linux kernel. The two answer different questions. WireGuard encrypts every packet between two nodes, whatever pod sent it, while mTLS encrypts per connection and also proves which workload is calling, which authorization rules then use.
 
-The OrbStack cluster runs neither, because its kernel has no WireGuard module and Calico's own encryption needs WireGuard too. The Lima VM's kernel has the module, so task 10 turns on Cilium's WireGuard there and checks it with `cilium encrypt status`.
+The practice cluster runs neither, because the kernel its kind nodes share has no WireGuard module and Calico's own encryption needs WireGuard too. The Lima VM's kernel has the module, so task 10 turns on Cilium's WireGuard there and checks it with `cilium encrypt status`.
 
 **What this stops.** Encryption between pods stops anybody on the network path from reading or changing traffic, and mTLS also stops a pod from pretending to be another workload.
 
@@ -249,7 +249,7 @@ Real platform teams set these fences once, centrally, so app teams never think a
 
 ## Task 1: Enforce the restricted standard
 
-**Time budget:** 8 minutes. **Host:** `cks-cp`.
+**Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 41.1
@@ -268,7 +268,7 @@ deployment "app" successfully rolled out
 Label the namespace first, and read the warning that names what the running pod lacks:
 
 ```console
-root@cks-cp:~# k label ns secure-apps pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/warn=restricted
+root@practice-control-plane:~# k label ns secure-apps pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/warn=restricted
 Warning: existing pods in namespace "secure-apps" violate the new PodSecurity enforce level "restricted:latest"
 Warning: app-7459c748d4-h5vfj: allowPrivilegeEscalation != false, unrestricted capabilities, runAsNonRoot != true, seccompProfile
 namespace/secure-apps labeled
@@ -307,7 +307,7 @@ $ ./platform-engineering/task.sh check 41.1
 
 ## Task 2: Encrypt Secrets at rest
 
-**Time budget:** 10 minutes. **Host:** `cks-cp`.
+**Time budget:** 10 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 41.2
@@ -328,10 +328,10 @@ The setup creates Secret `db-creds` in namespace `vault-test` and prints the pas
 Make a 32-byte key and write the configuration file around it:
 
 ```console
-root@cks-cp:~# mkdir -p /etc/kubernetes/enc
-root@cks-cp:~# head -c 32 /dev/urandom | base64
+root@practice-control-plane:~# mkdir -p /etc/kubernetes/enc
+root@practice-control-plane:~# head -c 32 /dev/urandom | base64
 E0Go46ihI4xopds2NYObxwfMWXzBzQ/ClXMezcOs0Mw=
-root@cks-cp:~# vim /etc/kubernetes/enc/enc.yaml
+root@practice-control-plane:~# vim /etc/kubernetes/enc/enc.yaml
 ```
 
 The transcript leaves out the editor session.
@@ -367,12 +367,12 @@ Back up the API server manifest, then add the flag, a volume mount and a volume,
 When the API server is back, rewrite every Secret so each one gets encrypted, and look at etcd:
 
 ```console
-root@cks-cp:~# k get secrets -A -o json | k replace -f -
+root@practice-control-plane:~# k get secrets -A -o json | k replace -f -
 secret/ingress-nginx-admission replaced
 secret/bootstrap-token-6uqqt7 replaced
 secret/bootstrap-token-acm1tv replaced
 secret/db-creds replaced
-root@cks-cp:~# ETCDCTL_API=3 etcdctl --endpoints=https://127.0.0.1:2379 \
+root@practice-control-plane:~# ETCDCTL_API=3 etcdctl --endpoints=https://127.0.0.1:2379 \
   --cacert=/etc/kubernetes/pki/etcd/ca.crt \
   --cert=/etc/kubernetes/pki/apiserver-etcd-client.crt \
   --key=/etc/kubernetes/pki/apiserver-etcd-client.key \
@@ -400,7 +400,7 @@ $ ./platform-engineering/task.sh check 41.2
 
 ## Task 3: A Secret as a file, not an environment variable
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 41.3
@@ -418,9 +418,9 @@ pod/api condition met
 A pod's containers don't change in place, so save the pod, delete it and create it again:
 
 ```console
-root@cks-cp:~# k -n orders get pod api -o yaml > api.yaml
-root@cks-cp:~# vim api.yaml       # remove env, add volumeMounts and volumes
-root@cks-cp:~# k -n orders replace --force -f api.yaml
+root@practice-control-plane:~# k -n orders get pod api -o yaml > api.yaml
+root@practice-control-plane:~# vim api.yaml       # remove env, add volumeMounts and volumes
+root@practice-control-plane:~# k -n orders replace --force -f api.yaml
 pod "api" deleted from orders namespace
 pod/api replaced
 ```
@@ -455,7 +455,7 @@ $ ./platform-engineering/task.sh check 41.3
 
 ## Task 4: Sandbox a pod with gVisor
 
-**Time budget:** 5 minutes. **Host:** `cks-cp`.
+**Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 41.4
@@ -484,15 +484,15 @@ handler: runsc
 ```
 
 ```console
-root@cks-cp:~# k apply -f rc.yaml
+root@practice-control-plane:~# k apply -f rc.yaml
 runtimeclass.node.k8s.io/gvisor created
-root@cks-cp:~# k -n sandbox patch deploy untrusted -p '{"spec":{"template":{"spec":{"runtimeClassName":"gvisor"}}}}'
+root@practice-control-plane:~# k -n sandbox patch deploy untrusted -p '{"spec":{"template":{"spec":{"runtimeClassName":"gvisor"}}}}'
 deployment.apps/untrusted patched
-root@cks-cp:~# k -n sandbox rollout status deploy untrusted
+root@practice-control-plane:~# k -n sandbox rollout status deploy untrusted
 Waiting for deployment "untrusted" rollout to finish: 1 old replicas are pending termination...
 Waiting for deployment "untrusted" rollout to finish: 1 old replicas are pending termination...
 deployment "untrusted" successfully rolled out
-root@cks-cp:~# k -n sandbox exec deploy/untrusted -- dmesg | head -2
+root@practice-control-plane:~# k -n sandbox exec deploy/untrusted -- dmesg | head -2
 [   0.000000] Starting gVisor...
 [   0.577100] Recruiting cron-ies...
 ```
@@ -512,7 +512,7 @@ $ ./platform-engineering/task.sh check 41.4
 
 ## Task 5: Rotate the encryption key
 
-**Time budget:** 10 minutes. **Host:** `cks-cp`.
+**Time budget:** 10 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 41.5
@@ -536,10 +536,10 @@ The setup starts from task 2's result and applies its solution when encryption i
 Step 1 puts the new key on top of the list:
 
 ```console
-root@cks-cp:~# cp /etc/kubernetes/enc/enc.yaml /root/
-root@cks-cp:~# head -c 32 /dev/urandom | base64
+root@practice-control-plane:~# cp /etc/kubernetes/enc/enc.yaml /root/
+root@practice-control-plane:~# head -c 32 /dev/urandom | base64
 VvafQ3jl97ZKzGW2k5m9h7sM6DnRbNypf8PEEsrWgO4=
-root@cks-cp:~# vim /etc/kubernetes/enc/enc.yaml
+root@practice-control-plane:~# vim /etc/kubernetes/enc/enc.yaml
 ```
 
 The transcript leaves out the editor session.
@@ -556,10 +556,10 @@ The transcript leaves out the editor session.
 Step 2 is a restart. The API server reads the file only at start, and the manifest didn't change, so the kubelet sees no reason to restart it, which means you move the manifest out of the folder and back:
 
 ```console
-root@cks-cp:~# mv /etc/kubernetes/manifests/kube-apiserver.yaml /root/
-root@cks-cp:~# watch crictl ps --name kube-apiserver        # wait until the container is gone
+root@practice-control-plane:~# mv /etc/kubernetes/manifests/kube-apiserver.yaml /root/
+root@practice-control-plane:~# watch crictl ps --name kube-apiserver        # wait until the container is gone
 CONTAINER           IMAGE               CREATED             STATE               NAME                ATTEMPT             POD ID              POD                 NAMESPACE
-root@cks-cp:~# mv /root/kube-apiserver.yaml /etc/kubernetes/manifests/
+root@practice-control-plane:~# mv /root/kube-apiserver.yaml /etc/kubernetes/manifests/
 ```
 
 `watch` redraws its screen every 2 seconds until you press Ctrl-C, and the transcript shows the last screen, with the container gone.
@@ -567,7 +567,7 @@ root@cks-cp:~# mv /root/kube-apiserver.yaml /etc/kubernetes/manifests/
 Step 3 rewrites every Secret, once `k get nodes` answers again:
 
 ```console
-root@cks-cp:~# k get secrets -A -o json | k replace -f -
+root@practice-control-plane:~# k get secrets -A -o json | k replace -f -
 secret/ingress-nginx-admission replaced
 secret/bootstrap-token-6uqqt7 replaced
 secret/bootstrap-token-acm1tv replaced
@@ -579,7 +579,7 @@ secret/db-creds replaced
 Step 4 deletes the two `key1` lines and restarts the API server the same way. Then prove the result with etcdctl, using the variables from task 2:
 
 ```console
-root@cks-cp:~# etcdctl ... get /registry/secrets/rotate-me/app-secret --print-value-only | head -c 23; echo
+root@practice-control-plane:~# etcdctl ... get /registry/secrets/rotate-me/app-secret --print-value-only | head -c 23; echo
 {"level":"warn","ts":"2026-11-15T12:48:03.539579Z","caller":"flags/flag.go:94","msg":"unrecognized environment variable","environment-variable":"ETCDCTL_API=3"}
 k8s:enc:aescbc:v1:key2:
 ```
@@ -602,7 +602,7 @@ $ ./platform-engineering/task.sh check 41.5
 
 ## Task 6: Pod Security levels, modes and versions
 
-**Time budget:** 4 minutes. **Host:** `cks-cp`.
+**Time budget:** 4 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 41.6
@@ -623,7 +623,7 @@ deployment "legacy" successfully rolled out
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# k label ns psa-levels \
+root@practice-control-plane:~# k label ns psa-levels \
   pod-security.kubernetes.io/enforce=baseline pod-security.kubernetes.io/enforce-version=v1.37 \
   pod-security.kubernetes.io/warn=restricted pod-security.kubernetes.io/warn-version=latest \
   pod-security.kubernetes.io/audit=restricted pod-security.kubernetes.io/audit-version=latest
@@ -633,9 +633,9 @@ namespace/psa-levels labeled
 Write `latest` explicitly even though it is the default, because the task asks for it and a check reads the label. Then test both levels with server-side dry runs:
 
 ```console
-root@cks-cp:~# k -n psa-levels run t1 --image=busybox:1.36 --privileged --dry-run=server -- sleep 1   # Forbidden
+root@practice-control-plane:~# k -n psa-levels run t1 --image=busybox:1.36 --privileged --dry-run=server -- sleep 1   # Forbidden
 Error from server (Forbidden): pods "t1" is forbidden: violates PodSecurity "baseline:v1.37": privileged (container "t1" must not set securityContext.privileged=true)
-root@cks-cp:~# k -n psa-levels run t2 --image=nginx:1.27-alpine --dry-run=server                      # Warning, then created
+root@practice-control-plane:~# k -n psa-levels run t2 --image=nginx:1.27-alpine --dry-run=server                      # Warning, then created
 Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "t2" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "t2" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "t2" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "t2" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
 pod/t2 created (server dry run)
 ```
@@ -657,7 +657,7 @@ $ ./platform-engineering/task.sh check 41.6
 
 ## Task 7: Cluster-wide Pod Security defaults with exemptions
 
-**Time budget:** 10 minutes. **Host:** `cks-cp`.
+**Time budget:** 10 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 41.7
@@ -693,12 +693,12 @@ Write the file from the theory section, then point the API server at it, after a
 The "Enforce Pod Security Standards by configuring the built-in admission controller" page in the Kubernetes docs holds the YAML. Once the API server answers, test three namespaces:
 
 ```console
-root@cks-cp:~# k -n psa-default run t1 --image=busybox:1.36 --privileged --dry-run=server -- sleep 1        # Forbidden
+root@practice-control-plane:~# k -n psa-default run t1 --image=busybox:1.36 --privileged --dry-run=server -- sleep 1        # Forbidden
 Error from server (Forbidden): pods "t1" is forbidden: violates PodSecurity "baseline:latest": privileged (container "t1" must not set securityContext.privileged=true)
-root@cks-cp:~# k -n psa-default run t2 --image=nginx:1.27-alpine --dry-run=server                           # Warning, then created
+root@practice-control-plane:~# k -n psa-default run t2 --image=nginx:1.27-alpine --dry-run=server                           # Warning, then created
 Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "t2" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "t2" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "t2" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "t2" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
 pod/t2 created (server dry run)
-root@cks-cp:~# k -n monitoring-agents run t3 --image=busybox:1.36 --privileged --dry-run=server -- sleep 1  # created, exempt
+root@practice-control-plane:~# k -n monitoring-agents run t3 --image=busybox:1.36 --privileged --dry-run=server -- sleep 1  # created, exempt
 pod/t3 created (server dry run)
 ```
 
@@ -719,7 +719,7 @@ $ ./platform-engineering/task.sh check 41.7
 
 ## Task 8: Pods that reach into the node
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 41.8
@@ -753,7 +753,7 @@ pod/cache created
 `jsonpath` prints the fields side by side, one pod per line, so the risky ones stand out:
 
 ```console
-root@cks-cp:~# for n in team-blue team-green; do
+root@practice-control-plane:~# for n in team-blue team-green; do
   k -n $n get pods -o jsonpath='{range .items[*]}{.metadata.name}{" pid="}{.spec.hostPID}{" net="}{.spec.hostNetwork}{" ipc="}{.spec.hostIPC}{" priv="}{.spec.containers[*].securityContext.privileged}{" vols="}{.spec.volumes[*].hostPath.path}{"\n"}{end}'
 done
 log-reader pid= net= ipc= priv= vols=/
@@ -768,10 +768,10 @@ net-tool pid= net=true ipc= priv= vols=
 Empty fields mean "not set". In the test run, four pods had something: `node-debug` (hostPID), `log-reader` (a hostPath of `/`), `net-tool` (hostNetwork) and `metrics` (privileged). `cache` mounts an `emptyDir`, which lives inside the pod's own storage and is harmless here.
 
 ```console
-root@cks-cp:~# k -n team-blue delete pod node-debug log-reader
+root@practice-control-plane:~# k -n team-blue delete pod node-debug log-reader
 pod "node-debug" deleted from team-blue namespace
 pod "log-reader" deleted from team-blue namespace
-root@cks-cp:~# k -n team-green delete pod net-tool metrics
+root@practice-control-plane:~# k -n team-green delete pod net-tool metrics
 pod "net-tool" deleted from team-green namespace
 pod "metrics" deleted from team-green namespace
 ```
@@ -793,22 +793,22 @@ $ ./platform-engineering/task.sh check 41.8
 
 ## Task 9: A sandbox only on the nodes that have it
 
-**Time budget:** 6 minutes. **Host:** `cks-cp`.
+**Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
 $ ./platform-engineering/task.sh setup 41.9
 == setup task 41.9
-  runsc on cks-w1: /usr/local/bin/runsc   runsc on cks-cp: none
+  runsc on practice-worker: /usr/local/bin/runsc   runsc on practice-control-plane: none
 ```
 
-> Only `cks-w1` has gVisor. Label it `sandbox=gvisor`. Create a RuntimeClass `gvisor-pinned` for the handler `runsc` that sends its pods only to nodes with that label. Then create Deployment `scanner` in namespace `sandbox-sched`, image `busybox:1.36`, command `sleep 1d`, 3 replicas, with that RuntimeClass.
+> Only `practice-worker` has gVisor. Label it `sandbox=gvisor`. Create a RuntimeClass `gvisor-pinned` for the handler `runsc` that sends its pods only to nodes with that label. Then create Deployment `scanner` in namespace `sandbox-sched`, image `busybox:1.36`, command `sleep 1d`, 3 replicas, with that RuntimeClass.
 
 <details>
 <summary>Solution</summary>
 
 ```console
-root@cks-cp:~# k label node cks-w1 sandbox=gvisor
-node/cks-w1 labeled
+root@practice-control-plane:~# k label node practice-worker sandbox=gvisor
+node/practice-worker labeled
 ```
 
 ```yaml
@@ -823,30 +823,30 @@ scheduling:
 ```
 
 ```console
-root@cks-cp:~# k -n sandbox-sched create deploy scanner --image=busybox:1.36 --replicas=3 $do -- sleep 1d > scanner.yaml
-root@cks-cp:~# vim scanner.yaml      # add runtimeClassName: gvisor-pinned under the pod template's spec
-root@cks-cp:~# k apply -f scanner.yaml
+root@practice-control-plane:~# k -n sandbox-sched create deploy scanner --image=busybox:1.36 --replicas=3 $do -- sleep 1d > scanner.yaml
+root@practice-control-plane:~# vim scanner.yaml      # add runtimeClassName: gvisor-pinned under the pod template's spec
+root@practice-control-plane:~# k apply -f scanner.yaml
 Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "busybox" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "busybox" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "busybox" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "busybox" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
 deployment.apps/scanner created
-root@cks-cp:~# k -n sandbox-sched get pods -o wide
+root@practice-control-plane:~# k -n sandbox-sched get pods -o wide
 NAME                       READY   STATUS    RESTARTS   AGE   IP              NODE     NOMINATED NODE   READINESS GATES
-scanner-85dff684c9-hssgc   1/1     Running   0          1s    10.244.135.82   cks-w1   <none>           <none>
-scanner-85dff684c9-rh2lt   1/1     Running   0          1s    10.244.135.80   cks-w1   <none>           <none>
-scanner-85dff684c9-xxxts   1/1     Running   0          1s    10.244.135.81   cks-w1   <none>           <none>
+scanner-85dff684c9-hssgc   1/1     Running   0          1s    10.244.135.82   practice-worker   <none>           <none>
+scanner-85dff684c9-rh2lt   1/1     Running   0          1s    10.244.135.80   practice-worker   <none>           <none>
+scanner-85dff684c9-xxxts   1/1     Running   0          1s    10.244.135.81   practice-worker   <none>           <none>
 ```
 
 The transcript leaves out the editor session, which adds `runtimeClassName: gvisor-pinned`.
 
-In the test run, all three pods landed on `cks-w1`, and each one carried `nodeSelector: {"sandbox":"gvisor"}`, copied in from the RuntimeClass.
+In the test run, all three pods landed on `practice-worker`, and each one carried `nodeSelector: {"sandbox":"gvisor"}`, copied in from the RuntimeClass.
 
 </details>
 
 ```console
 $ ./platform-engineering/task.sh check 41.9
 == check task 41.9
-  PASS  cks-w1 carries the label sandbox=gvisor, cks-cp does not
+  PASS  practice-worker carries the label sandbox=gvisor, practice-control-plane does not
   PASS  RuntimeClass gvisor-pinned uses runsc and schedules onto sandbox=gvisor
-  PASS  Deployment scanner has 3 ready pods, all on cks-w1, all under gVisor
+  PASS  Deployment scanner has 3 ready pods, all on practice-worker, all under gVisor
 == task 41.9: 3 passed, 0 failed
 ```
 
@@ -856,4 +856,4 @@ The WireGuard task needs Cilium on a kernel that belongs to one machine, so it s
 
 ## Clean up
 
-Tasks 2, 5 and 7 changed the API server, and task 9 labelled a node, so `./platform-engineering/practice/cluster/reset.sh` returns to a fresh cluster.
+Tasks 2, 5 and 7 changed the API server, and task 9 labelled a node, so `./lab.sh practice reset` returns to a fresh cluster.
