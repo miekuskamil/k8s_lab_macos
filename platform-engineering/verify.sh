@@ -1605,6 +1605,78 @@ module_0_5() {
   expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
 }
 
+module_0_6() {
+  section "0.6: security"
+  docker_reset
+  local p out d k="$DW/keys" sec="$DW/secrets" orb=0 n0 n1
+  [[ "$(docker info -f '{{.OperatingSystem}}' 2>/dev/null)" == *OrbStack* ]] && orb=1
+  expect "1. a container runs as root by default" "$(docker run --rm alpine:3.22.2 id -u)" '^0$'
+  expect "1. --user runs it as 1000" "$(docker run --rm --user 1000:1000 alpine:3.22.2 id -u)" '^1000$'
+  docker run -d --name course-root alpine:3.22.2 sleep 600 >/dev/null
+  p="$(docker inspect -f '{{.State.Pid}}' course-root)"
+  expect "1. its uid_map is the identity map" "$(onhost "cat /proc/$p/uid_map" | tr -s ' ')" '^ ?0 0 4294967295$'
+  out="$(docker run --rm alpine:3.22.2 sh -c 'cat /proc/self/attr/current 2>/dev/null || echo "no LSM profile"')"
+  if (( orb )); then expect "1. OrbStack: no LSM profile" "$out" '^no LSM profile$'
+  else expect "1. Linux: a Linux security module profile applies" "$out" '(docker-default|container_t|no LSM profile)'; fi
+  docker build -q -t course/nettools:1.0 "$DT/lab/nettools" >/dev/null 2>&1
+  expect "2. Docker's default capability set" "$(docker run --rm alpine:3.22.2 grep CapEff /proc/self/status | awk '{print $2}')" '^00000000a80425fb$'
+  expect "2. it decodes to 14 capabilities" "$(docker run --rm course/nettools:1.0 capsh --decode=00000000a80425fb | tr ',' '\n' | grep -c cap_)" '^14$'
+  expect "2. --cap-drop ALL makes root's chown fail" "$(docker run --rm --cap-drop ALL alpine:3.22.2 chown nobody /tmp 2>&1)" 'Operation not permitted'
+  expect "2. adding back CHOWN makes it work" "$(docker run --rm --cap-drop ALL --cap-add CHOWN alpine:3.22.2 sh -c 'chown nobody /tmp && echo ok')" '^ok$'
+  expect "2. without capabilities, user 1000 still pings" "$(docker run --rm --cap-drop ALL --user 1000 alpine:3.22.2 sh -c 'ping -c1 -W1 127.0.0.1 >/dev/null && echo ok')" '^ok$'
+  expect "2. and Docker opens every port to every user" "$(docker run --rm alpine:3.22.2 cat /proc/sys/net/ipv4/ip_unprivileged_port_start)" '^0$'
+  expect "3. the builtin seccomp profile is active" "$(docker info -f '{{.SecurityOptions}}')" 'seccomp,profile=builtin'
+  expect "3. it blocks a user namespace for non-root" "$(docker run --rm --user 1000 alpine:3.22.2 unshare -U -r id 2>&1)" 'Operation not permitted'
+  expect "3. unconfined, root inside maps to 1000 outside" "$(docker run --rm --user 1000 --security-opt seccomp=unconfined alpine:3.22.2 unshare -U -r sh -c 'id -u; cat /proc/self/uid_map' | tr -s ' \n' ' ')" '^0 0 1000 1 $'
+  expect "3. a custom profile blocks chmod" "$(docker run --rm --security-opt seccomp="$DT/lab/security/no-chmod.json" alpine:3.22.2 sh -c 'touch /tmp/f && chmod 600 /tmp/f' 2>&1)" 'chmod: /tmp/f: Operation not permitted'
+  expect "4. --read-only stops writes" "$(docker run --rm --read-only alpine:3.22.2 touch /x 2>&1)" 'Read-only file system'
+  expect "4. a tmpfs gives one writable place" "$(docker run --rm --read-only --tmpfs /tmp alpine:3.22.2 sh -c 'touch /tmp/x && echo ok')" '^ok$'
+  docker build -q -t course/setuid:1 -f "$DT/lab/security/Dockerfile.setuid" "$DT/lab/security" >/dev/null 2>&1
+  expect "4. a setuid binary gives user 1000 euid 0" "$(docker run --rm course/setuid:1 suid-python -c 'import os; print(os.getuid(), os.geteuid())')" '^1000 0$'
+  expect "4. no-new-privileges keeps euid 1000" "$(docker run --rm --security-opt no-new-privileges course/setuid:1 suid-python -c 'import os; print(os.getuid(), os.geteuid())')" '^1000 1000$'
+  docker run --name course-oom --memory 32m alpine:3.22.2 sh -c 'head -c 100m /dev/zero | tail' >/dev/null 2>&1
+  expect "5. the memory limit ends in an OOM kill" "$(docker inspect -f '{{.State.OOMKilled}} {{.State.ExitCode}}' course-oom)" '^true 137$'
+  expect "5. the process limit stops forks" "$(docker run --rm --pids-limit 20 alpine:3.22.2 sh -c 'for i in $(seq 1 40); do sleep 5 & done 2>&1 | tail -1')" "can't fork"
+  if command -v trivy >/dev/null 2>&1; then
+    expect "6. trivy finds CRITICAL vulnerabilities in nginx:1.28.0-alpine" "$(trivy image --quiet --scanners vuln --format json nginx:1.28.0-alpine 2>/dev/null | jq '[.Results[].Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length')" '^[1-9]'
+    docker build -q --build-arg VERSION=1.0.0 -t course/hits:1.0.0 "$DT/lab/app" >/dev/null 2>&1
+    docker build -q --build-arg VERSION=1.0.1 --build-arg GO_IMAGE=golang:1.27.3-alpine3.24 -t course/hits:1.0.1 "$DT/lab/app" >/dev/null 2>&1
+    n0="$(trivy image --quiet --scanners vuln --format json course/hits:1.0.0 2>/dev/null | jq '[.Results[].Vulnerabilities[]?] | length')"
+    n1="$(trivy image --quiet --scanners vuln --format json course/hits:1.0.1 2>/dev/null | jq '[.Results[].Vulnerabilities[]?] | length')"
+    expect "6. the Go 1.25.3 binary carries stdlib vulnerabilities ($n0)" "$n0" '^[1-9]'
+    expect "6. building with Go 1.27.3 leaves fewer ($n1)" "$(( ${n1:-999} < ${n0:-0} ))" '^1$'
+    trivy image --quiet --scanners vuln --severity CRITICAL --exit-code 1 course/hits:1.0.1 >/dev/null 2>&1
+    expect "6. the CRITICAL gate passes for hits:1.0.1" "$?" '^0$'
+  else
+    fail "6. trivy is missing: run the Docker track checks in the toolbox" "no trivy"
+  fi
+  docker run -d --name course-registry --network k8s-lab-toolbox_default -p 127.0.0.1:5555:5000 registry:3.1.2 >/dev/null 2>&1 \
+    || docker run -d --name course-registry -p 127.0.0.1:5555:5000 registry:3.1.2 >/dev/null
+  docker image inspect course/hits:1.0.1 >/dev/null 2>&1 || docker build -q --build-arg VERSION=1.0.1 --build-arg GO_IMAGE=golang:1.27.3-alpine3.24 -t course/hits:1.0.1 "$DT/lab/app" >/dev/null 2>&1
+  docker tag course/hits:1.0.1 localhost:5555/hits:1.0.1
+  for _ in $(seq 1 10); do docker push -q localhost:5555/hits:1.0.1 >/dev/null 2>&1 && break; settle 1; done
+  if command -v cosign >/dev/null 2>&1 && [[ "${LAB_TOOLBOX:-}" == 1 ]]; then
+    mkdir -p "$k"
+    COSIGN_PASSWORD= cosign generate-key-pair --output-key-prefix "$k/cosign" >/dev/null 2>&1
+    expect "7. cosign writes a key pair" "$(ls "$k" | tr '\n' ' ')" '^cosign\.key cosign\.pub $'
+    d="$(curl -s -I -H 'Accept: application/vnd.oci.image.index.v1+json' http://localhost:5555/v2/hits/manifests/1.0.1 | tr -d '\r' | awk '/Docker-Content-Digest/ {print $2}')"
+    COSIGN_PASSWORD= cosign sign --yes --key "$k/cosign.key" --use-signing-config=false --tlog-upload=false "localhost:5555/hits@$d" >/dev/null 2>&1
+    expect "7. verify by digest returns the signed digest" "$(cosign verify --key "$k/cosign.pub" --insecure-ignore-tlog "localhost:5555/hits@$d" 2>/dev/null | jq -r '.[0].critical.image."docker-manifest-digest"')" "^${d}$"
+    docker build -q --build-arg VERSION=6.6.6 -t localhost:5555/hits:1.0.1 "$DT/lab/app" >/dev/null 2>&1 && docker push -q localhost:5555/hits:1.0.1 >/dev/null 2>&1
+    expect "7. after a push under the same tag, verify fails" "$(cosign verify --key "$k/cosign.pub" --insecure-ignore-tlog localhost:5555/hits:1.0.1 2>&1 | tail -1)" 'no signatures found'
+  else
+    fail "7. cosign and the registry forward need the toolbox" "not in the toolbox"
+  fi
+  mkdir -p "$DW" && cp -R "$DT/lab/security" "$sec" && echo 's3cret-from-file' > "$sec/db_password.txt"
+  docker compose -f "$sec/compose.yaml" up -d >/dev/null 2>&1
+  expect "8. an environment variable shows in docker inspect" "$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' course-secrets-env-way-1 | grep PASSWORD)" '^DB_PASSWORD=s3cret-from-env$'
+  expect "8. a Compose secret leaves the configuration clean" "$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' course-secrets-secret-way-1 | grep -c PASSWORD)" '^0$'
+  expect "8. and appears as a file in /run/secrets" "$(docker compose -f "$sec/compose.yaml" exec -T secret-way cat /run/secrets/db_password)" '^s3cret-from-file$'
+  docker compose -f "$sec/compose.yaml" down >/dev/null 2>&1
+  docker_reset
+  expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
+}
+
 # Module 2.9 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 2.9
 module_2_9() {
   section "2.9: k3s certificates, backups and upgrades (the upgrade is one-way)"
