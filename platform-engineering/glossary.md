@@ -167,7 +167,7 @@ Where you attach the policy decides who enforces it. A `selector` (pod labels) m
 
 **Telemetry.** Telemetry (`telemetry.istio.io/v1`) is a resource that turns tracing, metrics and access logs on or off and picks where they go. It applies to the mesh, a namespace or one proxy. The lab sends traces to Jaeger with it. Module 3.6.
 
-**Trace and span.** A trace is the record of one request through every service it touches, and a span is one step inside it. A trace is a tree of spans. Each span records who did the step, when it started and how long it took. All spans of a trace share one trace ID, which travels in the `traceparent` header. Module 3.6.
+**Trace and span.** A trace is the record of one request through every service it touches, and a span is one step inside it. A trace is a tree of spans. Each span records who did the step, when it started and how long it took. All spans of a trace share one trace ID, which travels in the `traceparent` header. Modules 2.4 and 3.6.
 
 **Sampling.** Sampling is keeping only a share of traces, chosen at random when a request enters the mesh. The lab keeps 100%. Production systems often keep 1 to 5%, because storing every trace costs a lot. Module 3.6.
 
@@ -330,7 +330,11 @@ Modules 3.4, 3.5, 3.6, 3.7, 3.18. A flag appears in the log of the proxy that hi
 - `| json` turns JSON fields into labels.
 - `count_over_time`, `rate` and `unwrap` turn lines into numbers.
 
-Module 3.6.
+Modules 2.3 and 3.6.
+
+**Log stream.** A log stream is one set of labels in Loki together with every line that carries it, such as `{namespace="course-logs", app="orders"}`. Each new label value starts a new stream, so a label with many values, like an order id, makes the index grow with every line. Module 2.3.
+
+**Alloy.** Alloy is Grafana's collector that runs on every node, tails each container's log file and sends the lines to Loki with labels for the namespace, app and pod. Module 2.3.
 
 **Kiali.** Kiali is the Istio console that shows a traffic graph, mTLS status and config checks. It works next to the other observability tools in the lab:
 
@@ -716,7 +720,7 @@ These terms come from the [practice cluster](practice-cluster.md) and the securi
 
 **AppArmor.** AppArmor is a Linux security module that limits which files, capabilities and network access a program gets, through a text profile loaded with `apparmor_parser`. A pod asks for a loaded profile with `securityContext.appArmorProfile`. OrbStack's kernel lacks it, so the AppArmor tasks run on a VM. Modules 4.6 and 4.7.
 
-**Lima VM.** Lima is a macOS tool that runs Linux virtual machines, each with a kernel of its own. The third practice machine, `cks-lima`, is a Lima VM with AppArmor and a one-node kubeadm cluster that runs Cilium. [The VM page](../README.md#the-vm-for-module-44), module 4.7.
+**Lima VM.** Lima is a macOS tool that runs Linux virtual machines, each with a kernel of its own. The third practice machine, `cks-lima`, is a Lima VM with AppArmor and a one-node kubeadm cluster that runs Cilium. [The VM page](../README.md#the-vm-for-the-kernel-tasks), module 4.7.
 
 **CiliumNetworkPolicy.** A CiliumNetworkPolicy is Cilium's own policy resource. It selects pods with `endpointSelector` and adds what a NetworkPolicy lacks: HTTP rules at layer 7, named peer groups called entities, and deny rules that beat every allow. Modules 4.1 and 4.7.
 

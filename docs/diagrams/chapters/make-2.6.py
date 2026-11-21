@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Draw the diagrams for module 2.6 (GitOps with ArgoCD) with the kit in ../bbg.py.
 
-  22-reconcile-loop     the four steps of the reconcile loop
-  22-sync-operation     a failing sync operation blocks the revert
+  2.6-reconcile-loop     the four steps of the reconcile loop
+  2.6-sync-operation     a failing sync operation blocks the revert
 
 Run from anywhere: python3 docs/diagrams/chapters/make-2.6.py
 """

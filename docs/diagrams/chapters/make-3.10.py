@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Draw the diagrams for platform-engineering/3-istio/10-edge-tls.md with the kit in ../bbg.py.
 
-  11-two-tls           one request, two TLS sessions, two certificate authorities
-  11-trust-chain       the lab root CA signs shop-tls, curl trusts the root
-  11-cert-manager      Certificate and ClusterIssuer in, Secret out, Gateway reads it
+  3.10-two-tls           one request, two TLS sessions, two certificate authorities
+  3.10-trust-chain       the lab root CA signs shop-tls, curl trusts the root
+  3.10-cert-manager      Certificate and ClusterIssuer in, Secret out, Gateway reads it
 
 Run from anywhere: python3 docs/diagrams/chapters/make-3.10.py
 """

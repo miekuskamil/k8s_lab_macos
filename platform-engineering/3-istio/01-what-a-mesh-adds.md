@@ -2,11 +2,39 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](../glossary.md) explains every Istio resource and term in this course.
 
-**Before this module:** module 1.1.
+**Before this module:** the lab from the [quick start](../../README.md#quick-start). Read [Istio in one picture](../start-here.md) first, a 15-minute map of every Istio resource this track uses.
 
-**You need:** the lab running (`./lab.sh start` starts or repairs it), `istioctl`, and `./lab.sh ui` running in a spare terminal for Kiali (http://localhost:20001).
+**You need:** the lab running (`./lab.sh start` starts or repairs it), a shell in the toolbox for `istioctl`, and `./lab.sh ui` running in a spare terminal for Kiali (http://localhost:20001).
 
 You already know how Kubernetes moves a packet from one pod to another. This module shows what that path leaves out, such as who is calling and whether anyone encrypted the bytes, and the two ways Istio fills the gap.
+
+## Before you start: istioctl and Kiali
+
+`istioctl` does for Istio what `kubectl` does for Kubernetes: it reads the mesh's state and explains it in plain terms. The toolbox brings the client the course ran with in its tests, 1.32.0, so run it from your `./lab.sh shell`:
+
+```console
+$ istioctl version
+client version: 1.32.0
+control plane version: 1.24.2
+data plane version: 1.24.2 (3 proxies)
+```
+
+**What you should see.** The three lines above. A client newer than the control plane works fine, and module 3.18 needs one this new. If a command later fails with an unknown field error, check that the client line says 1.32.0, because an older `istioctl` on your machine may run instead of the toolbox's.
+
+The "3 proxies" line counts the proxies that take their configuration from istiod, the Istio control plane: the ingress gateway and the waypoint, which are both Envoy proxies, and ztunnel, a separate program written in Rust. The shop's own pods don't appear in the count, and this module explains why. A count above 3 means something from a later module still runs, so `./platform-engineering/reset.sh --all` brings the lab back to its starting point. A count below 3 is a first clue that some proxy lost its connection to istiod.
+
+![Five tools and the question each one answers](../../docs/diagrams/chapters/3.1-observability-tools.svg)
+
+The picture shows which tool answers which question. Kiali and Grafana read the same Prometheus data in different shapes: Kiali draws a live map of the mesh, while Grafana draws graphs over time. So you use Kiali to find which edge, the arrow between two services, is broken, and then Grafana to see since when and how badly.
+
+Learn Kiali in five minutes. Start some traffic with `./platform-engineering/load.sh 300`, then open http://localhost:20001:
+
+1. **Overview** lists namespaces with a health badge. Click `shop`.
+2. **Traffic Graph** draws the services and the calls between them. Choose namespaces `shop` and `shop-ingress`, then turn on "Traffic Animation" and "Security" under Display. A padlock on an edge means mTLS.
+3. **Applications**, **Workloads** and **Services** list the same pods from three angles, and each view has tabs for metrics, traces and logs.
+4. **Istio Config** lists every Istio resource and flags invalid ones with a red icon.
+
+The course uses Kiali only to look. You make every change with `kubectl`, so that each change stays in your shell history.
 
 ## Concept: what Kubernetes networking does not do
 

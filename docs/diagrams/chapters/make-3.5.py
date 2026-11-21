@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the diagrams for course module 3.5 (resilience) with the kit in ../bbg.py.
 
-  05-timeout-and-breaker   a 1 s route timeout, then the circuit breaker turning away request 11
+  3.5-timeout-and-breaker   a 1 s route timeout, then the circuit breaker turning away request 11
 
 The pool numbers come from manifests/scenarios/c-circuit-breaker.yaml: maxConnections 5
 and http1MaxPendingRequests 5, so 5 requests run, 5 wait and request 11 gets 503 UO.

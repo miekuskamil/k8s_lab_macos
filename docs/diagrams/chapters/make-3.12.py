@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the diagram for platform-engineering/3-istio/12-jwt.md with the kit in ../bbg.py.
 
-  13-two-checks        RequestAuthentication, then AuthorizationPolicy
+  3.12-two-checks        RequestAuthentication, then AuthorizationPolicy
 
 The circled numbers match the numbered steps in the chapter.
 

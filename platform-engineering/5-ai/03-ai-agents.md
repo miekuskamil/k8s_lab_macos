@@ -2,9 +2,9 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](../glossary.md) explains every Istio resource and term in this course.
 
-**Before this module:** modules 3.3, 5.1 and 5.2.
+**Before this module:** [module 5.1](01-llm-in-the-shop.md) and [module 5.2](02-serving-models.md). Step 4 fences the tool server in with an AuthorizationPolicy, the mesh rule that names which identities may call a service, and the Istio track's [module 3.3](../3-istio/03-authorization.md) explains it in depth.
 
-**You need:** the lab running (`./lab.sh start` starts or repairs it), `helm`, internet access for the kagent chart, and Ollama with a model that calls tools, such as `qwen2.5:3b`. Or use Claude, as [Choosing the model](../../docs/ai-models.md#3-module-19-kagent) shows.
+**You need:** the lab running (`./lab.sh start` starts or repairs it), `helm`, internet access for the kagent chart, and Ollama with a model that calls tools, such as `qwen2.5:3b`. Or use Claude, as [Choosing the model](../../docs/ai-models.md#3-module-53-kagent) shows.
 
 A plain language model only answers questions, while an AI agent goes further and acts. You ask "are all pods in shop healthy?", and the agent decides to call a tool that lists pods, reads the result and replies. Agents that operate Kubernetes are one of the most talked-about topics in the cloud-native world right now.
 
@@ -17,7 +17,7 @@ This module works in four stages:
 
 A platform team must do the last two stages before anyone trusts an agent.
 
-Time: about 60 minutes. This is the third of three AI modules. You need Ollama on your machine with a model that supports tool calling, as in module 5.1, and `qwen2.5:3b` works and fits next to the lab on a 24 GB Mac, using about 2.4 GB while it answers. To use Claude through the Anthropic API instead, see [Choosing the model for the AI modules](../../docs/ai-models.md#3-module-19-kagent).
+Time: about 60 minutes. This is the third of three AI modules. You need Ollama on your machine with a model that supports tool calling, as in module 5.1, and `qwen2.5:3b` works and fits next to the lab on a 24 GB Mac, using about 2.4 GB while it answers. To use Claude through the Anthropic API instead, see [Choosing the model for the AI modules](../../docs/ai-models.md#3-module-53-kagent).
 
 ## Concept: model, tools, loop
 

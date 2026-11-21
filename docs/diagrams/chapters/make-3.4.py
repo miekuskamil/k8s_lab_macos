@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the diagrams for course module 3.4 (traffic routing) with the kit in ../bbg.py.
 
-  04-who-decides   kube-proxy spreads by pod count; the waypoint follows HTTPRoute weights
+  3.4-who-decides   kube-proxy spreads by pod count; the waypoint follows HTTPRoute weights
 
 Run from anywhere: python3 docs/diagrams/chapters/make-3.4.py
 """

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Draw the diagrams for course module 3.16 (the life of an outbound request) with the kit in ../bbg.py.
 
-  45-outbound-overview   the whole path: pod, node container, OrbStack VM, Mac, router
-  45-pod-and-node        inside the pod and the node: redirect, ztunnel, veth, bridge, chains
-  45-nat-ladder          the source address after each layer, and conntrack on the way back
-  45-controlled-egress   with a ServiceEntry, the waypoint opens the outside connection
+  3.16-outbound-overview   the whole path: pod, node container, OrbStack VM, Mac, router
+  3.16-pod-and-node        inside the pod and the node: redirect, ztunnel, veth, bridge, chains
+  3.16-nat-ladder          the source address after each layer, and conntrack on the way back
+  3.16-controlled-egress   with a ServiceEntry, the waypoint opens the outside connection
 
 The circled numbers match the numbered lists in module 3.16. Addresses come from one
 test run of the lab.

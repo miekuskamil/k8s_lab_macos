@@ -2,7 +2,7 @@
 
 > New to a term here, like EndpointSlice or NetworkPolicy? The [glossary](../glossary.md#applications-on-kubernetes) explains every term these modules use.
 
-**Before this module:** [module 1.4](04-observing-and-debugging-applications.md), whose readiness probes decide which pods a Service uses, and the [practice cluster](../practice-cluster.md#the-application-extras), which runs ingress-nginx on NodePort 30080 and Calico, so NetworkPolicies take effect. The course's [module 3.15](../3-istio/15-life-of-a-request.md) follows one request through kube-proxy in more depth.
+**Before this module:** [module 1.4](04-observing-and-debugging-applications.md), whose readiness probes decide which pods a Service uses. The practice cluster runs ingress-nginx on NodePort 30080 and Calico, so NetworkPolicies take effect.
 
 Pods come and go, and each new pod gets a new IP address, so nothing should ever talk to a pod by its address. This module is about the stable names and addresses that sit in front of pods: Services inside the cluster, NodePorts and Ingress for traffic from outside, and NetworkPolicies that decide which pods may talk at all. It has ten tasks and takes about 1 hour 20 minutes.
 

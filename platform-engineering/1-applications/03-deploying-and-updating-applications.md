@@ -2,7 +2,7 @@
 
 > New to a term here, like ReplicaSet or Helm release? The [glossary](../glossary.md#applications-on-kubernetes) explains every term these modules use.
 
-**Before this module:** [module 1.2](02-building-and-running-applications.md), for pods and Deployments, and the [practice cluster](../practice-cluster.md#the-application-extras) with the application extras, because tasks 5 to 7 install Helm charts from the local registry.
+**Before this module:** [module 1.2](02-building-and-running-applications.md), for pods and Deployments. Tasks 5 to 7 install Helm charts from the local registry that [module 1.1](01-setup.md) set up.
 
 Getting version 1 of an application running is the easy part, because every later version has to replace a running one while users keep sending requests. This module is about that replacement: how a Deployment swaps old pods for new ones and takes a bad version back, how two versions run side by side for a blue-green switch or a canary, and how Helm and Kustomize turn one set of manifests into many installations. It has ten tasks and takes about 1 hour 30 minutes.
 

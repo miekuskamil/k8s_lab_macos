@@ -1,4 +1,4 @@
-# Module 3.6: observability
+# Module 3.6: mesh observability
 
 > New to a term here, like VirtualService or waypoint? The [glossary](../glossary.md) explains every Istio resource and term in this course.
 
@@ -6,7 +6,7 @@
 
 **You need:** the lab running (`./lab.sh start` starts or repairs it), and `./lab.sh ui` running in a spare terminal for Jaeger (http://localhost:16686), Grafana and Kiali.
 
-When something breaks, you need to see what happened, and the mesh helps because it measures every request it carries, with no code in the application. This module shows three things:
+When something breaks, you need to see what happened, and the mesh helps because it measures every request it carries, with no code in the application. This module shows three things the mesh adds:
 
 - what the mesh records
 - where each kind of data lives
@@ -223,38 +223,7 @@ $ kubectl -n shop logs deploy/waypoint --tail=1
 
 A `Telemetry` resource with `targetRefs` changes one proxy, while the mesh-wide one in `istio-system` changes all of them.
 
-### 5. Read the logs as data
-
-Logs are text, but you often want numbers from them, such as how many requests failed. Three parts make that work in this lab:
-
-- Alloy collects every pod's output and sends it to Loki.
-- Loki stores the logs. To keep storage cheap, it indexes only a few labels per stream, `namespace`, `app` and `pod`, and never the text itself.
-- LogQL is Loki's query language, which filters the text at query time.
-
-The backend writes one JSON line per request, so LogQL parses each line and turns its fields into numbers.
-
-Send some traffic with errors in it, then open Grafana, Dashboards, **Shop logs**:
-
-```console
-$ for i in $(seq 1 30); do curl -s -o /dev/null localhost:8080/api/orders; curl -s -o /dev/null localhost:8080/api/nope; done
-$ curl -s -o /dev/null "localhost:8080/api/slow?ms=400"
-```
-
-**What you should see.** Seven panels, all built from log lines:
-
-| Panel | LogQL behind it | What it teaches |
-|---|---|---|
-| Log lines per second, by app | `sum by (app) (rate({namespace="shop"}[1m]))` | `rate()` works on log streams too |
-| Backend responses by status | `count_over_time({...app="backend"} \| json \| message="request handled" [1m])` by `status` | `\| json` turns each JSON field into a label you group by |
-| Log lines by level | the same, by `level` | `INFO` from the backend, `error` from the frontend |
-| Backend p95 duration per path | `quantile_over_time(0.95, ... \| unwrap duration_ms ...) by (path)` | `unwrap` turns a field into a number: percentiles from text |
-| Top failing paths | `topk(10, ... \| json \| status >= 400 ...)` | `/api/nope` with `404` |
-| Errors in shop | `{namespace="shop"} \| json \| level=~"(?i)error\|warning" or status >= 500` | raw lines, filtered |
-| Live logs | `{namespace="shop", app=~"$app"} \|= "$search"` | pick apps at the top, type into **Search text**, like a `grep` across every pod |
-
-In the test run, the status panel showed `200`, `201`, `404`, `429` and `503`, where the last two came from the module 3.5 and 3.13 checks a few minutes earlier. The p95 panel put `/api/slow` near 400 ms and `/api/nope` below 1 ms. Click any line in a logs panel to open its fields, including the `trace_id` link to Jaeger.
-
-Logs and metrics sometimes answer the same question, and the dashboard's status panel usually agrees with Prometheus' `istio_requests_total`. When the two disagree, the difference tells you something, as Investigate question 4 shows. Counting from logs reads every line, so it runs slower and costs more at scale, which means you keep it for apps that have no metrics or for questions that metrics leave open, like "which order ids failed?".
+Logs complete the picture, and they need no mesh at all: Alloy collects every pod's output into Loki, and LogQL counts and measures from the text. [Module 2.3](../2-observability/03-logs-with-loki.md) teaches that with a plain app and the **Shop logs** dashboard, which Investigate question 4 uses.
 
 ## Investigate
 

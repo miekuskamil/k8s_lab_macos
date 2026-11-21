@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Draw the diagrams for platform-engineering/3-istio/21-ebpf-and-cilium.md with the kit in ../bbg.py.
 
-  10-cilium-node        the three Cilium parts on one node
-  10-two-designs        Cilium and Istio ambient: an L4 layer per node, Envoy for L7
+  3.21-cilium-node        the three Cilium parts on one node
+  3.21-two-designs        Cilium and Istio ambient: an L4 layer per node, Envoy for L7
 
 Run from anywhere: python3 docs/diagrams/chapters/make-3.21.py
 """

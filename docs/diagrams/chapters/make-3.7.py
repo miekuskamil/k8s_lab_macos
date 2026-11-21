@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the diagram for platform-engineering/3-istio/07-incidents.md with the kit in ../bbg.py.
 
-  08-investigate       from the symptom to the fix, outside in
+  3.7-investigate       from the symptom to the fix, outside in
 
 Run from anywhere: python3 docs/diagrams/chapters/make-3.7.py
 """

@@ -2,7 +2,7 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](../glossary.md) explains every Istio resource and term in this course.
 
-**Before this module:** modules 3.1, 3.4 and 3.5, and 17 for the AI basics.
+**Before this module:** [module 5.1](01-llm-in-the-shop.md), for the AI basics. Step 3 puts a waypoint, the mesh's HTTP proxy, in front of the model servers, and the concept below explains what it changes. The Istio track's [module 3.4](../3-istio/04-traffic-routing.md) covers routing in depth.
 
 **You need:** the lab running (`./lab.sh start` starts or repairs it), and internet access: the module downloads about 900 MB of models, once per run.
 

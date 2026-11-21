@@ -10,13 +10,13 @@ Every task has a title, a time budget and a host, then a short brief in a quote 
 
 Read the brief, start a timer, and solve the task on the node the brief names. Open the solution only when the time runs out, and run the check either way. Every setup starts its namespace from scratch, so you repeat a task by running its setup again.
 
-The six timed practice exams work the same way for a whole exam, through `./lab.sh exam`. Exams 1 to 3 cover the application modules and sit at the end of [level 1](../README.md#1-foundations), and exams 4 to 6 cover the security modules and sit at the end of [level 3](../README.md#3-advanced). Each gives you 2 hours for 16 or 17 tasks worth 100 points, and `score` prints the minutes since `setup` and flags a run over 120. Two forms go beyond the guide: `./lab.sh exam score 4 3 9` scores only tasks 3 and 9, and `./lab.sh exam solve 4 9` applies the reference solution of task 9 alone.
+The six timed practice exams work the same way for a whole exam, through `./lab.sh exam`. Exams 1 to 3 cover the application modules and sit at the end of [track 1](../README.md#1-applications), and exams 4 to 6 cover the security modules and sit at the end of [track 4](../README.md#4-cluster-security). Each gives you 2 hours for 16 or 17 tasks worth 100 points, and `score` prints the minutes since `setup` and flags a run over 120. Two forms go beyond the guide: `./lab.sh exam score 4 3 9` scores only tasks 3 and 9, and `./lab.sh exam solve 4 9` applies the reference solution of task 9 alone.
 
 In the test run on the live clusters, every task's check failed after its setup and passed after its reference solution, and each practice exam scored 0 on a fresh setup and 100 after its reference solution. The run on 21 November 2026 repeated all six exams from a fresh clone with only Docker, git and Lima on the PATH, with the resets from the guide between them. Exam 2 scored 94 at first, because the reference LimitRange of task 6 filled the quota and the rolling restart waited for room, and after a fix to its defaults it scored 100 like the other five. A whole exam cycle of setup, score, solve and score took between 3 and 14 minutes.
 
 ## Where you type
 
-Every command except the `./lab.sh` commands and the scripts they call runs on a node, in a root shell. `./lab.sh practice shell` opens that shell on the control plane, and `./lab.sh practice shell worker` opens it on the worker, already as root and with the `k` alias set. `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell on the Lima VM that [module 4.7](../README.md#the-vm-for-module-44) needs. On OrbStack machines or your own VMs the same command works too, because `./lab.sh` follows the platform setting that the [practice cluster page](practice-cluster.md#other-platforms-orbstack-machines-and-your-own-vms) describes.
+Every command except the `./lab.sh` commands and the scripts they call runs on a node, in a root shell. `./lab.sh practice shell` opens that shell on the control plane, and `./lab.sh practice shell worker` opens it on the worker, already as root and with the `k` alias set. `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell on the Lima VM that [module 4.7](../README.md#the-vm-for-the-kernel-tasks) needs. On OrbStack machines or your own VMs the same command works too, because `./lab.sh` follows the platform setting that the [practice cluster page](practice-cluster.md#other-platforms-orbstack-machines-and-your-own-vms) describes.
 
 The tasks need no repo files on the nodes, because each setup writes what its task needs onto the node itself. The application tasks keep their files under `/opt/apps` on `practice-control-plane`, the way many teams keep a task's files under a folder like `/opt/course`.
 
@@ -34,7 +34,7 @@ The application modules 1.2 to 1.6 take about three weeks at an hour a day:
 
 The security modules 4.1 to 4.7 take about four weeks at an hour a day:
 
-1. Build both clusters: the practice cluster from the guide's [practice cluster section](../README.md#practice-cluster-and-timed-tasks), and the Lima VM from [the VM for module 4.7](../README.md#the-vm-for-module-44).
+1. Build both clusters: the practice cluster from the guide's [practice cluster section](../README.md#practice-cluster-and-timed-tasks), and the Lima VM from [the VM for module 4.7](../README.md#the-vm-for-the-kernel-tasks).
 2. Work through modules 4.1 to 4.6 in order, and take each task of module 4.7 after the module it comes from. Module 4.2 teaches the static pod repairs that every later API server edit relies on, and module 4.6 builds on audit logging and Falco basics from its own first tasks.
 3. Reset between modules with the commands from the guide's reset table, because some tasks change the API server, upgrade the cluster or load kernel profiles.
 4. Repeat the tasks you needed the solution for, a few days later, until each one fits its budget.

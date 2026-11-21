@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the diagram in platform-engineering/3-istio/15-life-of-a-request.md with the kit in ../bbg.py.
 
-  29-many-workers   one Deployment, many workers that each watch the API server and write back
+  3.15-many-workers   one Deployment, many workers that each watch the API server and write back
 
 Run from anywhere: python3 docs/diagrams/chapters/make-3.15.py
 """

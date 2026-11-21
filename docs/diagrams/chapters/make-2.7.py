@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the diagram for module 2.7 (Kyverno, policy as code) with the kit in ../bbg.py.
 
-  26-where-kyverno-sits     one apply through the two Kyverno webhooks, plus the background parts
+  2.7-where-kyverno-sits     one apply through the two Kyverno webhooks, plus the background parts
 
 Solid arrows follow the request. Dashed arrows are the parts that work outside of requests,
 as the module text says.

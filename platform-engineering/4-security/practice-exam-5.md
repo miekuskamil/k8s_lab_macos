@@ -2,7 +2,7 @@
 
 > New to a term here? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this practice exam:** [practice exam 4](practice-exam-4.md) under time, all tasks of modules 4.1 to 4.7, and the [practice cluster](../practice-cluster.md) and the [Lima VM](../../README.md#the-vm-for-module-44), both freshly reset.
+**Before this practice exam:** [practice exam 4](practice-exam-4.md) under time, all tasks of modules 4.1 to 4.7, and the [practice cluster](../practice-cluster.md) and the [Lima VM](../../README.md#the-vm-for-the-kernel-tasks), both freshly reset.
 
 Practice exam 4 checks that you know each topic, while this one checks that you keep your head when topics collide. The API server is down when you start, two tasks write the same admission configuration file, and one fix makes the cluster refuse every new pod until a second fix lands, which is how the real exam feels after the first hour. You get 2 hours for 17 tasks worth 100 points, on two clusters, the OrbStack cluster and the Lima VM.
 

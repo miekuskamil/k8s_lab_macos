@@ -2,7 +2,7 @@
 
 > New to a term here, like CIS benchmark or ipBlock? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this module:** the [practice cluster](../practice-cluster.md) running. The course's [module 3.3](../3-istio/03-authorization.md#concept-authorizationpolicy-compared-with-networkpolicy) compares NetworkPolicy with Istio's rules, and [module 3.10](../3-istio/10-edge-tls.md) explains certificates and trust. Read those first if NetworkPolicy or TLS feel shaky.
+**Before this module:** the practice cluster from `./lab.sh practice up`, as [the practice cluster in depth](../practice-cluster.md) explains. This module starts from the basics of NetworkPolicy and TLS.
 
 A fresh kubeadm cluster lets every pod reach every other pod, serves profiling data about its own internals, and runs whatever binaries somebody copies onto the nodes. This module closes those doors before the first workload arrives, so that a later mistake in one application stays inside that application. It has 10 tasks here and 3 Cilium tasks in module 4.7, and takes about 2 hours, theory included.
 
@@ -101,7 +101,7 @@ A CiliumNetworkPolicy selects pods with `endpointSelector` instead of `podSelect
 
 The layer 7 rule needs an extra hop, because eBPF programs in the kernel handle layers 3 and 4 quickly but parsing HTTP is a job for a proxy. So Cilium sends the selected traffic through an Envoy proxy on the node, and Envoy reads each HTTP request and answers `403 Forbidden` itself when no rule matches. A connection refused at layer 4 times out instead, because the kernel simply drops the packets. That difference tells you which layer refused the request.
 
-The practice cluster runs Calico, so the Cilium tasks run on the third practice machine, the [Lima VM](../../README.md#the-vm-for-module-44) `cks-lima`. It holds a one-node kubeadm cluster with Cilium 1.20.4, and `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell there.
+The practice cluster runs Calico, so the Cilium tasks run on the third practice machine, the [Lima VM](../../README.md#the-vm-for-the-kernel-tasks) `cks-lima`. It holds a one-node kubeadm cluster with Cilium 1.20.4, and `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell there.
 
 **What this stops.** An HTTP rule stops a compromised frontend from calling admin endpoints on a service it legitimately talks to. An `egressDeny` to `world` stops a pod from sending stolen data to the internet, whatever allow rules other teams add later.
 

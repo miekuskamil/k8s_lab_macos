@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Draw the diagrams for platform-engineering/3-istio/09-sidecar-mode.md with the kit in ../bbg.py.
 
-  07-two-modes         ambient and sidecar namespaces side by side, one istiod
-  07-injection         how a one-container Deployment ends up with three containers
-  07-two-proxies       a request from client to httpbin passes two Envoys
+  3.9-two-modes         ambient and sidecar namespaces side by side, one istiod
+  3.9-injection         how a one-container Deployment ends up with three containers
+  3.9-two-proxies       a request from client to httpbin passes two Envoys
 
 Run from anywhere: python3 docs/diagrams/chapters/make-3.9.py
 """

@@ -2,7 +2,7 @@
 
 > New to a term here, like Pod Security Admission or RuntimeClass? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this module:** the [practice cluster](../practice-cluster.md) running. The course's [module 3.2](../3-istio/02-identity-and-mtls.md) explains mTLS between pods, and [module 3.21](../3-istio/21-ebpf-and-cilium.md#concept-kernel-space-and-user-space) explains the kernel boundary that gVisor moves. Read them for the pod-to-pod encryption topic. The WireGuard task needs a VM and sits in [module 4.7](07-kernel-and-host-security.md#task-5-pod-to-pod-encryption-with-cilium).
+**Before this module:** [module 4.3](03-hardening-nodes.md). The WireGuard task needs a VM and sits in [module 4.7](07-kernel-and-host-security.md#task-5-pod-to-pod-encryption-with-cilium).
 
 A container is a process with a few fences around it. It shares the node's kernel, and by default it runs as root, keeps a dozen Linux capabilities, and sees its API token and its Secrets as plain text. This module tightens each fence in turn: what a pod may ask for, where Secrets rest, how a pod receives them, and which kernel a risky pod talks to. It has nine tasks here and one in module 4.7, and takes about 1 hour 45 minutes.
 

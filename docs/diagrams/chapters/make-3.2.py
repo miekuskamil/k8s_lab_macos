@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Draw the diagrams for course module 3.2 (identity and mTLS) with the kit in ../bbg.py.
 
-  02-certificate-issue   ztunnel asks istiod for a certificate, istiod checks with the API server
-  02-hbone-tunnel        plain HTTP inside each node, one mTLS tunnel on :15008 between the ztunnels
+  3.2-certificate-issue   ztunnel asks istiod for a certificate, istiod checks with the API server
+  3.2-hbone-tunnel        plain HTTP inside each node, one mTLS tunnel on :15008 between the ztunnels
 
 Run from anywhere: python3 docs/diagrams/chapters/make-3.2.py
 """

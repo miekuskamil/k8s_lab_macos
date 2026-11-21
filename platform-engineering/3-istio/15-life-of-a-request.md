@@ -2,7 +2,7 @@
 
 > New to a term here, like admission webhook, conntrack or HBONE? The [glossary](../glossary.md) explains every term in this course.
 
-**Before this module:** module 1.1. Parts 1 and 2 need no Istio. Part 3 builds on modules 3.1 and 3.2 (ambient mode, ztunnel, mTLS identity) and refers to module 3.3's policies.
+**Before this module:** the lab from the [quick start](../../README.md#quick-start). Parts 1 and 2 need no Istio. Part 3 builds on modules 3.1 and 3.2 (ambient mode, ztunnel, mTLS identity) and refers to module 3.3's policies.
 
 **You need:** the lab running (`./lab.sh start` starts or repairs it) and `istioctl`. `./lab.sh ui` running in a spare terminal lets you follow part 3 in Jaeger.
 

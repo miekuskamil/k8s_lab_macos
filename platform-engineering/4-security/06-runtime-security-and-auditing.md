@@ -2,7 +2,7 @@
 
 > New to a term here, like audit policy or syscall? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this module:** the [practice cluster](../practice-cluster.md) running, ideally fresh from `./lab.sh practice reset`. The course's [module 3.21](../3-istio/21-ebpf-and-cilium.md#concept-what-ebpf-is) explains eBPF, the technique Falco uses to watch the kernel.
+**Before this module:** [module 4.5](05-supply-chain-security.md), and the practice cluster fresh from `./lab.sh practice reset`.
 
 The other security modules try to keep attackers out, while this one assumes somebody got in anyway. Three questions then matter: what did they do through the API, what are they doing inside the container right now, and how much damage does the container let them do. Audit logs answer the first, Falco the second, and immutable root file systems, seccomp and AppArmor limit the third. This module has 11 tasks here and two in module 4.7, and takes about 2 hours.
 

@@ -115,7 +115,7 @@ The Telemetry resource in `3.18-access-logs.yaml` turns on access logs for every
 
 **What you should see.** One row per sidecar, both on 1.24.2.
 
-Older guides show columns named `CDS`, `LDS`, `EDS` and `RDS` with `SYNCED` in each, but the istioctl 1.32 client that module 1.1 installed moved those states into the JSON output. Print them like this:
+Older guides show columns named `CDS`, `LDS`, `EDS` and `RDS` with `SYNCED` in each, but the istioctl 1.32 client from the toolbox moved those states into the JSON output. Print them like this:
 
 ```console
 $ istioctl proxy-status -o json | python3 -c 'import json,sys

@@ -22,7 +22,7 @@ def lab_map():
     c.frame(40, 150, 1680, 820, "Your machine", "host")
     term = c.node(70, 250, 250, 110, SLATE, "Terminal", "terminal", "./lab.sh")
     web = c.node(70, 480, 250, 110, SLATE, "Browser", "globe", "localhost ports")
-    llm = c.node(70, 730, 250, 110, SLATE, "Ollama", "sparkle", "AI modules")
+    llm = c.node(70, 730, 250, 110, SLATE, "Ollama", "sparkle", "track 5")
 
     c.frame(540, 200, 860, 740, "Docker engine", "plain", icon="box")
     tb = c.node(570, 250, 800, 110, TEAL, "toolbox", "terminal", "kubectl, helm, k3d, kind, istioctl")
@@ -32,13 +32,13 @@ def lab_map():
     c.box(595, 555, 340, 80, BLUE, "Istio ambient", "gateway, ztunnel, waypoint", size=18)
     c.box(595, 650, 340, 80, PURPLE, "ArgoCD", "syncs from GitHub", size=18)
     c.box(595, 745, 340, 80, ORANGE, "Grafana, Prometheus", "Jaeger, Loki, Kiali", size=18)
-    c.note(765, 875, ["modules 1.1, 2.1 and 2.2, 2.4 to 2.9, 3.1 to 3.21 and 5.1 to 5.4"], size=16, anchor="middle")
+    c.note(765, 875, ["tracks 2, 3 and 5"], size=16, anchor="middle")
 
     pc = c.frame(980, 410, 390, 500, "practice cluster", "node")
     c.box(1005, 460, 340, 80, PURPLE, "practice-control-plane", "kubeadm control plane", size=17)
     c.box(1005, 555, 340, 80, TEAL, "practice-worker", "gVisor, Falco", size=18)
     c.box(1005, 650, 340, 80, ORANGE, "practice-registry", "registry.practice:5000", size=18)
-    c.note(1175, 875, ["modules 1.2 to 1.6 and 4.1 to 4.6, exams 1 to 6"], size=16, anchor="middle")
+    c.note(1175, 875, ["tracks 1 and 4, exams 1 to 6"], size=16, anchor="middle")
 
     c.frame(1430, 200, 260, 740, "VM cks-lima", "node")
     c.box(1450, 250, 220, 120, GREEN, "its own kernel", "Cilium, AppArmor", size=18)

@@ -1,6 +1,6 @@
 ---
 name: course-module
-description: Build or extend a module of this repo's course (platform-engineering/<level>/NN-*.md) the way every existing module is built - installed step by step on the live lab, every step and answer tested, verify.sh checks, reset.sh cleanup, glossary and README updates. Use when asked to add a course module, a lab, an exercise, or a new tool to the course, or to bring an existing module up to standard.
+description: Build or extend a module of this repo's course (platform-engineering/<track>/NN-*.md, module id T.N) the way every existing module is built - installed step by step on the live lab, every step and answer tested, verify.sh checks, reset.sh cleanup, glossary and README updates. Use when asked to add a course module, a lab, an exercise, or a new tool to the course, or to bring an existing module up to standard.
 ---
 
 # Building a course module
@@ -10,13 +10,13 @@ A module is finished only when a learner follows it on a fresh lab and sees exac
 ## 1. Before writing anything
 
 - **Read two finished modules** as the reference for structure and tone: `platform-engineering/2-observability/06-gitops-with-argocd.md` (a tool installed and used) and `platform-engineering/2-observability/01-prometheus-and-alerting.md` (concepts plus a measured incident).
-- **Pick the number, the level and the domain.** The course is one path in four level folders, and each level groups its modules by topic, and the root `README.md` (the guide) lists them in one table per level under "The course": `1-foundations/` holds the application basics (33 to 37) and the mesh basics, `2-intermediate/` the mesh in practice, platform operations and a secure cluster (38, 39), `3-advanced/` hardening, supply chain, runtime security and platform internals, and `4-ai/` AI workloads. `kernel-and-host/` sits outside the levels and holds module 4.7, the tasks that need a VM with a kernel of its own. Put the new module under the domain and level that fit, and give it the next free number, 45 at the time of writing, with the `NN-` prefix in its file name, because `verify.sh NN`, `task.sh NN.N` and every "Module NN" reference go by that number. Never renumber a module. Name modules by what they teach, never by an exam: exam names appear only in the exam mapping of `platform-engineering/timed-tasks.md`. Modules after 19 must work after `./platform-engineering/reset.sh` with only module 1.1 behind them. Use their own namespace, `course-<topic>`, and stay out of `shop` unless the module is about the mesh.
+- **Pick the track and the place.** The course has five independent tracks, each in its own folder, and the root `README.md` (the guide) lists each in one table under "The course": `1-applications/` (setup and the application basics, practice cluster, exams 1 to 3), `2-observability/` (telemetry for plain apps, then GitOps, policy, nodes and k3s, on the lab), `3-istio/` (the service mesh, easy to hard, on the lab), `4-security/` (cluster hardening on the practice cluster, the kernel tasks of 4.7 on a VM, exams 4 to 6) and `5-ai/` (AI workloads on the lab). Within a track the modules run from easy to hard, and the module id is the track number and the position, so the file `3-istio/02-identity-and-mtls.md` is module 3.2. Insert the new module where its difficulty fits and renumber the later modules of that track everywhere (`git mv` the module, its manifests `T.N-*.yaml`, its diagrams `T.N-*.svg` and `make-T.N.py`, the `module_T_N` function, task ids, reset.sh comments, glossary lines, links and the old-to-new table in the README), or append it at the end of the track. Every **Before this module** points only backwards inside the track; anything from another track becomes a short recap in place plus a link, never a requirement, and the first module of each track runs on a fresh lab from the quick start. Name modules by what they teach, never by an exam: exam names appear only in the exam mapping of `platform-engineering/timed-tasks.md`. Use the module's own namespace, `course-<topic>`, and stay out of `shop` unless the module is about the mesh.
 - **Pick versions at least two weeks old.** Read release dates from the Helm index (`~/Library/Caches/helm/repository/<repo>-index.yaml`, field `created`). If every release shows the same date, the index was regenerated; pick a release line that's clearly older. Pin the exact chart version everywhere.
 - **Check memory.** The user's Mac has 24 GB and the lab uses about 5 GB. Give every new pod requests and limits, and say in the module how much it adds.
 
 ## 2. Build it on the lab, step by step
 
-Install the tool the way the learner will: `helm install` with a values file in `platform-engineering/manifests/NN-*.yaml`, or `kubectl apply`. Run every command in the module text, in order, and copy real output into the text. Never write "you should see" from memory.
+Install the tool the way the learner will: `helm install` with a values file in `platform-engineering/manifests/T.N-*.yaml`, or `kubectl apply`. Run every command in the module text, in order, and copy real output into the text. Never write "you should see" from memory.
 
 Things that bit earlier modules, check each:
 
@@ -29,9 +29,9 @@ Things that bit earlier modules, check each:
 
 ## 3. Write the module
 
-File `platform-engineering/<level>/NN-topic.md`, with these sections in this order. The file sits one folder below `platform-engineering/`, so its links start with `../` for the glossary (`../glossary.md`) and `../../` for the repo (`../../docs/diagrams/chapters/NN-slug.svg`), and a link to a module in another level folder goes through its folder (`../2-intermediate/22-gitops-with-argocd.md`).
+File `platform-engineering/<track>/NN-topic.md`, where NN is the two-digit position in the track, with these sections in this order. The file sits one folder below `platform-engineering/`, so its links start with `../` for the glossary (`../glossary.md`) and `../../` for the repo (`../../docs/diagrams/chapters/NN-slug.svg`), and a link to a module in another track goes through its folder (`../2-observability/06-gitops-with-argocd.md`).
 
-1. `# Module NN: title`, the glossary pointer line, and **`**Before this module:**`** with the modules to read first and whether Istio is needed.
+1. `# Module T.N: title`, the glossary pointer line, and **`**Before this module:**`** with the earlier modules of the same track to read first, and whether Istio is needed.
 2. An opening paragraph: the real-world problem, then what the module does. Then `Time: about N minutes.` and the memory it adds.
 3. `## Concept: ...` sections, usually two, each with a diagram (see **Diagrams** below) and often a table.
 4. `## The bigger picture: ...`: why the industry does it this way, where it's heading.
@@ -43,8 +43,8 @@ File `platform-engineering/<level>/NN-topic.md`, with these sections in this ord
 **Language:** B2 English, written like a conversation. Follow the unslop rules: no em dashes, no "can/cannot/could", no passive voice, dynamic verbs, varied sentence length. Run this before finishing:
 
 ```bash
-grep -nE "\b(can|cannot|can't|could)\b|—|–" platform-engineering/*/NN-*.md
-grep -nE "\b(is|are|was|were|be|been|being) [a-z]+ed\b" platform-engineering/*/NN-*.md
+grep -nE "\b(can|cannot|can't|could)\b|—|–" platform-engineering/<track>/NN-*.md
+grep -nE "\b(is|are|was|were|be|been|being) [a-z]+ed\b" platform-engineering/<track>/NN-*.md
 ```
 
 **Explain, don't compress, and connect.** The course follows the ByteByteGo newsletter's style: a good engineer explaining to a colleague, as a story that reasons its way forward. A paragraph that names eight components in four correct sentences teaches nothing, and a run of short disconnected sentences teaches nothing either.
@@ -69,7 +69,7 @@ Before and after, the target voice:
 
 **Values differ per run.** Quote real output, but never hard-code an IP or pod name in a command: look it up (`SVCIP=$(kubectl ... -o jsonpath=...)`). Say "in the test run" next to measured numbers.
 
-**Diagrams.** Draw every diagram with the kit in `docs/diagrams/bbg.py`, in a script `docs/diagrams/chapters/make-NN.py` that writes `NN-slug.svg` and `.excalidraw`. Copy the patterns in `docs/diagrams/make-life-of-a-request.py` and `docs/diagrams/chapters/make-3.2.py`. No mermaid.
+**Diagrams.** Draw every diagram with the kit in `docs/diagrams/bbg.py`, in a script `docs/diagrams/chapters/make-T.N.py` that writes `T.N-slug.svg` and `.excalidraw`. Copy the patterns in `docs/diagrams/make-life-of-a-request.py` and `docs/diagrams/chapters/make-3.2.py`. No mermaid.
 
 A course diagram is a structure diagram, not a chain of boxes. First draw where things run, then draw the flow on top of it:
 
@@ -94,13 +94,13 @@ Alignment rules:
 
 Render and look before you embed it. Pad the SVG to a square so Quick Look shows all of it (`qlmanage -t -s 1100 -o <dir> file.svg`), open the PNG, and fix every overlap and misaligned arrow before you commit.
 
-**Define every term.** Add a glossary entry for each new term to `platform-engineering/glossary.md`, under a section for the topic, ending with "Module NN."
+**Define every term.** Add a glossary entry for each new term to `platform-engineering/glossary.md`, under a section for the topic, ending with "Module T.N."
 
 ## 4. verify.sh
 
-Add `module_NN()` to `platform-engineering/verify.sh`, before the `# Module 2.9 upgrades k3s` comment. It replays the module from a clean lab and checks each claim the text makes.
+Add `module_T_N()` (dots become underscores) to `platform-engineering/verify.sh`, before the `# Module 2.9 upgrades k3s` comment. It replays the module from a clean lab and checks each claim the text makes.
 
-- Start with `section "NN: title"` and `baseline`; end with `baseline` and one check that the reset removed everything, including the leftovers from step 2.
+- Start with `section "T.N: title"` and `baseline`; end with `baseline` and one check that the reset removed everything, including the leftovers from step 2.
 - `expect "description" "$actual" 'regex'` for values, `between "description" "$n" min max` for counts. Use ranges, never exact counts or timings.
 - **Poll, never sleep and hope.** Write a small loop: `for _ in $(seq 1 36); do v=...; [[ $v =~ ok ]] && break; settle 5; done`.
 - A poll on "Succeeded" must check the new revision, not the previous operation's status.
@@ -108,11 +108,11 @@ Add `module_NN()` to `platform-engineering/verify.sh`, before the `# Module 2.9 
 - **macOS runs bash 3.2:** escaped quotes inside `"$( ... )"` break. Build queries in a variable first.
 - Add the module number to the default list (`modules=(0 1 2 ...)`) only if it's safe to repeat and needs nothing outside the lab (no Ollama, no one-way upgrade).
 
-Run `./platform-engineering/verify.sh NN` until it passes, then run it again from a clean lab.
+Run `./platform-engineering/verify.sh T.N` until it passes, then run it again from a clean lab.
 
 ## 5. reset.sh
 
-Add a cleanup block to `platform-engineering/reset.sh` above the previous module's, commented `# Module NN: ...`.
+Add a cleanup block to `platform-engineering/reset.sh` above the previous module's, commented `# Module T.N: ...`.
 
 - `helm uninstall` before deleting the namespace, guarded by `helm status`.
 - Delete cluster-scoped leftovers by name, with `--ignore-not-found`.
@@ -128,10 +128,10 @@ Add a cleanup block to `platform-engineering/reset.sh` above the previous module
 
 ## 7. Finish
 
-1. `README.md`, the guide: a row in the table of the module's level under "The course" (number, title link, what you learn, what it runs on), and a place in the recommended order under "How to study". Add the module to the routes map in `docs/diagrams/chapters/make-course-readme.py` when it runs on the lab, and to the exam mapping in `platform-engineering/timed-tasks.md` when it covers an exam domain.
+1. `README.md`, the guide: a row in the table of the module's track under "The course" (id, title link, what you learn, what it runs on), and the stop count of its lane in `docs/diagrams/chapters/make-course-readme.py`. Add it to the exam mapping in `platform-engineering/timed-tasks.md` when it covers an exam domain.
 
-A module with timed tasks on the practice cluster, like 33 to 44, follows the same parts but replaces `verify.sh` with task functions: `setup_D_N`, `check_D_N` and `solve_D_N` in `platform-engineering/practice/apps/tasks/0D.sh` or `practice/security/tasks/0D.sh`, and the module number in the `resolve` and `module_id` functions of `platform-engineering/task.sh`, so that `./platform-engineering/task.sh check NN.N` finds it. A task that needs its own kernel goes into module 4.7 and the `KERNEL_TASKS` list of `task.sh`.
-2. Module 5.4 loads the README, the glossary, start-here and the lab modules 1.1, 2.1 and 2.2, 2.4 to 2.9, 3.1 to 3.15, 3.17 to 3.21 and 5.1 to 5.4 into one ConfigMap, which holds at most 1 MiB. A new lab module needs its number in that glob, in module 5.4's step 3 and in `module_27` of `verify.sh`. Check the size after adding a module: `kubectl create configmap x --dry-run=client -o yaml $(printf -- '--from-file=%s ' README.md platform-engineering/{glossary,start-here}.md platform-engineering/*/[0-2][0-9]-*.md platform-engineering/*/3[0-2]-*.md) | wc -c`, and update the numbers in module 5.4's step 3.
+A module with timed tasks on the practice cluster, like 1.2 to 1.6 and 4.1 to 4.7, follows the same parts but replaces `verify.sh` with task functions: `setup_D_N`, `check_D_N` and `solve_D_N` in `platform-engineering/practice/apps/tasks/0D.sh` or `practice/security/tasks/0D.sh`, and the module in the `resolve` and `task_id` functions of `platform-engineering/task.sh`, so that `./platform-engineering/task.sh check T.M.N` finds it. A task id is track, module and task, such as `4.1.3`. A task that needs its own kernel goes into module 4.7 and the `KERNEL_TASKS` list of `task.sh`.
+2. Module 5.4 loads the README, the glossary, start-here, module 1.1 and every module of the lab tracks 2, 3 and 5 into one ConfigMap, which holds at most 1 MiB, with the glob `platform-engineering/1-applications/01-*.md platform-engineering/[235]-*/[0-9][0-9]-*.md` in its step 3 and in `module_5_4` of `verify.sh`. Check the size after adding a module: `kubectl create configmap x --dry-run=client -o yaml $(printf -- '--from-file=%s ' README.md platform-engineering/{glossary,start-here}.md platform-engineering/1-applications/01-*.md platform-engineering/[235]-*/[0-9][0-9]-*.md) | wc -c`, and update the numbers in module 5.4's step 3.
 3. The tables under "Logins and addresses" in `README.md` if the module adds a UI, a port or a credential.
 4. **Never push while a test runs:** a push makes ArgoCD resync `istio-config` and wipes the exercise in progress.
 5. Rebuild and run the full check: `./lab.sh down --yes && ./lab.sh up && ./lab.sh test all`. Record the total in the commit message.

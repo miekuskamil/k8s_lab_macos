@@ -51,7 +51,7 @@
 <polyline points="106.7,764.5 113.1,764.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
 <text x="144.0" y="742.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">helm install</text>
 <text x="144.0" y="767.9" font-size="17.0" fill="#475569" text-anchor="start">values files,</text>
-<text x="144.0" y="790.0" font-size="17.0" fill="#475569" text-anchor="start">module 14</text>
+<text x="144.0" y="790.0" font-size="17.0" fill="#475569" text-anchor="start">module 3.19</text>
 <polyline points="350.0,760.0 580.0,760.0 580.0,699.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="580.0,690.0 585.8,701.5 574.2,701.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
 <text x="470.0" y="750.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">same charts</text>

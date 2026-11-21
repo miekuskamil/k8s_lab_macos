@@ -45,7 +45,6 @@ baseline() { "$ROOT/platform-engineering/reset.sh" >/dev/null 2>&1; settle 5; }
 module_1_1() {
   section "1.1: the lab is ready"
   expect "kubectl reaches the cluster" "$("${K[@]}" get nodes --no-headers 2>&1 | awk '{print $2}' | head -1)" '^Ready$'
-  expect "istioctl is installed" "$("${I[@]}" version 2>&1 | grep -c 'control plane version')" '^1$'
   expect "the shop answers on localhost:8080" "$(code "$BASE/healthz")" '^200$'
   expect "no ArgoCD application is unhealthy" "$("${K[@]}" -n argocd get applications --no-headers | awk '$3!="Healthy"' | wc -l | tr -d ' ')" '^0$'
   expect "Kiali answers" "$("${K[@]}" -n istio-system get deploy kiali -o jsonpath='{.status.readyReplicas}')" '^1$'
@@ -53,6 +52,8 @@ module_1_1() {
 
 module_3_1() {
   section "3.1: what a mesh adds"
+  expect "istioctl reaches the control plane" "$("${I[@]}" version 2>&1 | grep -c 'control plane version')" '^1$'
+  expect "istiod manages 3 proxies at the baseline" "$("${I[@]}" version 2>&1 | grep -o '([0-9]* proxies)')" '^\(3 proxies\)$'
   expect "the shop namespace is in ambient mode" "$("${K[@]}" get ns shop -o jsonpath='{.metadata.labels.istio\.io/dataplane-mode}')" '^ambient$'
   expect "shop pods have no sidecar (one container each)" "$("${K[@]}" -n shop get pods -l app=backend -o jsonpath='{.items[0].spec.containers[*].name}')" '^backend$'
   expect "ztunnel lists the backend as an HBONE workload" "$("${I[@]}" ztunnel-config workloads 2>/dev/null | grep -c 'backend-v1.*HBONE')" '^[1-9]'
@@ -642,6 +643,13 @@ module_2_1() {
   alert_state() { curl -s "localhost:$port/api/v1/alerts" | python3 -c 'import json,sys; a=[x for x in json.load(sys.stdin)["data"]["alerts"] if x["labels"]["alertname"]=="ShopBackendErrorBudgetBurn"]; print(a[0]["state"] if a else "none")' 2>/dev/null; }
   # poll <seconds> <command...>: run the command every 5 s until it succeeds
   poll() { local t=$1 i; shift; for ((i = 0; i < t; i += 5)); do "$@" && return 0; sleep 5; done; return 1; }
+  "${K[@]}" apply -f "$M/2.1-plain-app.yaml" >/dev/null
+  "${K[@]}" -n course-metrics rollout status deploy/podinfo --timeout=120s >/dev/null 2>&1
+  "${K[@]}" -n course-metrics exec deploy/podinfo -- sh -c 'for i in $(seq 1 20); do wget -q -O /dev/null localhost:9898/; done; for i in 1 2 3; do wget -q -O /dev/null localhost:9898/status/500; done' >/dev/null 2>&1
+  expect "the plain app counts its own requests by status" "$("${K[@]}" -n course-metrics exec deploy/podinfo -- wget -q -O - localhost:9797/metrics 2>/dev/null | grep -c '^http_request_duration_seconds_count{.*status="\(200\|500\)"')" '^2$'
+  plain_scraped() { [[ -n "$(prom 'sum(http_request_duration_seconds_count{namespace="course-metrics",status="500"})')" ]]; }
+  poll 150 plain_scraped
+  expect "Prometheus scrapes the plain app through its PodMonitor" "$(prom 'sum(http_request_duration_seconds_count{namespace="course-metrics",status="500"})')" '^[1-9]'
   expect "Prometheus sends alerts to Alertmanager" "$(curl -s "localhost:$port/api/v1/alertmanagers" | grep -o '"activeAlertmanagers":\[{"url":"http://[0-9.]*:9093' | grep -c 9093)" '^1$'
   "${K[@]}" apply -f "$M/2.1-alert-receiver.yaml" -f "$M/2.1-shop-slo.yaml" >/dev/null
   "${K[@]}" -n course-alerts rollout status deploy/alert-receiver --timeout=120s >/dev/null 2>&1
@@ -674,7 +682,7 @@ module_2_1() {
   expect "the API server's histogram is the biggest metric" "$(curl -s "localhost:$port/api/v1/query" --data-urlencode 'query=topk(1, count by (__name__) ({__name__=~".+"}))' | grep -o '"__name__":"[a-z_]*"')" 'apiserver_'
   kill "$pf" 2>/dev/null; wait "$pf" 2>/dev/null
   baseline
-  expect "after the reset course-alerts is gone" "$("${K[@]}" get ns course-alerts 2>&1 | grep -c NotFound)" '^1$'
+  expect "after the reset course-alerts and course-metrics are gone" "$("${K[@]}" get ns course-alerts course-metrics 2>&1 | grep -c NotFound)" '^2$'
 }
 
 module_2_2() {
@@ -730,6 +738,31 @@ module_2_2() {
   baseline
   expect "after the reset the dashboard and the Grafana rule are gone" "$(gf "localhost:$gport/api/dashboards/uid/shop-slo" | grep -c 'not found') $(gf "localhost:$gport/api/v1/provisioning/alert-rules/shop-burn-grafana" -o /dev/null -w '%{http_code}')" '^1 404$'
   kill "$pf1" "$pf2" 2>/dev/null; wait "$pf1" "$pf2" 2>/dev/null
+}
+
+module_2_3() {
+  section "2.3: logs with Loki"
+  baseline
+  # logql <kind> <query>: run a LogQL query through the API server's service proxy
+  logql() { "${K[@]}" get --raw "/api/v1/namespaces/observability/services/loki:3100/proxy/loki/api/v1/$1?query=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$2")&limit=1000" 2>/dev/null; }
+  "${K[@]}" apply -f "$M/2.3-plain-app.yaml" >/dev/null
+  "${K[@]}" -n course-logs rollout status deploy/orders --timeout=120s >/dev/null 2>&1
+  expect "the plain app prints JSON order lines" "$("${K[@]}" -n course-logs logs deploy/orders --tail=1 2>/dev/null)" '^\{"level":"(info|error)","msg":"order (placed|failed)"'
+  local n=0 failed=0
+  for _ in $(seq 1 36); do
+    n="$(logql query_range '{namespace="course-logs"}' | python3 -c 'import json,sys; print(sum(len(s["values"]) for s in json.load(sys.stdin)["data"]["result"]))' 2>/dev/null)"
+    failed="$(logql query_range '{namespace="course-logs"} | json | status >= 500' | python3 -c 'import json,sys; print(sum(len(s["values"]) for s in json.load(sys.stdin)["data"]["result"]))' 2>/dev/null)"
+    [[ "$failed" =~ ^[1-9] ]] && break; settle 5
+  done
+  between "Loki holds the app's lines" "${n:-0}" 5 100000
+  expect "| json | status >= 500 finds failed orders" "${failed:-0}" '^[1-9]'
+  expect "Loki refuses a query with an empty selector" "$("${K[@]}" get --raw '/api/v1/namespaces/observability/services/loki:3100/proxy/loki/api/v1/query_range?query=%7B%7D' 2>&1 | grep -c BadRequest)" '^1$'
+  expect "count_over_time groups the lines by status" "$(logql query 'sum by (status) (count_over_time({namespace="course-logs"} | json [10m]))' | python3 -c 'import json,sys; print(" ".join(sorted(r["metric"]["status"] for r in json.load(sys.stdin)["data"]["result"])))' 2>/dev/null)" '^200 500$'
+  expect "unwrap gives a p95 duration for failures from 300 to 660 ms" "$(logql query 'quantile_over_time(0.95, {namespace="course-logs"} | json | status >= 500 | unwrap duration_ms [10m])' | python3 -c 'import json,sys; v=float(json.load(sys.stdin)["data"]["result"][0]["value"][1]); print(int(300 <= v <= 660))' 2>/dev/null)" '^1$'
+  expect "Grafana loads the Shop logs dashboard" "$("${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- sh -c \
+    'curl -s -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" localhost:3000/api/dashboards/uid/shop-logs' 2>/dev/null | grep -o '"title":"Shop logs"' | head -1)" '^"title":"Shop logs"$'
+  baseline
+  expect "after the reset course-logs is gone" "$("${K[@]}" get ns course-logs 2>&1 | grep -c NotFound)" '^1$'
 }
 
 module_2_4() {
@@ -1379,7 +1412,7 @@ module_3_19() {
 }
 
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(1.1 2.1 2.2 2.4 2.5 2.6 2.7 2.8 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.9 3.10 3.11 3.12 3.13 3.14 3.15 3.16 3.17 3.18); fi
+if (( ${#modules[@]} == 0 )); then modules=(1.1 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.9 3.10 3.11 3.12 3.13 3.14 3.15 3.16 3.17 3.18); fi
 # Start from the Git baseline, in case an exercise is still applied.
 printf 'Restoring the baseline before the checks\n'
 "$ROOT/platform-engineering/reset.sh" >/dev/null 2>&1
@@ -1389,7 +1422,7 @@ done
 
 printf '\nRestoring the baseline\n'
 # --all also removes the module 3.9 namespaces and the course client, so the lab ends
-# exactly as a fresh provision leaves it (module 1.1 expects 3 proxies).
+# exactly as a fresh provision leaves it (module 3.1 expects 3 proxies).
 "$ROOT/platform-engineering/reset.sh" --all >/dev/null 2>&1
 printf '\n%d checks passed, %d failed\n' "$PASS" "$FAIL"
 (( FAIL == 0 ))

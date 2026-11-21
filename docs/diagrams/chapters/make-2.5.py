@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Draw the diagrams for module 2.5 (continuous profiling) with the kit in ../bbg.py.
 
-  28-profile-path       how profiles get from podinfo to a flame graph, in four steps
-  28-flame-tree         the call tree from the module's test run, with total percentages
+  2.5-profile-path       how profiles get from podinfo to a flame graph, in four steps
+  2.5-flame-tree         the call tree from the module's test run, with total percentages
 
 Run from anywhere: python3 docs/diagrams/chapters/make-2.5.py
 """

@@ -25,7 +25,7 @@ spec:
             - {name: EMBED_MODEL, value: nomic-embed-text}
             - {name: CHAT_MODEL, value: "qwen2.5:3b"}
             - {name: DOCS_DIR, value: /docs}
-            - {name: EXCLUDE_FILES, value: 27-rag-on-kubernetes.md}
+            - {name: EXCLUDE_FILES, value: 04-rag-on-kubernetes.md}
           # Your AI settings from lab.env, once ./lab.sh ai has stored them.
           envFrom:
             - configMapRef: {name: llm-settings, optional: true}

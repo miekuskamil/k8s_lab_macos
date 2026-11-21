@@ -2,7 +2,7 @@
 
 > New to a term here, like embedding or vector database? The [glossary](../glossary.md) explains every term in this course.
 
-**Before this module:** module 1.1. Module 5.1 helps: it introduced RAG with a handful of orders. No Istio needed.
+**Before this module:** [module 5.1](01-llm-in-the-shop.md) helps, because it introduced RAG with a handful of orders. No Istio needed.
 
 **You need:** the lab running (`./lab.sh start` starts or repairs it), `helm`, Ollama with `nomic-embed-text` and `qwen2.5:3b`, and internet access for the Qdrant chart. [What you need](#what-you-need) below has the details.
 
@@ -180,7 +180,7 @@ INFO[0003] Successfully imported 1 image(s) into 1 cluster(s)
 
 ```console
 $ kubectl -n course-rag create configmap course-docs \
-    $(printf -- '--from-file=%s ' README.md platform-engineering/{glossary,start-here}.md platform-engineering/*/[0-2][0-9]-*.md platform-engineering/*/3[0-2]-*.md platform-engineering/*/45-*.md)
+    $(printf -- '--from-file=%s ' README.md platform-engineering/{glossary,start-here}.md platform-engineering/1-applications/01-*.md platform-engineering/[235]-*/[0-9][0-9]-*.md)
 configmap/course-docs created
 
 $ cat platform-engineering/manifests/5.4-rag-app.yaml
@@ -211,7 +211,7 @@ spec:
             - {name: EMBED_MODEL, value: nomic-embed-text}
             - {name: CHAT_MODEL, value: "qwen2.5:3b"}
             - {name: DOCS_DIR, value: /docs}
-            - {name: EXCLUDE_FILES, value: 27-rag-on-kubernetes.md}
+            - {name: EXCLUDE_FILES, value: 04-rag-on-kubernetes.md}
           # Your AI settings from lab.env, once ./lab.sh ai has stored them.
           envFrom:
             - configMapRef: {name: llm-settings, optional: true}
@@ -248,7 +248,7 @@ deployment "rag" successfully rolled out
 $ kubectl -n course-rag port-forward svc/rag 8090:8000 >/dev/null 2>&1 &
 ```
 
-**What you should see.** The modules sit in four level folders below `platform-engineering/`, so the `printf` builds one `--from-file` flag for the README, the glossary, the Istio picture and each lab module, 0 to 32 and 45, and each file becomes one key in the ConfigMap. The ConfigMap holds 37 files and about 890 KiB. A ConfigMap holds at most 1 MiB, so the lab modules still fit with about 130 KiB to spare, while modules 1.2 to 1.6 and 4.1 to 4.7 with their long transcripts would push it over, so the glob leaves them out, and most of the space goes to the terminal transcripts in the modules. The app leaves one file out on purpose, this module itself, because the manifest sets `EXCLUDE_FILES: 27-rag-on-kubernetes.md`.
+**What you should see.** The modules sit in one folder per track below `platform-engineering/`, so the `printf` builds one `--from-file` flag for the README, the glossary, the Istio picture, module 1.1 and every module of the lab tracks 2, 3 and 5, and each file becomes one key in the ConfigMap. The ConfigMap holds 38 files and about 960 KiB. A ConfigMap holds at most 1 MiB, so the lab modules still fit with about 70 KiB to spare, while the practice cluster modules of tracks 1 and 4, with their long transcripts, would push it over, so the glob leaves them out, and most of the space goes to the terminal transcripts in the modules. The app leaves one file out on purpose, this module itself, because the manifest sets `EXCLUDE_FILES: 04-rag-on-kubernetes.md`.
 
 This module quotes its own test questions and the answers they got, so if the index held them, a question like "What is the capital of Denmark?" would find step 6's table, and the model would repeat what it read there. The test would leak into the data, like exam answers left inside the textbook, and teams keep evaluation questions out of the index for the same reason.
 
@@ -305,17 +305,17 @@ $ curl -s -G localhost:8090/search --data-urlencode "q=how do I roll back a bad 
     "results": [
         {
             "score": 0.714,
-            "file": "22-gitops-with-argocd.md",
+            "file": "06-gitops-with-argocd.md",
             "heading": "Investigate"
         },
         {
             "score": 0.696,
-            "file": "22-gitops-with-argocd.md",
+            "file": "06-gitops-with-argocd.md",
             "heading": "6. Ordered deploys: hooks and waves"
         },
         {
             "score": 0.685,
-            "file": "22-gitops-with-argocd.md",
+            "file": "06-gitops-with-argocd.md",
             "heading": "5. A bad release, and `git revert`"
         },
         {
@@ -332,28 +332,28 @@ $ curl -s -G localhost:8090/search --data-urlencode "q=Why is my pod stuck in Pe
     "results": [
         {
             "score": 0.694,
-            "file": "21-k3s-lifecycle.md",
+            "file": "09-k3s-lifecycle.md",
             "heading": "Concept: how a pod gets its network, and how one missing file stops it"
         },
         {
             "score": 0.691,
-            "file": "20-nodes-and-cleanup.md",
+            "file": "08-nodes-and-cleanup.md",
             "heading": "Concept: PodDisruptionBudgets"
         },
         {
             "score": 0.688,
-            "file": "23-prometheus-and-alerting.md",
+            "file": "01-prometheus-and-alerting.md",
             "heading": "4. Break it, get paged"
         },
         {
             "score": 0.682,
-            "file": "45-life-of-an-outbound-request.md",
+            "file": "16-life-of-an-outbound-request.md",
             "heading": "1. Start a client in its own ambient namespace"
         },
 ...
         {
             "score": 0.666,
-            "file": "24-grafana-as-code.md",
+            "file": "02-grafana-as-code.md",
             "heading": "4. A Grafana-managed alert"
         }
     ]
@@ -388,13 +388,13 @@ $ ask "Why is my pod stuck in Pending?"
         {
             "n": 1,
             "score": 0.694,
-            "file": "21-k3s-lifecycle.md",
+            "file": "09-k3s-lifecycle.md",
             "heading": "Concept: how a pod gets its network, and how one missing file stops it"
         },
         {
             "n": 2,
             "score": 0.691,
-            "file": "20-nodes-and-cleanup.md",
+            "file": "08-nodes-and-cleanup.md",
             "heading": "Concept: PodDisruptionBudgets"
         },
 ...
@@ -412,13 +412,13 @@ $ ask "Which Kyverno chart version does module 2.7 install?"
         {
             "n": 1,
             "score": 0.731,
-            "file": "26-kyverno-policy-as-code.md",
+            "file": "07-kyverno-policy-as-code.md",
             "heading": "Module 2.7: Kyverno, policy as code"
         },
         {
             "n": 2,
             "score": 0.717,
-            "file": "26-kyverno-policy-as-code.md",
+            "file": "07-kyverno-policy-as-code.md",
             "heading": "1. Install Kyverno"
         },
 ...
@@ -436,13 +436,13 @@ $ ask "What is the capital of Denmark?"
         {
             "n": 1,
             "score": 0.535,
-            "file": "17-llm-in-the-mesh.md",
+            "file": "01-llm-in-the-shop.md",
             "heading": "On Linux (Ubuntu 24.04)"
         },
         {
             "n": 2,
             "score": 0.532,
-            "file": "45-life-of-an-outbound-request.md",
+            "file": "16-life-of-an-outbound-request.md",
             "heading": "2. DNS: how the pod finds example.com"
         },
 ...
@@ -485,14 +485,14 @@ $ ask "Why is my pod stuck in Pending?"
         {
             "n": 1,
             "score": 0.694,
-            "file": "21-k3s-lifecycle.md",
+            "file": "09-k3s-lifecycle.md",
             "heading": "Concept: how a pod gets its network, and how one missing file stops it"
         },
 ...
         {
             "n": 8,
             "score": 0.672,
-            "file": "15-outlier-detection-and-retries.md",
+            "file": "13-outlier-detection-and-retries.md",
             "heading": "Investigate"
         }
     ],

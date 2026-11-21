@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the diagrams for course module 3.6 (observability) with the kit in ../bbg.py.
 
-  06-signals   who produces metrics, traces and logs, where each lives, and where you look
+  3.6-signals   who produces metrics, traces and logs, where each lives, and where you look
 
 Run from anywhere: python3 docs/diagrams/chapters/make-3.6.py
 """

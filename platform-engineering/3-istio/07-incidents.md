@@ -2,7 +2,7 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](../glossary.md) explains every Istio resource and term in this course.
 
-**Before this module:** modules 3.1 to 3.6 and 3.9: the incidents mix everything.
+**Before this module:** modules 3.1 to 3.6: the incidents mix everything.
 
 **You need:** the lab running (`./lab.sh start` starts or repairs it) and `istioctl`.
 

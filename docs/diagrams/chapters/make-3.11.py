@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the diagram for platform-engineering/3-istio/11-egress.md with the kit in ../bbg.py.
 
-  12-egress-flow       a call to httpbin.org through ztunnel and the waypoint
+  3.11-egress-flow       a call to httpbin.org through ztunnel and the waypoint
 
 The circled numbers match the numbered steps in the chapter.
 

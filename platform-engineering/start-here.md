@@ -1,6 +1,6 @@
 # Start here: Istio in one picture
 
-Read this before module 1.1. It takes about 15 minutes and needs no cluster, and by the end you'll know what each Istio resource is for and which proxy acts on it, which matters just as much. The modules then fill in the details one by one.
+Read this before track 3, the Istio service mesh. It takes about 15 minutes and needs no cluster, and by the end you'll know what each Istio resource is for and which proxy acts on it, which matters just as much. The modules then fill in the details one by one.
 
 ![Istio in one picture: the lab's request path, with every Istio resource grouped by the proxy that enforces it](../docs/diagrams/istio-resources.svg)
 
@@ -72,4 +72,4 @@ The resources stay the same in both modes, and only the proxy that applies them 
 ## Next
 
 - Keep the [glossary](glossary.md) open in a tab. It explains every resource and term in this course, with small examples.
-- Then start with [module 1.1: setup](1-applications/01-setup.md).
+- Then start the track with [module 3.1: what a mesh adds](3-istio/01-what-a-mesh-adds.md).

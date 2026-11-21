@@ -2,11 +2,11 @@
 
 > New to a term here, like span or OTLP? The [glossary](../glossary.md) explains every term in this course.
 
-**Before this module:** module 1.1. Module 3.6 helps, because it explains traces and spans. No Istio needed: this module runs its own app outside the mesh.
+**Before this module:** [module 2.3](03-logs-with-loki.md), for Grafana's Explore view. No Istio needed: this module runs its own app outside the mesh.
 
 **You need:** the lab running (`./lab.sh start` starts or repairs it), `helm`, internet access for the charts, about 250 MB of free memory, and `./lab.sh ui` running in a spare terminal for Grafana.
 
-In the lab so far, every app sends its traces straight to Jaeger, which stops working well once you have 50 services, three tracing back ends, and a security team that wants every trace scrubbed of customer data. At that point you want one place in the middle that does four jobs:
+A trace follows one request across services. Each service records its part as a **span**, a timed piece of work such as "the backend handled POST /orders", and tags it with the request's trace id, so a tracing back end puts the spans together into one tree. In the lab so far, every app sends its spans straight to Jaeger, which stops working well once you have 50 services, three tracing back ends, and a security team that wants every trace scrubbed of customer data. At that point you want one place in the middle that does four jobs:
 
 1. It receives all telemetry from the apps.
 2. It cleans the data.

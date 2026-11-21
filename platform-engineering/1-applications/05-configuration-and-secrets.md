@@ -2,7 +2,7 @@
 
 > New to a term here, like ResourceQuota or RoleBinding? The [glossary](../glossary.md#applications-on-kubernetes) explains every term these modules use.
 
-**Before this module:** [module 1.2](02-building-and-running-applications.md) for pods and Deployments, and the [practice cluster](../practice-cluster.md#the-application-extras). [Module 4.4](../4-security/04-hardening-workloads.md) goes deeper into security contexts and Pod Security, and [module 4.2](../4-security/02-hardening-access-to-the-api.md) into RBAC.
+**Before this module:** [module 1.2](02-building-and-running-applications.md) for pods and Deployments.
 
 The same image runs in testing and in production, which means everything that differs between the two has to come from outside the image: settings, passwords, how much CPU the app gets, and which API calls it may make. This module is about that outside layer. It covers ConfigMaps and Secrets, requests and limits with the namespace rules that enforce them, ServiceAccounts and RBAC for the app's own API calls, the security context, and resources that extend Kubernetes itself. It is the largest of the five application modules, has twelve tasks, and takes about 1 hour 45 minutes.
 

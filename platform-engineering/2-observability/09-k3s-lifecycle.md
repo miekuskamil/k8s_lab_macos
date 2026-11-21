@@ -2,7 +2,7 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](../glossary.md) explains every Istio resource and term in this course.
 
-**Before this module:** module 1.1, and module 2.8 helps. This module covers plain Kubernetes operations, except for one surprise in step 4.
+**Before this module:** [module 2.8](08-nodes-and-cleanup.md) helps. This module covers plain Kubernetes operations, except for one surprise in step 4.
 
 **You need:** the lab running (`./lab.sh start` starts or repairs it), `openssl`, and internet access for the newer k3s image. Steps 2 and 4 restart k3s, and step 4 breaks the mesh on purpose until step 5 repairs it. Finish other modules' exercises first.
 

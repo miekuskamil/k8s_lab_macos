@@ -76,7 +76,7 @@ The two paths aren't exclusive, because `istioctl manifest translate` turns an I
 
 **Why a separate cluster?** `istioctl install` and `uninstall --purge` act on the whole cluster, so on `k8s-lab` they would fight with the Helm releases and ArgoCD, and `--purge` would delete the CRDs that every Istio resource in the lab depends on. A throwaway cluster costs 5 seconds and isolates every mistake.
 
-**Why download istioctl 1.24.2 instead of using the one from module 1.1?** istioctl installs the Istio version it was built with, and module 1.1's client is 1.32, which would install 1.32 images, while the 1.24.2 binary installs 1.24.2, the same version as the lab, so everything you see matches the rest of the course.
+**Why download istioctl 1.24.2 instead of using the toolbox's?** istioctl installs the Istio version it was built with, and the toolbox's client is 1.32, which would install 1.32 images, while the 1.24.2 binary installs 1.24.2, the same version as the lab, so everything you see matches the rest of the course.
 
 **Why minimal with a file, rather than demo?** `demo` turns on many settings at once, so you would struggle to tell which change caused which effect, while starting from `minimal` and adding three meshConfig settings makes each effect visible in step 6.
 

@@ -2,7 +2,7 @@
 
 > New to a term here, like admission webhook or PolicyException? The [glossary](../glossary.md) explains every term in this course.
 
-**Before this module:** module 1.1. No Istio needed: the policies only touch the module's own namespaces.
+**Before this module:** the lab from the [quick start](../../README.md#quick-start). No Istio needed: the policies only touch the module's own namespaces.
 
 **You need:** the lab running (`./lab.sh start` starts or repairs it), `helm`, internet access for the Kyverno chart, and about 230 MB of free memory.
 

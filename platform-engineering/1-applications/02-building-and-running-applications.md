@@ -2,7 +2,7 @@
 
 > New to a term here, like init container or PersistentVolumeClaim? The [glossary](../glossary.md#applications-on-kubernetes) explains every term these modules use.
 
-**Before this module:** the [practice cluster](../practice-cluster.md#the-application-extras) running, with the application extras from `./platform-engineering/practice/app-extras/extras.sh`, because tasks 1 and 2 build images with podman and push them to the local registry.
+**Before this module:** [module 1.1](01-setup.md), which builds the practice cluster and adds the application extras, because tasks 1 and 2 build images with podman and push them to the local registry.
 
 An application reaches Kubernetes in two pieces. The first piece is an [image](../glossary.md#image), a packed file system with everything the program needs, and the second is a workload object that tells the cluster how many copies of that image to run, on which nodes, and when they may stop. This module covers both pieces: how you build and change an image, which workload object fits which job, how several containers share one pod, and where a pod keeps data that must survive a restart. It has ten tasks and takes about 1 hour 30 minutes.
 

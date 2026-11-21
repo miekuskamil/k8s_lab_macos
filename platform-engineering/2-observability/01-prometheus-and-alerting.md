@@ -2,17 +2,17 @@
 
 > New to a term here, like recording rule or burn rate? The [glossary](../glossary.md) explains every term in this course.
 
-**Before this module:** module 1.1, and module 3.6 helps.
+**Before this module:** the lab from the [quick start](../../README.md#quick-start). No Istio knowledge needed: the first example is a plain app, and the mesh's numbers come with a short recap.
 
 **You need:** the lab running (`./lab.sh start` starts or repairs it), and `./lab.sh ui` running in a spare terminal for Prometheus (http://localhost:9090) and Alertmanager (http://localhost:9093).
 
-Module 3.6 used Prometheus to look at things, but in production teams use it to *wake people up* when something breaks, which takes a different skill in three parts:
+Prometheus collects numbers from every app in the cluster, and teams use it to *wake people up* when something breaks, which takes a skill in three parts:
 
 1. You decide what counts as broken.
 2. You write that decision as a query.
 3. You send the alert to the person who fixes it.
 
-This module starts with raw PromQL, the query language of Prometheus, and ends with a service-level objective (SLO), a target for how often the service works, plus an alert on how fast you're missing it. Google's SRE books describe this approach, and most SRE interviews ask about it. Then you break the backend, get paged, fix it, and watch the alert clear.
+This module starts with a plain app that counts its own requests and raw PromQL, the query language of Prometheus, and ends with a service-level objective (SLO), a target for how often the service works, plus an alert on how fast you're missing it. Google's SRE books describe this approach, and most SRE interviews ask about it. Then you break the backend, get paged, fix it, and watch the alert clear.
 
 Time: about 60 minutes.
 
@@ -86,7 +86,7 @@ By default the operator adds a namespace matcher to each route, which limits the
 
 Prometheus stores **time series**, which you think of as one line in a meter-reading log: one metric name plus one exact set of labels, holding samples that each pair a timestamp with a number, one per scrape. `istio_requests_total` with `response_code="200"` and the same metric with `response_code="503"` are two separate series, so changing any label value gives you a new series.
 
-Prometheus keeps the newest samples, roughly the last two hours, in memory, in the **head block**, and later compacts them into blocks on disk. Every series in the head costs memory, whether anyone queries it or not, and step 6 counts them.
+Prometheus keeps the newest samples, roughly the last two hours, in memory, in the **head block**, and later compacts them into blocks on disk. Every series in the head costs memory, whether anyone queries it or not, and step 7 counts them.
 
 A query has two shapes:
 
@@ -99,29 +99,64 @@ A query has two shapes:
 
 `rate()` needs at least two samples, so with this lab's 15-second scrape, `[1m]` holds about four samples, while `[15s]` often returns nothing. A common rule makes the range at least four times the scrape interval.
 
-### 1. Read a counter
+### 1. Deploy a plain app that counts its own requests
 
-In Prometheus (http://localhost:9090), run:
+Every app that Prometheus watches does the same thing: it keeps counters in memory and serves them as text on a metrics port. podinfo, a small Go web app, does exactly that on port 9797, and it runs here in its own namespace with no mesh around it. A PodMonitor, a small resource that names the pods and the port to scrape, tells Prometheus where to look.
 
-```text
-istio_requests_total{reporter="waypoint", destination_canonical_service="backend"}
+```console
+$ kubectl apply -f platform-engineering/manifests/2.1-plain-app.yaml
+namespace/course-metrics created
+deployment.apps/podinfo created
+service/podinfo created
+podmonitor.monitoring.coreos.com/podinfo created
+
+$ kubectl -n course-metrics rollout status deploy/podinfo
+deployment "podinfo" successfully rolled out
 ```
 
-**What you should see.** One line for each distinct label set, with the response code, the source workload, the destination workload and about 30 more labels. The value is a counter, the total number of requests since the waypoint started, like `1903`, which on its own tells you nothing.
+Send 20 good requests and 3 that fail, then read the app's own metrics page:
 
-### 2. Turn counters into answers
+```console
+$ kubectl -n course-metrics exec deploy/podinfo -- sh -c '
+    for i in $(seq 1 20); do wget -q -O /dev/null localhost:9898/; done
+    for i in 1 2 3; do wget -q -O /dev/null localhost:9898/status/500; done
+    wget -q -O - localhost:9797/metrics' | grep '_count{'
+wget: server returned error: HTTP/1.1 500 Internal Server Error
+wget: server returned error: HTTP/1.1 500 Internal Server Error
+wget: server returned error: HTTP/1.1 500 Internal Server Error
+http_request_duration_seconds_count{method="GET",path="root",status="200"} 20
+http_request_duration_seconds_count{method="GET",path="status",status="500"} 3
+```
+
+**What you should see.** Three `wget` errors for the requests you asked to fail, then one counter line per label set: 20 answers with status `200` and 3 with `500`. That text is everything Prometheus ever sees from an app, so a metric is just a name, a few labels and a number that only goes up.
+
+### 2. Read the counter in Prometheus
+
+The PodMonitor takes up to a minute to reach Prometheus. Then open Prometheus (http://localhost:9090) and run:
+
+```text
+http_request_duration_seconds_count{namespace="course-metrics"}
+sum by (status) (http_request_duration_seconds_count{namespace="course-metrics"})
+```
+
+**What you should see.** The first query returns the same two series as the metrics page, now with more labels, such as `pod` and `namespace`, which Prometheus adds when it scrapes. The second collapses them into one line per status code, `200` and `500`. Run the `wget` loop again and the numbers grow, because a counter keeps the total since the app started, which is why the next step turns totals into rates.
+
+### 3. The same numbers for the shop, with no code
+
+The shop's backend serves no request metrics of its own, yet Prometheus knows every request it answers. The shop runs in the lab's service mesh, where a proxy called the waypoint sits in front of the backend and reads every HTTP request on the way through. The waypoint counts each one in `istio_requests_total`, with the status code in `response_code`, so you get the counters from step 1 for every service in the mesh without touching its code. The [Istio track](../3-istio/06-mesh-observability.md) explains how the proxies measure, and this module only reads their numbers.
 
 Start some traffic in a second terminal, `./platform-engineering/load.sh 300`, then run these one by one:
 
 ```text
+istio_requests_total{reporter="waypoint", destination_canonical_service="backend"}
 rate(istio_requests_total{reporter="waypoint", destination_canonical_service="backend"}[1m])
 sum by (response_code) (rate(istio_requests_total{reporter="waypoint", destination_canonical_service="backend"}[1m]))
 histogram_quantile(0.95, sum by (le) (rate(istio_request_duration_milliseconds_bucket{reporter="waypoint", destination_canonical_service="backend"}[5m])))
 ```
 
-**What you should see.** The first query gives requests per second for each series, about `4.9` for the `200` series with `load.sh` at 5 per second. The second collapses everything into one line per status code, and the third gives the backend's 95th-percentile latency in milliseconds, `18.5` in the test run.
+**What you should see.** The first query returns one line for each distinct label set, with about 30 labels and a total like `1903`, which on its own tells you nothing. The second gives requests per second for each series, about `4.9` for the `200` series with `load.sh` at 5 per second. The third collapses everything into one line per status code, and the fourth gives the backend's 95th-percentile latency in milliseconds, `18.5` in the test run. The rest of the module builds its SLO on these numbers, because they cover every request the backend gets.
 
-### 3. Add the SLO rules and a receiver
+### 4. Add the SLO rules and a receiver
 
 ```console
 $ cat platform-engineering/manifests/2.1-shop-slo.yaml
@@ -212,9 +247,9 @@ Each link in the chain adds a delay:
 
 So expect `pending` about a minute after the fault, and `firing` a minute later.
 
-### 4. Break it, get paged
+### 5. Break it, get paged
 
-Add module 3.13's faulty backend pod, which fails every request, and keep traffic flowing:
+Add a faulty backend pod, which fails every request, and keep traffic flowing. Its manifest comes from module 3.13 of the Istio track, and here it only serves as a source of errors:
 
 ```console
 $ kubectl apply -f platform-engineering/manifests/3.13-faulty-pod.yaml
@@ -240,7 +275,7 @@ $ kubectl -n course-alerts logs deploy/alert-receiver -f | grep -o '"status":"[a
 "alertname":"ShopBackendErrorBudgetBurn"
 ```
 
-The command keeps following the log until you press Ctrl-C, and the transcript shows what it printed through step 5, until the alert resolved.
+The command keeps following the log until you press Ctrl-C, and the transcript shows what it printed through step 6, until the alert resolved.
 
 **What you should see.** In the test run:
 
@@ -252,7 +287,7 @@ The command keeps following the log until you press Ctrl-C, and the transcript s
 
 One pod in three fails, so about a third of requests fail, which is 33 times the budget. The alert sat in `pending` for one minute because of `for: 1m` and then fired, and the receiver logged `"status":"firing"` with `"alertname":"ShopBackendErrorBudgetBurn"`, the message Slack or PagerDuty would get. In the run above, the first `firing` webhook arrived 130 seconds after the fault.
 
-### 5. Fix it, and watch it clear
+### 6. Fix it, and watch it clear
 
 ```console
 $ kubectl delete -f platform-engineering/manifests/3.13-faulty-pod.yaml
@@ -265,7 +300,7 @@ Keep the receiver's log open, and query `shop:backend_error_ratio:rate5m` in Pro
 
 Stop the load with `kill %1`.
 
-### 6. Count what you store
+### 7. Count what you store
 
 Run in Prometheus:
 
@@ -277,7 +312,7 @@ count(istio_request_duration_milliseconds_bucket)
 
 **What you should see.** In the test run Prometheus held about 136,000 series in total, and the six biggest metrics all came from the Kubernetes API server and etcd: histograms with many buckets, repeated for many resource types. `apiserver_request_duration_seconds_bucket` alone had 21,600 series, while the whole shop's latency histogram had 240, so on a single-node lab the API server's own metrics make up most of what Prometheus stores.
 
-Also query `istio_requests_total{destination_workload="backend-v1-faulty"}` right after step 5, and you find the faulty pod's series still there, because a series stays until Prometheus marks it stale, about 5 minutes after the last scrape that included it.
+Also query `istio_requests_total{destination_workload="backend-v1-faulty"}` right after step 6, and you find the faulty pod's series still there, because a series stays until Prometheus marks it stale, about 5 minutes after the last scrape that included it.
 
 ## Investigate
 
@@ -290,7 +325,7 @@ Also query `istio_requests_total{destination_workload="backend-v1-faulty"}` righ
 <summary>Answers</summary>
 
 1. Probably not, because the condition must hold for a full minute, and 30 seconds of errors lifts the 5-minute ratio only briefly. If the team wants to see it, add a slow-burn alert with `severity: ticket` over longer windows and route it to a ticket queue or a chat channel rather than a pager, so over a month the error budget shows the true cost of those Tuesday deploys.
-2. Not necessarily, because a broken alert also stays silent. Test the alert path on purpose, the way step 4 did, in staging or during a game day. Also keep a "dead man's switch": the chart's `Watchdog` alert always fires, and an outside service pages you if it *stops* arriving, so you learn when Prometheus or Alertmanager dies. Finally, add `absent()` checks for the metrics your SLO depends on, so a renamed metric doesn't silently turn the ratio into nothing.
+2. Not necessarily, because a broken alert also stays silent. Test the alert path on purpose, the way step 5 did, in staging or during a game day. Also keep a "dead man's switch": the chart's `Watchdog` alert always fires, and an outside service pages you if it *stops* arriving, so you learn when Prometheus or Alertmanager dies. Finally, add `absent()` checks for the metrics your SLO depends on, so a renamed metric doesn't silently turn the ratio into nothing.
 3. Every distinct label value creates a new series, multiplied by every other label, so two million users times the existing combinations means tens of millions of series, Prometheus runs out of memory, and queries slow to a crawl. Per-user detail belongs in logs and traces, which handle high cardinality, meaning many distinct values, while metrics take a label with a small, fixed set of values, like `plan="free"|"pro"`, or no label at all.
 4. Create a **silence** in Alertmanager that matches `alertname=ShopBackendErrorBudgetBurn` for the migration window, at http://localhost:9093 with "New Silence", or with `amtool silence add`. Prometheus keeps evaluating the rule and the alert still fires, but Alertmanager drops the notifications until the silence ends, and afterwards the alert pages again by itself, which a disabled rule wouldn't do.
 
@@ -307,4 +342,4 @@ Asking ArgoCD to sync istio-config from Git
 Done. Baseline: 100% of backend traffic to v1, no faults, no extra rules.
 ```
 
-This deletes the `course-alerts` namespace, and with it the receiver, the AlertmanagerConfig and the SLO rules, plus module 3.13's faulty pod if it's still there. Alertmanager itself stays, because it's part of the lab now.
+This deletes the `course-alerts` namespace, and with it the receiver, the AlertmanagerConfig and the SLO rules, plus the `course-metrics` namespace with podinfo and the faulty backend pod if it's still there. Alertmanager itself stays, because it's part of the lab now.

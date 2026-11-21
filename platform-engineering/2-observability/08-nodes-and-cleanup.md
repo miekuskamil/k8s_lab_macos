@@ -2,7 +2,7 @@
 
 > New to a term here, like VirtualService or waypoint? The [glossary](../glossary.md) explains every Istio resource and term in this course.
 
-**Before this module:** module 1.1 only. This module covers plain Kubernetes operations. The mesh just keeps running underneath.
+**Before this module:** the lab from the [quick start](../../README.md#quick-start). This module covers plain Kubernetes operations, and the mesh just keeps running underneath.
 
 **You need:** the lab running (`./lab.sh start` starts or repairs it), and about 300 MB of free memory for the second node.
 

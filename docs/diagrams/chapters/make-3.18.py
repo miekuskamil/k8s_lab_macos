@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Draw the diagrams for platform-engineering/3-istio/18-debugging-envoy.md with the kit in ../bbg.py.
 
-  31-envoy-chain   listener, route, cluster, endpoint, and the Istio resource behind each
-  31-flag-where    which proxy writes which response flag
+  3.18-envoy-chain   listener, route, cluster, endpoint, and the Istio resource behind each
+  3.18-flag-where    which proxy writes which response flag
 
 Run from anywhere: python3 docs/diagrams/chapters/make-3.18.py
 """

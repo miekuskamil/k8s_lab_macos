@@ -2,7 +2,7 @@
 
 > New to a term here, like provisioned dashboard or contact point? The [glossary](../glossary.md) explains every term in this course.
 
-**Before this module:** module 2.1 for the SLO ideas, and module 2.6 helps.
+**Before this module:** [module 2.1](01-prometheus-and-alerting.md), for the SLO ideas.
 
 **You need:** the lab running (`./lab.sh start` starts or repairs it), and `./lab.sh ui` running in a spare terminal for Grafana (http://localhost:3000, `admin` / `k8s-lab-admin`).
 

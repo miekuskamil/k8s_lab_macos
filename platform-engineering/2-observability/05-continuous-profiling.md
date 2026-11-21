@@ -2,7 +2,7 @@
 
 > New to a term here, like flame graph or pprof? The [glossary](../glossary.md) explains every term in this course.
 
-**Before this module:** module 1.1. Module 2.2 helps for Grafana. No Istio needed.
+**Before this module:** [module 2.2](02-grafana-as-code.md) helps for Grafana. No Istio needed.
 
 **You need:** the lab running (`./lab.sh start` starts or repairs it), `helm`, internet access for the chart, and about 350 MB of free memory.
 

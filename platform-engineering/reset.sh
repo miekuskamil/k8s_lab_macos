@@ -69,14 +69,17 @@ remove_datasource() {
 }
 remove_datasource course-tempo-datasource tempo Tempo
 remove_datasource course-pyroscope-datasource pyroscope Pyroscope
+# Module 2.3: the plain app that writes the order lines
+"${K[@]}" delete namespace course-logs --ignore-not-found >/dev/null
 # Module 2.2: the dashboard's namespace, and the alert rule and folder that live only in Grafana
 "${K[@]}" delete namespace course-dashboards --ignore-not-found >/dev/null
 "${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- sh -c \
   'A="$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD"
    curl -s -o /dev/null -u "$A" -X DELETE localhost:3000/api/v1/provisioning/alert-rules/shop-burn-grafana
    curl -s -o /dev/null -u "$A" -X DELETE "localhost:3000/api/folders/course?forceDeleteRules=true"' >/dev/null 2>&1 || true
-# Module 2.1: the receiver, its Alertmanager route and the SLO rules all live in one namespace
-"${K[@]}" delete namespace course-alerts --ignore-not-found >/dev/null
+# Module 2.1: the receiver, its Alertmanager route and the SLO rules all live in one namespace,
+# and the plain app with its PodMonitor in another
+"${K[@]}" delete namespace course-alerts course-metrics --ignore-not-found >/dev/null
 # Module 2.6: the ApplicationSet first (its Applications' finalizers delete what they
 # deployed), then the hand-made Application, the project, Gitea and the namespaces.
 "${K[@]}" -n argocd delete applicationset podinfo --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || true

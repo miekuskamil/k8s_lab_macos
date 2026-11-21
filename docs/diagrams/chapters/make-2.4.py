@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the diagram for module 2.4 (OpenTelemetry and Tempo) with the kit in ../bbg.py.
 
-  25-collector-pipeline     one span from the orders app through the Collector to the back ends
+  2.4-collector-pipeline     one span from the orders app through the Collector to the back ends
 
 Run from anywhere: python3 docs/diagrams/chapters/make-2.4.py
 """

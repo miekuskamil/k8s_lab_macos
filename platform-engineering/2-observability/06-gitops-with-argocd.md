@@ -2,7 +2,7 @@
 
 > New to a term here, like Application or sync wave? The [glossary](../glossary.md) explains every term in this course.
 
-**Before this module:** module 1.1. No Istio knowledge needed.
+**Before this module:** the lab from the [quick start](../../README.md#quick-start). No Istio knowledge needed.
 
 **You need:** the lab running (`./lab.sh start` starts or repairs it), `git`, and `./lab.sh ui` running in a spare terminal for the ArgoCD UI (http://localhost:8081). Step 1 deploys a Git server of your own, Gitea, and forwards it to http://localhost:3001.
 

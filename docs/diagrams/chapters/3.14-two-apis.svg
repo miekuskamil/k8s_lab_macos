@@ -4,7 +4,7 @@
 <text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Same jobs, <tspan fill="#7c3aed">different shapes</tspan></text>
 <text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Both APIs build an ingress proxy and route to backend versions. The pieces fit together differently.</text>
 <rect x="40.0" y="150.0" width="740.0" height="740.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
-<text x="58.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Gateway API (modules 4, 11)</text>
+<text x="58.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Gateway API (modules 3.4, 3.10)</text>
 <rect x="70.0" y="210.0" width="280.0" height="100.0" rx="14.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
 <rect x="86.0" y="238.0" width="44.0" height="44.0" rx="10.0" fill="#2563eb" stroke="none"/>
 <polygon points="100.3,247.8 111.2,247.8 117.0,253.6 117.0,272.2 100.3,272.2" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linejoin="round"/>

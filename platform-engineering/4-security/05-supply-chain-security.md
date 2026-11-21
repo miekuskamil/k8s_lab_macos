@@ -2,7 +2,7 @@
 
 > New to a term here, like SBOM or ImagePolicyWebhook? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this module:** the [practice cluster](../practice-cluster.md) running. The course's [module 2.7](../2-observability/07-kyverno-policy-as-code.md) explains admission webhooks, which task 5 configures by hand.
+**Before this module:** [module 4.4](04-hardening-workloads.md), whose admission configuration file task 5 extends.
 
 Most of the code in a container image came from someone else: a base image, system packages and language libraries. A vulnerable or poisoned piece anywhere in that chain ends up running in your cluster with your permissions, so this module checks the chain at each step, from the Dockerfile to the API server's front door. It has ten tasks and takes about 1 hour 40 minutes.
 

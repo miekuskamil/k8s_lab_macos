@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Draw the diagrams for platform-engineering/3-istio/20-installing-istio.md with the kit in ../bbg.py.
 
-  32-profiles       which components each install profile turns on
-  32-install-flow   profile + IstioOperator + --set, rendered from the same charts Helm uses
+  3.20-profiles       which components each install profile turns on
+  3.20-install-flow   profile + IstioOperator + --set, rendered from the same charts Helm uses
 
 Run from anywhere: python3 docs/diagrams/chapters/make-3.20.py
 """
@@ -52,7 +52,7 @@ def install_flow():
         c.connect(b, ictl, "", sa="right", sb="left", fb=(0.25, 0.5, 0.75)[i], mid=390)
     charts = c.node(430, 560, 300, 130, ORANGE, "Istio charts", "layers", "base, istiod, cni,\nztunnel, gateways")
     c.connect(ictl, charts, "render", n=1, pos="right")
-    helm = c.node(70, 700, 280, 120, BLUE, "helm install", "terminal", "values files,\nmodule 14")
+    helm = c.node(70, 700, 280, 120, BLUE, "helm install", "terminal", "values files,\nmodule 3.19")
     c.connect(helm, charts, "same charts", sa="right", sb="bottom", fa=0.5, fb=0.5, pos="above", at=(470, 760))
 
     c.frame(820, 150, 740, 710, "Cluster", "cluster")

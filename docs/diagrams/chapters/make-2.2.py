@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the diagram for module 2.2 (Grafana as code) with the kit in ../bbg.py.
 
-  24-dashboard-provisioning     a dashboard file in Git reaches Grafana in four steps
+  2.2-dashboard-provisioning     a dashboard file in Git reaches Grafana in four steps
 
 Run from anywhere: python3 docs/diagrams/chapters/make-2.2.py
 """

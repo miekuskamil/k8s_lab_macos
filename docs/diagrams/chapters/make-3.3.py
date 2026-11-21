@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the diagrams for course module 3.3 (authorization) with the kit in ../bbg.py.
 
-  03-two-guards   the waypoint checks HTTP, the backend's ztunnel checks connections
+  3.3-two-guards   the waypoint checks HTTP, the backend's ztunnel checks connections
 
 Run from anywhere: python3 docs/diagrams/chapters/make-3.3.py
 """

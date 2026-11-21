@@ -62,7 +62,7 @@
 <polyline points="527.1,714.1 527.1,735.9 549.5,735.9" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
 <polyline points="530.3,730.8 535.4,725.0 539.9,728.2 547.6,718.0" fill="none" stroke="#ffffff" stroke-width="1.66" stroke-linecap="round" stroke-linejoin="round"/>
 <text x="574.0" y="718.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Grafana</text>
-<text x="574.0" y="744.0" font-size="17.0" fill="#475569" text-anchor="start">dashboards (module 24)</text>
+<text x="574.0" y="744.0" font-size="17.0" fill="#475569" text-anchor="start">dashboards (module 2.2)</text>
 <polyline points="400.0,310.0 520.5,310.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="530.0,310.0 518.5,315.8 518.5,304.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
 <ellipse cx="430.0" cy="310.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>

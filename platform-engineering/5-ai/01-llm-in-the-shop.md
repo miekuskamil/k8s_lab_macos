@@ -1,10 +1,10 @@
-# Module 5.1: an LLM as a mesh service
+# Module 5.1: an LLM behind the shop
 
 > New to a term here, like VirtualService or waypoint? The [glossary](../glossary.md) explains every Istio resource and term in this course.
 
-**Before this module:** modules 3.3, 3.5, 3.6 and 3.11.
+**Before this module:** the lab from the [quick start](../../README.md#quick-start). Steps 1 to 3 need no Istio knowledge. The optional mesh part at the end builds on the Istio track, modules 3.3, 3.5 and 3.11.
 
-**You need:** the lab running (`./lab.sh start` starts or repairs it), Ollama with `qwen2.5:3b`, and the assistant image `k8s-lab/assistant:1.2.0`. [What you need](#what-you-need) below has the details. Step 5 uses Jaeger, so keep `./lab.sh ui` running in a spare terminal.
+**You need:** the lab running (`./lab.sh start` starts or repairs it), Ollama with `qwen2.5:3b`, and the assistant image `k8s-lab/assistant:1.2.0`. [What you need](#what-you-need) below has the details. Step 3 uses Jaeger, so keep `./lab.sh ui` running in a spare terminal.
 
 AI features are the fastest-growing kind of traffic on Kubernetes right now, and most of them follow one pattern:
 
@@ -12,7 +12,7 @@ AI features are the fastest-growing kind of traffic on Kubernetes right now, and
 2. It sends the data to a language model, together with a question.
 3. It returns the model's answer.
 
-This module adds exactly that to the shop, as an **assistant** that answers questions about orders, with the model running in Ollama on your own machine. Then you use the mesh the way platform teams handle AI traffic in production: you give the assistant an identity, lock down what it may call, watch its calls, and size its timeouts.
+This module adds exactly that to the shop, as an **assistant** that answers questions about orders, with the model running in Ollama on your own machine. You ask it questions, count the tokens each answer costs, and follow one model call in a trace. An optional last part then uses the mesh the way platform teams handle AI traffic in production: you lock down what may call the model and size its timeouts.
 
 Time: about 50 minutes. This is the first of three AI modules. While the model answers, it uses about 2.4 GB of extra memory on your Mac.
 
@@ -107,12 +107,15 @@ Model servers also bring a security problem. Ollama, like many of them, has **no
 
 ### 1. Deploy the assistant
 
+The assistant runs next to the shop and reads orders from the backend. The backend answers only callers it knows, through a rule in the lab's service mesh, so the second file adds the assistant to that list, for `GET /api/orders` only. The optional part at the end shows what happens without it.
+
 ```console
-$ kubectl apply -f platform-engineering/manifests/5.1-assistant.yaml
+$ kubectl apply -f platform-engineering/manifests/5.1-assistant.yaml -f platform-engineering/manifests/5.1-allow-assistant.yaml
 serviceaccount/assistant created
 deployment.apps/assistant created
 service/assistant created
 httproute.gateway.networking.k8s.io/assistant created
+authorizationpolicy.security.istio.io/backend-allow-assistant created
 
 $ kubectl -n shop set env deploy/assistant OLLAMA_MODEL=qwen2.5:3b
 $ kubectl -n shop rollout status deploy/assistant
@@ -124,20 +127,10 @@ $ curl -s http://localhost:8080/api/model; echo
 
 **What you should see.** `{"model":"qwen2.5:3b","ollama":"http://host.docker.internal:11434","max_tokens":120}`, which shows the model, the Ollama URL and a cap on answer length. On a Mac with more memory, set any other model from `ollama list` by name. If you get `no healthy upstream` right after the rollout, wait a few seconds, because the gateway hasn't received the new pod's address yet.
 
-### 2. Ask a question, and meet a 403
+### 2. Ask a question
 
 ```console
 $ ask() { curl -s -m 180 -X POST http://localhost:8080/api/ask -H 'Content-Type: application/json' -d "{\"question\":\"$1\"}"; echo; }
-$ ask "How many orders are there?"
-{"error":"backend call failed: Client error '403 Forbidden' for url 'http://backend.shop.svc.cluster.local:8000/api/orders?limit=10'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403","trace_id":"b040ff903391cb8940f41ade522f3250"}
-```
-
-**What you should see.** An error, `backend call failed: Client error '403 Forbidden'`, because the assistant asked the backend for orders and the backend's waypoint refused `sa/assistant`. Allow the assistant, for `GET /api/orders` only:
-
-```console
-$ kubectl apply -f platform-engineering/manifests/5.1-allow-assistant.yaml
-authorizationpolicy.security.istio.io/backend-allow-assistant created
-
 $ ask "How many orders are there, and what was ordered?"
 {"answer":"There are 5 orders. The items ordered are verify, find-me, book, life, and book.","model":"qwen2.5:3b","input_tokens":390,"output_tokens":23,"model_seconds":0.46,"orders_seen":5,"trace_id":"9511b1c3b479aff17a13a4c8b5c1a670"}
 ```
@@ -146,7 +139,51 @@ $ ask "How many orders are there, and what was ordered?"
 
 Read the answers critically. Asked which item people ordered most, the model replied "book" and added "There is no item named verify in the order data", although one order was for `verify`. A small model contradicts its own context now and then, and module 5.4 looks at that problem in depth.
 
-### 3. See what the mesh knows about the model
+### 3. Read the model call in a trace
+
+The `trace_id` field in each answer points to the full trace. Open Jaeger (http://localhost:16686), paste the ID into the search box at the top, and look at the spans.
+
+**What you should see.** Spans like these from the test run:
+
+| Span | Time |
+|---|---|
+| ingress gateway to assistant | 247 ms |
+| assistant: `GET` the orders, through the waypoint, the mesh proxy in front of the backend, to the backend and Redis | 5 ms |
+| assistant: `chat qwen2.5:3b` | 233 ms |
+| waypoint: `host.docker.internal:11434` | 230 ms |
+
+Click the `chat ...` span, and you find tags that follow the OpenTelemetry conventions for generative AI: `gen_ai.system`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`. Almost the whole request time goes to the model, while the rest of the shop barely shows up.
+
+Prometheus counts the tokens too. In Grafana, open Explore, pick Prometheus, and run this query:
+
+```text
+sum by (type) (assistant_llm_tokens_total)
+```
+
+**What you should see.** Far more input tokens than output tokens, 1,152 against 55 in the test run, because the order data in every prompt costs much more than the short answers.
+
+## Optional: the mesh around the model
+
+Steps 1 to 3 treated the mesh as a black box. This part opens it and handles the model's traffic the way platform teams do in production: you see the identity rule that let the assistant in, give the model a name in the mesh, lock down what may call it, and size its timeout. It builds on the Istio track, where [module 3.3](../3-istio/03-authorization.md) explains AuthorizationPolicy, [module 3.5](../3-istio/05-resilience.md) timeouts and [module 3.11](../3-istio/11-egress.md) ServiceEntry.
+
+### 4. Meet the 403
+
+Take the assistant off the backend's list and ask again:
+
+```console
+$ kubectl delete -f platform-engineering/manifests/5.1-allow-assistant.yaml
+authorizationpolicy.security.istio.io "backend-allow-assistant" deleted
+
+$ ask "How many orders are there?"
+{"error":"backend call failed: Client error '403 Forbidden' for url 'http://backend.shop.svc.cluster.local:8000/api/orders?limit=10'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403","trace_id":"b040ff903391cb8940f41ade522f3250"}
+
+$ kubectl apply -f platform-engineering/manifests/5.1-allow-assistant.yaml
+authorizationpolicy.security.istio.io/backend-allow-assistant created
+```
+
+**What you should see.** An error, `backend call failed: Client error '403 Forbidden'`, a few seconds after the delete. The backend's waypoint checks the caller's identity, `sa/assistant`, against its rules, and the lab's baseline allows only the frontend, so the assistant needs a rule of its own. Applying the file again lets it back in.
+
+### 5. See what the mesh knows about the model
 
 ```console
 $ kubectl -n istio-system logs ds/ztunnel --since=5m | grep 'src.workload="assistant' | grep 11434 | tail -1
@@ -174,7 +211,7 @@ $ kubectl -n istio-system logs ds/ztunnel --since=1m | grep 'src.workload="assis
 
 **What you should see.** `dst.service="host.docker.internal"` and `dst.workload="waypoint-..."`, so model calls now pass through the waypoint under a name. You restarted the assistant to get a fresh pod, which resolves the name to the ServiceEntry's virtual IP, as in module 3.11.
 
-### 4. Protect Ollama's admin API
+### 6. Protect Ollama's admin API
 
 Ollama listens for more than chat requests:
 
@@ -206,30 +243,7 @@ $ ask "How many orders are there?"
 
 **What you should see.** The course client gets `403` for both calls, and the assistant gets a normal answer. The delete call uses a model name that doesn't exist, so nothing would break even without the policy, and you should never test this with a real model name.
 
-### 5. Read the model call in a trace
-
-The `trace_id` field in each answer points to the full trace. Open Jaeger (http://localhost:16686), paste the ID into the search box at the top, and look at the spans.
-
-**What you should see.** Spans like these from the test run:
-
-| Span | Time |
-|---|---|
-| ingress gateway to assistant | 247 ms |
-| assistant: `GET` the orders, through the waypoint, to the backend and Redis | 5 ms |
-| assistant: `chat qwen2.5:3b` | 233 ms |
-| waypoint: `host.docker.internal:11434` | 230 ms |
-
-Click the `chat ...` span, and you find tags that follow the OpenTelemetry conventions for generative AI: `gen_ai.system`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`. Almost the whole request time goes to the model, while the rest of the shop barely shows up.
-
-Prometheus counts the tokens too. In Grafana, open Explore, pick Prometheus, and run this query:
-
-```text
-sum by (type) (assistant_llm_tokens_total)
-```
-
-**What you should see.** Far more input tokens than output tokens, 1,152 against 55 in the test run, because the order data in every prompt costs much more than the short answers.
-
-### 6. Watch a timeout cut a model call off
+### 7. Watch a timeout cut a model call off
 
 ```console
 $ kubectl apply -f platform-engineering/manifests/5.1-llm-timeout.yaml
@@ -239,7 +253,7 @@ $ ask "How many orders are there?"
 {"error":"model call failed: Server error '504 Gateway Timeout' for url 'http://host.docker.internal:11434/api/chat'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/504","trace_id":"fe8bffb976aeeda0e3b415676daa8d5e"}
 ```
 
-**What you should see.** `model call failed: Server error '504 Gateway Timeout'` after a tenth of a second. The route allows 100 ms, while even a two-word answer took more than twice that in step 5, so the route timeout on the waypoint fired before the model finished. If you run Homebrew's Ollama on a Mac, look at its log:
+**What you should see.** `model call failed: Server error '504 Gateway Timeout'` after a tenth of a second. The route allows 100 ms, while even a two-word answer took more than twice that in step 3, so the route timeout on the waypoint fired before the model finished. If you run Homebrew's Ollama on a Mac, look at its log:
 
 ```console
 $ tail -n 5 /opt/homebrew/var/log/ollama.log
@@ -255,8 +269,8 @@ In a test run with a 3-second timeout, the log showed the call ending with statu
 ## Investigate
 
 1. A teammate suggests `retries: {attempts: 3}` for model calls "because models sometimes fail". What does that cost, in time and in tokens, when the model is slow rather than broken?
-2. Step 5 showed far more input tokens than output tokens. Name two ways to cut the input side.
-3. Without the policy from step 4, what does Ollama let a compromised pod anywhere in the `shop` namespace do?
+2. Step 3 showed far more input tokens than output tokens. Name two ways to cut the input side.
+3. Without the policy from step 6, what does Ollama let a compromised pod anywhere in the `shop` namespace do?
 4. Your company switches from Ollama to a hosted model API that charges per token. Which parts of this module stay exactly the same, and which change?
 
 <details>

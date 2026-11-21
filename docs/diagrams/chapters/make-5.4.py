@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Draw the diagrams for module 5.4 (RAG on Kubernetes) with the kit in ../bbg.py.
 
-  27-ingest-and-ask     the two flows: ingest once per change, ask once per question
-  27-prompt             what the chat model actually receives
+  5.4-ingest-and-ask     the two flows: ingest once per change, ask once per question
+  5.4-prompt             what the chat model actually receives
 
 The chunk count is left out on purpose: it changes whenever the course files change.
 

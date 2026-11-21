@@ -2,7 +2,7 @@
 
 > New to a term here, like attack surface or NodeRestriction? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this module:** the [practice cluster](../practice-cluster.md) running. No course module covers node hardening, so this module starts from the basics.
+**Before this module:** [module 4.2](02-hardening-access-to-the-api.md). No other module covers node hardening, so this module starts from the basics.
 
 Kubernetes runs on ordinary Linux machines, so an attacker who escapes a container lands on a machine with whatever services, users and credentials it holds. This module makes the node itself a poor place to land, so that an escape stays a small incident. It has six tasks here and one in module 4.7, and takes about an hour.
 

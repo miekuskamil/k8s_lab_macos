@@ -2,7 +2,7 @@
 
 > New to a term here, like resourceNames or AuthenticationConfiguration? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this module:** the [practice cluster](../practice-cluster.md) at v1.37.1, so run `./lab.sh practice reset` after module 4.1. The course's [module 3.15](../3-istio/15-life-of-a-request.md#concept-inside-the-api-server) walks one request through authentication, authorization and admission. Read it first, because this module changes each of those gates.
+**Before this module:** [module 4.1](01-setting-up-a-secure-cluster.md), and the practice cluster at v1.37.1, so run `./lab.sh practice reset` after module 4.1. This module changes the three gates every API request passes, which the first concept below recaps.
 
 Every attack on a cluster ends at the API server, because nothing changes the cluster's state any other way. A stolen service account token, a forgotten anonymous binding or a known bug in an old version all turn into API calls that change something. This module shrinks what each caller may do, repairs a control plane that a bad edit broke, and keeps the API server patched. It has 12 tasks and takes about 2 hours.
 

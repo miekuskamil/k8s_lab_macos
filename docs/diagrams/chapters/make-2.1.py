@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the diagram for module 2.1 (Prometheus and alerting) with the kit in ../bbg.py.
 
-  23-scrape-to-page     from a /metrics page to a person, in four steps
+  2.1-scrape-to-page     from a /metrics page to a person, in four steps
 
 Run from anywhere: python3 docs/diagrams/chapters/make-2.1.py
 """

@@ -2,7 +2,7 @@
 <rect width="1760" height="1000" fill="#ffffff"/>
 <rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
 <text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">How the lab <tspan fill="#7c3aed">fits together</tspan></text>
-<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Two clusters in one Docker engine on your machine, and a VM only for module 44.</text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Two clusters in one Docker engine on your machine, and a VM only for module 4.7.</text>
 <rect x="40.0" y="150.0" width="1680.0" height="820.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
 <rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
 <polyline points="57.5,181.0 76.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
@@ -25,7 +25,7 @@
 <rect x="86.0" y="763.0" width="44.0" height="44.0" rx="10.0" fill="#475569" stroke="none"/>
 <polygon points="108.0,772.8 110.6,782.4 120.2,785.0 110.6,787.6 108.0,797.2 105.4,787.6 95.8,785.0 105.4,782.4" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linejoin="round"/>
 <text x="144.0" y="778.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Ollama</text>
-<text x="144.0" y="804.0" font-size="17.0" fill="#475569" text-anchor="start">AI modules</text>
+<text x="144.0" y="804.0" font-size="17.0" fill="#475569" text-anchor="start">track 5</text>
 <rect x="540.0" y="200.0" width="860.0" height="740.0" rx="16.0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.6"/>
 <rect x="558.5" y="217.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
 <polyline points="558.5,221.5 575.5,221.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
@@ -60,7 +60,7 @@
 <rect x="595.0" y="745.0" width="340.0" height="80.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
 <text x="765.0" y="777.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">Grafana, Prometheus</text>
 <text x="765.0" y="798.3" font-size="17.0" fill="#475569" text-anchor="middle">Jaeger, Loki, Kiali</text>
-<text x="765.0" y="875.0" font-size="16.0" fill="#475569" text-anchor="middle">modules 0 to 32 and 45</text>
+<text x="765.0" y="875.0" font-size="16.0" fill="#475569" text-anchor="middle">tracks 2, 3 and 5</text>
 <rect x="980.0" y="410.0" width="390.0" height="500.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
 <rect x="998.0" y="425.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
 <ellipse cx="1001.5" cy="427.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
@@ -81,7 +81,7 @@
 <rect x="1005.0" y="650.0" width="340.0" height="80.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
 <text x="1175.0" y="682.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">practice-registry</text>
 <text x="1175.0" y="703.3" font-size="17.0" fill="#475569" text-anchor="middle">registry.practice:5000</text>
-<text x="1175.0" y="875.0" font-size="16.0" fill="#475569" text-anchor="middle">modules 33 to 43, exams 1 to 6</text>
+<text x="1175.0" y="875.0" font-size="16.0" fill="#475569" text-anchor="middle">tracks 1 and 4, exams 1 to 6</text>
 <rect x="1430.0" y="200.0" width="260.0" height="740.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
 <rect x="1448.0" y="215.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
 <ellipse cx="1451.5" cy="217.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
@@ -96,7 +96,7 @@
 <rect x="1450.0" y="250.0" width="220.0" height="120.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
 <text x="1560.0" y="302.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">its own kernel</text>
 <text x="1560.0" y="323.3" font-size="17.0" fill="#475569" text-anchor="middle">Cilium, AppArmor</text>
-<text x="1560.0" y="875.0" font-size="16.0" fill="#475569" text-anchor="middle">module 44 only</text>
+<text x="1560.0" y="875.0" font-size="16.0" fill="#475569" text-anchor="middle">module 4.7 only</text>
 <polyline points="320.0,305.0 560.5,305.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="570.0,305.0 558.5,310.8 558.5,299.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
 <text x="445.0" y="295.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">./lab.sh shell</text>
