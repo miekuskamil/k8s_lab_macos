@@ -69,7 +69,10 @@ TOOLBOX_IMAGE="$(awk '/^ *image: k8s-lab\/toolbox:/ {print $2; exit}' "$ROOT/com
 # Settings that pass from your shell into the toolbox when they are set.
 PASS_ENV=(CLUSTER_NAME KUBE_CONTEXT BASE_URL SKIP_IMAGE_BUILD ISTIO_VERSION ISTIO_PLATFORM
   SYNC_TIMEOUT_SECONDS LAB_OLLAMA_URL LAB_OLLAMA_MODEL PRACTICE_PLATFORM PRACTICE_KIND_NAME
-  PRACTICE_NODE_IMAGE K8S_VERSION TERM)
+  PRACTICE_NODE_IMAGE K8S_VERSION TERM
+  # The practice cluster on your own VMs (PRACTICE_PLATFORM=vms), and the older CKS_* names.
+  PRACTICE_CP PRACTICE_W1 PRACTICE_CP_HOST PRACTICE_W1_HOST PRACTICE_SSH_USER PRACTICE_SSH_KEY
+  PRACTICE_SSH_OPTS CKS_PLATFORM CKS_CP_HOST CKS_W1_HOST CKS_SSH_USER CKS_SSH_KEY CKS_SSH_OPTS)
 
 in_toolbox() { [[ "${LAB_TOOLBOX:-}" == 1 ]]; }
 
@@ -78,6 +81,9 @@ toolbox_compose_env() {
   # the toolbox leads to a rebuild on the next start.
   TOOLBOX_HASH="$(cat "$ROOT"/toolbox/* | cksum | awk '{print $1}')"
   export LAB_ROOT="$ROOT" HOST_UID="$(id -u)" HOST_GID="$(id -g)" TOOLBOX_HASH
+  # compose.yaml mounts ~/.ssh read-only, so the practice VMs answer ssh from the toolbox too.
+  # ssh-keygen makes this folder anyway; an empty one keeps Docker from creating it as root.
+  [[ -d "$HOME/.ssh" ]] || { mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"; }
 }
 
 toolbox_start() {
@@ -236,9 +242,8 @@ case "$command" in
   # The timed tasks and exams reach the nodes with docker exec, orb or ssh, and the Lima VM
   # with limactl, which only the host has. So they run on the host, where bash 3.2 is enough.
   task|exam) [[ "${LAB_USE_TOOLBOX:-auto}" == always ]] && want_toolbox && { toolbox_start; toolbox_exec "$ROOT/lab.sh" "$command" "$@"; exit $?; } ;;
-  # The practice cluster on OrbStack machines or your own VMs needs orb or ssh and your key in
-  # ~/.ssh, which only the host has, so it stays on the host as well.
-  practice) [[ "${PRACTICE_PLATFORM:-${CKS_PLATFORM:-kind}}" == kind ]] && want_toolbox && { toolbox_start; toolbox_exec "$ROOT/lab.sh" "$command" "$@"; exit $?; } ;;
+  # The practice cluster on OrbStack machines needs orb, which only the host has.
+  practice) [[ "${PRACTICE_PLATFORM:-${CKS_PLATFORM:-kind}}" != orbstack ]] && want_toolbox && { toolbox_start; toolbox_exec "$ROOT/lab.sh" "$command" "$@"; exit $?; } ;;
   *)
     if want_toolbox; then
       toolbox_start
@@ -248,9 +253,9 @@ case "$command" in
     fi ;;
 esac
 
-if in_toolbox && [[ "$command" =~ ^(practice|task|exam)$ ]] && [[ "${PRACTICE_PLATFORM:-${CKS_PLATFORM:-kind}}" != kind ]]; then
-  echo "With PRACTICE_PLATFORM=${PRACTICE_PLATFORM:-$CKS_PLATFORM}, run ./lab.sh $command in your machine's own terminal, not in the toolbox:" >&2
-  echo "it reaches the nodes with orb or ssh and your key in ~/.ssh, and the toolbox has neither." >&2
+if in_toolbox && [[ "$command" =~ ^(practice|task|exam)$ ]] && [[ "${PRACTICE_PLATFORM:-${CKS_PLATFORM:-kind}}" == orbstack ]]; then
+  echo "With PRACTICE_PLATFORM=orbstack, run ./lab.sh $command in your Mac's own terminal, not in the toolbox:" >&2
+  echo "it reaches the OrbStack machines with the orb command, which only your Mac has." >&2
   exit 1
 fi
 

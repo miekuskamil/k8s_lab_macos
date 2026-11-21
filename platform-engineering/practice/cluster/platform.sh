@@ -42,6 +42,13 @@ case "$PRACTICE_PLATFORM" in
     PRACTICE_SSH_USER="${PRACTICE_SSH_USER:-${CKS_SSH_USER:-ubuntu}}"
     PRACTICE_SSH_KEY="${PRACTICE_SSH_KEY:-${CKS_SSH_KEY:-$HOME/.ssh/cks_proxmox}}"
     PRACTICE_SSH_OPTS="${PRACTICE_SSH_OPTS:-${CKS_SSH_OPTS:-}}"
+    # In the toolbox, your ~/.ssh sits read-only at /run/host-ssh, so a key path into ~/.ssh,
+    # written for your machine or for the toolbox's own home, points there instead.
+    if [ "${LAB_TOOLBOX:-}" = 1 ] && [ ! -r "$PRACTICE_SSH_KEY" ] && [ -d /run/host-ssh ]; then
+      for _pc_pre in "${LAB_HOST_HOME:-/nonexistent}/.ssh/" "$HOME/.ssh/"; do
+        case "$PRACTICE_SSH_KEY" in "$_pc_pre"*) PRACTICE_SSH_KEY="/run/host-ssh/${PRACTICE_SSH_KEY#"$_pc_pre"}"; break ;; esac
+      done
+    fi
     ;;
   *) echo "PRACTICE_PLATFORM must be kind, orbstack or vms, not '$PRACTICE_PLATFORM'" >&2; exit 1 ;;
 esac

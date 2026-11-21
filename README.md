@@ -337,7 +337,7 @@ The practice exams work the same way for a whole exam. Each one gives you 2 hour
 ./lab.sh exam solve 4
 ```
 
-Aim for 80 points or more inside the time before you move on. [Timed tasks and exam preparation](platform-engineering/timed-tasks.md) has the terminal habits that save the most time, and [the practice cluster in depth](platform-engineering/practice-cluster.md) explains the nodes, the shared kernel, and how to run the same cluster on OrbStack machines or your own VMs. On OrbStack machines or your own VMs, run the practice, task and exam commands in your machine's own terminal, not in the toolbox, because they reach the nodes with `orb` or `ssh` and your key in `~/.ssh`.
+Aim for 80 points or more inside the time before you move on. [Timed tasks and exam preparation](platform-engineering/timed-tasks.md) has the terminal habits that save the most time, and [the practice cluster in depth](platform-engineering/practice-cluster.md) explains the nodes, the shared kernel, and how to run the same cluster on OrbStack machines or your own VMs. On OrbStack machines, run the practice commands in your Mac's own terminal, because only your Mac has the `orb` command. Your own VMs work from the toolbox too, because it gets your settings and a read-only copy of `~/.ssh`.
 
 ## AI models
 
@@ -527,7 +527,7 @@ The scripts in [proxmox/](proxmox) build Ubuntu 24.04 VMs from the official clou
    ./proxmox/pe-lab.sh ui
    ```
 
-The practice cluster runs on `cks-cp` and `cks-w1` when you set `PRACTICE_PLATFORM=vms` in your laptop's own terminal, outside the toolbox, and [the practice cluster on your own VMs](platform-engineering/practice-cluster.md#the-practice-cluster-on-your-own-vms-proxmox-or-any-ssh-reachable-ubuntu) lists the other settings. `./create-vms.sh snapshot cks` takes an instant rollback point, `./create-vms.sh backup cks` writes a compressed vzdump backup, and `./create-vms.sh destroy cks` asks before it deletes anything.
+The practice cluster runs on `cks-cp` and `cks-w1` when you set `PRACTICE_PLATFORM=vms`, in `lab.env` or in your shell, and [the practice cluster on your own VMs](platform-engineering/practice-cluster.md#the-practice-cluster-on-your-own-vms-proxmox-or-any-ssh-reachable-ubuntu) lists the other settings. `./create-vms.sh snapshot cks` takes an instant rollback point, `./create-vms.sh backup cks` writes a compressed vzdump backup, and `./create-vms.sh destroy cks` asks before it deletes anything.
 
 The cks set uses 5.5 GB of memory and `pe-lab` 8 GB, so on a 16 GB host start one set at a time with `qm stop 221 222` before `qm start 231`. The AI modules need about 2.5 GB more while a model answers, so give `pe-lab` more memory for them. With `--with-ollama`, Ollama listens on every interface of the VM, so stop it after the AI modules with `sudo systemctl stop ollama`.
 

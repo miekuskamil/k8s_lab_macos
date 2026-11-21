@@ -108,7 +108,7 @@ On Proxmox, `proxmox/create-vms.sh` builds both VMs from the Ubuntu cloud image.
 
 ### Settings and commands
 
-Run these commands in your machine's own terminal, not inside `./lab.sh shell`. They reach the VMs with ssh and your key in `~/.ssh`, and the Cilium tasks call `limactl` on the Mac, and the toolbox has neither, so `./lab.sh` keeps them on your machine and stops with a message when you try them in the toolbox. Five environment variables tell the scripts where the VMs are. Export them once in your shell:
+These commands work in your machine's own terminal and inside `./lab.sh shell` alike. The toolbox receives the settings below from your shell or from `lab.env`, and it sees your `~/.ssh` read-only at `/run/host-ssh`, so a key path into `~/.ssh` works there unchanged. The Cilium tasks of module 44 still run from your Mac's own terminal, because they reach the Lima VM with `limactl`. On a Mac, the toolbox reaches your home network only when OrbStack has the Local Network permission: turn it on in System Settings, Privacy & Security, Local Network, OrbStack. Without it, ssh from the toolbox times out while ssh from the Mac's terminal works. Five environment variables tell the scripts where the VMs are. Export them once in your shell, or write them in `lab.env`:
 
 ```bash
 export PRACTICE_PLATFORM=vms                  # without it, the scripts use kind

@@ -17,6 +17,7 @@ services:
       HOST_UID: ${HOST_UID:-1000}
       HOST_GID: ${HOST_GID:-1000}
       LAB_ROOT: ${LAB_ROOT:?run ./lab.sh shell instead of docker compose}
+      LAB_HOST_HOME: ${HOME}
     volumes:
       # The repo at the same path as on the host: k3d and kind pass host paths to the Docker
       # engine, which resolves them on the host, so both sides must agree on the path.
@@ -24,6 +25,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       # Home of the toolbox user: kubeconfig, Helm's repository cache and shell history.
       - home:/home/lab
+      # Your ssh keys, read-only, for the practice cluster on your own VMs (PRACTICE_PLATFORM=vms).
+      # platform.sh looks for the key here when the path you gave points into ~/.ssh.
+      - ${HOME}/.ssh:/run/host-ssh:ro
     working_dir: ${LAB_ROOT}
     extra_hosts:
       # Docker Desktop and OrbStack know this name already; Docker Engine on Linux needs it.

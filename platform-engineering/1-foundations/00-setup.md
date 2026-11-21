@@ -128,4 +128,4 @@ The course uses Kiali only to look. You make every change with `kubectl`, so tha
 
 ## What the verification run showed
 
-`./platform-engineering/verify.sh`, or `./lab.sh test all`, replays every module that is safe to repeat against the lab, so run it whenever you change the lab and again after the course to check your own work. On 21 November 2026 it passed 322 of 322 checks for its 25 default modules in 49 minutes. [Check a module](../../README.md#check-a-module) in the guide lists the modules it leaves out.
+`./platform-engineering/verify.sh`, or `./lab.sh test all`, replays every module that is safe to repeat against the lab, so run it whenever you change the lab and again after the course to check your own work. On 21 November 2026 it passed 322 of 322 checks for its 25 default modules in 49 minutes on the Mac itself. Run through the toolbox from a fresh clone, it passed 321 of 321 in 47 minutes, because the check that the OrbStack app holds module 45's outside connection needs a shell on the Mac and the toolbox skips it. [Check a module](../../README.md#check-a-module) in the guide lists the modules it leaves out.
