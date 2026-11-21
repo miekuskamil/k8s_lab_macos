@@ -1,0 +1,8 @@
+# Files the build never needs. They stay out of the build context, so they never reach
+# the builder, never break the cache and never end up in an image by accident.
+.git
+*.md
+notes/
+*.log
+Dockerfile*
+.dockerignore

@@ -2,8 +2,11 @@
 # Put the lab back to its Git baseline after a course exercise.
 #   ./platform-engineering/reset.sh         restore routing, policies and experiment settings
 #   ./platform-engineering/reset.sh --all   also remove the course namespaces and the course client
+#   ./platform-engineering/reset.sh docker  clean up the Docker track instead (0-docker/reset.sh)
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# The Docker track needs no cluster, so its clean-up runs on its own.
+if [[ "${1:-}" == docker ]]; then exec "$ROOT/platform-engineering/0-docker/reset.sh"; fi
 K=(kubectl --context "${KUBE_CONTEXT:-k3d-k8s-lab}")
 
 echo "Removing course rules from the shop namespace"

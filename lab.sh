@@ -35,7 +35,7 @@ Usage: ./lab.sh <command> [arguments]
   test ID...  run the course checks for modules ID, for example: ./lab.sh test 3.4 3.5
   test all    run the course checks for every lab module that is safe to repeat (about 50 minutes)
   reset       undo course exercises and return to the Git baseline (--all also
-              removes the course namespaces)
+              removes the course namespaces; reset docker cleans up the Docker track)
   down        delete the cluster and everything in it (asks first, --yes skips)
   ai          store the AI settings from lab.env in the cluster (see lab.env.example)
   ollama      run Ollama in a container, for machines without Ollama, and pull the

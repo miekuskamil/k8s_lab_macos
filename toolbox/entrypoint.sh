@@ -32,6 +32,7 @@ forward 8443 host.docker.internal:8443                     # the shop over HTTPS
 forward 11434 host.docker.internal:11434                   # Ollama on the host, or the ollama service
 forward 30080 "${PRACTICE_KIND_NAME:-practice}-control-plane:30080"   # the practice cluster's ingress
 forward 30443 "${PRACTICE_KIND_NAME:-practice}-control-plane:30443"
+forward 5555 course-registry:5000                          # the Docker track's registry (module 0.2)
 
 su lab -c /usr/local/lib/lab/kube-sync.sh || echo "kube-sync failed; run it again with: kube-sync" >&2
 touch /run/lab-ready     # lab.sh waits for this file before it runs commands here

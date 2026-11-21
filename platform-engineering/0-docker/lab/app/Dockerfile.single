@@ -1,0 +1,7 @@
+# One stage: the Go toolchain and the source code ship with the app.
+FROM golang:1.25.3-alpine3.22
+WORKDIR /src
+COPY . .
+RUN go build -o /usr/local/bin/hits .
+EXPOSE 8000
+CMD ["hits"]

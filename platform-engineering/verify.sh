@@ -1304,6 +1304,59 @@ module_3_16() {
   expect "after the reset course-outbound is gone" "$("${K[@]}" get ns course-outbound 2>&1 | grep -c NotFound)" '^1$'
 }
 
+# ---- Track 0: Docker and Compose ----------------------------------------------------------
+# These checks need only Docker. They run in the toolbox, which has docker compose, trivy and
+# cosign at the versions the track was written with (see the main loop at the end).
+DT="$ROOT/platform-engineering/0-docker"
+DW="$DT/work"
+# Published ports: the toolbox reaches the Docker host as host.docker.internal, your own
+# terminal as localhost.
+PUB=localhost; [[ "${LAB_TOOLBOX:-}" == 1 ]] && PUB=host.docker.internal
+docker_reset() { "$DT/reset.sh" >/dev/null 2>&1; }
+dcurl() { curl -s -m 5 --retry 8 --retry-all-errors --retry-delay 1 "$@" 2>/dev/null || true; }
+# onhost <command>: run a command on the Docker host, the way the track does it
+onhost() { docker run --rm --privileged --net=host --pid=host "${ONHOST_IMAGE:-alpine:3.22.2}" sh -c "$1" 2>/dev/null; }
+docker_left() { echo "$(docker ps -aq --filter name=^course- | wc -l | tr -d ' ') $(docker network ls -q --filter name=^course- | wc -l | tr -d ' ') $(docker volume ls -q --filter name=^course- | wc -l | tr -d ' ') $(docker image ls -q --filter reference='course/*' | wc -l | tr -d ' ')"; }
+
+module_0_1() {
+  section "0.1: containers and images"
+  docker_reset
+  local k1 k2 pid t0 t1
+  k1="$(docker run --rm alpine:3.22.2 uname -r)"; k2="$(onhost 'uname -r')"
+  expect "1. a container runs on the Docker host's kernel" "$k1" "^${k2}$"
+  expect "1. in its own PID namespace a container sees only itself" "$(docker run --rm alpine:3.22.2 ps -o pid= | tr -d ' ' | tr '\n' ' ')" '^1 $'
+  docker run -d --name course-web -p 8880:80 nginx:1.28.0-alpine >/dev/null
+  expect "2. the published port 8880 answers" "$(dcurl -o /dev/null -w '%{http_code}' "http://$PUB:8880/")" '^200$'
+  expect "2. docker logs shows the request" "$(docker logs course-web 2>&1 | grep -c '"GET / HTTP')" '^[1-9]'
+  pid="$(docker inspect -f '{{.State.Pid}}' course-web)"
+  expect "3. the Docker host lists nginx under its host PID" "$(onhost "ps -o pid,args | grep -E '^ *$pid '")" 'nginx: master process'
+  local nsdiff nsuser
+  nsdiff="$(onhost "for n in net pid mnt uts; do [ \"\$(readlink /proc/$pid/ns/\$n)\" != \"\$(readlink /proc/1/ns/\$n)\" ] && echo \$n; done" | tr '\n' ' ')"
+  expect "3. nginx has its own net, pid, mnt and uts namespaces" "$nsdiff" '^net pid mnt uts $'
+  nsuser="$(onhost "[ \"\$(readlink /proc/$pid/ns/user)\" = \"\$(readlink /proc/1/ns/user)\" ] && echo same")"
+  expect "3. nginx shares the host's user namespace" "$nsuser" '^same$'
+  docker run -d --name course-limited --memory 64m --cpus 0.5 --pids-limit 50 alpine:3.22.2 sleep 600 >/dev/null
+  expect "4. the cgroup holds 64 MiB, half a CPU and 50 processes" "$(docker exec course-limited sh -c 'cat /sys/fs/cgroup/memory.max /sys/fs/cgroup/cpu.max /sys/fs/cgroup/pids.max' | tr '\n' ' ')" '^67108864 50000 100000 50 $'
+  expect "4. docker stats shows the 64MiB limit" "$(docker stats --no-stream --format '{{.MemUsage}}' course-limited)" '/ 64MiB$'
+  docker exec course-web sh -c 'echo "hello from a container" > /usr/share/nginx/html/hello.txt'
+  expect "5. docker diff lists the new file in the writable layer" "$(docker diff course-web | grep -c '^A /usr/share/nginx/html/hello.txt$')" '^1$'
+  expect "5. the image history shows the layers that hold megabytes" "$(docker image history nginx:1.28.0-alpine --format '{{.Size}}' | grep -c 'MB')" '^[2-9]'
+  docker rm -f course-web >/dev/null; docker run -d --name course-web -p 8880:80 nginx:1.28.0-alpine >/dev/null
+  expect "5. a new container from the same image lacks the file" "$(dcurl -o /dev/null -w '%{http_code}' "http://$PUB:8880/hello.txt")" '^404$'
+  docker run -d --name course-sleeper alpine:3.22.2 sleep 300 >/dev/null
+  t0=$(date +%s); docker stop course-sleeper >/dev/null; t1=$(date +%s)
+  between "6. sleep as PID 1 ignores SIGTERM, so stop waits about 10 s" "$((t1 - t0))" 9 13
+  expect "6. and kills it: exit code 137" "$(docker inspect -f '{{.State.ExitCode}}' course-sleeper)" '^137$'
+  docker run -d --init --name course-sleeper2 alpine:3.22.2 sleep 300 >/dev/null
+  expect "6. with --init, docker-init is PID 1" "$(docker exec course-sleeper2 ps -o pid,args | awk '$1==1')" 'docker-init'
+  t0=$(date +%s); docker stop course-sleeper2 >/dev/null; t1=$(date +%s)
+  between "6. with --init the stop takes under 3 s" "$((t1 - t0))" 0 3
+  expect "6. and the exit code is 143 (SIGTERM)" "$(docker inspect -f '{{.State.ExitCode}}' course-sleeper2)" '^143$'
+  expect "7. inspect shows the memory limit and the command" "$(docker inspect -f '{{.HostConfig.Memory}} {{json .Config.Cmd}}' course-limited)" '^67108864 \["sleep","600"\]$'
+  docker_reset
+  expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
+}
+
 # Module 2.9 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 2.9
 module_2_9() {
   section "2.9: k3s certificates, backups and upgrades (the upgrade is one-way)"
@@ -1412,17 +1465,39 @@ module_3_19() {
 }
 
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(1.1 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.9 3.10 3.11 3.12 3.13 3.14 3.15 3.16 3.17 3.18); fi
-# Start from the Git baseline, in case an exercise is still applied.
-printf 'Restoring the baseline before the checks\n'
-"$ROOT/platform-engineering/reset.sh" >/dev/null 2>&1
+if (( ${#modules[@]} == 0 )); then modules=(0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 1.1 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.9 3.10 3.11 3.12 3.13 3.14 3.15 3.16 3.17 3.18); fi
+# The Docker track (0.x) needs no cluster, so the cluster baseline runs only for the others.
+need_lab=0
+for m in "${modules[@]}"; do [[ "$m" == 0.* ]] || need_lab=1; done
+# Docker track checks run in the toolbox, which has docker compose, trivy and cosign. Outside
+# it, they go there through lab.sh, and their counts join this run's.
+in_docker_toolbox() { [[ "${LAB_TOOLBOX:-}" == 1 || "${LAB_USE_TOOLBOX:-auto}" == never ]]; }
+docker_track_via_toolbox() {
+  local out p f
+  out="$(mktemp)"
+  LAB_USE_TOOLBOX=always "$ROOT/lab.sh" test "$1" > "$out" 2>&1
+  grep -vE '^[0-9]+ checks passed|^$' "$out"
+  p="$(sed -nE 's/^([0-9]+) checks passed, ([0-9]+) failed$/\1/p' "$out" | tail -1)"
+  f="$(sed -nE 's/^([0-9]+) checks passed, ([0-9]+) failed$/\2/p' "$out" | tail -1)"
+  if [[ -z "$p" ]]; then FAIL=$((FAIL + 1)); printf '  FAIL  module %s did not run in the toolbox\n' "$1"; fi
+  PASS=$((PASS + ${p:-0})); FAIL=$((FAIL + ${f:-0}))
+  rm -f "$out"
+}
+if (( need_lab )); then
+  # Start from the Git baseline, in case an exercise is still applied.
+  printf 'Restoring the baseline before the checks\n'
+  "$ROOT/platform-engineering/reset.sh" >/dev/null 2>&1
+fi
 for m in "${modules[@]}"; do
+  if [[ "$m" == 0.* ]] && ! in_docker_toolbox; then docker_track_via_toolbox "$m"; continue; fi
   if declare -F "module_${m//./_}" >/dev/null; then "module_${m//./_}"; else echo "No module $m"; fi
 done
 
-printf '\nRestoring the baseline\n'
-# --all also removes the module 3.9 namespaces and the course client, so the lab ends
-# exactly as a fresh provision leaves it (module 3.1 expects 3 proxies).
-"$ROOT/platform-engineering/reset.sh" --all >/dev/null 2>&1
+if (( need_lab )); then
+  printf '\nRestoring the baseline\n'
+  # --all also removes the module 3.9 namespaces and the course client, so the lab ends
+  # exactly as a fresh provision leaves it (module 3.1 expects 3 proxies).
+  "$ROOT/platform-engineering/reset.sh" --all >/dev/null 2>&1
+fi
 printf '\n%d checks passed, %d failed\n' "$PASS" "$FAIL"
 (( FAIL == 0 ))
