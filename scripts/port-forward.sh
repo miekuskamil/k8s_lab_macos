@@ -3,21 +3,37 @@
 set -euo pipefail
 
 pids=()
+# A run whose terminal went away without Ctrl-C leaves its forwards behind, holding the
+# ports. Each run writes its process ids here, and the next run stops those first.
+PIDFILE="${TMPDIR:-/tmp}/k8s-lab-port-forward.pids"
+if [[ -f "$PIDFILE" ]]; then
+  for pid in $(cat "$PIDFILE"); do
+    # Only processes of an earlier run, never an unrelated one that got the same id.
+    ps -p "$pid" -o args= 2>/dev/null | grep -q port-forward && kill "$pid" 2>/dev/null
+  done
+  sleep 1
+fi
+echo "$$" > "$PIDFILE"
 cleanup() {
   for pid in "${pids[@]:-}"; do
     kill "$pid" 2>/dev/null || true
   done
+  rm -f "$PIDFILE"
 }
 trap cleanup EXIT INT TERM
 
 # Always target the lab cluster. OrbStack switches the current context to "orbstack"
 # when it restarts, and a bare "kubectl port-forward" would then look in the wrong cluster.
 CONTEXT="k3d-${CLUSTER_NAME:-k8s-lab}"
+# The toolbox sets PF_ADDRESS=0.0.0.0, so the ports it publishes reach these forwards from
+# your browser. On the host they listen on localhost only.
+ADDRESS="${PF_ADDRESS:-localhost}"
 
 forward() {
   local namespace="$1" target="$2" mapping="$3" label="$4"
-  kubectl --context "$CONTEXT" -n "$namespace" port-forward "$target" "$mapping" >/dev/null &
+  kubectl --context "$CONTEXT" -n "$namespace" port-forward --address "$ADDRESS" "$target" "$mapping" >/dev/null &
   pids+=("$!")
+  echo "$!" >> "$PIDFILE"
   printf '%-11s http://localhost:%s\n' "$label" "${mapping%%:*}"
 }
 

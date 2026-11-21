@@ -6,14 +6,26 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Your settings, when you made a lab.env from lab.env.example. Git ignores lab.env.
+if [[ -f "$ROOT/lab.env" ]]; then
+  set -a
+  # shellcheck source=/dev/null
+  . "$ROOT/lab.env"
+  set +a
+fi
 # The same variable and default that scripts/provision.sh uses.
 CLUSTER_NAME="${CLUSTER_NAME:-k8s-lab}"
-K=(kubectl --context "k3d-${CLUSTER_NAME}")
+export CLUSTER_NAME
+# verify.sh and reset.sh read the kubectl context from KUBE_CONTEXT.
+export KUBE_CONTEXT="${KUBE_CONTEXT:-k3d-${CLUSTER_NAME}}"
+K=(kubectl --context "$KUBE_CONTEXT")
 
 usage() {
   cat <<'HELP'
 Usage: ./lab.sh <command> [arguments]
 
+  shell       open a shell in the toolbox container, which has every tool the lab
+              needs; your machine needs only Docker and git (see "The toolbox" below)
   up          build the whole lab from nothing (about 10 minutes the first time)
   start       bring the lab back after a reboot, sleep or ./lab.sh stop
   stop        stop the cluster to free memory; ./lab.sh start resumes it
@@ -25,6 +37,9 @@ Usage: ./lab.sh <command> [arguments]
   reset       undo course exercises and return to the Git baseline (--all also
               removes the course namespaces)
   down        delete the cluster and everything in it (asks first, --yes skips)
+  ai          store the AI settings from lab.env in the cluster (see lab.env.example)
+  ollama      run Ollama in a container, for machines without Ollama, and pull the
+              two models the course uses
   help        show this list
 
 The practice cluster for modules 33 to 43 (two kubeadm nodes in Docker, built with kind):
@@ -34,7 +49,121 @@ The practice cluster for modules 33 to 43 (two kubeadm nodes in Docker, built wi
   practice shell [node]    open a root shell on the control plane, or on "worker"
   task setup|check|solve|list ID     the timed tasks, for example: ./lab.sh task setup 38.3
   exam setup|score|solve N [task]    the six practice exams, for example: ./lab.sh exam setup 4
+
+The toolbox (toolbox/Dockerfile and compose.yaml):
+  shell                    start the toolbox and open a shell in it, in the repo folder
+  toolbox build            build the toolbox image again, after you changed toolbox/
+  toolbox stop             stop and remove the toolbox container (your kubeconfig stays)
+  Every command above works the same inside the toolbox. Run outside it, on a machine
+  without kubectl, helm or k3d, a command goes through the toolbox by itself.
+  LAB_USE_TOOLBOX=always or LAB_USE_TOOLBOX=never overrides that choice.
 HELP
+}
+
+# --- The toolbox container -------------------------------------------------------------
+COMPOSE=(docker compose -f "$ROOT/compose.yaml")
+TOOLBOX_IMAGE="$(awk '/^ *image: k8s-lab\/toolbox:/ {print $2; exit}' "$ROOT/compose.yaml")"
+# Settings that pass from your shell into the toolbox when they are set.
+PASS_ENV=(CLUSTER_NAME KUBE_CONTEXT BASE_URL SKIP_IMAGE_BUILD ISTIO_VERSION ISTIO_PLATFORM
+  SYNC_TIMEOUT_SECONDS LAB_OLLAMA_URL LAB_OLLAMA_MODEL PRACTICE_PLATFORM PRACTICE_KIND_NAME
+  PRACTICE_NODE_IMAGE K8S_VERSION TERM)
+
+in_toolbox() { [[ "${LAB_TOOLBOX:-}" == 1 ]]; }
+
+toolbox_compose_env() {
+  # TOOLBOX_HASH labels the image with a checksum of toolbox/, so a git pull that changes
+  # the toolbox leads to a rebuild on the next start.
+  TOOLBOX_HASH="$(cat "$ROOT"/toolbox/* | cksum | awk '{print $1}')"
+  export LAB_ROOT="$ROOT" HOST_UID="$(id -u)" HOST_GID="$(id -g)" TOOLBOX_HASH
+}
+
+toolbox_start() {
+  command -v docker >/dev/null 2>&1 || { echo "The toolbox needs Docker: install OrbStack, Docker Desktop or Docker Engine first." >&2; exit 1; }
+  docker info >/dev/null 2>&1 || { echo "Docker does not answer. Start OrbStack or Docker first." >&2; exit 1; }
+  docker compose version >/dev/null 2>&1 || { echo "The toolbox needs Docker Compose v2 (the 'docker compose' command)." >&2; exit 1; }
+  toolbox_compose_env
+  if [[ "$(docker image inspect -f '{{index .Config.Labels "lab.toolbox.hash"}}' "$TOOLBOX_IMAGE" 2>/dev/null)" != "$TOOLBOX_HASH" ]]; then
+    echo "Building the toolbox image $TOOLBOX_IMAGE (about 2 minutes the first time)" >&2
+    "${COMPOSE[@]}" build lab >&2
+  fi
+  local out
+  if ! out="$("${COMPOSE[@]}" up -d lab 2>&1)"; then
+    echo "$out" >&2
+    if grep -qiE "port is already allocated|address already in use|ports are not available" <<<"$out"; then
+      echo >&2
+      echo "Another program holds one of the UI ports 8081 3000 9090 9093 16686 20001 4466," >&2
+      echo "for example a ./lab.sh ui that runs outside the toolbox. Stop it and try again." >&2
+    fi
+    exit 1
+  fi
+  # The container's start script creates your user and the kubeconfig first.
+  local i
+  for i in $(seq 1 60); do
+    "${COMPOSE[@]}" exec -T lab test -f /run/lab-ready 2>/dev/null && return 0
+    sleep 1
+  done
+  echo "The toolbox did not get ready in 60 seconds. Its log: docker logs k8s-lab-toolbox-lab-1" >&2
+  exit 1
+}
+
+# toolbox_exec <command...>: run a command as your user in the toolbox, in the folder you are in.
+toolbox_exec() {
+  local wd="$ROOT" tty=() envs=() v
+  [[ "$PWD" == "$ROOT" || "$PWD" == "$ROOT"/* ]] && wd="$PWD"
+  [[ -t 0 && -t 1 ]] || tty=(-T)
+  for v in "${PASS_ENV[@]}"; do
+    [[ -n "${!v:-}" ]] && envs+=(-e "$v=${!v}")
+  done
+  "${COMPOSE[@]}" exec ${tty[@]+"${tty[@]}"} -u lab -w "$wd" ${envs[@]+"${envs[@]}"} lab "$@"
+}
+
+shell() {
+  if in_toolbox; then
+    echo "You are in the toolbox already."
+    return 0
+  fi
+  toolbox_start
+  # Clusters made outside the toolbox since it started get their kubectl context now.
+  toolbox_exec /usr/local/lib/lab/kube-sync.sh
+  cat <<'EOF'
+You are in the lab toolbox: kubectl (alias k), helm, k3d, kind, istioctl, git and the rest.
+The repo is the current folder. ./lab.sh help lists the commands; exit leaves the shell.
+EOF
+  toolbox_exec bash
+}
+
+toolbox_cmd() {
+  in_toolbox && { echo "Run ./lab.sh toolbox on your machine, not inside the toolbox." >&2; exit 1; }
+  toolbox_compose_env
+  case "${1:-}" in
+    build) "${COMPOSE[@]}" build lab ;;
+    stop)  "${COMPOSE[@]}" rm -sf lab ;;
+    *) echo "Usage: ./lab.sh toolbox build|stop" >&2; exit 1 ;;
+  esac
+}
+
+# Run Ollama as a container next to the clusters, for machines that have no Ollama.
+ollama_service() {
+  in_toolbox && { echo "Run ./lab.sh ollama on your machine, not inside the toolbox." >&2; exit 1; }
+  toolbox_compose_env
+  "${COMPOSE[@]}" --profile ai up -d ollama
+  echo "Ollama runs in the container k8s-lab-toolbox-ollama-1 on port ${LAB_OLLAMA_PORT:-11434}."
+  echo "It pulls ${LAB_OLLAMA_MODELS:-qwen2.5:3b nomic-embed-text} the first time (about 2.2 GB)."
+  echo "Follow the download: docker compose -p k8s-lab-toolbox logs -f ollama"
+}
+
+# Outside the toolbox, use it when this machine lacks the lab's tools.
+want_toolbox() {
+  in_toolbox && return 1
+  case "${LAB_USE_TOOLBOX:-auto}" in
+    always) return 0 ;;
+    never) return 1 ;;
+  esac
+  local t
+  for t in kubectl helm k3d; do
+    command -v "$t" >/dev/null 2>&1 || return 0
+  done
+  return 1
 }
 
 status() {
@@ -88,9 +217,34 @@ practice() {
 command="${1:-help}"
 [[ $# -gt 0 ]] && shift
 
+# AI settings from lab.env go into the cluster after up and start (scripts/llm-settings.sh).
+with_ai_settings() {
+  local status=0
+  "$@" || status=$?
+  if [[ -f "$ROOT/lab.env" ]] && (( status == 0 )); then
+    "$ROOT/scripts/llm-settings.sh" || status=$?
+  fi
+  exit "$status"
+}
+
 case "$command" in
-  up)     exec "$ROOT/scripts/provision.sh" "$@" ;;
-  start)  exec "$ROOT/scripts/start.sh" "$@" ;;
+  help|-h|--help|shell|toolbox|ollama) ;;
+  *)
+    if want_toolbox; then
+      toolbox_start
+      exec_status=0
+      toolbox_exec "$ROOT/lab.sh" "$command" "$@" || exec_status=$?
+      exit "$exec_status"
+    fi ;;
+esac
+
+case "$command" in
+  shell)  shell ;;
+  toolbox) toolbox_cmd "$@" ;;
+  ollama) ollama_service ;;
+  ai)     exec "$ROOT/scripts/llm-settings.sh" "$@" ;;
+  up)     with_ai_settings "$ROOT/scripts/provision.sh" "$@" ;;
+  start)  with_ai_settings "$ROOT/scripts/start.sh" "$@" ;;
   stop)   exec k3d cluster stop "$CLUSTER_NAME" ;;
   status) status ;;
   ui)     exec "$ROOT/scripts/port-forward.sh" ;;
