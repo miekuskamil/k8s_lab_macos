@@ -15,6 +15,8 @@
 #     PRACTICE_SSH_USER  login user on both VMs            (default ubuntu)
 #     PRACTICE_SSH_KEY   private key for that user         (default ~/.ssh/cks_proxmox)
 #     PRACTICE_SSH_OPTS  extra ssh options, for example "-o UserKnownHostsFile=/some/file"
+#     PRACTICE_CILIUM_HOST  address of the Cilium VM for the Cilium tasks (default 192.168.1.223)
+#     PRACTICE_CILIUM       its hostname and node name           (default practice-cilium)
 #
 # The older CKS_* names (CKS_PLATFORM, CKS_CP, CKS_SSH_KEY and so on) still work when the
 # PRACTICE_* name is unset. Every command that runs on a node goes through node_sh,
@@ -42,6 +44,9 @@ case "$PRACTICE_PLATFORM" in
     PRACTICE_SSH_USER="${PRACTICE_SSH_USER:-${CKS_SSH_USER:-ubuntu}}"
     PRACTICE_SSH_KEY="${PRACTICE_SSH_KEY:-${CKS_SSH_KEY:-$HOME/.ssh/cks_proxmox}}"
     PRACTICE_SSH_OPTS="${PRACTICE_SSH_OPTS:-${CKS_SSH_OPTS:-}}"
+    # The third VM, a one-node cluster with Cilium that cilium-vm.sh builds, as the Lima VM does on a Mac.
+    PRACTICE_CILIUM_HOST="${PRACTICE_CILIUM_HOST:-192.168.1.223}"
+    PRACTICE_CILIUM="${PRACTICE_CILIUM:-practice-cilium}"
     # In the toolbox, your ~/.ssh sits read-only at /run/host-ssh, so a key path into ~/.ssh,
     # written for your machine or for the toolbox's own home, points there instead.
     if [ "${LAB_TOOLBOX:-}" = 1 ] && [ ! -r "$PRACTICE_SSH_KEY" ] && [ -d /run/host-ssh ]; then
