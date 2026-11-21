@@ -107,7 +107,7 @@ orb stop cks-cp cks-w1            # frees the memory; "orb start cks-cp cks-w1" 
 ./lab.sh practice down --yes      # deletes both machines
 ```
 
-In the earlier test runs, `create.sh` took 3 minutes 45 seconds from nothing and `reset.sh` 2 minutes 30 seconds, and the machines used 1.1 GB and 0.7 GB of memory. The application extras install helm, podman and kubectl-convert on `cks-cp` there, with the registry as the systemd service `practice-registry` on port 5000. After this course moved to kind, a sample of __ORB_SAMPLE__ tasks still passed on the OrbStack machines.
+In the earlier test runs, `create.sh` took 3 minutes 45 seconds from nothing and `reset.sh` 2 minutes 30 seconds, and the machines used 1.1 GB and 0.7 GB of memory. The application extras install helm, podman and kubectl-convert on `cks-cp` there, with the registry as the systemd service `practice-registry` on port 5000. After the move to kind, a sample of six tasks (33.1, 35.3, 38.4, 40.4, 41.4 and 43.2, which cover podman and the registry, a node label, Ingress, a systemd unit, gVisor and Falco) still failed after setup and passed after the solution on the OrbStack machines.
 
 ## The practice cluster on your own VMs (Proxmox or any SSH-reachable Ubuntu)
 
