@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="980" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Docker&#x27;s DNS server <tspan fill="#7c3aed">inside each container</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">127.0.0.11 never leaves the container: NAT rules there send it to a dockerd socket.</text>
+<rect x="40.0" y="150.0" width="1520.0" height="790.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="58.5" y="167.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="58.5,171.5 75.5,171.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Docker host</text>
+<rect x="80.0" y="210.0" width="900.0" height="690.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="107.0,225.0 115.5,229.5 115.5,239.0 107.0,243.5 98.5,239.0 98.5,229.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="98.5,229.5 107.0,234.0 115.5,229.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="107.0,234.0 107.0,243.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="126.0" y="240.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">course-a netns</text>
+<rect x="120.0" y="270.0" width="380.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="310.0" y="302.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">nslookup course-b</text>
+<text x="310.0" y="324.7" font-size="17.0" fill="#475569" text-anchor="middle">to 127.0.0.11:53</text>
+<rect x="120.0" y="430.0" width="380.0" height="90.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="310.0" y="467.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">DOCKER_OUTPUT</text>
+<text x="310.0" y="489.7" font-size="17.0" fill="#475569" text-anchor="middle">DNAT to :48364</text>
+<rect x="560.0" y="430.0" width="380.0" height="90.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="750.0" y="467.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">dockerd socket</text>
+<text x="750.0" y="489.7" font-size="17.0" fill="#475569" text-anchor="middle">127.0.0.11:48364</text>
+<rect x="120.0" y="620.0" width="380.0" height="90.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="310.0" y="657.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">DOCKER_POSTROUTING</text>
+<text x="310.0" y="678.3" font-size="17.0" fill="#475569" text-anchor="middle">SNAT back to :53</text>
+<rect x="120.0" y="780.0" width="380.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="310.0" y="812.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">answer</text>
+<text x="310.0" y="834.7" font-size="17.0" fill="#475569" text-anchor="middle">from 127.0.0.11:53</text>
+<rect x="1080.0" y="430.0" width="420.0" height="90.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="1290.0" y="467.8" font-size="20.0" fill="#0f172a" font-weight="700" text-anchor="middle">dockerd</text>
+<text x="1290.0" y="491.1" font-size="17.0" fill="#475569" text-anchor="middle">container records</text>
+<rect x="1080.0" y="640.0" width="420.0" height="90.0" rx="10.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<text x="1290.0" y="677.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">host&#x27;s DNS servers</text>
+<text x="1290.0" y="699.7" font-size="17.0" fill="#475569" text-anchor="middle">for other names</text>
+<polyline points="310.0,350.0 310.0,420.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="310.0,430.0 304.2,418.5 315.8,418.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="310.0" cy="390.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="310.0" cy="390.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="310.0" y="396.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<polyline points="500.0,475.0 550.5,475.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="560.0,475.0 548.5,480.8 548.5,469.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="530.0" cy="475.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="530.0" cy="475.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="530.0" y="481.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<polyline points="940.0,475.0 1070.5,475.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1080.0,475.0 1068.5,480.8 1068.5,469.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="1010.0" y="465.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">same process</text>
+<polyline points="1290.0,520.0 1290.0,630.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1290.0,640.0 1284.2,628.5 1295.8,628.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1290.0" cy="580.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1290.0" cy="580.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1290.0" y="586.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<text x="1316.0" y="586.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">example.com</text>
+<polyline points="750.0,520.0 750.0,665.0 509.5,665.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="500.0,665.0 511.5,659.2 511.5,670.8" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="310.0,710.0 310.0,770.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="310.0,780.0 304.2,768.5 315.8,768.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="310.0" cy="745.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="310.0" cy="745.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="310.0" y="751.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+</svg>

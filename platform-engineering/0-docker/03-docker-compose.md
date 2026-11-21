@@ -154,9 +154,9 @@ proxy     Up Less than a second    0.0.0.0:8884->80/tcp, [::]:8884->80/tcp
 redis     Up 4 seconds (healthy)   6379/tcp
 
 $ for i in 1 2 3; do curl -s --retry 5 --retry-all-errors --retry-delay 1 http://host.docker.internal:8884/; done
-hello from d33603cc5391, visit 1, version 2.0.0
-hello from d33603cc5391, visit 2, version 2.0.0
-hello from d33603cc5391, visit 3, version 2.0.0
+hello from 672ea65f82a2, visit 1, version 2.0.0
+hello from 672ea65f82a2, visit 2, version 2.0.0
+hello from 672ea65f82a2, visit 3, version 2.0.0
 ```
 
 **What you should see.** Compose builds the API image first. Then the order follows the dependencies exactly: Redis starts, Compose waits until it's `Healthy`, starts the API, waits again, and starts the proxy last. `docker compose ps` shows the health next to each service that has a check; the proxy has none, so it shows only `Up`. The three requests reach the same API container, and the counter climbs from 1 to 3, because it lives in Redis.
@@ -167,7 +167,7 @@ hello from d33603cc5391, visit 3, version 2.0.0
 $ docker network ls --filter name=course-compose --format '{{.Name}} {{.Driver}}'
 course-compose_default bridge
 
-$ docker compose exec proxy nslookup api 127.0.0.11 2>/dev/null | grep -A1 'Name:'
+$ docker compose exec proxy nslookup api. 127.0.0.11 2>/dev/null | grep -A1 'Name:'
 Name:	api
 Address: 192.168.148.3
 
@@ -178,7 +178,7 @@ $ docker run --rm alpine:3.22.2 sh -c 'nslookup api >/dev/null 2>&1 && echo foun
 api: no such name
 ```
 
-**What you should see.** Compose made one bridge network, `course-compose_default`. Inside the proxy, the name `api` resolves to one address on that network, answered by `127.0.0.11`, which Docker writes into every container's `/etc/resolv.conf` on a network that Compose or `docker network create` made. A container started on Docker's default network finds no `api` at all, because service names exist only inside their project's network. Module 0.5 shows where that DNS server lives.
+**What you should see.** Compose made one bridge network, `course-compose_default`. Inside the proxy, the name `api` resolves to one address on that network; the final dot in `api.` asks for exactly that name, so no search domain from the host's DNS settings ends up appended. The answer comes from `127.0.0.11`, which Docker writes into every container's `/etc/resolv.conf` on a network that Compose or `docker network create` made. A container started on Docker's default network finds no `api` at all, because service names exist only inside their project's network. Module 0.5 shows where that DNS server lives.
 
 ### 4. Break Redis and watch the healthchecks
 
@@ -189,7 +189,7 @@ $ docker compose stop redis
 
 $ sleep 20; docker compose ps -a --format 'table {{.Service}}\t{{.Status}}'
 SERVICE   STATUS
-api       Up 22 seconds (unhealthy)
+api       Up 23 seconds (unhealthy)
 proxy     Up 20 seconds
 redis     Exited (0) 20 seconds ago
 
@@ -203,7 +203,7 @@ $ docker inspect -f '{{range .State.Health.Log}}{{.ExitCode}} {{.Output}}{{end}}
 $ docker compose start redis && sleep 6 && curl -s http://host.docker.internal:8884/
  Container course-compose-redis-1 Starting 
  Container course-compose-redis-1 Started 
-hello from d33603cc5391, visit 4, version 2.0.0
+hello from 672ea65f82a2, visit 4, version 2.0.0
 ```
 
 **What you should see.** With Redis stopped, the API fails its healthcheck three times in a row, 5 seconds apart, and Docker marks it `unhealthy` about 15 to 20 seconds later. The proxy still forwards requests, and the API answers each with `503` and the reason, which holds a surprise: `lookup redis on 127.0.0.11:53: no such host`. Docker's DNS server answers only for running containers, so a stopped service vanishes from DNS instead of refusing connections, and the error reads like a typo in the name. The health log keeps the last checks with their exit code `1` and output `unhealthy`. After `start redis`, the API recovers and the counter continues at 4, because Redis wrote every increment to its append-only file in the `data` volume. Compose doesn't restart an unhealthy container by itself; a restart policy or an orchestrator does that.
@@ -221,7 +221,7 @@ $ APP_VERSION=2.1.0 docker compose up -d --build api 2>&1 | grep -E 'Built|Recre
  Container course-compose-api-1 Started 
 
 $ curl -s --retry 5 --retry-all-errors --retry-delay 1 http://host.docker.internal:8884/
-hello from e61e2027d8ab, visit 5, version 2.1.0
+hello from 519cb8f88a8d, visit 5, version 2.1.0
 ```
 
 **What you should see.** The shell's `APP_VERSION=2.1.0` wins over the `2.0.0` from `.env`, so Compose builds `course/hits:2.1.0` and recreates only the API container, because only its definition changed. Redis and the proxy keep running. The counter keeps counting across the new version, and the proxy finds the new API container under the same name.
@@ -233,13 +233,13 @@ $ APP_VERSION=2.1.0 docker compose up -d --scale api=3 2>&1 | grep -E 'api-[0-9]
  Container course-compose-api-2 Started 
  Container course-compose-api-3 Started 
 
-$ docker compose exec proxy nslookup api 127.0.0.11 2>/dev/null | grep -c '^Address: '
+$ docker compose exec proxy nslookup api. 127.0.0.11 2>/dev/null | grep -c '^Address: '
 3
 
 $ sleep 6; for i in $(seq 1 9); do curl -s http://host.docker.internal:8884/; done | awk '{print $3}' | sort | uniq -c
-      5 444c124aab68,
-      1 af6bb1a87e26,
-      3 e61e2027d8ab,
+      2 519cb8f88a8d,
+      3 751cb7d8bdcf,
+      4 b37797376a5d,
 ```
 
 **What you should see.** Compose starts `api-2` and `api-3` next to the existing one, and Docker's DNS server now answers `api` with three addresses. nginx asks again after its 5-second cache runs out and spreads the nine requests over the three containers, because nginx takes the addresses in turn; the split is rarely exactly even, since the first requests may still use the old single address. The counter stays one shared count, because every copy talks to the same Redis.
@@ -276,7 +276,7 @@ course-compose_data
 
 $ APP_VERSION=2.1.0 docker compose up -d 2>&1 | grep -c Started; curl -s --retry 5 --retry-all-errors --retry-delay 1 http://host.docker.internal:8884/
 3
-hello from 1a94bad49852, visit 16, version 2.1.0
+hello from 100ebe04b3bc, visit 16, version 2.1.0
 
 $ docker compose down -v 2>&1 | grep -E 'Volume|Network' | uniq
  Volume course-compose_data Removing 
@@ -368,9 +368,9 @@ course-compose-redis-1 Up 5 seconds (healthy)
 $ docker compose -f platform-engineering/0-docker/work/compose/compose.yaml up -d --scale api=3 --wait 2>&1 | tail -1
  Container course-compose-api-1 Healthy 
 $ sleep 6; for i in $(seq 1 9); do curl -s http://host.docker.internal:8884/; done | awk '{print $3}' | sort | uniq -c
-      3 0f9a48cb4209,
-      2 9f060c730430,
-      4 a827c0b53af8,
+      4 c7a1c3ecd32e,
+      4 d1c5f3e631da,
+      1 e7cf1e1e3528,
 ```
 
 </details>

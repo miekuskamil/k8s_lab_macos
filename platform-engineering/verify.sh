@@ -1433,7 +1433,7 @@ module_0_3() {
   out="$(dcurl "http://$PUB:8884/")"
   expect "2. the proxy forwards to the api, which counts in redis" "$out" 'visit [0-9]+, version 2\.0\.0$'
   expect "3. one bridge network for the project" "$(docker network ls --filter name=course-compose --format '{{.Name}} {{.Driver}}')" '^course-compose_default bridge$'
-  expect "3. inside the project, api resolves through 127.0.0.11" "$(dc exec -T proxy nslookup api 127.0.0.11 2>/dev/null | grep -c '^Address: [0-9]')" '^1$'
+  expect "3. inside the project, api resolves through 127.0.0.11" "$(dc exec -T proxy nslookup api. 127.0.0.11 2>/dev/null | grep -c '^Address: [0-9]')" '^1$'
   expect "3. resolv.conf points at 127.0.0.11" "$(dc exec -T proxy cat /etc/resolv.conf | grep nameserver)" '^nameserver 127\.0\.0\.11$'
   expect "3. on the default network, api has no name" "$(docker run --rm alpine:3.22.2 sh -c 'nslookup api >/dev/null 2>&1 && echo found || echo none')" '^none$'
   dc stop redis >/dev/null 2>&1
@@ -1450,7 +1450,7 @@ module_0_3() {
   expect "5. the new version answers" "$(dcurl "http://$PUB:8884/")" 'version 2\.1\.0$'
   APP_VERSION=2.1.0 dc up -d --scale api=3 --wait >/dev/null 2>&1
   expect "6. three api containers" "$(docker ps -q --filter label=com.docker.compose.project=course-compose --filter label=com.docker.compose.service=api | wc -l | tr -d ' ')" '^3$'
-  expect "6. Docker's DNS answers api with three addresses" "$(dc exec -T proxy nslookup api 127.0.0.11 2>/dev/null | grep -c '^Address: [0-9]')" '^3$'
+  expect "6. Docker's DNS answers api with three addresses" "$(dc exec -T proxy nslookup api. 127.0.0.11 2>/dev/null | grep -c '^Address: [0-9]')" '^3$'
   settle 6
   names="$(for _ in $(seq 1 12); do dcurl "http://$PUB:8884/"; done | awk '{print $3}' | sort -u | wc -l | tr -d ' ')"
   expect "6. nginx spreads requests over all three" "$names" '^3$'
@@ -1505,6 +1505,77 @@ module_0_4() {
   docker volume create course-restored >/dev/null
   docker run --rm -v course-restored:/data -v "$bk":/backup:ro alpine:3.22.2 tar xzf /backup/course-data.tgz -C /data
   expect "7. the restored volume gives the same note" "$(docker run --rm -v course-restored:/data alpine:3.22.2 cat /data/note.txt)" "^${note}$"
+  docker_reset
+  expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
+}
+
+module_0_5() {
+  section "0.5: networking in depth"
+  docker_reset
+  local idx veth br pida ipb ipc ipa ipw sub ex gw cnt0 cnt1 out orb=0
+  [[ "$(docker info -f '{{.OperatingSystem}}' 2>/dev/null)" == *OrbStack* ]] && orb=1
+  docker build -q -t course/nettools:1.0 "$DT/lab/nettools" >/dev/null 2>&1
+  local ONHOST_IMAGE=course/nettools:1.0
+  expect "1. the debug container sees iptables with the nf_tables backend" "$(onhost 'iptables -V')" 'nf_tables'
+  gw="$(docker network inspect bridge -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}')"
+  expect "1. docker0 holds the default network's gateway" "$(onhost 'ip -4 -o addr show docker0' | awk '{print $4}')" "^${gw//./\\.}/"
+  docker run -d --name course-a alpine:3.22.2 sleep 3600 >/dev/null
+  docker run -d --name course-b nginx:1.28.0-alpine >/dev/null
+  expect "2. the container's default route points at the gateway" "$(docker exec course-a ip route | head -1)" "^default via ${gw//./\\.} dev eth0"
+  idx="$(docker exec course-a cat /sys/class/net/eth0/iflink)"
+  veth="$(onhost 'ip -o link' | awk -F': ' -v i="$idx" '$1==i {print $2}' | cut -d@ -f1)"
+  expect "2. iflink names a veth on the host" "$veth" '^veth[0-9a-f]+$'
+  expect "2. that veth is a port of docker0" "$(onhost 'bridge link show master docker0' | grep -c "$veth")" '^1$'
+  expect "2. the default network has no names" "$(docker exec course-a ping -c1 -W1 course-b 2>&1)" 'bad address'
+  docker rm -f course-a course-b >/dev/null
+  docker network create course-net >/dev/null
+  br="br-$(docker network inspect -f '{{slice .Id 0 12}}' course-net)"
+  expect "3. a new network gets its own bridge br-<id>" "$(onhost "ip -4 -o addr show $br" | awk '{print $2}')" "^$br$"
+  docker run -d --name course-a --network course-net alpine:3.22.2 sleep 3600 >/dev/null
+  docker run -d --name course-b --network course-net nginx:1.28.0-alpine >/dev/null
+  expect "3. resolv.conf names 127.0.0.11" "$(docker exec course-a grep nameserver /etc/resolv.conf)" '^nameserver 127\.0\.0\.11$'
+  ipb="$(docker inspect -f '{{(index .NetworkSettings.Networks "course-net").IPAddress}}' course-b)"
+  expect "3. Docker's DNS answers course-b" "$(docker exec course-a getent hosts course-b | awk '{print $1}')" "^${ipb//./\\.}$"
+  pida="$(docker inspect -f '{{.State.Pid}}' course-a)"
+  expect "3. NAT rules in the container's namespace redirect port 53" "$(onhost "nsenter -t $pida -n iptables -t nat -S" | grep -c 'DOCKER_OUTPUT.*--dport 53 -j DNAT')" '^2$'
+  expect "3. dockerd listens inside the container's namespace" "$(onhost "nsenter -t $pida -n ss -lntup" | grep -c 'dockerd')" '^2$'
+  out="$( (onhost "timeout 8 tcpdump -lnni any -c 4 'host $ipb and tcp port 80' 2>/dev/null" &) ; settle 3; docker exec course-a wget -qO /dev/null http://course-b/; settle 4)"
+  expect "4. the SYN crosses two veths with unchanged addresses" "$(echo "$out" | grep -c "veth.*IP [0-9.]*\.[0-9]* > ${ipb//./\\.}\.80: Flags \[S\]")" '^2$'
+  docker network create course-net2 >/dev/null
+  docker run -d --name course-c --network course-net2 nginx:1.28.0-alpine >/dev/null
+  ipc="$(docker inspect -f '{{(index .NetworkSettings.Networks "course-net2").IPAddress}}' course-c)"
+  if (( orb )); then
+    expect "5. OrbStack: no raw drop rule, so the other network answers" "$(docker exec course-a wget -qO /dev/null -T 3 "http://$ipc/" >/dev/null 2>&1 && echo reached)$(onhost 'iptables -t raw -S PREROUTING' | grep -c "$ipc")" '^reached0$'
+  else
+    expect "5. Linux: a raw rule drops packets for course-c from other bridges" "$(onhost 'iptables -t raw -S PREROUTING' | grep -c -- "-d $ipc/32 ! -i br-.* -j DROP")" '^1$'
+    expect "5. Linux: so the request across networks times out" "$(docker exec course-a wget -qO /dev/null -T 3 "http://$ipc/" 2>&1)" 'timed out'
+  fi
+  docker network connect course-net2 course-a
+  expect "5. connected, course-a gets eth1 on course-net2" "$(docker exec course-a ip -4 -o addr show eth1 | awk '{print $2}')" '^eth1$'
+  expect "5. and reaches course-c by name" "$(docker exec course-a wget -qO /dev/null -T 3 http://course-c/ 2>&1 && echo ok)" '^ok$'
+  sub="$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' course-net)"
+  expect "6. a MASQUERADE rule covers course-net's subnet" "$(onhost 'iptables -t nat -S POSTROUTING' | grep -c -- "-s $sub ! -o $br -j MASQUERADE")" '^1$'
+  ipa="$(docker inspect -f '{{(index .NetworkSettings.Networks "course-net").IPAddress}}' course-a)"
+  ex="$(docker exec course-a nslookup example.com 2>/dev/null | awk '/^Address: / && !/:.*:/ {print $2; exit}')"
+  local hostip; hostip="$(onhost 'ip route get 1.1.1.1' | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -1)"
+  out="$( (onhost "timeout 10 tcpdump -lnni any -c 4 'host $ex and tcp[tcpflags] & tcp-syn != 0' 2>/dev/null" &) ; settle 3; docker exec course-a wget -qO /dev/null -T 5 --header 'Host: example.com' "http://$ex/" >/dev/null 2>&1; settle 5)"
+  expect "6. the SYN leaves eth0 with the host's address" "$(echo "$out" | grep -c "eth0 *Out IP ${hostip//./\\.}\.")" '^[1-9]'
+  docker exec -d course-a sh -c "sleep 20 | nc $ex 80"
+  settle 2
+  expect "6. conntrack maps course-a's connection to the host's address" "$(onhost "conntrack -L -p tcp -d $ex 2>/dev/null" | grep "src=$ipa" | grep -c "dst=$hostip")" '^[1-9]'
+  docker run -d --name course-web --network course-net -p 8886:80 nginx:1.28.0-alpine >/dev/null
+  ipw="$(docker inspect -f '{{(index .NetworkSettings.Networks "course-net").IPAddress}}' course-web)"
+  expect "7. -p adds a DNAT rule to the container" "$(onhost 'iptables -t nat -S DOCKER' | grep -c -- "--dport 8886 -j DNAT --to-destination $ipw:80")" '^1$'
+  expect "7. and a filter ACCEPT for its port 80" "$(onhost 'iptables -S DOCKER' | grep -c -- "-d $ipw/32 .*--dport 80 -j ACCEPT")" '^1$'
+  expect "7. a userland proxy listens on 8886" "$(onhost 'ss -ltnp' | grep ':8886 ' | head -1)" '(docker-proxy|orbstack-agent)'
+  cnt0="$(onhost 'iptables -t nat -L DOCKER -v -n -x' | awk '/dpt:8886/ {print $1}')"
+  docker run --rm alpine:3.22.2 wget -qO /dev/null -T 3 "http://$gw:8886/" >/dev/null 2>&1
+  cnt1="$(onhost 'iptables -t nat -L DOCKER -v -n -x' | awk '/dpt:8886/ {print $1}')"
+  expect "7. a request to the gateway's port 8886 counts on the DNAT rule" "$((cnt1 - cnt0))" '^[1-9]'
+  expect "7. the published port answers from the toolbox or the host" "$(dcurl -o /dev/null -w '%{http_code}' "http://$PUB:8886/")" '^200$'
+  expect "7. nginx logs the network's gateway as the source" "$(docker logs course-web 2>&1 | grep GET | awk '{print $1}' | sort -u)" "^${sub%.0/*}\.1$"
+  expect "8. --network host sees docker0" "$(docker run --rm --network host alpine:3.22.2 ip -o link | grep -c ': docker0:')" '^1$'
+  expect "8. --network none has no eth0" "$(docker run --rm --network none alpine:3.22.2 ip -o link | grep -c 'eth0')" '^0$'
   docker_reset
   expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
 }
