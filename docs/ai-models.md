@@ -1,6 +1,6 @@
-# Choosing the model for the AI modules
+# Choosing the model for track 5
 
-The AI modules (17, 18, 19 and 27) use [Ollama](https://ollama.com) with `qwen2.5:3b` by default. Ollama runs models on your own machine, for free and offline, and the course's measured numbers come from that setup. You aren't tied to it. This page shows the choices:
+The AI modules of track 5, 5.1 to 5.4, use [Ollama](https://ollama.com) with `qwen2.5:3b` by default. Ollama runs models on your own machine, for free and offline, and the course's measured numbers come from that setup. You aren't tied to it. This page shows the choices:
 
 1. One settings file, `lab.env`, for any provider: Ollama, any server that speaks the OpenAI API, or Claude.
 2. Any other model that Ollama serves, switched by hand.

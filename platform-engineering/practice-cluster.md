@@ -135,14 +135,14 @@ The kernel tasks need a kernel of their own. On a Mac every task of module 4.7 r
 
 | Task | On a Mac | On Proxmox |
 |---|---|---|
-| 4.7.1 to 4.7.3, Cilium policies | `cks-lima` | not available |
+| 4.7.1 to 4.7.3, Cilium policies | `cks-lima` | the Cilium VM `practice-cilium`, once `create-vms.sh` builds it |
 | 4.7.4, a kernel module | `cks-lima` | `cks-w1` |
-| 4.7.5, WireGuard with Cilium | `cks-lima` | not available |
+| 4.7.5, WireGuard with Cilium | `cks-lima` | the Cilium VM `practice-cilium`, once `create-vms.sh` builds it |
 | 4.7.6 and 4.7.7, AppArmor | `cks-lima` | `cks-w1` |
 | Practice exam 5 task 9, AppArmor | `cks-lima` | `cks-w1` |
 | Practice exam 6 task 10, a kernel module | `cks-lima` | `cks-w1` |
-| Practice exams 5 and 6, task 3, Cilium | `cks-lima` | not available |
+| Practice exams 5 and 6, task 3, Cilium | `cks-lima` | the Cilium VM `practice-cilium`, once `create-vms.sh` builds it |
 
 The task text says `cks-lima`, so on Proxmox read it as `cks-w1` for the AppArmor and kernel module tasks: load the profile or write the modprobe rule on `cks-w1`, and run `kubectl` on `cks-cp`. The pods land on `cks-w1` anyway, because the control plane keeps its taint, and AppArmor confines a container only on the node that loaded the profile.
 
-The Cilium tasks need a cluster whose network plugin is Cilium, which only `cks-lima` has, so on Proxmox they stop with a message and every other task still works.
+The Cilium tasks need a cluster whose network plugin is Cilium. On Proxmox that is a third small VM, `practice-cilium`, with 3 GB and 2 cores, which a later version of `create-vms.sh` adds. Until then these tasks stop with a message on Proxmox, and every other task still works.

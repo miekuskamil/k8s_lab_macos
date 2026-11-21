@@ -67,7 +67,7 @@ Every part of the course runs in Docker, so the same four containers appear on e
 |---|---|
 | Memory | 16 GB in the Mac, with 8 GiB or more given to OrbStack, plus 3 GiB for the Lima VM in module 4.7 |
 | CPU | 4 cores |
-| Disk | 40 GB free |
+| Disk | 50 GB free |
 | Software | OrbStack and git, plus Lima (`brew install lima`) for module 4.7 and Ollama for track 5 |
 
 ![On Linux: Docker Engine runs the same four containers](docs/diagrams/chapters/topology-linux.svg)
@@ -76,17 +76,19 @@ Every part of the course runs in Docker, so the same four containers appear on e
 |---|---|
 | Memory | 12 GB or more |
 | CPU | 4 cores |
-| Disk | 40 GB free |
+| Disk | 50 GB free |
 | Software | Ubuntu 24.04 with Docker Engine, Compose, Buildx and git, as [Linux](#linux) shows |
 
-![On Proxmox: the VM pe-lab runs Docker with the same four containers, the toolbox reaches the VMs cks-cp and cks-w1 over SSH for module 4.7, and your laptop's browser reaches the UIs over ssh -L](docs/diagrams/chapters/topology-proxmox.svg)
+![On Proxmox: the VM pe-lab runs Docker with the same four containers, the toolbox reaches three small VMs for module 4.7 over SSH, cks-cp, cks-w1 and the Cilium VM, and your laptop's browser reaches the UIs over ssh -L](docs/diagrams/chapters/topology-proxmox.svg)
 
-| On Proxmox | pe-lab, the lab host | cks-cp and cks-w1, module 4.7 only |
-|---|---|---|
-| Memory | 8 GB minimum, 12 to 16 GB comfortable | 3 GB and 2.5 GB |
-| CPU | 4 cores | 2 cores each |
-| Disk | 80 GB | 30 GB each |
-| Software | Ubuntu 24.04 with Docker and git, from `install-lab.sh` | Ubuntu 24.04, reached over SSH from the toolbox |
+| On Proxmox | pe-lab, the lab host | cks-cp and cks-w1, module 4.7 | practice-cilium, the Cilium tasks of 4.7 |
+|---|---|---|---|
+| Memory | 8 GB minimum, 12 to 16 GB comfortable | 3 GB and 2.5 GB | 3 GB |
+| CPU | 4 cores | 2 cores each | 2 cores |
+| Disk | 80 GB | 30 GB each | 30 GB |
+| Software | Ubuntu 24.04 with Docker and git, from `install-lab.sh` | Ubuntu 24.04, reached over SSH from the toolbox | Ubuntu 24.04 with kubeadm and Cilium, the Proxmox counterpart of the Mac's Lima VM |
+
+`create-vms.sh` builds `pe-lab`, `cks-cp` and `cks-w1` today. The Cilium VM comes with a later version of the script, and until then the four Cilium tasks of module 4.7 stop with a message on Proxmox while every other task works.
 
 ## Logins and addresses
 
@@ -299,7 +301,7 @@ The lab is portable: everything it needs runs in Docker, so the same commands wo
 |---|---|
 | macOS with OrbStack | The main platform. Every module and check ran here. |
 | Linux with Docker Engine | Tested on Ubuntu 24.04 with Docker Engine. |
-| Proxmox | The lab and the practice cluster on one Ubuntu VM, plus two VMs for the kernel tasks. |
+| Proxmox | The lab and the practice cluster on one Ubuntu VM, plus three small VMs for the kernel tasks. |
 | Windows with WSL2 | Untested. |
 
 ### macOS with OrbStack
@@ -360,7 +362,7 @@ Ollama now answers every machine on your network, so block port 11434 with a fir
 
 ### Proxmox
 
-On Proxmox the whole course runs on the host's own VMs, driven from one of them, as the [topology](#topologies) shows. One Docker VM is the intended layout: `pe-lab` is the lab host, it runs the lab and the kind practice cluster exactly as a Linux machine does, and you work in a shell on it. Two more VMs, `cks-cp` and `cks-w1`, form a second practice cluster with kernels of their own, for the AppArmor and kernel module tasks of module 4.7, and `pe-lab` drives them over SSH.
+On Proxmox the whole course runs on the host's own VMs, driven from one of them, as the [topology](#topologies) shows. One Docker VM is the intended layout: `pe-lab` is the lab host, it runs the lab and the kind practice cluster exactly as a Linux machine does, and you work in a shell on it. Three small VMs serve only module 4.7, and `pe-lab` drives them over SSH: `cks-cp` and `cks-w1` form a second practice cluster with kernels of their own for the AppArmor and kernel module tasks, and the Cilium VM `practice-cilium` takes the Cilium tasks once a later version of `create-vms.sh` builds it.
 
 | VMID | Name | Address | CPU | Memory | Disk |
 |---|---|---|---|---|---|
