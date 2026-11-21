@@ -1,0 +1,26 @@
+# A broken copy of module 0.3's project, for module 0.7. It starts, and it doesn't work.
+# Find each fault with the debugging ladder before you read the module's answers.
+name: course-broken
+
+services:
+  proxy:
+    image: nginx:1.28.0-alpine
+    ports:
+      - "8887:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: ../app
+      args:
+        VERSION: 3.0.0
+    image: course/hits:3.0.0
+    environment:
+      REDIS_ADDR: redsi:6379
+
+  redis:
+    image: redis:8.2.2-alpine
+    command: ["redis-server", "--requirepass", "change-me"]

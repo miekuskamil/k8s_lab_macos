@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="960" viewBox="0 0 1600 960" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="960" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">The debugging ladder: <tspan fill="#7c3aed">cheap questions first</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Each command reads a different record. Go inside the container only at the last rung.</text>
+<rect x="40.0" y="150.0" width="1520.0" height="770.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="58.5" y="167.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="58.5,171.5 75.5,171.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Docker host</text>
+<text x="1542.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">on a Mac: OrbStack&#x27;s Linux VM</text>
+<rect x="80.0" y="210.0" width="340.0" height="670.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="107.0,225.0 115.5,229.5 115.5,239.0 107.0,243.5 98.5,239.0 98.5,229.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="98.5,229.5 107.0,234.0 115.5,229.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="107.0,234.0 107.0,243.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="126.0" y="240.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">toolbox</text>
+<rect x="110.0" y="270.0" width="280.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="250.0" y="307.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">docker ps -a</text>
+<text x="250.0" y="329.7" font-size="17.0" fill="#475569" text-anchor="middle">state, exit, health</text>
+<rect x="110.0" y="390.0" width="280.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="250.0" y="427.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">docker logs</text>
+<text x="250.0" y="449.7" font-size="17.0" fill="#475569" text-anchor="middle">stdout and stderr</text>
+<rect x="110.0" y="510.0" width="280.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="250.0" y="547.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">docker events</text>
+<text x="250.0" y="569.7" font-size="17.0" fill="#475569" text-anchor="middle">start, die, kill</text>
+<rect x="110.0" y="630.0" width="280.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="250.0" y="667.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">docker inspect</text>
+<text x="250.0" y="689.7" font-size="17.0" fill="#475569" text-anchor="middle">configuration</text>
+<rect x="110.0" y="750.0" width="280.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="250.0" y="787.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">exec or debug</text>
+<text x="250.0" y="809.7" font-size="17.0" fill="#475569" text-anchor="middle">inside the namespaces</text>
+<rect x="520.0" y="210.0" width="600.0" height="550.0" rx="16.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.6"/>
+<text x="538.0" y="240.0" font-size="18.0" fill="#5b21b6" font-weight="700" text-anchor="start">dockerd</text>
+<rect x="560.0" y="270.0" width="520.0" height="90.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="820.0" y="307.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">container state</text>
+<text x="820.0" y="329.7" font-size="17.0" fill="#475569" text-anchor="middle">status, exit code, health log</text>
+<rect x="560.0" y="390.0" width="520.0" height="90.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="820.0" y="427.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">log file</text>
+<text x="820.0" y="449.7" font-size="17.0" fill="#475569" text-anchor="middle">one per container</text>
+<rect x="560.0" y="510.0" width="520.0" height="90.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="820.0" y="547.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">event stream</text>
+<text x="820.0" y="569.7" font-size="17.0" fill="#475569" text-anchor="middle">last few minutes</text>
+<rect x="560.0" y="630.0" width="520.0" height="90.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="820.0" y="667.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">container config</text>
+<text x="820.0" y="689.7" font-size="17.0" fill="#475569" text-anchor="middle">command, env, mounts</text>
+<rect x="1180.0" y="210.0" width="340.0" height="670.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="1207.0,225.0 1215.5,229.5 1215.5,239.0 1207.0,243.5 1198.5,239.0 1198.5,229.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="1198.5,229.5 1207.0,234.0 1215.5,229.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1207.0,234.0 1207.0,243.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1226.0" y="240.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">course-hits</text>
+<rect x="1210.0" y="750.0" width="280.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1350.0" y="787.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">/hits</text>
+<text x="1350.0" y="809.7" font-size="17.0" fill="#475569" text-anchor="middle">PID 1, no shell</text>
+<polyline points="390.0,315.0 550.5,315.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="560.0,315.0 548.5,320.8 548.5,309.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="475.0" cy="315.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="475.0" cy="315.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="475.0" y="321.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<polyline points="390.0,435.0 550.5,435.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="560.0,435.0 548.5,440.8 548.5,429.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="475.0" cy="435.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="475.0" cy="435.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="475.0" y="441.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<polyline points="390.0,555.0 550.5,555.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="560.0,555.0 548.5,560.8 548.5,549.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="475.0" cy="555.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="475.0" cy="555.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="475.0" y="561.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<polyline points="390.0,675.0 550.5,675.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="560.0,675.0 548.5,680.8 548.5,669.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="475.0" cy="675.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="475.0" cy="675.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="475.0" y="681.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<polyline points="390.0,795.0 1200.5,795.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1210.0,795.0 1198.5,800.8 1198.5,789.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="800.0" cy="795.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="800.0" cy="795.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="800.0" y="801.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">5</text>
+<polyline points="1350.0,750.0 1350.0,435.0 1089.5,435.0" fill="none" stroke="#ea580c" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="1080.0,435.0 1091.5,429.2 1091.5,440.8" fill="#ea580c" stroke="#ea580c" stroke-width="1" stroke-linejoin="round"/>
+</svg>

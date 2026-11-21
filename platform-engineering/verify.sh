@@ -1677,6 +1677,54 @@ module_0_6() {
   expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
 }
 
+module_0_7() {
+  section "0.7: debugging containers"
+  docker_reset
+  local f="$DW/broken/compose.yaml" h
+  docker run -d --name course-crash alpine:3.22.2 sh -c 'echo "reading /etc/app.conf"; cat /etc/app.conf; echo "config missing, giving up" >&2; exit 3' >/dev/null
+  settle 2
+  expect "1. ps -a shows Exited (3)" "$(docker ps -a --filter name=course-crash --format '{{.Status}}')" '^Exited \(3\)'
+  expect "1. the log holds stdout and stderr" "$(docker logs course-crash 2>&1 | tr '\n' '|')" 'reading /etc/app\.conf\|.*giving up\|'
+  expect "1. it was the app's own exit, not an OOM kill" "$(docker inspect -f '{{.State.ExitCode}} {{.State.OOMKilled}}' course-crash)" '^3 false$'
+  docker run -d --name course-loop --restart on-failure:3 alpine:3.22.2 sh -c 'echo "attempt at $(date +%T)"; exit 1' >/dev/null
+  for _ in $(seq 1 20); do [[ "$(docker inspect -f '{{.State.Status}} {{.RestartCount}}' course-loop)" == "exited 3" ]] && break; settle 1; done
+  expect "2. on-failure:3 restarts three times, then stops" "$(docker inspect -f '{{.State.Status}} {{.RestartCount}}' course-loop)" '^exited 3$'
+  expect "2. the log keeps all four runs" "$(docker logs course-loop | grep -c attempt)" '^4$'
+  settle 3
+  expect "2. events count four starts and four deaths" "$(docker events --since "$(docker inspect -f '{{.Created}}' course-loop)" --until 0s --filter container=course-loop --format '{{.Action}}' | sort | uniq -c | awk '{print $2 "=" $1}' | tr '\n' ' ')" 'die=4 start=4'
+  docker build -q -t course/hits:1.0.0 "$DT/lab/app" >/dev/null 2>&1
+  docker run -d --name course-sick -e REDIS_ADDR=nowhere:6379 course/hits:1.0.0 >/dev/null
+  h=""; for _ in $(seq 1 40); do h="$(docker inspect -f '{{.State.Health.Status}}' course-sick)"; [[ "$h" == unhealthy ]] && break; settle 1; done
+  expect "3. the app runs but turns unhealthy" "$(docker inspect -f '{{.State.Status}}' course-sick) $h" '^running unhealthy$'
+  docker run -d --name course-hits -e PORT=8123 course/hits:1.0.0 >/dev/null
+  expect "4. exec fails: no shell" "$(docker exec course-hits sh -c 'echo hi' 2>&1)" 'executable file not found'
+  docker build -q -t course/nettools:1.0 "$DT/lab/nettools" >/dev/null 2>&1
+  settle 1
+  local dbg; dbg="$(docker run --rm --network container:course-hits --pid container:course-hits --cap-add SYS_PTRACE course/nettools:1.0 sh -c 'ps -o pid,user,args; ss -ltn; ls /proc/1/root/' 2>&1)"
+  expect "4. the debug container sees the app as PID 1, user 65532" "$(echo "$dbg" | awk '$1==1 {print $2, $3}')" '^65532 /hits$'
+  expect "4. it sees the listening port 8123" "$(echo "$dbg" | grep -c ':8123 ')" '^1$'
+  expect "4. it reads the app's files through /proc/1/root" "$(echo "$dbg" | grep -cx 'hits')" '^1$'
+  expect "4. without SYS_PTRACE, /proc/1/root is closed" "$(docker run --rm --pid container:course-hits course/nettools:1.0 ls /proc/1/root/ 2>&1)" 'Permission denied'
+  mkdir -p "$DW" && cp -R "$DT/lab/app" "$DT/lab/broken" "$DW/"
+  docker compose -f "$f" up -d --build >/dev/null 2>&1
+  h=""; for _ in $(seq 1 40); do h="$(docker inspect -f '{{.State.Health.Status}}' course-broken-api-1 2>/dev/null)"; [[ "$h" == unhealthy ]] && break; settle 1; done
+  expect "5. the broken project's api turns unhealthy" "$h" '^unhealthy$'
+  expect "5. the proxy answers 502" "$(curl -s -m 5 -o /dev/null -w '%{http_code}' "http://$PUB:8887/")" '^502$'
+  expect "5. its log names upstream port 8080" "$(docker compose -f "$f" logs proxy 2>&1 | grep -c 'upstream: "http://[0-9.]*:8080/"')" '^[1-9]'
+  sed -i.bak 's/api:8080/api:8000/' "$DW/broken/nginx.conf"
+  docker compose -f "$f" restart proxy >/dev/null 2>&1; settle 3
+  expect "5. fault 2: the api cannot resolve redsi" "$(curl -s -m 5 -w ' %{http_code}' "http://$PUB:8887/" | tr -d '\n')" 'lookup redsi .* 503$'
+  sed -i.bak 's/redsi:6379/redis:6379/' "$f"
+  docker compose -f "$f" up -d api >/dev/null 2>&1; settle 3
+  expect "5. fault 3: Redis wants a password" "$(curl -s -m 5 -w ' %{http_code}' "http://$PUB:8887/" | tr -d '\n')" 'NOAUTH.* 503$'
+  sed -i.bak 's/    command: \["redis-server", "--requirepass", "change-me"\]//' "$f"
+  docker compose -f "$f" up -d redis >/dev/null 2>&1; settle 3
+  expect "5. with three fixes, the project answers" "$(dcurl -w ' %{http_code}' "http://$PUB:8887/" | tr -d '\n')" 'visit 1, version 3\.0\.0 200$'
+  docker compose -f "$f" down >/dev/null 2>&1
+  docker_reset
+  expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
+}
+
 # Module 2.9 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 2.9
 module_2_9() {
   section "2.9: k3s certificates, backups and upgrades (the upgrade is one-way)"
