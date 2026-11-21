@@ -132,7 +132,7 @@ http_request_duration_seconds_count{method="GET",path="status",status="500"} 3
 
 ### 2. Read the counter in Prometheus
 
-The PodMonitor takes up to a minute to reach Prometheus. Then open Prometheus (http://localhost:9090) and run:
+A new PodMonitor reaches Prometheus through a Secret, which takes up to four minutes, so give it time. Then open Prometheus (http://localhost:9090) and run:
 
 ```text
 http_request_duration_seconds_count{namespace="course-metrics"}

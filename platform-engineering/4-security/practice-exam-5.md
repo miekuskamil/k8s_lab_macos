@@ -35,8 +35,10 @@ Practice exam 4 checks that you know each topic, while this one checks that you 
 
    In the final test run, the practice cluster reset took 71 seconds, the Lima reset 2 minutes 5 seconds, and the setup 2 minutes 22 seconds. The setup breaks the API server in its last step, so it doesn't wait for any pods to start.
 
+   On [Proxmox](../practice-cluster.md#the-practice-cluster-on-proxmox-vms), run the same steps in `./lab.sh shell` on `pe-lab`, with `./lab.sh practice cilium reset` in place of the Lima reset. The setup then needs `cks-cp`, `cks-w1` and the Cilium VM `practice-cilium` running together with `pe-lab`, about 17 GB of memory, and task 3 runs on `practice-cilium`.
+
 2. The clock starts when `setup.sh` ends, because it writes the start time, and `score.sh` prints the minutes since then and says when you went over 120.
-3. Work only on the nodes, through `./lab.sh practice shell`, `./lab.sh practice shell worker` and `./platform-engineering/practice/cluster/lima.sh shell`, and use only the documentation the exam allows.
+3. Work only on the nodes, through `./lab.sh practice shell`, `./lab.sh practice shell worker` and `./platform-engineering/practice/cluster/lima.sh shell`, or `./lab.sh practice cilium shell` on Proxmox, and use only the documentation the exam allows.
 4. Don't open the solutions while the clock runs, because the score only means something when you worked without them.
 5. Score from your Mac with `./lab.sh exam score 5`, or score single tasks with `./lab.sh exam score 5 3 9`.
 

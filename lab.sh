@@ -47,6 +47,8 @@ The practice cluster for tracks 1 and 4 (two kubeadm nodes in Docker, built with
   practice reset           build it again from scratch, to start a module clean
   practice down            delete it (asks first, --yes skips)
   practice shell [node]    open a root shell on the control plane, or on "worker"
+  practice cilium up|reset|down|shell   with PRACTICE_PLATFORM=vms, the one-node Cilium
+                           cluster on its own VM, for the Cilium tasks of module 4.7
   task setup|check|solve|list ID     the timed tasks, for example: ./lab.sh task setup 4.1.3
   exam setup|score|solve N [task]    the six practice exams, for example: ./lab.sh exam setup 4
 
@@ -72,7 +74,7 @@ PASS_ENV=(CLUSTER_NAME KUBE_CONTEXT BASE_URL SKIP_IMAGE_BUILD ISTIO_VERSION ISTI
   PRACTICE_NODE_IMAGE K8S_VERSION TERM
   # The practice cluster on your own VMs (PRACTICE_PLATFORM=vms), and the older CKS_* names.
   PRACTICE_CP PRACTICE_W1 PRACTICE_CP_HOST PRACTICE_W1_HOST PRACTICE_SSH_USER PRACTICE_SSH_KEY
-  PRACTICE_SSH_OPTS CKS_PLATFORM CKS_CP_HOST CKS_W1_HOST CKS_SSH_USER CKS_SSH_KEY CKS_SSH_OPTS)
+  PRACTICE_SSH_OPTS PRACTICE_CILIUM_HOST PRACTICE_CILIUM CKS_PLATFORM CKS_CP_HOST CKS_W1_HOST CKS_SSH_USER CKS_SSH_KEY CKS_SSH_OPTS)
 
 in_toolbox() { [[ "${LAB_TOOLBOX:-}" == 1 ]]; }
 
@@ -197,7 +199,7 @@ status() {
   echo "${pods:-none}"
 }
 
-# ./lab.sh practice up|reset|down|shell [node]
+# ./lab.sh practice up|reset|down|shell [node], and practice cilium up|reset|down|shell
 practice() {
   local cluster="$ROOT/platform-engineering/practice/cluster" sub="${1:-}"
   [[ $# -gt 0 ]] && shift
@@ -205,6 +207,7 @@ practice() {
     up)    exec "$cluster/create.sh" "$@" ;;
     reset) exec "$cluster/reset.sh" "$@" ;;
     down)  exec "$cluster/destroy.sh" "$@" ;;
+    cilium) exec "$cluster/cilium-vm.sh" "$@" ;;
     shell)
       # shellcheck source=/dev/null
       . "$cluster/platform.sh"
@@ -220,7 +223,7 @@ practice() {
         vms) local h="$PRACTICE_CP_HOST"; [[ "$node" == "$W1" ]] && h="$PRACTICE_W1_HOST"
              exec ssh -t -i "$PRACTICE_SSH_KEY" $PRACTICE_SSH_OPTS "$PRACTICE_SSH_USER@$h" sudo -i ;;
       esac ;;
-    *) echo "Usage: ./lab.sh practice up|reset|down|shell [worker]" >&2; exit 1 ;;
+    *) echo "Usage: ./lab.sh practice up|reset|down|shell [worker], or ./lab.sh practice cilium up|reset|down|shell" >&2; exit 1 ;;
   esac
 }
 

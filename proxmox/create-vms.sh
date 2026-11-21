@@ -2,7 +2,7 @@
 # Creates the lab's Ubuntu 24.04 VMs on a Proxmox VE host. Run it as root in the
 # Proxmox shell (Datacenter > node > Shell, or ssh root@<proxmox>):
 #
-#   ./create-vms.sh cks              the CKS practice cluster: cks-cp and cks-w1
+#   ./create-vms.sh cks              the practice VMs: cks-cp, cks-w1 and the Cilium VM practice-cilium
 #   ./create-vms.sh course           the Platform Engineering lab VM: pe-lab
 #   ./create-vms.sh all              both sets
 #   ./create-vms.sh list             what this script manages, and its state
@@ -34,6 +34,7 @@ IMAGE="$IMAGE_STORAGE_DIR/noble-server-cloudimg-amd64.qcow2"
 VMS="
 cks    221 cks-cp 221 2 3072  30G
 cks    222 cks-w1 222 2 2560  30G
+cks    223 practice-cilium 223 2 3072  30G
 course 231 pe-lab 231 4 8192  80G
 "
 
@@ -89,12 +90,12 @@ create() {
 }
 
 list() {
-  printf '%-6s %-5s %-8s %-16s %s\n' SET VMID NAME ADDRESS STATE
+  printf '%-6s %-5s %-16s %-16s %s\n' SET VMID NAME ADDRESS STATE
   rows all | while read -r set id name octet _; do
     state="$(qm status "$id" 2>/dev/null | awk '{print $2}')"
     have="$(vm_name "$id")"
     [ -n "$have" ] && [ "$have" != "$name" ] && state="VMID used by $have"
-    printf '%-6s %-5s %-8s %-16s %s\n' "$set" "$id" "$name" "$NET_PREFIX.$octet" "${state:-absent}"
+    printf '%-6s %-5s %-16s %-16s %s\n' "$set" "$id" "$name" "$NET_PREFIX.$octet" "${state:-absent}"
   done
 }
 

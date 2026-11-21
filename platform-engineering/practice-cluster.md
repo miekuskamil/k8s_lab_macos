@@ -98,21 +98,22 @@ In the earlier test runs, `create.sh` took 3 minutes 45 seconds from nothing and
 
 ## The practice cluster on Proxmox VMs
 
-On a Proxmox host, the course runs as a set of its own: the toolbox VM `pe-lab` runs the lab and the kind practice cluster, as the [guide](../README.md#proxmox) shows, and two more VMs, `cks-cp` and `cks-w1`, form a second practice cluster with kernels of their own. The scripts on `pe-lab` send every node command to those VMs through `ssh` and `sudo`, so the tasks, the checks and the practice exams stay the same. The kernel of `cks-w1` has AppArmor and loads modules, so the AppArmor and kernel module tasks of module 4.7 run there.
+On a Proxmox host, the course runs as a set of its own: the toolbox VM `pe-lab` runs the lab and the kind practice cluster, as the [guide](../README.md#proxmox) shows, two more VMs, `cks-cp` and `cks-w1`, form a second practice cluster with kernels of their own, and a third, `practice-cilium`, holds a one-node cluster with Cilium. The scripts on `pe-lab` send every node command to those VMs through `ssh` and `sudo`, so the tasks, the checks and the practice exams stay the same. The kernel of `cks-w1` has AppArmor and loads modules, so the AppArmor and kernel module tasks of module 4.7 run there, and the Cilium tasks run on `practice-cilium`, which plays the part of the Mac's Lima VM.
 
 ### What you need
 
-`proxmox/create-vms.sh cks` builds both VMs from the Ubuntu 24.04 cloud image: VM 221 `cks-cp` at 192.168.1.221 with 2 CPUs, 3 GB of memory and 30 GB of disk, and VM 222 `cks-w1` at 192.168.1.222 with 2 CPUs, 2.5 GB and 30 GB, each with the user `ubuntu` and your public key. Their network must stay clear of the pod network `10.244.0.0/16` and the service network `10.96.0.0/12`. The VMs need no particular hostname, because `create.sh` renames them to `cks-cp` and `cks-w1`, the node names that kubeadm and the tasks expect.
+`proxmox/create-vms.sh cks` builds three VMs from the Ubuntu 24.04 cloud image: VM 221 `cks-cp` at 192.168.1.221 with 2 CPUs, 3 GB of memory and 30 GB of disk, VM 222 `cks-w1` at 192.168.1.222 with 2 CPUs, 2.5 GB and 30 GB, and VM 223 `practice-cilium` at 192.168.1.223 with 2 CPUs, 3 GB and 30 GB, each with the user `ubuntu` and your public key. Their network must stay clear of the pod network `10.244.0.0/16` and the service network `10.96.0.0/12`. The VMs need no particular hostname, because `create.sh` renames them to `cks-cp` and `cks-w1`, the node names that kubeadm and the tasks expect, and `cilium-vm.sh` names the third one `practice-cilium`.
 
 ### Settings and commands
 
-Run these on `pe-lab`, inside `./lab.sh shell`. The toolbox reads the settings from `lab.env` and sees `~/.ssh` read-only, so put the private key for the two VMs at `~/.ssh/cks_proxmox` on `pe-lab`. Five variables tell the scripts where the VMs are, and all but the first have the defaults shown:
+Run these on `pe-lab`, inside `./lab.sh shell`. The toolbox reads the settings from `lab.env` and sees `~/.ssh` read-only, so put the private key for the VMs at `~/.ssh/cks_proxmox` on `pe-lab`. Six variables tell the scripts where the VMs are, and all but the first have the defaults shown:
 
 ```bash
 PRACTICE_PLATFORM=vms                  # without it, the scripts use kind on pe-lab
 PRACTICE_CP_HOST=192.168.1.221         # the address of cks-cp
 PRACTICE_W1_HOST=192.168.1.222         # the address of cks-w1
-PRACTICE_SSH_USER=ubuntu               # the login user on both VMs
+PRACTICE_CILIUM_HOST=192.168.1.223     # the address of practice-cilium
+PRACTICE_SSH_USER=ubuntu               # the login user on every VM
 PRACTICE_SSH_KEY=~/.ssh/cks_proxmox    # the private key for that user
 ```
 
@@ -123,26 +124,35 @@ PRACTICE_SSH_KEY=~/.ssh/cks_proxmox    # the private key for that user
 ./lab.sh practice down --yes     # wipes the cluster with kubeadm reset and keeps both VMs
 ```
 
-`down` never deletes a VM here, because the VMs belong to your hypervisor: it runs `kubeadm reset` and undoes the task changes. A sixth variable, `PRACTICE_SSH_OPTS`, passes extra options to `ssh`, such as a separate known hosts file. Remove `PRACTICE_PLATFORM=vms` from `lab.env` to go back to the kind cluster on `pe-lab`.
+The Cilium VM has commands of its own, because it holds a separate cluster that only the Cilium tasks use. `cilium-vm.sh` runs the same steps as the Mac's `lima.sh` over SSH: the same `node-prep.sh`, then `kubeadm init` for one node and Cilium 1.20.4 with its command line tool.
+
+```bash
+./lab.sh practice cilium up      # builds the one-node Cilium cluster on practice-cilium; safe to run again
+./lab.sh practice cilium shell   # ssh to practice-cilium and sudo -i
+./lab.sh practice cilium reset   # back to a fresh Cilium cluster
+./lab.sh practice cilium down --yes   # wipes that cluster and keeps the VM
+```
+
+`down` never deletes a VM here, because the VMs belong to your hypervisor: it runs `kubeadm reset` and undoes the task changes. A seventh variable, `PRACTICE_SSH_OPTS`, passes extra options to `ssh`, such as a separate known hosts file. Remove `PRACTICE_PLATFORM=vms` from `lab.env` to go back to the kind cluster on `pe-lab`.
 
 ### What the test run measured
 
-The test ran on a Proxmox host with an Intel i7-12700T and 15 GB of memory, so the nodes ran on amd64. On two new VMs, `create.sh` built the cluster in 3 minutes 26 seconds, after it had waited for cloud-init to finish the first-boot package upgrade, and `reset.sh` took between 2 minutes 35 seconds and 4 minutes 33 seconds. With the cluster idle, `cks-cp` used 1.0 GB of memory and `cks-w1` 0.6 GB. All 65 security tasks and the three security practice exams passed in this setup. If `apt` hangs on the VMs, change `http://` to `https://` in `/etc/apt/sources.list.d/ubuntu.sources`.
+The test ran on a Proxmox host with an Intel i7-12700T and 15 GB of memory, so the nodes ran on amd64. On two new VMs, `create.sh` built the cluster in 3 minutes 26 seconds, after it had waited for cloud-init to finish the first-boot package upgrade, and `reset.sh` took between 2 minutes 35 seconds and 4 minutes 33 seconds. With the cluster idle, `cks-cp` used 1.0 GB of memory and `cks-w1` 0.6 GB. All 65 security tasks and the three security practice exams passed in this setup. On a new `practice-cilium`, `./lab.sh practice cilium up` built the Cilium cluster in 81 seconds and `reset` took 3 minutes 27 seconds, and the four Cilium tasks and task 3 of exams 5 and 6 failed after setup and passed after the solution. If `apt` hangs on the VMs, change `http://` to `https://` in `/etc/apt/sources.list.d/ubuntu.sources`.
 
 ## Where each task runs
 
-The kernel tasks need a kernel of their own. On a Mac every task of module 4.7 runs on the Lima VM `cks-lima`, which the [guide](../README.md#the-vm-for-the-kernel-tasks) builds. On Proxmox, `cks-w1` takes the AppArmor and kernel module tasks:
+The kernel tasks need a kernel of their own. On a Mac every task of module 4.7 runs on the Lima VM `cks-lima`, which the [guide](../README.md#the-vm-for-the-kernel-tasks) builds. On Proxmox, `cks-w1` takes the AppArmor and kernel module tasks, and `practice-cilium` takes the Cilium tasks:
 
 | Task | On a Mac | On Proxmox |
 |---|---|---|
-| 4.7.1 to 4.7.3, Cilium policies | `cks-lima` | the Cilium VM `practice-cilium`, once `create-vms.sh` builds it |
+| 4.7.1 to 4.7.3, Cilium policies | `cks-lima` | `practice-cilium` |
 | 4.7.4, a kernel module | `cks-lima` | `cks-w1` |
-| 4.7.5, WireGuard with Cilium | `cks-lima` | the Cilium VM `practice-cilium`, once `create-vms.sh` builds it |
+| 4.7.5, WireGuard with Cilium | `cks-lima` | `practice-cilium` |
 | 4.7.6 and 4.7.7, AppArmor | `cks-lima` | `cks-w1` |
 | Practice exam 5 task 9, AppArmor | `cks-lima` | `cks-w1` |
 | Practice exam 6 task 10, a kernel module | `cks-lima` | `cks-w1` |
-| Practice exams 5 and 6, task 3, Cilium | `cks-lima` | the Cilium VM `practice-cilium`, once `create-vms.sh` builds it |
+| Practice exams 5 and 6, task 3, Cilium | `cks-lima` | `practice-cilium` |
 
 The task text says `cks-lima`, so on Proxmox read it as `cks-w1` for the AppArmor and kernel module tasks: load the profile or write the modprobe rule on `cks-w1`, and run `kubectl` on `cks-cp`. The pods land on `cks-w1` anyway, because the control plane keeps its taint, and AppArmor confines a container only on the node that loaded the profile.
 
-The Cilium tasks need a cluster whose network plugin is Cilium. On Proxmox that is a third small VM, `practice-cilium`, with 3 GB and 2 cores, which a later version of `create-vms.sh` adds. Until then these tasks stop with a message on Proxmox, and every other task still works.
+The Cilium tasks need a cluster whose network plugin is Cilium, while the practice cluster runs Calico. On Proxmox that cluster lives on the third small VM, `practice-cilium`, so read `cks-lima` in those tasks as `practice-cilium`, and open its shell with `./lab.sh practice cilium shell`. Run `./lab.sh practice cilium up` once before the first Cilium task; until then, a Cilium task stops with a message that names this command. On a 16 GB host, `pe-lab` and all three small VMs do not fit at once, so stop `cks-cp` and `cks-w1` while `practice-cilium` runs, as the [guide](../README.md#proxmox) explains.
