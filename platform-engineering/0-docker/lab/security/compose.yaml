@@ -1,0 +1,23 @@
+# Two ways to hand a password to a container (module 0.6). Both services print what they see.
+name: course-secrets
+
+services:
+  # The password as an environment variable: visible in docker inspect, in the process
+  # environment and in every child process.
+  env-way:
+    image: alpine:3.22.2
+    environment:
+      DB_PASSWORD: s3cret-from-env
+    command: ["sleep", "3600"]
+
+  # The password as a Compose secret: a read-only file under /run/secrets, nothing in the
+  # container's configuration.
+  secret-way:
+    image: alpine:3.22.2
+    secrets:
+      - db_password
+    command: ["sleep", "3600"]
+
+secrets:
+  db_password:
+    file: ./db_password.txt

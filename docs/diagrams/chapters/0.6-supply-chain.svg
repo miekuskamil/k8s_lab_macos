@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="820" viewBox="0 0 1600 820" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="820" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Scan, sign, <tspan fill="#7c3aed">verify before running</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">The scanner reads what is inside; the signature proves who built these exact bytes.</text>
+<rect x="40.0" y="150.0" width="1520.0" height="640.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="58.5" y="167.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="58.5,171.5 75.5,171.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">toolbox and Docker host</text>
+<rect x="80.0" y="260.0" width="280.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="220.0" y="297.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">image hits:1.0.1</text>
+<text x="220.0" y="318.3" font-size="17.0" fill="#475569" text-anchor="middle">digest sha256:34e2...</text>
+<rect x="460.0" y="230.0" width="300.0" height="150.0" rx="10.0" fill="#fdecf4" stroke="#db2777" stroke-width="1.8"/>
+<text x="610.0" y="297.8" font-size="20.0" fill="#0f172a" font-weight="700" text-anchor="middle">trivy</text>
+<text x="610.0" y="321.1" font-size="17.0" fill="#475569" text-anchor="middle">packages, Go libraries</text>
+<rect x="460.0" y="470.0" width="300.0" height="90.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="610.0" y="507.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">vulnerability DB</text>
+<text x="610.0" y="528.3" font-size="17.0" fill="#475569" text-anchor="middle">about 1.7 GB</text>
+<rect x="860.0" y="260.0" width="300.0" height="90.0" rx="10.0" fill="#fdeeee" stroke="#dc2626" stroke-width="1.8"/>
+<text x="1010.0" y="297.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">report</text>
+<text x="1010.0" y="319.7" font-size="17.0" fill="#475569" text-anchor="middle">severity per CVE</text>
+<rect x="80.0" y="640.0" width="280.0" height="90.0" rx="10.0" fill="#fdecf4" stroke="#db2777" stroke-width="1.8"/>
+<text x="220.0" y="677.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">cosign.key</text>
+<text x="220.0" y="699.7" font-size="17.0" fill="#475569" text-anchor="middle">private key</text>
+<rect x="860.0" y="430.0" width="640.0" height="320.0" rx="16.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.6"/>
+<text x="878.0" y="460.0" font-size="18.0" fill="#9a3412" font-weight="700" text-anchor="start">registry localhost:5555</text>
+<rect x="900.0" y="490.0" width="260.0" height="80.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="1030.0" y="522.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">image manifest</text>
+<text x="1030.0" y="543.3" font-size="17.0" fill="#475569" text-anchor="middle">by digest</text>
+<rect x="1200.0" y="490.0" width="260.0" height="80.0" rx="10.0" fill="#fdecf4" stroke="#db2777" stroke-width="1.8"/>
+<text x="1330.0" y="522.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">signature</text>
+<text x="1330.0" y="543.3" font-size="17.0" fill="#475569" text-anchor="middle">attached to digest</text>
+<rect x="1200.0" y="620.0" width="260.0" height="80.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="1330.0" y="652.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">cosign verify</text>
+<text x="1330.0" y="673.3" font-size="17.0" fill="#475569" text-anchor="middle">with cosign.pub</text>
+<polyline points="360.0,305.0 450.5,305.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="460.0,305.0 448.5,310.8 448.5,299.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="410.0" cy="305.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="410.0" cy="305.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="410.0" y="311.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<polyline points="610.0,470.0 610.0,389.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="610.0,380.0 615.8,391.5 604.2,391.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="760.0,305.0 850.5,305.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="860.0,305.0 848.5,310.8 848.5,299.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="810.0" cy="305.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="810.0" cy="305.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="810.0" y="311.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<polyline points="360.0,685.0 1030.0,685.0 1030.0,579.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1030.0,570.0 1035.8,581.5 1024.2,581.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="600.0" cy="685.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="600.0" cy="685.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="600.0" y="691.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<polyline points="1160.0,530.0 1190.5,530.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1200.0,530.0 1188.5,535.8 1188.5,524.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="1330.0,570.0 1330.0,610.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1330.0,620.0 1324.2,608.5 1335.8,608.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1330.0" cy="595.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1330.0" cy="595.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1330.0" y="601.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+</svg>

@@ -1,5 +1,7 @@
 # Two stages: the first compiles, the second holds only the program.
-FROM golang:1.25.3-alpine3.22 AS build
+# GO_IMAGE picks the Go toolchain; module 0.6 builds with a newer one.
+ARG GO_IMAGE=golang:1.25.3-alpine3.22
+FROM ${GO_IMAGE} AS build
 WORKDIR /src
 # The module file first, so a change to the code reuses this layer.
 COPY go.mod ./

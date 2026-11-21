@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="1000" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">The checks between <tspan fill="#7c3aed">a container and the kernel</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Each layer stops a different attack. --cap-drop ALL makes chown fail at the capability check.</text>
+<rect x="40.0" y="150.0" width="1520.0" height="810.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="58.5" y="167.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="58.5,171.5 75.5,171.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Docker host</text>
+<text x="1542.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">on a Mac: OrbStack&#x27;s Linux VM</text>
+<rect x="80.0" y="210.0" width="560.0" height="180.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="107.0,225.0 115.5,229.5 115.5,239.0 107.0,243.5 98.5,239.0 98.5,229.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="98.5,229.5 107.0,234.0 115.5,229.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="107.0,234.0 107.0,243.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="126.0" y="240.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">container</text>
+<rect x="120.0" y="260.0" width="480.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="360.0" y="297.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">app as root</text>
+<text x="360.0" y="319.7" font-size="17.0" fill="#475569" text-anchor="middle">chown nobody /tmp</text>
+<rect x="700.0" y="210.0" width="820.0" height="710.0" rx="16.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.6"/>
+<text x="718.0" y="240.0" font-size="18.0" fill="#047857" font-weight="700" text-anchor="start">kernel</text>
+<rect x="740.0" y="270.0" width="740.0" height="80.0" rx="10.0" fill="#fdeeee" stroke="#dc2626" stroke-width="1.8"/>
+<text x="1110.0" y="302.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">seccomp filter</text>
+<text x="1110.0" y="324.7" font-size="17.0" fill="#475569" text-anchor="middle">default profile allows chown</text>
+<rect x="740.0" y="390.0" width="740.0" height="80.0" rx="10.0" fill="#fdeeee" stroke="#dc2626" stroke-width="1.8"/>
+<text x="1110.0" y="422.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">capabilities</text>
+<text x="1110.0" y="444.7" font-size="17.0" fill="#475569" text-anchor="middle">CAP_CHOWN missing</text>
+<rect x="740.0" y="510.0" width="740.0" height="80.0" rx="10.0" fill="#fdeeee" stroke="#dc2626" stroke-width="1.8"/>
+<text x="1110.0" y="542.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">AppArmor or SELinux</text>
+<text x="1110.0" y="564.7" font-size="17.0" fill="#475569" text-anchor="middle">Linux hosts only</text>
+<rect x="740.0" y="630.0" width="740.0" height="80.0" rx="10.0" fill="#fdeeee" stroke="#dc2626" stroke-width="1.8"/>
+<text x="1110.0" y="662.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">no-new-privileges</text>
+<text x="1110.0" y="684.7" font-size="17.0" fill="#475569" text-anchor="middle">setuid bits ignored</text>
+<rect x="740.0" y="750.0" width="740.0" height="80.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="1110.0" y="782.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">cgroup limits</text>
+<text x="1110.0" y="804.7" font-size="17.0" fill="#475569" text-anchor="middle">memory, CPU, processes</text>
+<rect x="120.0" y="510.0" width="480.0" height="80.0" rx="10.0" fill="#fdeeee" stroke="#dc2626" stroke-width="1.8"/>
+<text x="360.0" y="553.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">Operation not permitted</text>
+<polyline points="600.0,305.0 670.0,305.0 670.0,310.0 730.5,310.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="740.0,310.0 728.5,315.8 728.5,304.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="670.0" cy="307.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="670.0" cy="307.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="670.0" y="313.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<polyline points="1110.0,350.0 1110.0,380.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1110.0,390.0 1104.2,378.5 1115.8,378.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1110.0" cy="370.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1110.0" cy="370.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1110.0" y="376.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<polyline points="740.0,430.0 360.0,430.0 360.0,500.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="360.0,510.0 354.2,498.5 365.8,498.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="550.0" cy="430.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="550.0" cy="430.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="550.0" y="436.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<ellipse cx="1440.0" cy="430.0" rx="14.0" ry="14.0" fill="#dc2626" stroke="none"/>
+<polyline points="1435.0,425.0 1445.0,435.0" fill="none" stroke="#ffffff" stroke-width="2.60" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1445.0,425.0 1435.0,435.0" fill="none" stroke="#ffffff" stroke-width="2.60" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1110.0,470.0 1110.0,500.5" fill="none" stroke="#94a3b8" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="1110.0,510.0 1104.2,498.5 1115.8,498.5" fill="#94a3b8" stroke="#94a3b8" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="1110.0,590.0 1110.0,620.5" fill="none" stroke="#94a3b8" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="1110.0,630.0 1104.2,618.5 1115.8,618.5" fill="#94a3b8" stroke="#94a3b8" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="1110.0,710.0 1110.0,740.5" fill="none" stroke="#94a3b8" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="1110.0,750.0 1104.2,738.5 1115.8,738.5" fill="#94a3b8" stroke="#94a3b8" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="720.0" cy="790.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="720.0" cy="790.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="720.0" y="796.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+</svg>
