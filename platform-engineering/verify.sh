@@ -1725,6 +1725,63 @@ module_0_7() {
   expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
 }
 
+module_0_8() {
+  section "0.8: capstone"
+  docker_reset
+  local C="$DW/capstone" c u out
+  cc() { docker compose -f "$C/compose.yaml" "$@"; }
+  mkdir -p "$DW" && cp -R "$DT/lab/capstone" "$C"
+  docker build -q --build-arg VERSION=2.0.0 --build-arg GO_IMAGE=golang:1.27.3-alpine3.24 -t localhost:5555/hits:2.0.0 "$DT/lab/app" >/dev/null 2>&1
+  docker build -q -t localhost:5555/proxy:1.0.0 "$C/proxy" >/dev/null 2>&1
+  if command -v trivy >/dev/null 2>&1; then
+    trivy image --quiet --scanners vuln --severity CRITICAL --exit-code 1 nginxinc/nginx-unprivileged:1.31.7-alpine3.24 >/dev/null 2>&1
+    expect "1. the base proxy image fails the CRITICAL gate" "$?" '^1$'
+    for i in localhost:5555/hits:2.0.0 localhost:5555/proxy:1.0.0 redis:8.10.2-alpine3.23; do
+      trivy image --quiet --scanners vuln --severity CRITICAL --exit-code 1 "$i" >/dev/null 2>&1
+      expect "1. $i passes the CRITICAL gate" "$?" '^0$'
+    done
+  else
+    fail "1. trivy is missing: run the Docker track checks in the toolbox" "no trivy"
+  fi
+  docker run -d --name course-registry --network k8s-lab-toolbox_default -p 127.0.0.1:5555:5000 registry:3.1.2 >/dev/null 2>&1 \
+    || docker run -d --name course-registry -p 127.0.0.1:5555:5000 registry:3.1.2 >/dev/null
+  for _ in $(seq 1 10); do docker push -q localhost:5555/hits:2.0.0 >/dev/null 2>&1 && break; settle 1; done
+  docker push -q localhost:5555/proxy:1.0.0 >/dev/null 2>&1
+  dg() { curl -s -I -H 'Accept: application/vnd.oci.image.index.v1+json' "http://localhost:5555/v2/$1/manifests/$2" | tr -d '\r' | awk '/Docker-Content-Digest/ {print $2}'; }
+  printf 'API_IMAGE=localhost:5555/hits@%s\nPROXY_IMAGE=localhost:5555/proxy@%s\n' "$(dg hits 2.0.0)" "$(dg proxy 1.0.0)" > "$C/.env"
+  expect "2. .env pins both images by digest" "$(grep -c '@sha256:[0-9a-f]\{64\}$' "$C/.env")" '^2$'
+  if command -v cosign >/dev/null 2>&1 && [[ "${LAB_TOOLBOX:-}" == 1 ]]; then
+    COSIGN_PASSWORD= cosign generate-key-pair --output-key-prefix "$C/cosign" >/dev/null 2>&1
+    for i in $(cut -d= -f2 "$C/.env"); do COSIGN_PASSWORD= cosign sign --yes --key "$C/cosign.key" --use-signing-config=false --tlog-upload=false "$i" >/dev/null 2>&1; done
+    out=0; for i in $(cut -d= -f2 "$C/.env"); do cosign verify --key "$C/cosign.pub" --insecure-ignore-tlog "$i" >/dev/null 2>&1 && out=$((out + 1)); done
+    expect "3. both pinned images verify" "$out" '^2$'
+  else
+    fail "3. cosign and the registry forward need the toolbox" "not in the toolbox"
+  fi
+  cc up -d --wait >/dev/null 2>&1
+  expect "3. all three services report healthy" "$(cc ps --format '{{.Service}} {{.Health}}' | sort | tr '\n' ' ')" '^api healthy proxy healthy redis healthy $'
+  expect "3. the proxy serves the app with a shared counter" "$(dcurl "http://$PUB:8889/")" 'visit 1, version 2\.0\.0$'
+  for c in proxy api redis; do
+    u="$(docker inspect -f '{{.Config.User}}' course-capstone-$c-1)"
+    expect "4. $c: non-root, read-only, all caps dropped, no-new-privileges, limits" \
+      "$(docker inspect -f '{{.HostConfig.ReadonlyRootfs}} {{json .HostConfig.CapDrop}} {{json .HostConfig.SecurityOpt}} {{.HostConfig.Memory}} {{.HostConfig.PidsLimit}}' course-capstone-$c-1) user=${u%%:*}" \
+      '^true \["ALL"\] \["no-new-privileges:true"\] [1-9][0-9]* [1-9][0-9]* user=[1-9]'
+  done
+  expect "4. the proxy fails to write to its root filesystem" "$(cc exec -T proxy touch /etc/x 2>&1 </dev/null)" 'Read-only file system'
+  expect "5. back is an internal network" "$(docker network inspect course-capstone_back -f '{{.Internal}}')" '^true$'
+  expect "5. redis has no way out" "$(cc exec -T redis sh -c 'wget -q -T 3 -O /dev/null http://example.com 2>&1; echo "exit $?"' </dev/null)" 'exit 1'
+  expect "5. the proxy finds no name redis" "$(cc exec -T proxy sh -c 'getent hosts redis || echo none' </dev/null)" '^none$'
+  expect "5. only the proxy publishes a port" "$(cc ps --format '{{.Service}} {{.Ports}}' | grep -c -- '->')" '^1$'
+  cc kill api >/dev/null 2>&1; settle 2
+  expect "6. killed through Docker, the api stays down (unless-stopped)" "$(docker inspect -f '{{.State.Status}} {{.State.ExitCode}}' course-capstone-api-1)" '^exited 137$'
+  cc up -d --wait >/dev/null 2>&1
+  expect "6. after up, the counter continues from the volume" "$(dcurl "http://$PUB:8889/")" 'visit 2, version 2\.0\.0$'
+  cc down -v >/dev/null 2>&1
+  unset -f cc dg
+  docker_reset
+  expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
+}
+
 # Module 2.9 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 2.9
 module_2_9() {
   section "2.9: k3s certificates, backups and upgrades (the upgrade is one-way)"

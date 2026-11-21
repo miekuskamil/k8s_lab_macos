@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="640" viewBox="0 0 1600 640" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="640" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">From build to run: <tspan fill="#7c3aed">pin what you checked</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">The deploy names each image by the digest that passed the scan and carries a signature.</text>
+<rect x="40.0" y="150.0" width="1520.0" height="450.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="58.5" y="167.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="58.5,171.5 75.5,171.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">toolbox and Docker host</text>
+<rect x="80.0" y="250.0" width="230.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="195.0" y="287.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">docker build</text>
+<text x="195.0" y="308.3" font-size="17.0" fill="#475569" text-anchor="middle">api and proxy</text>
+<rect x="380.0" y="250.0" width="230.0" height="90.0" rx="10.0" fill="#fdecf4" stroke="#db2777" stroke-width="1.8"/>
+<text x="495.0" y="287.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">trivy gate</text>
+<text x="495.0" y="308.3" font-size="17.0" fill="#475569" text-anchor="middle">CRITICAL: exit 1</text>
+<rect x="680.0" y="250.0" width="230.0" height="90.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="795.0" y="287.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">push + sign</text>
+<text x="795.0" y="308.3" font-size="17.0" fill="#475569" text-anchor="middle">registry, cosign</text>
+<rect x="980.0" y="250.0" width="230.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1095.0" y="287.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">.env</text>
+<text x="1095.0" y="308.3" font-size="17.0" fill="#475569" text-anchor="middle">image@sha256:...</text>
+<rect x="1280.0" y="250.0" width="240.0" height="90.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="1400.0" y="287.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">verify</text>
+<text x="1400.0" y="308.3" font-size="17.0" fill="#475569" text-anchor="middle">cosign.pub</text>
+<rect x="1340.0" y="440.0" width="180.0" height="90.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="1430.0" y="477.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">compose up</text>
+<text x="1430.0" y="498.3" font-size="17.0" fill="#475569" text-anchor="middle">--wait</text>
+<rect x="1040.0" y="440.0" width="200.0" height="90.0" rx="10.0" fill="#fdeeee" stroke="#dc2626" stroke-width="1.8"/>
+<text x="1140.0" y="477.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">stop</text>
+<text x="1140.0" y="498.3" font-size="17.0" fill="#475569" text-anchor="middle">not signed</text>
+<polyline points="310.0,295.0 370.5,295.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="380.0,295.0 368.5,300.8 368.5,289.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="345.0" cy="295.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="345.0" cy="295.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="345.0" y="301.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<polyline points="610.0,295.0 670.5,295.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="680.0,295.0 668.5,300.8 668.5,289.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="645.0" cy="295.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="645.0" cy="295.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="645.0" y="301.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<polyline points="910.0,295.0 970.5,295.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="980.0,295.0 968.5,300.8 968.5,289.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="945.0" cy="295.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="945.0" cy="295.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="945.0" y="301.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<polyline points="1210.0,295.0 1270.5,295.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1280.0,295.0 1268.5,300.8 1268.5,289.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="1430.0,340.0 1430.0,430.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1430.0,440.0 1424.2,428.5 1435.8,428.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1430.0" cy="390.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1430.0" cy="390.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1430.0" y="396.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<polyline points="1304.0,340.0 1304.0,485.0 1249.5,485.0" fill="none" stroke="#dc2626" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="1240.0,485.0 1251.5,479.2 1251.5,490.8" fill="#dc2626" stroke="#dc2626" stroke-width="1" stroke-linejoin="round"/>
+</svg>
