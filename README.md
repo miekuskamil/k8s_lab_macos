@@ -72,7 +72,7 @@ Your machine needs Docker and git. On a Mac, Docker comes from [OrbStack](https:
    ./lab.sh test
    ```
 
-The clusters run as containers on your own Docker engine, not inside the toolbox, so they keep running after you leave the shell. Every `./lab.sh` command works the same inside and outside the toolbox. On a machine without kubectl, helm or k3d, a command run outside the toolbox goes through it by itself.
+The clusters run as containers on your own Docker engine, not inside the toolbox, so they keep running after you leave the shell. Every `./lab.sh` command works the same inside and outside the toolbox. On a machine without kubectl, helm or k3d, a command run outside the toolbox goes through it by itself. The exceptions are `./lab.sh task` and `./lab.sh exam`, which stay on your machine, because they reach the Lima VM of module 44 with `limactl` and only your machine has it. Run the tasks of module 44 and practice exams 5 and 6 in a terminal outside the toolbox for that reason.
 
 ## Logins and addresses
 

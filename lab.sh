@@ -55,7 +55,8 @@ The toolbox (toolbox/Dockerfile and compose.yaml):
   toolbox build            build the toolbox image again, after you changed toolbox/
   toolbox stop             stop and remove the toolbox container (your kubeconfig stays)
   Every command above works the same inside the toolbox. Run outside it, on a machine
-  without kubectl, helm or k3d, a command goes through the toolbox by itself.
+  without kubectl, helm or k3d, a command goes through the toolbox by itself, except task
+  and exam, which reach the nodes and the Lima VM from your machine with docker and limactl.
   LAB_USE_TOOLBOX=always or LAB_USE_TOOLBOX=never overrides that choice.
 
 README.md is the guide: logins, everyday commands, the course and troubleshooting.
@@ -231,6 +232,9 @@ with_ai_settings() {
 
 case "$command" in
   help|-h|--help|shell|toolbox|ollama) ;;
+  # The timed tasks and exams reach the nodes with docker exec, orb or ssh, and the Lima VM
+  # with limactl, which only the host has. So they run on the host, where bash 3.2 is enough.
+  task|exam) [[ "${LAB_USE_TOOLBOX:-auto}" == always ]] && want_toolbox && { toolbox_start; toolbox_exec "$ROOT/lab.sh" "$command" "$@"; exit $?; } ;;
   *)
     if want_toolbox; then
       toolbox_start
