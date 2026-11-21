@@ -1,4 +1,4 @@
-# How the timed tasks work
+# Timed tasks and exam preparation
 
 > New to a term here? The [glossary](glossary.md) explains every term in the course, with the security terms under [the practice cluster and the security modules](glossary.md#the-practice-cluster-and-the-security-modules) and the application terms under [applications on Kubernetes](glossary.md#applications-on-kubernetes).
 
@@ -17,7 +17,7 @@ Every task has a title, a time budget and a host, then a short brief in a quote 
 
 Read the brief, start a timer, and solve the task on the node the brief names. Open the solution only when the time runs out, and run the check either way. Every setup starts its namespace from scratch, so you repeat a task by running its setup again.
 
-The six timed practice exams work the same way with one script for a whole exam. Exams 1 to 3 cover the application modules and sit at the end of [level 1](1-foundations/README.md), and exams 4 to 6 cover the security modules and sit at the end of [level 3](3-advanced/README.md). Each gives you 2 hours for 16 or 17 tasks worth 100 points, and `score` prints the minutes since `setup` and flags a run over 120:
+The six timed practice exams work the same way with one script for a whole exam. Exams 1 to 3 cover the application modules and sit at the end of [level 1](../README.md#1-foundations), and exams 4 to 6 cover the security modules and sit at the end of [level 3](../README.md#3-advanced). Each gives you 2 hours for 16 or 17 tasks worth 100 points, and `score` prints the minutes since `setup` and flags a run over 120:
 
 ```bash
 ./platform-engineering/practice-exam.sh setup 4        # seeds every task of exam 4 and starts the clock
@@ -30,7 +30,7 @@ In the test run on the live clusters, every task's check failed after its setup 
 
 ## Where you type
 
-Every command except `task.sh`, `practice-exam.sh` and the `./lab.sh` commands runs on a node, in a root shell. `./lab.sh practice shell` opens that shell on the control plane, and `./lab.sh practice shell worker` opens it on the worker, already as root and with the `k` alias set. `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell on the Lima VM that [module 44](kernel-and-host/README.md) needs. On OrbStack machines or your own VMs the same command works too, because `./lab.sh` follows the platform setting that the [practice cluster page](practice-cluster.md#other-platforms-orbstack-machines-and-your-own-vms) describes.
+Every command except `task.sh`, `practice-exam.sh` and the `./lab.sh` commands runs on a node, in a root shell. `./lab.sh practice shell` opens that shell on the control plane, and `./lab.sh practice shell worker` opens it on the worker, already as root and with the `k` alias set. `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell on the Lima VM that [module 44](../README.md#the-vm-for-module-44) needs. On OrbStack machines or your own VMs the same command works too, because `./lab.sh` follows the platform setting that the [practice cluster page](practice-cluster.md#other-platforms-orbstack-machines-and-your-own-vms) describes.
 
 The tasks need no repo files on the nodes, because each setup writes what its task needs onto the node itself. The application tasks keep their files under `/opt/apps` on `practice-control-plane`, the way many teams keep a task's files under a folder like `/opt/course`.
 
@@ -53,6 +53,26 @@ The security modules 38 to 44 take about four weeks at an hour a day:
 3. Reset between modules with `./lab.sh practice reset`, and with `./platform-engineering/practice/cluster/lima.sh reset` after module 44's tasks, because some tasks change the API server, upgrade the cluster or load kernel profiles.
 4. Repeat the tasks you needed the solution for, a few days later, until each one fits its budget.
 5. Take practice exams 4, 5 and 6 in order, each on freshly reset clusters and with its 2-hour clock. Leave a few days between them, and aim for 80 points or more on exam 6 inside the time.
+
+## Which modules cover each exam domain
+
+These modules cover the curricula of the Certified Kubernetes Application Developer (CKAD) and the Certified Kubernetes Security Specialist (CKS) exams for Kubernetes v1.37, as read in November 2026. Both exams last 2 hours with 15 to 20 tasks on live clusters. The CKAD has no prerequisite and passes at 66%, and the CKS asks for a passed CKA first. The browser in both exams opens the Kubernetes docs, so practise finding an example on kubernetes.io quickly.
+
+| Exam domain (weight) | Modules |
+|---|---|
+| CKAD: Application design and build (20%) | 33 |
+| CKAD: Application deployment (20%) | 34 |
+| CKAD: Application observability and maintenance (15%) | 35 |
+| CKAD: Application environment, configuration and security (25%) | 36 |
+| CKAD: Services and networking (20%) | 37 |
+| CKAD: mock exams | practice exams 1 to 3 |
+| CKS: Cluster setup (15%) | 38, and 44 tasks 1 to 3 |
+| CKS: Cluster hardening (15%) | 39 |
+| CKS: System hardening (10%) | 40, and 44 task 4 |
+| CKS: Minimize microservice vulnerabilities (20%) | 41, and 44 task 5 |
+| CKS: Supply chain security (20%) | 42 |
+| CKS: Monitoring, logging and runtime security (20%) | 43, and 44 tasks 6 and 7 |
+| CKS: mock exams | practice exams 4 to 6 |
 
 ## Working fast at the terminal
 

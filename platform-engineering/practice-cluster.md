@@ -1,4 +1,4 @@
-# The practice cluster
+# The practice cluster in depth
 
 > New to a term here, like kubeadm, kind or static pod? The [glossary](glossary.md#the-practice-cluster-and-the-security-modules) explains every term the practice cluster and the security modules use.
 
@@ -11,7 +11,7 @@ Modules 33 to 43 and the six timed practice exams run on a second cluster, the p
 | A module is | 30 to 60 minutes that explain one idea in depth | course-style theory, concepts and diagrams, then timed tasks of 3 to 10 minutes each |
 | You finish when | you understand why the platform behaves as it does | you solve each task inside its time budget without opening the solution |
 
-The practice cluster comes from kubeadm, the official tool that turns plain Linux machines into a Kubernetes cluster. kubeadm runs the control plane as **static pods**, which are pods that the kubelet starts from YAML files in `/etc/kubernetes/manifests` with no API server involved. Many security tasks edit those files, while the k3s cluster of the lab keeps its control plane inside one binary, so those tasks have nothing to edit there. The [timed tasks page](timed-tasks.md) explains how a task works, and the [VM page](kernel-and-host/README.md) explains the third machine that the kernel tasks of module 44 need.
+The practice cluster comes from kubeadm, the official tool that turns plain Linux machines into a Kubernetes cluster. kubeadm runs the control plane as **static pods**, which are pods that the kubelet starts from YAML files in `/etc/kubernetes/manifests` with no API server involved. Many security tasks edit those files, while the k3s cluster of the lab keeps its control plane inside one binary, so those tasks have nothing to edit there. The [timed tasks page](timed-tasks.md) explains how a task works, and the [VM page](../README.md#the-vm-for-module-44) explains the third machine that the kernel tasks of module 44 need.
 
 ## Two nodes in Docker
 
@@ -48,12 +48,12 @@ kind writes the cluster's kubeconfig to `~/.kube/practice-kind.yaml` instead of 
 
 A kind node is a container, so both nodes share one Linux kernel with each other, with the k3d lab and with every other container on your Mac. Most security controls live above the kernel and work the same as on a server. Four consequences matter for the security modules:
 
-- The kernel has no AppArmor. The kubelet accepts AppArmor fields in a pod but refuses to start the pod: `Cannot enforce AppArmor: AppArmor is not enabled on the host`. So the AppArmor tasks run on the [Lima VM](kernel-and-host/README.md#the-lima-vm-on-a-mac), which has a kernel of its own.
+- The kernel has no AppArmor. The kubelet accepts AppArmor fields in a pod but refuses to start the pod: `Cannot enforce AppArmor: AppArmor is not enabled on the host`. So the AppArmor tasks run on the [Lima VM](../README.md#the-vm-for-module-44), which has a kernel of its own.
 - The kernel has no WireGuard module, so Calico and Cilium node-to-node encryption don't run here. Pod-to-pod encryption points to Istio, which the course already runs, or to the Lima VM.
 - Cilium would load its eBPF programs into the kernel that every container shares. The Cilium tasks run on the Lima VM for that reason, and the practice cluster keeps Calico.
 - Falco sees every system call on the shared kernel, including the ones from the k3d lab and other containers. Filter its output by `k8s.ns.name` or container name to see only your cluster.
 
-gVisor and Falco still run on the worker. gVisor brings its own user-space kernel inside the sandbox, and Falco's eBPF probe only watches system calls, so neither needs a kernel to itself, and both passed every task in the test run. The [kernel and host page](kernel-and-host/README.md) collects the tasks that do need one.
+gVisor and Falco still run on the worker. gVisor brings its own user-space kernel inside the sandbox, and Falco's eBPF probe only watches system calls, so neither needs a kernel to itself, and both passed every task in the test run. The [kernel and host page](../README.md#the-vm-for-module-44) collects the tasks that do need one.
 
 Two kubeadm settings in `platform-engineering/practice/cluster/kind/cluster.yaml` exist because of the shared kernel. kube-proxy doesn't set the kernel's connection tracking table size (`conntrack.maxPerCore: 0`), because a container may not change a value the whole kernel shares. And the kubelet tolerates swap (`failSwapOn: false`), because the Docker engine's VM may have swap that every container sees.
 
@@ -144,6 +144,22 @@ The test ran on a Proxmox host with an Intel i7-12700T and 15 GB of memory, so t
 
 All 65 security tasks and the three security practice exams passed in this setup. The node scripts pick the downloads for the VM's CPU, amd64 here and arm64 on a Mac. The first boot stalled, because the VMs reached Ubuntu's package mirrors over HTTPS only and plain HTTP downloads hung. If `apt` hangs on your VMs, change `http://` to `https://` in `/etc/apt/sources.list.d/ubuntu.sources`.
 
-### Where the kernel tasks run
+## Where each task runs
 
-A VM brings a kernel of its own, so on your own VMs the AppArmor and kernel module tasks of module 44 run on `cks-w1`, while the Cilium tasks still need the Lima VM. The [VM page](kernel-and-host/README.md#where-each-task-runs) lists each task and its host.
+A VM brings a kernel of its own. On a Mac every task of module 44 runs on the Lima VM `cks-lima`, which the [guide](../README.md#the-vm-for-module-44) builds. On your own VMs, the kernel of `cks-w1` has AppArmor and loads modules, so three tasks of module 44 and two practice exam tasks move there:
+
+| Task | On a Mac | On your own VMs |
+|---|---|---|
+| 44.1 to 44.3, Cilium policies | `cks-lima` | `cks-lima` |
+| 44.4, a kernel module | `cks-lima` | `cks-w1` |
+| 44.5, WireGuard with Cilium | `cks-lima` | `cks-lima` |
+| 44.6 and 44.7, AppArmor | `cks-lima` | `cks-w1` |
+| Practice exam 5 task 9, AppArmor | `cks-lima` | `cks-w1` |
+| Practice exam 6 task 10, a kernel module | `cks-lima` | `cks-w1` |
+| Practice exams 5 and 6, task 3, Cilium | `cks-lima` | `cks-lima` |
+
+The task text says `cks-lima`, so on your own VMs read it as `cks-w1` for the AppArmor and kernel module tasks: load the profile or write the modprobe rule on `cks-w1`, and run `kubectl` on `cks-cp`. The pods land on `cks-w1` anyway, because the control plane keeps its taint, and AppArmor confines a container only on the node that loaded the profile.
+
+The Cilium tasks stay on the Lima VM, because Cilium replaces the cluster's network plugin and so needs a cluster of its own. A third VM for it needs another 3 GB, which the test host lacked while `cks-cp` and `cks-w1` ran, so keep `cks-lima` on your Mac for those tasks. Without it, they stop with a message, and every other task still works.
+
+On Windows, two Ubuntu 24.04 VMs in Hyper-V or Multipass, set up like the Proxmox VMs and reached over SSH from a Linux shell, should work the same way. Nobody has tested that setup yet.

@@ -4,7 +4,7 @@
 
 **Before this module:** modules 1 to 7: the incidents mix everything.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it) and `istioctl`.
+**You need:** the lab running (`./lab.sh start` starts or repairs it) and `istioctl`.
 
 This module gives you four broken setups to fix, like real on-call shifts. For each one, `./platform-engineering/incident.sh` breaks something in the cluster and tells you only what the users see, not what it changed, so your job has three parts:
 

@@ -101,7 +101,7 @@ A CiliumNetworkPolicy selects pods with `endpointSelector` instead of `podSelect
 
 The layer 7 rule needs an extra hop, because eBPF programs in the kernel handle layers 3 and 4 quickly but parsing HTTP is a job for a proxy. So Cilium sends the selected traffic through an Envoy proxy on the node, and Envoy reads each HTTP request and answers `403 Forbidden` itself when no rule matches. A connection refused at layer 4 times out instead, because the kernel simply drops the packets. That difference tells you which layer refused the request.
 
-The practice cluster runs Calico, so the Cilium tasks run on the third practice machine, the [Lima VM](../kernel-and-host/README.md#the-lima-vm-on-a-mac) `cks-lima`. It holds a one-node kubeadm cluster with Cilium 1.20.4, and `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell there.
+The practice cluster runs Calico, so the Cilium tasks run on the third practice machine, the [Lima VM](../../README.md#the-vm-for-module-44) `cks-lima`. It holds a one-node kubeadm cluster with Cilium 1.20.4, and `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell there.
 
 **What this stops.** An HTTP rule stops a compromised frontend from calling admin endpoints on a service it legitimately talks to. An `egressDeny` to `world` stops a pod from sending stolen data to the internet, whatever allow rules other teams add later.
 

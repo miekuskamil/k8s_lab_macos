@@ -4,7 +4,7 @@
 
 **Before this module:** module 0 only. This module covers plain Kubernetes operations. The mesh just keeps running underneath.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it), and about 300 MB of free memory for the second node.
+**You need:** the lab running (`./lab.sh start` starts or repairs it), and about 300 MB of free memory for the second node.
 
 Day-to-day cluster work isn't glamorous: a node needs a kernel patch, a disk fills up, or a node dies and leaves its leftovers behind. This module walks through that work in four parts:
 

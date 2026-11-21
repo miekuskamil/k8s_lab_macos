@@ -52,7 +52,7 @@ Headlamp    http://localhost:4466
 Port-forwards are running. Press Ctrl-C to stop.
 ```
 
-The [course README](../README.md#before-you-start) lists every UI. Keep Headlamp (http://localhost:4466) open in a tab, because it shows every pod with its logs and events in one place and needs no login.
+The [guide](../../README.md#logins-and-addresses) lists every UI. Keep Headlamp (http://localhost:4466) open in a tab, because it shows every pod with its logs and events in one place and needs no login.
 
 ## Install istioctl
 
@@ -81,7 +81,7 @@ sudo install istioctl /usr/local/bin/ && rm istioctl
 istioctl version
 ```
 
-Your client then reports 1.32.0 against control plane 1.24.2, which matches the macOS setup. Module 31 needs a client this new, because `istioctl proxy-status -o json` and the analyzer it uses don't exist in 1.24. [Running the lab on Linux](../../docs/linux.md) covers the rest of the setup and the few commands that differ.
+Your client then reports 1.32.0 against control plane 1.24.2, which matches the macOS setup. Module 31 needs a client this new, because `istioctl proxy-status -o json` and the analyzer it uses don't exist in 1.24. [Running the lab on Linux](../../README.md#linux) covers the rest of the setup and the few commands that differ.
 
 **What you should see.** The `istioctl version` lines from the macOS transcript above. A client newer than the control plane works fine, and every command in this course ran with client 1.32 against control plane 1.24. If a command fails with an unknown field error, install the matching client from the releases page.
 
@@ -144,4 +144,4 @@ The course uses Kiali only to look. You make every change with `kubectl`, so tha
 
 ## What the verification run showed
 
-`./platform-engineering/verify.sh` replays every module against the lab, so run it whenever you change the lab and again after the course to check your own work. The summary of the last run sits at the end of [the course README](../README.md#check-that-the-course-works).
+`./platform-engineering/verify.sh` replays every module against the lab, so run it whenever you change the lab and again after the course to check your own work. The summary of the last run sits at the end of [the course README](../../README.md#check-a-module).

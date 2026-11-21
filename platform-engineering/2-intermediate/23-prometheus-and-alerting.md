@@ -4,7 +4,7 @@
 
 **Before this module:** module 0, and module 6 helps.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it), and `./scripts/port-forward.sh` running in a spare terminal for Prometheus (http://localhost:9090) and Alertmanager (http://localhost:9093).
+**You need:** the lab running (`./lab.sh start` starts or repairs it), and `./lab.sh ui` running in a spare terminal for Prometheus (http://localhost:9090) and Alertmanager (http://localhost:9093).
 
 Module 6 used Prometheus to look at things, but in production teams use it to *wake people up* when something breaks, which takes a different skill in three parts:
 

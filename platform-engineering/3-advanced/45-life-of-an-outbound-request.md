@@ -4,7 +4,7 @@
 
 **Before this module:** [module 29](../1-foundations/29-life-of-a-request.md), which follows a request into the cluster, and modules 1 and 2 for ambient mode and ztunnel. Step 9 builds on [module 12](../2-intermediate/12-egress.md). The lab's Istio is all you need, and nothing here changes it.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it), internet access, and the `docker` command on your Mac. Docker pulls the small `alpine:3.20` image once, for the packet captures.
+**You need:** the lab running (`./lab.sh start` starts or repairs it), internet access, and the `docker` command on your Mac. Docker pulls the small `alpine:3.20` image once, for the packet captures.
 
 Module 29 followed a request from your Mac into a pod. This module turns around and follows a pod's call out to the internet, which every real app makes: a payment API, a package mirror, a weather service. The call works, and that hides how much happens on the way, because the pod's address, `10.42.0.204` in the test run, means nothing outside the node. Before the packet reaches the internet, four different layers rewrite its source address, and each one keeps a note so the reply finds its way back.
 

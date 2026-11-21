@@ -4,7 +4,7 @@
 
 **Before this module:** modules 1 to 3, and 11 helps.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it), and internet access: the module calls httpbin.org.
+**You need:** the lab running (`./lab.sh start` starts or repairs it), and internet access: the module calls httpbin.org.
 
 Modules 2 to 5 controlled traffic between your own services, so this module looks the other way, at calls from your pods out to the internet. The plan has four steps:
 

@@ -4,7 +4,7 @@
 
 **Before this module:** module 0. No Istio needed: the policies only touch the module's own namespaces.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `helm`, internet access for the Kyverno chart, and about 230 MB of free memory.
+**You need:** the lab running (`./lab.sh start` starts or repairs it), `helm`, internet access for the Kyverno chart, and about 230 MB of free memory.
 
 RBAC decides *who* may create a Deployment but says nothing about *what* the Deployment looks like, so a team might use an image tagged `latest`, set no memory limit, or run a container as root. In a bank, an auditor asks you to prove every day that every workload follows the rules, with every exception written down, and **Kyverno** does that inside Kubernetes through four jobs:
 

@@ -38,7 +38,7 @@ The addresses, the bridge and the storage match one homelab. Set `NET_PREFIX`, `
 
 ## Platform Engineering course
 
-The course runs on one VM, pe-lab, which holds the whole lab: Docker Engine, the k3d cluster, Istio and every tool the modules use. Two scripts set it up. `install-lab.sh` runs on the VM, installs everything that [Running the lab on Linux](../docs/linux.md) describes, and then runs `./scripts/provision.sh`. `pe-lab.sh` runs on your Mac, copies the installer to the VM over SSH, and later opens the lab's web UIs on your Mac.
+The course runs on one VM, pe-lab, which holds the whole lab: Docker Engine, the k3d cluster, Istio and every tool the modules use. Two scripts set it up. `install-lab.sh` runs on the VM, installs everything that the [Linux section of the guide](../README.md#linux) describes, and then runs `./scripts/provision.sh`. `pe-lab.sh` runs on your Mac, copies the installer to the VM over SSH, and later opens the lab's web UIs on your Mac.
 
 ### 1. Create the VM
 
@@ -60,7 +60,7 @@ From the repository on your Mac:
 ./proxmox/pe-lab.sh install --with-ollama   # also Ollama and its two models, for modules 17, 18, 19 and 27
 ```
 
-The installer downloads each tool at the version that docs/linux.md lists and compares it with the checksum its project publishes, so a broken or tampered download stops the run before it installs anything. It then adds `ubuntu` to the docker group, raises the inotify limits for good, clones the repository into `~/k8s_lab_macos` and runs `provision.sh`. A second run skips every step it already finished, and on an existing clone it pulls the latest commits first.
+The installer downloads each tool at the version that the [Linux section of the guide](../README.md#linux) lists and compares it with the checksum its project publishes, so a broken or tampered download stops the run before it installs anything. It then adds `ubuntu` to the docker group, raises the inotify limits for good, clones the repository into `~/k8s_lab_macos` and runs `provision.sh`. A second run skips every step it already finished, and on an existing clone it pulls the latest commits first.
 
 Without the wrapper, the same thing takes two commands:
 
@@ -77,7 +77,7 @@ To try a branch that is not on GitHub yet, `./proxmox/pe-lab.sh install --from-c
 ./proxmox/pe-lab.sh ui
 ```
 
-The command opens one SSH session that runs `scripts/port-forward.sh` on the VM and forwards each port to the same port on your Mac, so http://localhost:8080 shows the shop and http://localhost:3000 shows Grafana, exactly as the course text says. The [main README](../README.md#open-the-uis) lists every address and password, and Ctrl-C closes them all. The Mac's own lab uses the same ports, and the wrapper refuses to start while a port is busy, so either stop the local lab with `k3d cluster stop k8s-lab` or run `PE_LAB_PORT_OFFSET=10000 ./proxmox/pe-lab.sh ui` to move the VM's UIs to http://localhost:18080, http://localhost:13000 and so on. The plain SSH form is:
+The command opens one SSH session that runs `scripts/port-forward.sh` on the VM and forwards each port to the same port on your Mac, so http://localhost:8080 shows the shop and http://localhost:3000 shows Grafana, exactly as the course text says. The [main README](../README.md#logins-and-addresses) lists every address and password, and Ctrl-C closes them all. The Mac's own lab uses the same ports, and the wrapper refuses to start while a port is busy, so either stop the local lab with `k3d cluster stop k8s-lab` or run `PE_LAB_PORT_OFFSET=10000 ./proxmox/pe-lab.sh ui` to move the VM's UIs to http://localhost:18080, http://localhost:13000 and so on. The plain SSH form is:
 
 ```bash
 ssh -i ~/.ssh/cks_proxmox -L 8080:localhost:8080 -L 8443:localhost:8443 -L 8081:localhost:8081 \

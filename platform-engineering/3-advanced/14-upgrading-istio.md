@@ -4,7 +4,7 @@
 
 **Before this module:** modules 1, 2 and 7.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `istioctl`, `helm`, and internet access to download Istio 1.25.5. `./scripts/port-forward.sh` running in a spare terminal lets you watch the switch in Kiali.
+**You need:** the lab running (`./lab.sh start` starts or repairs it), `istioctl`, `helm`, and internet access to download Istio 1.25.5. `./lab.sh ui` running in a spare terminal lets you watch the switch in Kiali.
 
 Every Istio release gets security fixes for about six months and none after that, so a team that runs Istio upgrades it two or three times a year. In this module you upgrade the lab from Istio 1.24.2 to 1.25.5, following the steps Istio recommends for ambient mode, while a stream of requests checks that the shop keeps answering.
 
@@ -398,7 +398,7 @@ Cluster ports
   HBONE tunnel 15008, ztunnel metrics 15020, istiod xDS 15012, istiod metrics 15014
 
 Next steps
-  ./scripts/traffic-test.sh 200                 send 200 requests and print the version split
+  ./lab.sh test                                 send 100 requests and print the version split
   kubectl apply -f manifests/scenarios/a-canary-httproute.yaml
-  see docs/lab-guide.md for scenarios B and C, and platform-engineering/README.md for the Kubernetes Platform Engineering course
+  README.md is the guide: everyday commands, the course, and help when something breaks
 ```

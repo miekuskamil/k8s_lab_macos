@@ -4,7 +4,7 @@
 
 **Before this module:** module 2.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it).
+**You need:** the lab running (`./lab.sh start` starts or repairs it).
 
 mTLS tells the receiver who is calling, but something still has to decide whether that caller may come in. In this module you write rules at both layers of the mesh, and you see the gap that opens when you write only one of them.
 

@@ -50,7 +50,7 @@ check_prerequisites() {
     fi
   done
   if [[ "$missing" -eq 1 ]]; then
-    die "Install the missing tools first. See README.md, section \"What you need\"."
+    die "Install the missing tools first, or run ./lab.sh up, which uses the toolbox. See README.md, section \"Quick start\"."
   fi
 
   # The traffic scripts read response headers with curl -w '%header{...}', added in curl 7.84.
@@ -345,25 +345,26 @@ print_summary() {
 
 Shop UI via the ingress gateway   http://localhost:8080
 
-Run ./scripts/port-forward.sh to open these local ports:
-  ArgoCD      http://localhost:8081    user admin, password k8s-lab-admin
-  Grafana     http://localhost:3000    user admin, password k8s-lab-admin
-  Prometheus  http://localhost:9090    no login
-  Jaeger      http://localhost:16686   no login
-  Kiali       http://localhost:20001   no login (anonymous, lab only)
-  Headlamp    http://localhost:4466    no login (cluster-admin, lab only)
+Run ./lab.sh ui to open these local ports:
+  ArgoCD        http://localhost:8081    user admin, password k8s-lab-admin
+  Grafana       http://localhost:3000    user admin, password k8s-lab-admin
+  Prometheus    http://localhost:9090    no login
+  Alertmanager  http://localhost:9093    no login
+  Jaeger        http://localhost:16686   no login
+  Kiali         http://localhost:20001   no login (anonymous, lab only)
+  Headlamp      http://localhost:4466    no login (cluster-admin, lab only)
 
 Redis has no local port. Its password is k8s-lab-redis.
-These are lab defaults stored in Git. See README.md, section "Open the UIs".
+These are lab defaults stored in Git. See README.md, section "Logins and addresses".
 
 Cluster ports
   ingress gateway 8080, frontend 3000, backend 8000, redis 6379,
   HBONE tunnel 15008, ztunnel metrics 15020, istiod xDS 15012, istiod metrics 15014
 
 Next steps
-  ./scripts/traffic-test.sh 200                 send 200 requests and print the version split
+  ./lab.sh test                                 send 100 requests and print the version split
   kubectl apply -f manifests/scenarios/a-canary-httproute.yaml
-  see docs/lab-guide.md for scenarios B and C, and platform-engineering/README.md for the Kubernetes Platform Engineering course
+  README.md is the guide: everyday commands, the course, and help when something breaks
 
 SUMMARY
 }

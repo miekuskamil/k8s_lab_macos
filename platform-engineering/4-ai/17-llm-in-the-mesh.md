@@ -4,7 +4,7 @@
 
 **Before this module:** modules 3, 5, 6 and 12.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it), Ollama with `qwen2.5:3b`, and the assistant image `k8s-lab/assistant:1.2.0`. [What you need](#what-you-need) below has the details. Step 5 uses Jaeger, so keep `./scripts/port-forward.sh` running in a spare terminal.
+**You need:** the lab running (`./lab.sh start` starts or repairs it), Ollama with `qwen2.5:3b`, and the assistant image `k8s-lab/assistant:1.2.0`. [What you need](#what-you-need) below has the details. Step 5 uses Jaeger, so keep `./lab.sh ui` running in a spare terminal.
 
 AI features are the fastest-growing kind of traffic on Kubernetes right now, and most of them follow one pattern:
 
@@ -26,7 +26,7 @@ Time: about 50 minutes. This is the first of three AI modules. While the model a
 
 ### On Linux (Ubuntu 24.04)
 
-Plain Docker Engine on Linux doesn't answer the name `host.docker.internal`, and Ollama on Linux listens only on `127.0.0.1` by default, so the pods never reach the model. Two steps fix both: make Ollama listen on every interface, and add the name to the cluster's DNS. [Running the lab on Linux](../../docs/linux.md#the-ai-modules-17-18-19-and-27) has the commands and a check.
+Plain Docker Engine on Linux doesn't answer the name `host.docker.internal`, and Ollama on Linux listens only on `127.0.0.1` by default, so the pods never reach the model. Two steps fix both: make Ollama listen on every interface, and add the name to the cluster's DNS. [Ollama on Linux](../../README.md#ollama-on-linux) has the commands and a check.
 
 ## Concept: what the assistant does
 
