@@ -1,4 +1,4 @@
-# Module 19: talk MCP to the kagent tool server directly, the way an intruder would.
+# Module 5.3: talk MCP to the kagent tool server directly, the way an intruder would.
 # Opens a session, then calls the k8s_get_resources tool to list every Secret's name.
 # Run inside a pod: kubectl -n shop exec -i deploy/course-client -- sh < platform-engineering/mcp-call.sh
 U=http://kagent-tools.kagent:8084/mcp

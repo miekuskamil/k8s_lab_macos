@@ -1,0 +1,15 @@
+# Module 3.17: limit what every sidecar in course-proxy hears about.
+# A Sidecar named "default" with no workloadSelector applies to the whole namespace.
+# egress.hosts lists "namespace/host" patterns: "./*" means every Service in this
+# namespace, "istio-system/*" keeps istiod reachable. Everything else drops out of the
+# proxies' config, which shrinks it and the memory it needs.
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: default
+  namespace: course-proxy
+spec:
+  egress:
+    - hosts:
+        - "./*"
+        - "istio-system/*"

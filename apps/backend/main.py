@@ -37,7 +37,7 @@ REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
 OTEL_ENABLED = os.getenv("OTEL_ENABLED", "true").lower() == "true"
 RATE_LIMIT_RPS = float(os.getenv("RATE_LIMIT_RPS", "0"))
 EXTRA_LATENCY_MS = int(os.getenv("EXTRA_LATENCY_MS", "0"))
-# Share of /api/ requests that fail with 503, for course module 15 (0 = never, 1 = always).
+# Share of /api/ requests that fail with 503, for course module 3.13 (0 = never, 1 = always).
 ERROR_RATE = float(os.getenv("ERROR_RATE", "0"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 UNTRACED_PATHS = ("/healthz", "/readyz", "/metrics")

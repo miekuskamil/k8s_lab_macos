@@ -2,16 +2,16 @@
 
 > New to a term here, like kubeadm, kind or static pod? The [glossary](glossary.md#the-practice-cluster-and-the-security-modules) explains every term the practice cluster and the security modules use.
 
-Modules 33 to 43 and the six timed practice exams run on a second cluster, the practice cluster, instead of the k3d lab. The k3d lab is built for watching a platform work, so it runs the shop, Istio and every UI on one k3s node that you drive from your Mac. The application and security modules train a different skill, fixing a given problem on a live cluster from a terminal inside its time budget, and that skill needs a cluster that looks like the ones teams build by hand.
+Modules 1.2 to 1.6 and 4.1 to 4.6 and the six timed practice exams run on a second cluster, the practice cluster, instead of the k3d lab. The k3d lab is built for watching a platform work, so it runs the shop, Istio and every UI on one k3s node that you drive from your Mac. The application and security modules train a different skill, fixing a given problem on a live cluster from a terminal inside its time budget, and that skill needs a cluster that looks like the ones teams build by hand.
 
-| | k3d lab (modules 0 to 32) | Practice cluster (modules 33 to 43) |
+| | k3d lab (modules 1.1, 2.1 and 2.2, 2.4 to 2.9, 3.1 to 3.15, 3.17 to 3.21 and 5.1 to 5.4) | Practice cluster (modules 1.2 to 1.6 and 4.1 to 4.6) |
 |---|---|---|
 | Cluster | k3d on your Mac, one k3s node, Istio and the shop | kubeadm on two kind nodes in Docker, no mesh |
 | You work | from your Mac, with `kubectl` and the UIs | inside a node, with `kubectl`, `vim`, `systemctl` and `journalctl` |
 | A module is | 30 to 60 minutes that explain one idea in depth | course-style theory, concepts and diagrams, then timed tasks of 3 to 10 minutes each |
 | You finish when | you understand why the platform behaves as it does | you solve each task inside its time budget without opening the solution |
 
-The practice cluster comes from kubeadm, the official tool that turns plain Linux machines into a Kubernetes cluster. kubeadm runs the control plane as **static pods**, which are pods that the kubelet starts from YAML files in `/etc/kubernetes/manifests` with no API server involved. Many security tasks edit those files, while the k3s cluster of the lab keeps its control plane inside one binary, so those tasks have nothing to edit there. The [timed tasks page](timed-tasks.md) explains how a task works, and the [VM page](../README.md#the-vm-for-module-44) explains the third machine that the kernel tasks of module 44 need.
+The practice cluster comes from kubeadm, the official tool that turns plain Linux machines into a Kubernetes cluster. kubeadm runs the control plane as **static pods**, which are pods that the kubelet starts from YAML files in `/etc/kubernetes/manifests` with no API server involved. Many security tasks edit those files, while the k3s cluster of the lab keeps its control plane inside one binary, so those tasks have nothing to edit there. The [timed tasks page](timed-tasks.md) explains how a task works, and the [VM page](../README.md#the-vm-for-module-44) explains the third machine that the kernel tasks of module 4.7 need.
 
 ## Two nodes in Docker
 
@@ -26,7 +26,7 @@ The picture shows the two nodes inside the Docker engine on your Mac:
 
 Both nodes run Kubernetes 1.37.1. That is one patch release below the newest 1.37, so the upgrade task has somewhere to go. Calico 3.32.3 connects the pods and enforces NetworkPolicy, and ingress-nginx 1.15.1 serves Ingress objects on NodePorts 30080 and 30443, which also answer on your Mac at `localhost:30080` and `localhost:30443`.
 
-Every tool comes from one **node image**. kind publishes a node image per Kubernetes version, and its newest, for 1.37.0, is the base. A Dockerfile in `platform-engineering/practice/cluster/kind/` adds the kubeadm, kubelet and kubectl packages at 1.37.1 from the Kubernetes package repository, so `apt` upgrades them in module 39 the way it does on any kubeadm node, and then every scanner, runtime and helper that the tasks use. The first `./lab.sh practice up` builds that image once. After that Docker keeps it, so a new cluster downloads nothing but the Kubernetes images, and you carry the whole toolbox with you wherever Docker runs.
+Every tool comes from one **node image**. kind publishes a node image per Kubernetes version, and its newest, for 1.37.0, is the base. A Dockerfile in `platform-engineering/practice/cluster/kind/` adds the kubeadm, kubelet and kubectl packages at 1.37.1 from the Kubernetes package repository, so `apt` upgrades them in module 4.2 the way it does on any kubeadm node, and then every scanner, runtime and helper that the tasks use. The first `./lab.sh practice up` builds that image once. After that Docker keeps it, so a new cluster downloads nothing but the Kubernetes images, and you carry the whole toolbox with you wherever Docker runs.
 
 ### Create, open, reset, delete
 
@@ -34,7 +34,7 @@ The guide's [Practice cluster and timed tasks](../README.md#practice-cluster-and
 
 In the test run on a Mac with 24 GB of memory and OrbStack, `./lab.sh practice up` took 2 minutes 38 seconds from nothing, including the download of kind's node image and the build of the practice image on top. A second `up` on a finished cluster took 3 seconds, and `./lab.sh practice reset` took between 64 and 95 seconds. A reset deletes the two node containers and starts new ones from the cached image, which is faster and cleaner than undoing every task by hand.
 
-The cluster fits next to the running k3d lab. With the cluster idle, `practice-control-plane` used about 0.95 GB of memory and `practice-worker` about 0.6 GB, while the k3d lab used between 3.3 and 4.0 GB, all inside OrbStack's Docker engine with its limit of 11.7 GB. Through all 108 tasks of modules 33 to 43 the two nodes together peaked at 2.6 GB, so the k3d lab and the practice cluster ran side by side the whole time.
+The cluster fits next to the running k3d lab. With the cluster idle, `practice-control-plane` used about 0.95 GB of memory and `practice-worker` about 0.6 GB, while the k3d lab used between 3.3 and 4.0 GB, all inside OrbStack's Docker engine with its limit of 11.7 GB. Through all 108 tasks of modules 1.2 to 1.6 and 4.1 to 4.6 the two nodes together peaked at 2.6 GB, so the k3d lab and the practice cluster ran side by side the whole time.
 
 kind writes the cluster's kubeconfig to `~/.kube/practice-kind.yaml` instead of your main kubeconfig, so the current context of your `kubectl` stays on the k3d lab. You rarely need it, because the tasks run inside a node, and in a toolbox shell `kubectl --context kind-practice get nodes` reaches the cluster, because the toolbox adds that context to its own kubeconfig. The file lands in your Mac's home only when `./lab.sh practice up` runs on your Mac instead of in the toolbox, which happens when kubectl, helm and k3d are installed there.
 
@@ -55,7 +55,7 @@ Two kubeadm settings in `platform-engineering/practice/cluster/kind/cluster.yaml
 
 ![The application extras on the practice cluster: the two kind nodes with helm, podman and kubectl-convert in the node image, the local registry container, and metrics-server in the cluster](../docs/diagrams/chapters/ckad-practice-cluster.svg)
 
-The application modules 33 to 37 run on the same two nodes as the security modules, but building and shipping an app needs a few tools that hardening a cluster doesn't:
+The application modules 1.2 to 1.6 run on the same two nodes as the security modules, but building and shipping an app needs a few tools that hardening a cluster doesn't:
 
 1. On `practice-control-plane`: helm 4.3.1 to install charts, podman to build and push images, and `kubectl-convert` for API version changes. All three sit in the node image.
 2. Next to the nodes: a local image registry at `registry.practice:5000`, which runs as the container `practice-registry` on kind's Docker network. Both nodes and every pod reach it by that name, and containerd on both nodes pulls from it over plain HTTP.
@@ -94,7 +94,7 @@ orb stop cks-cp cks-w1            # frees the memory; "orb start cks-cp cks-w1" 
 ./lab.sh practice down --yes      # deletes both machines
 ```
 
-In the earlier test runs, `create.sh` took 3 minutes 45 seconds from nothing and `reset.sh` 2 minutes 30 seconds, and the machines used 1.1 GB and 0.7 GB of memory. The application extras install helm, podman and kubectl-convert on `cks-cp` there, with the registry as the systemd service `practice-registry` on port 5000. After the move to kind, a sample of six tasks (33.1, 35.3, 38.4, 40.4, 41.4 and 43.2, which cover podman and the registry, a node label, Ingress, a systemd unit, gVisor and Falco) still failed after setup and passed after the solution on the OrbStack machines.
+In the earlier test runs, `create.sh` took 3 minutes 45 seconds from nothing and `reset.sh` 2 minutes 30 seconds, and the machines used 1.1 GB and 0.7 GB of memory. The application extras install helm, podman and kubectl-convert on `cks-cp` there, with the registry as the systemd service `practice-registry` on port 5000. After the move to kind, a sample of six tasks (1.2.1, 1.4.3, 4.1.4, 4.3.4, 4.4.4 and 4.6.2, which cover podman and the registry, a node label, Ingress, a systemd unit, gVisor and Falco) still failed after setup and passed after the solution on the OrbStack machines.
 
 ## The practice cluster on your own VMs (Proxmox or any SSH-reachable Ubuntu)
 
@@ -108,7 +108,7 @@ On Proxmox, `proxmox/create-vms.sh` builds both VMs from the Ubuntu cloud image.
 
 ### Settings and commands
 
-These commands work in your machine's own terminal and inside `./lab.sh shell` alike. The toolbox receives the settings below from your shell or from `lab.env`, and it sees your `~/.ssh` read-only at `/run/host-ssh`, so a key path into `~/.ssh` works there unchanged. The Cilium tasks of module 44 still run from your Mac's own terminal, because they reach the Lima VM with `limactl`. On a Mac, the toolbox reaches your home network only when OrbStack has the Local Network permission: turn it on in System Settings, Privacy & Security, Local Network, OrbStack. Without it, ssh from the toolbox times out while ssh from the Mac's terminal works. Five environment variables tell the scripts where the VMs are. Export them once in your shell, or write them in `lab.env`:
+These commands work in your machine's own terminal and inside `./lab.sh shell` alike. The toolbox receives the settings below from your shell or from `lab.env`, and it sees your `~/.ssh` read-only at `/run/host-ssh`, so a key path into `~/.ssh` works there unchanged. The Cilium tasks of module 4.7 still run from your Mac's own terminal, because they reach the Lima VM with `limactl`. On a Mac, the toolbox reaches your home network only when OrbStack has the Local Network permission: turn it on in System Settings, Privacy & Security, Local Network, OrbStack. Without it, ssh from the toolbox times out while ssh from the Mac's terminal works. Five environment variables tell the scripts where the VMs are. Export them once in your shell, or write them in `lab.env`:
 
 ```bash
 export PRACTICE_PLATFORM=vms                  # without it, the scripts use kind
@@ -133,14 +133,14 @@ All 65 security tasks and the three security practice exams passed in this setup
 
 ## Where each task runs
 
-A VM brings a kernel of its own. On a Mac every task of module 44 runs on the Lima VM `cks-lima`, which the [guide](../README.md#the-vm-for-module-44) builds. On your own VMs, the kernel of `cks-w1` has AppArmor and loads modules, so three tasks of module 44 and two practice exam tasks move there:
+A VM brings a kernel of its own. On a Mac every task of module 4.7 runs on the Lima VM `cks-lima`, which the [guide](../README.md#the-vm-for-module-44) builds. On your own VMs, the kernel of `cks-w1` has AppArmor and loads modules, so three tasks of module 4.7 and two practice exam tasks move there:
 
 | Task | On a Mac | On your own VMs |
 |---|---|---|
-| 44.1 to 44.3, Cilium policies | `cks-lima` | `cks-lima` |
-| 44.4, a kernel module | `cks-lima` | `cks-w1` |
-| 44.5, WireGuard with Cilium | `cks-lima` | `cks-lima` |
-| 44.6 and 44.7, AppArmor | `cks-lima` | `cks-w1` |
+| 4.7.1 to 4.7.3, Cilium policies | `cks-lima` | `cks-lima` |
+| 4.7.4, a kernel module | `cks-lima` | `cks-w1` |
+| 4.7.5, WireGuard with Cilium | `cks-lima` | `cks-lima` |
+| 4.7.6 and 4.7.7, AppArmor | `cks-lima` | `cks-w1` |
 | Practice exam 5 task 9, AppArmor | `cks-lima` | `cks-w1` |
 | Practice exam 6 task 10, a kernel module | `cks-lima` | `cks-w1` |
 | Practice exams 5 and 6, task 3, Cilium | `cks-lima` | `cks-lima` |

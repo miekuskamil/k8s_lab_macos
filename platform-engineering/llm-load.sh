@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Module 18: one long generation keeps a model server busy, while 10 short
+# Module 5.2: one long generation keeps a model server busy, while 10 short
 # questions arrive half a second apart. Prints how long each short one took.
 # Runs inside the course client, so the traffic goes through the mesh.
 #   ./platform-engineering/llm-load.sh            target the Qwen servers directly

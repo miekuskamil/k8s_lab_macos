@@ -125,7 +125,7 @@ Measured on 12 November 2026 with the course workloads deployed: 31 pods on one 
 | `observability` | Prometheus, Alertmanager, Grafana, Jaeger, Loki, Alloy, operator, kube-state-metrics | 1,362 MiB after a full course run on 12 November 2026; Prometheus alone 613 MiB, Alertmanager 32 MiB |
 | `argocd` | controller, server, repo server, applicationset, redis | 499 MiB |
 | `kube-system` | coredns, metrics-server, local-path, load balancer | 68 MiB |
-| `course-sidecar` | httpbin and client, each with a sidecar (course module 7) | 67 MiB |
+| `course-sidecar` | httpbin and client, each with a sidecar (course module 3.9) | 67 MiB |
 
 The node used 3.3 GiB in total, including k3s itself. Loki took 84 MiB, Alloy 57 MiB and Kiali 33 MiB. The mesh data plane stays small: ztunnel used 10 MiB and the waypoint 29 MiB, while each sidecar in `course-sidecar` used 35 to 38 MiB. Check your own numbers with `kubectl top pods -A` and `kubectl top node`.
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Module 21: free pod IPs that leaked while the CNI was broken.
+# Module 2.9: free pod IPs that leaked while the CNI was broken.
 # flannel's host-local IPAM keeps one file per handed-out IP in /var/lib/cni/networks/cbr0.
 # When pod sandboxes fail half-way, those files stay behind until all 254 addresses are
 # "in use" and no new pod gets an IP. This deletes only files for IPs that no pod holds.

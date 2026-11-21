@@ -30,5 +30,5 @@ for n in ${MOCK_SETUP_ORDER:-$MOCK_TASKS}; do
 done
 date +%s > "$HERE/.started-$MOCK"
 echo
-echo "Ready. The clock runs from now: 2 hours. Open platform-engineering/1-foundations/practice-exam-$MOCK.md."
+echo "Ready. The clock runs from now: 2 hours. Open platform-engineering/1-applications/practice-exam-$MOCK.md."
 echo "Score yourself at any time with ./lab.sh exam score $MOCK"

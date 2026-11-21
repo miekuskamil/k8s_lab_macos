@@ -68,7 +68,7 @@ say "Waiting for istio-cni and ztunnel"
 cond_time() { "${K[@]}" -n istio-system get pods -l "$1" -o jsonpath="{.items[0].status.conditions[?(@.type==\"$2\")].lastTransitionTime}"; }
 window_start="$(cond_time k8s-app=istio-cni-node PodReadyToStartContainers)"
 # Something may have replaced the istio-cni pod after the boot, like provision.sh after
-# a k3s upgrade (course module 21). Then its sandbox time comes too late, so the window
+# a k3s upgrade (course module 2.9). Then its sandbox time comes too late, so the window
 # starts when the node container started, if that's earlier.
 node_boot="$(docker inspect -f '{{.State.StartedAt}}' "k3d-${CLUSTER_NAME}-server-0" 2>/dev/null | cut -c1-19)"
 [[ -n "$node_boot" && "${node_boot}Z" < "$window_start" ]] && window_start="${node_boot}Z"

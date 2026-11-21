@@ -288,11 +288,11 @@ Containers run as a non-root user with a read-only root filesystem, no Linux cap
 
 ### Observability
 
-- Alert on symptoms such as error ratio and latency before causes such as CPU. The lab runs Alertmanager (http://localhost:9093) with no rules by default; [course module 23](../platform-engineering/2-intermediate/23-prometheus-and-alerting.md) adds an SLO with a burn-rate alert and routes it to a receiver.
-- Keep dashboards in Git. The lab's dashboard is a ConfigMap that Grafana's sidecar loads, and Grafana refuses edits to it in the UI. [Course module 24](../platform-engineering/2-intermediate/24-grafana-as-code.md) builds an SLO dashboard the same way.
+- Alert on symptoms such as error ratio and latency before causes such as CPU. The lab runs Alertmanager (http://localhost:9093) with no rules by default; [course module 2.1](../platform-engineering/2-observability/01-prometheus-and-alerting.md) adds an SLO with a burn-rate alert and routes it to a receiver.
+- Keep dashboards in Git. The lab's dashboard is a ConfigMap that Grafana's sidecar loads, and Grafana refuses edits to it in the UI. [Course module 2.2](../platform-engineering/2-observability/02-grafana-as-code.md) builds an SLO dashboard the same way.
 - The lab samples 100% of traces. Use 1 to 5% in production, plus tail sampling to keep error traces.
 - The backend writes the trace id into every log line. Search your logs by `trace_id` and open the matching trace in Jaeger.
-- Log in JSON, and logs turn into data. The Grafana dashboard **Shop logs** counts the backend's requests by status and computes p95 latency per path from its JSON log lines with LogQL (course module 6, step 5).
+- Log in JSON, and logs turn into data. The Grafana dashboard **Shop logs** counts the backend's requests by status and computes p95 latency per path from its JSON log lines with LogQL (course module 3.6, step 5).
 - Keep probes out of your traces. The backend excludes `/healthz`, `/readyz` and `/metrics` from tracing and drops the Redis `PING` spans its readiness probe would create.
 
 ## 7. Things to try next
@@ -303,4 +303,4 @@ Containers run as a non-root user with a read-only root filesystem, no Linux cap
 4. Add a second waypoint for the frontend and measure its memory with `kubectl top pods -n shop`.
 5. Push a manifest with a deliberate typo to `main` and read how ArgoCD reports the failed sync.
 
-For more depth on the platform tools, the course has a module each: [GitOps with ArgoCD](../platform-engineering/2-intermediate/22-gitops-with-argocd.md) runs its own Git server, so you practise drift, rollbacks, hooks, project guardrails and ApplicationSets without pushing to this repository. Then [Prometheus and alerting](../platform-engineering/2-intermediate/23-prometheus-and-alerting.md) and [Grafana as code](../platform-engineering/2-intermediate/24-grafana-as-code.md).
+For more depth on the platform tools, the course has a module each: [GitOps with ArgoCD](../platform-engineering/2-observability/06-gitops-with-argocd.md) runs its own Git server, so you practise drift, rollbacks, hooks, project guardrails and ApplicationSets without pushing to this repository. Then [Prometheus and alerting](../platform-engineering/2-observability/01-prometheus-and-alerting.md) and [Grafana as code](../platform-engineering/2-observability/02-grafana-as-code.md).

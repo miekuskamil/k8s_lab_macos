@@ -4,11 +4,11 @@ The AI modules (17, 18, 19 and 27) use [Ollama](https://ollama.com) with `qwen2.
 
 1. One settings file, `lab.env`, for any provider: Ollama, any server that speaks the OpenAI API, or Claude.
 2. Any other model that Ollama serves, switched by hand.
-3. Claude, through the Anthropic API, with the mesh setup for module 17.
+3. Claude, through the Anthropic API, with the mesh setup for module 5.1.
 
 ## Settings in lab.env
 
-The shop assistant (module 17) and the RAG app (module 27) read four settings. `LLM_PROVIDER` picks the API they speak, and `LLM_URL`, `LLM_MODEL` and `LLM_API_KEY` say where the model runs, which model answers and which key pays for it. You write them once in `lab.env`, and `./lab.sh ai` copies them into the cluster.
+The shop assistant (module 5.1) and the RAG app (module 5.4) read four settings. `LLM_PROVIDER` picks the API they speak, and `LLM_URL`, `LLM_MODEL` and `LLM_API_KEY` say where the model runs, which model answers and which key pays for it. You write them once in `lab.env`, and `./lab.sh ai` copies them into the cluster.
 
 The `openai` provider matters most, because most model servers and hosted providers speak the OpenAI chat completions API: Ollama's own `/v1` endpoint, vLLM, LM Studio, OpenAI, Grok, Gemini, Groq and OpenRouter. The `ollama` provider speaks Ollama's native API, and `anthropic` uses the Anthropic SDK.
 
@@ -27,15 +27,15 @@ The `openai` provider matters most, because most model servers and hosted provid
    ```bash
    ./lab.sh ai
    ```
-   The command writes the ConfigMap `llm-settings`, and the Secret `llm-api-key` when you set a key, into each of the namespaces `shop` and `course-rag` that exists. Both apps load them through `envFrom`, and the command restarts an app that already runs, because a pod reads its environment only when it starts. `./lab.sh up` and `./lab.sh start` run it too, and module 27 creates `course-rag` later, so run `./lab.sh ai` again after module 27's deploy step.
+   The command writes the ConfigMap `llm-settings`, and the Secret `llm-api-key` when you set a key, into each of the namespaces `shop` and `course-rag` that exists. Both apps load them through `envFrom`, and the command restarts an app that already runs, because a pod reads its environment only when it starts. `./lab.sh up` and `./lab.sh start` run it too, and module 5.4 creates `course-rag` later, so run `./lab.sh ai` again after module 5.4's deploy step.
 
-3. Check the switch once module 17 has deployed the assistant: `curl -s localhost:8080/api/model` then shows the provider, model and URL the assistant uses. Before module 17 the path returns 404, because no assistant runs yet.
+3. Check the switch once module 5.1 has deployed the assistant: `curl -s localhost:8080/api/model` then shows the provider, model and URL the assistant uses. Before module 5.1 the path returns 404, because no assistant runs yet.
 
 The settings in `lab.env` win over the per-app variables further down this page, such as `OLLAMA_MODEL`. Delete `lab.env`, or leave `LLM_PROVIDER` empty, and run `./lab.sh ai` to go back to the defaults.
 
-Module 27 also needs an embedding model for its search. With `LLM_PROVIDER=openai`, the RAG app asks the same server's `/embeddings` endpoint for `nomic-embed-text`. A provider without that model needs `EMBED_PROVIDER=ollama` and `EMBED_URL=http://host.docker.internal:11434`, so search stays in Ollama while another model writes the answers. Keep the embedding model the same once you ingest, because a different model means running the ingest step again.
+Module 5.4 also needs an embedding model for its search. With `LLM_PROVIDER=openai`, the RAG app asks the same server's `/embeddings` endpoint for `nomic-embed-text`. A provider without that model needs `EMBED_PROVIDER=ollama` and `EMBED_URL=http://host.docker.internal:11434`, so search stays in Ollama while another model writes the answers. Keep the embedding model the same once you ingest, because a different model means running the ingest step again.
 
-kagent (module 19) keeps its own model settings in its Helm release. For an OpenAI-compatible server, add these flags to module 19's `helm install kagent` command, with the key in the Secret `kagent-openai` under `OPENAI_API_KEY` (any value works for Ollama):
+kagent (module 5.3) keeps its own model settings in its Helm release. For an OpenAI-compatible server, add these flags to module 5.3's `helm install kagent` command, with the key in the Secret `kagent-openai` under `OPENAI_API_KEY` (any value works for Ollama):
 
 ```bash
 helm install kagent ... --set providers.default=openAI --set providers.openAI.model=qwen2.5:3b \
@@ -50,7 +50,7 @@ A machine without Ollama runs it as a container next to the clusters:
 ./lab.sh ollama
 ```
 
-The command starts the `ollama` service from `compose.yaml` and pulls `qwen2.5:3b` and `nomic-embed-text`, about 2.2 GB, into a Docker volume. It listens on port 11434 of your machine, where pods find it as `host.docker.internal:11434`, so the course commands work unchanged. It runs on the CPU, because containers on a Mac get no GPU, so it suits a Linux machine or a test more than daily work on a Mac. In the test run on an Apple silicon Mac, the assistant's first answer took 42 seconds instead of under one, and module 27's ingest of the whole course took about 15 minutes instead of under one. When something else holds port 11434, set `LAB_OLLAMA_PORT` in `lab.env` and use that port in `LLM_URL`. On Linux, also set `LAB_OLLAMA_BIND=0.0.0.0`, because pods reach the host there through the Docker network's gateway, not through its loopback.
+The command starts the `ollama` service from `compose.yaml` and pulls `qwen2.5:3b` and `nomic-embed-text`, about 2.2 GB, into a Docker volume. It listens on port 11434 of your machine, where pods find it as `host.docker.internal:11434`, so the course commands work unchanged. It runs on the CPU, because containers on a Mac get no GPU, so it suits a Linux machine or a test more than daily work on a Mac. In the test run on an Apple silicon Mac, the assistant's first answer took 42 seconds instead of under one, and module 5.4's ingest of the whole course took about 15 minutes instead of under one. When something else holds port 11434, set `LAB_OLLAMA_PORT` in `lab.env` and use that port in `LLM_URL`. On Linux, also set `LAB_OLLAMA_BIND=0.0.0.0`, because pods reach the host there through the Docker network's gateway, not through its loopback.
 
 ## Another Ollama model, by hand
 
@@ -58,25 +58,25 @@ Each app reads the model name from an environment variable. Pull the model, then
 
 ```bash
 ollama pull llama3.2:3b
-kubectl -n shop set env deploy/assistant OLLAMA_MODEL=llama3.2:3b          # module 17
-kubectl -n course-rag set env deploy/rag CHAT_MODEL=llama3.2:3b             # module 27
-helm upgrade kagent ... --set providers.ollama.model=llama3.2:3b            # module 19, same flags as the install
+kubectl -n shop set env deploy/assistant OLLAMA_MODEL=llama3.2:3b          # module 5.1
+kubectl -n course-rag set env deploy/rag CHAT_MODEL=llama3.2:3b             # module 5.4
+helm upgrade kagent ... --set providers.ollama.model=llama3.2:3b            # module 5.3, same flags as the install
 ```
 
-After module 17, check the switch with `curl -s localhost:8080/api/model`. Memory is the limit. A model needs roughly its download size plus 30% while it answers, on top of the lab's 5 GB. Models that call tools well matter most for module 19, because kagent's agents work by calling tools. Module 27's search model, `nomic-embed-text`, stays the same: the index was built with it, and a different embedding model means re-running the ingest step.
+After module 5.1, check the switch with `curl -s localhost:8080/api/model`. Memory is the limit. A model needs roughly its download size plus 30% while it answers, on top of the lab's 5 GB. Models that call tools well matter most for module 5.3, because kagent's agents work by calling tools. Module 5.4's search model, `nomic-embed-text`, stays the same: the index was built with it, and a different embedding model means re-running the ingest step.
 
 ## Claude through the Anthropic API
 
-The shop assistant (module 17) and the RAG app (module 27) both have a `PROVIDER` setting. With `PROVIDER=anthropic`, they send the question to Claude through the official Anthropic Python SDK. kagent (module 19) supports Anthropic natively.
+The shop assistant (module 5.1) and the RAG app (module 5.4) both have a `PROVIDER` setting. With `PROVIDER=anthropic`, they send the question to Claude through the official Anthropic Python SDK. kagent (module 5.3) supports Anthropic natively.
 
-The `PROVIDER` setting arrived with the images `assistant:1.1.0` and `rag:1.2.0`, and the `LLM_*` settings and the `openai` provider with `assistant:1.2.0` and `rag:1.3.0`. If your lab is older than 21 November 2026, run `./lab.sh up` once to build the new assistant image. Module 27 builds its own image in its steps.
+The `PROVIDER` setting arrived with the images `assistant:1.1.0` and `rag:1.2.0`, and the `LLM_*` settings and the `openai` provider with `assistant:1.2.0` and `rag:1.3.0`. If your lab is older than 21 November 2026, run `./lab.sh up` once to build the new assistant image. Module 5.4 builds its own image in its steps.
 
 Some things work differently from Ollama:
 
 - **Cost.** Every call costs money. The default model, `claude-opus-5-5`, costs $4 per million input tokens and $20 per million output tokens, and thinking counts as output. A question to the assistant carries the 10 most recent orders, so expect around one cent per answer. The `input_tokens` and `output_tokens` fields in each reply show the real numbers. Set `ANTHROPIC_MODEL=claude-haiku-5-5` for the cheapest model.
 - **Thinking.** Current Claude models think before they answer, and the thinking counts against `max_tokens`. The apps therefore give Claude a budget of 4,000 tokens instead of Ollama's 120 and 250, and ask for `effort: low`, because short questions about orders don't need deep reasoning. The system prompt still keeps the visible answer to three sentences.
-- **Search stays in Ollama.** Anthropic offers no embedding model. In module 27, `nomic-embed-text` in Ollama still turns the text into vectors. Only the final answer comes from Claude.
-- **Encrypted traffic.** Ollama speaks plain HTTP, so the waypoint reads every request. The Anthropic API only accepts HTTPS. The setup below uses TLS origination from [module 12](../platform-engineering/2-intermediate/12-egress.md#concept-tls-origination): the assistant sends plain HTTP inside the mesh, and the waypoint opens the HTTPS connection. The waypoint then still sees the method and path of every call, so metrics and policies keep working.
+- **Search stays in Ollama.** Anthropic offers no embedding model. In module 5.4, `nomic-embed-text` in Ollama still turns the text into vectors. Only the final answer comes from Claude.
+- **Encrypted traffic.** Ollama speaks plain HTTP, so the waypoint reads every request. The Anthropic API only accepts HTTPS. The setup below uses TLS origination from [module 3.11](../platform-engineering/3-istio/11-egress.md#concept-tls-origination): the assistant sends plain HTTP inside the mesh, and the waypoint opens the HTTPS connection. The waypoint then still sees the method and path of every call, so metrics and policies keep working.
 - **Declined answers.** A safety system sometimes declines a request. The apps ask the API to retry on another model in that case (`fallbacks: "default"`), and they show "The model declined to answer this question." when no model answers.
 
 ### 1. Store the API key
@@ -88,12 +88,12 @@ read -rs ANTHROPIC_API_KEY      # paste the key, then press Enter; nothing is sh
 kubectl -n shop create secret generic anthropic --from-literal=ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"
 ```
 
-### 2. Module 17: the assistant
+### 2. Module 5.1: the assistant
 
-Do module 17 up to its ServiceEntry step first, so the assistant and the shop waypoint exist. Then add Anthropic's API to the mesh, allow only the assistant to call it, and switch the assistant over:
+Do module 5.1 up to its ServiceEntry step first, so the assistant and the shop waypoint exist. Then add Anthropic's API to the mesh, allow only the assistant to call it, and switch the assistant over:
 
 ```bash
-kubectl apply -f platform-engineering/manifests/17-claude-serviceentry.yaml -f platform-engineering/manifests/17-claude-policy.yaml
+kubectl apply -f platform-engineering/manifests/5.1-claude-serviceentry.yaml -f platform-engineering/manifests/5.1-claude-policy.yaml
 kubectl -n shop set env deploy/assistant --from=secret/anthropic
 kubectl -n shop set env deploy/assistant PROVIDER=anthropic ANTHROPIC_BASE_URL=http://api.anthropic.com
 kubectl -n shop rollout status deploy/assistant
@@ -111,18 +111,18 @@ kubectl -n shop exec deploy/course-client -- curl -s -o /dev/null -w '%{http_cod
 
 To go back to Ollama: `kubectl -n shop set env deploy/assistant PROVIDER=ollama`.
 
-### 3. Module 19: kagent
+### 3. Module 5.3: kagent
 
-kagent reads the key from its own Secret. Install kagent as module 19 shows, and add these flags to the `helm install kagent` command:
+kagent reads the key from its own Secret. Install kagent as module 5.3 shows, and add these flags to the `helm install kagent` command:
 
 ```bash
 kubectl -n kagent create secret generic kagent-anthropic --from-literal=ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"
 helm install kagent ... --set providers.default=anthropic --set providers.anthropic.model=claude-opus-5-5
 ```
 
-Claude calls tools far more reliably than a 3-billion-parameter model, so module 19's agents finish more of their tasks.
+Claude calls tools far more reliably than a 3-billion-parameter model, so module 5.3's agents finish more of their tasks.
 
-### 4. Module 27: RAG
+### 4. Module 5.4: RAG
 
 The RAG app calls Claude over HTTPS directly. The `course-rag` namespace sits outside the shop waypoint, so no ServiceEntry is involved:
 
@@ -132,15 +132,15 @@ kubectl -n course-rag set env deploy/rag --from=secret/anthropic
 kubectl -n course-rag set env deploy/rag PROVIDER=anthropic
 ```
 
-The answers in module 27's text came from `qwen2.5:3b`. Claude answers the same questions with the same retrieved sections, so the retrieval lessons still hold: when search returns the wrong sections, a better model still gives a confident wrong answer.
+The answers in module 5.4's text came from `qwen2.5:3b`. Claude answers the same questions with the same retrieved sections, so the retrieval lessons still hold: when search returns the wrong sections, a better model still gives a confident wrong answer.
 
 ## What was tested
 
-The Ollama path is the course default. With the new app images, `./platform-engineering/verify.sh 17 27` passed every check.
+The Ollama path is the course default. With the new app images, `./platform-engineering/verify.sh 5.1 5.4` passed every check.
 
-On 21 November 2026 the run was repeated the way a learner works, from a fresh clone with only Docker and git on the PATH, so every command went through the toolbox, with Ollama on the Mac. `./lab.sh test 17 18 19` passed 26 of 26 checks in 10 minutes 16 seconds, with the practice cluster deleted to leave memory for module 18's model servers and kagent. With the three `openai` lines above in `lab.env` and `./lab.sh ai`, `./lab.sh test 17 27` passed 21 of 21 in 3 minutes 9 seconds, and `/api/model` reported `"provider":"openai"`.
+On 21 November 2026 the run was repeated the way a learner works, from a fresh clone with only Docker and git on the PATH, so every command went through the toolbox, with Ollama on the Mac. `./lab.sh test 5.1 5.2 5.3` passed 26 of 26 checks in 10 minutes 16 seconds, with the practice cluster deleted to leave memory for module 5.2's model servers and kagent. With the three `openai` lines above in `lab.env` and `./lab.sh ai`, `./lab.sh test 5.1 5.4` passed 21 of 21 in 3 minutes 9 seconds, and `/api/model` reported `"provider":"openai"`.
 
-The `lab.env` settings were first tested from the toolbox on a fresh lab, with Ollama 0.32.13 and `qwen2.5:3b` throughout. With no `lab.env`, `./lab.sh test 17 27` passed 21 of 21 checks. With `LLM_PROVIDER=openai` and Ollama's `/v1` endpoint, the same run passed 21 of 21 once module 17's AuthorizationPolicy also allowed `/v1/chat/completions`, and `/api/model` reported the `openai` provider. Against the `ollama` service in a container, the assistant answered, `./lab.sh test 27` passed 11 of 11 checks, and the RAG app also ingested, searched and answered through the service's `/v1` API. The Claude path was tested without an API key:
+The `lab.env` settings were first tested from the toolbox on a fresh lab, with Ollama 0.32.13 and `qwen2.5:3b` throughout. With no `lab.env`, `./lab.sh test 5.1 5.4` passed 21 of 21 checks. With `LLM_PROVIDER=openai` and Ollama's `/v1` endpoint, the same run passed 21 of 21 once module 5.1's AuthorizationPolicy also allowed `/v1/chat/completions`, and `/api/model` reported the `openai` provider. Against the `ollama` service in a container, the assistant answered, `./lab.sh test 5.4` passed 11 of 11 checks, and the RAG app also ingested, searched and answered through the service's `/v1` API. The Claude path was tested without an API key:
 
 - Both apps ran against a stand-in server that recorded each request. The SDK sent `POST /v1/messages` with the model, the system prompt, `effort: low` and the fallback setting, and the apps read the answer and the token counts from the reply.
 - In the cluster, the request went from the assistant through the waypoint to `api.anthropic.com` over HTTPS. With a fake key, Anthropic answered `401 authentication_error`, which shows the route and the TLS origination work. A pod with another service account got `403` from the waypoint, before its request left the cluster. The policy matches `/v1/messages` even though the SDK adds `?beta=true`, because Istio leaves the query string out of path matching.

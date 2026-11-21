@@ -1,0 +1,15 @@
+# Module 3.18, break 4. Apply it without reading it first, then find the cause with istioctl.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: block-anything
+  namespace: course-debug
+spec:
+  selector:
+    matchLabels:
+      app: httpbin
+  action: DENY
+  rules:
+    - to:
+        - operation:
+            paths: ["/anything*"]

@@ -179,13 +179,13 @@ detect_platform_args() {
 
 install_istio_ambient() {
   step "Installing Istio ${ISTIO_VERSION} in ambient mode with Helm"
-  # Course module 14 upgrades Istio to a revisioned control plane (a Helm release named
+  # Course module 3.19 upgrades Istio to a revisioned control plane (a Helm release named
   # istiod-<revision>). Installing the course version on top would downgrade the CRDs and
   # start a second control plane, so leave an upgraded mesh alone.
   local upgraded
   upgraded="$(helm -n istio-system list -q 2>/dev/null | grep '^istiod-' || true)"
   if [[ -n "$upgraded" ]]; then
-    warn "Istio was upgraded in course module 14 (Helm release ${upgraded}). Leaving it as it is."
+    warn "Istio was upgraded in course module 3.19 (Helm release ${upgraded}). Leaving it as it is."
     warn "To return to Istio ${ISTIO_VERSION}: ./lab.sh down --yes && ./lab.sh up"
     return 0
   fi

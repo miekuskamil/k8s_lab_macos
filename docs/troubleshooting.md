@@ -307,7 +307,7 @@ Turning the setting on in Helm was not enough at first. `helm upgrade` rewrote t
 
 ## 19. Istio resources fail validation after an upgrade
 
-**Symptom.** After the old control plane was removed during an upgrade (course module 14), `kubectl apply` of any Istio resource, a ServiceEntry or a VirtualService for example, fails:
+**Symptom.** After the old control plane was removed during an upgrade (course module 3.19), `kubectl apply` of any Istio resource, a ServiceEntry or a VirtualService for example, fails:
 
 ```text
 Internal error occurred: failed calling webhook "validation.istio.io": failed to call webhook:
@@ -327,7 +327,7 @@ It printed `istiod Fail`: the webhook still sent every Istio resource to the Ser
 
 **Cause.** The `istio-base` chart owns `istiod-default-validator` and points it at the `default` revision's Service, `istiod`. Installing a revisioned control plane and deleting the old one doesn't move it.
 
-**Fix.** Before deleting the old istiod, point the base chart at the new revision: `helm upgrade istio-base istio/base -n istio-system --version 1.25.5 -f helm/istio-base-values.yaml --set defaultRevision=1-25-5 --force-conflicts`. Module 14 does this in step 8.
+**Fix.** Before deleting the old istiod, point the base chart at the new revision: `helm upgrade istio-base istio/base -n istio-system --version 1.25.5 -f helm/istio-base-values.yaml --set defaultRevision=1-25-5 --force-conflicts`. Module 3.19 does this in step 8.
 
 ## A note on watching long installs
 

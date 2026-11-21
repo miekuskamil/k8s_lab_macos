@@ -20,17 +20,17 @@ The lab is a small online shop that runs in a Kubernetes cluster on your laptop,
 
 The course builds on that lab in four levels, from your first container image to AI agents in a service mesh. Its application and security modules need a cluster built the way teams build one by hand, so a second, smaller cluster runs next to the lab for them. A few kernel tasks need a virtual machine with a kernel of its own.
 
-![How the lab fits together: your terminal and browser, the toolbox, the k3d lab and the practice cluster in one Docker engine, Ollama on your machine, and the VM for module 44](docs/diagrams/chapters/lab-map.svg)
+![How the lab fits together: your terminal and browser, the toolbox, the k3d lab and the practice cluster in one Docker engine, Ollama on your machine, and the VM for module 4.7](docs/diagrams/chapters/lab-map.svg)
 
 Five names come back on every page of the course:
 
 | Name | What it is |
 |---|---|
-| The lab | The k3d cluster `k8s-lab`: one k3s node in Docker with the shop, Istio ambient mesh, ArgoCD and every UI. Modules 0 to 32 and 45 run here. |
+| The lab | The k3d cluster `k8s-lab`: one k3s node in Docker with the shop, Istio ambient mesh, ArgoCD and every UI. Modules 1.1, 2.1 and 2.2, 2.4 to 2.9, 3.1 to 3.21 and 5.1 to 5.4 run here. |
 | The toolbox | A container with kubectl, helm, k3d, kind and istioctl at the tested versions. Your machine needs only Docker and git. |
-| The practice cluster | Two kubeadm nodes that kind runs as containers, for the timed tasks of modules 33 to 43 and the six practice exams. |
-| The VM | `cks-lima`, a Lima VM with its own kernel, only for module 44 and a few tasks of practice exams 5 and 6. |
-| Ollama | A program on your machine that runs the language model for the AI modules 17, 18, 19 and 27. |
+| The practice cluster | Two kubeadm nodes that kind runs as containers, for the timed tasks of modules 1.2 to 1.6 and 4.1 to 4.6 and the six practice exams. |
+| The VM | `cks-lima`, a Lima VM with its own kernel, only for module 4.7 and a few tasks of practice exams 5 and 6. |
+| Ollama | A program on your machine that runs the language model for the AI modules 5.1, 5.2, 5.3 and 5.4. |
 
 The [glossary](platform-engineering/glossary.md) explains every other term the course uses, so keep it open in a tab.
 
@@ -72,7 +72,7 @@ Your machine needs Docker and git. On a Mac, Docker comes from [OrbStack](https:
    ./lab.sh test
    ```
 
-The clusters run as containers on your own Docker engine, not inside the toolbox, so they keep running after you leave the shell. Every `./lab.sh` command works the same inside and outside the toolbox. On a machine without kubectl, helm or k3d, a command run outside the toolbox goes through it by itself. The exceptions are `./lab.sh task` and `./lab.sh exam`, which stay on your machine, because they reach the Lima VM of module 44 with `limactl` and only your machine has it. Run the tasks of module 44 and practice exams 5 and 6 in a terminal outside the toolbox for that reason.
+The clusters run as containers on your own Docker engine, not inside the toolbox, so they keep running after you leave the shell. Every `./lab.sh` command works the same inside and outside the toolbox. On a machine without kubectl, helm or k3d, a command run outside the toolbox goes through it by itself. The exceptions are `./lab.sh task` and `./lab.sh exam`, which stay on your machine, because they reach the Lima VM of module 4.7 with `limactl` and only your machine has it. Run the tasks of module 4.7 and practice exams 5 and 6 in a terminal outside the toolbox for that reason.
 
 ## Logins and addresses
 
@@ -89,7 +89,7 @@ The shop answers as soon as `./lab.sh up` finishes. Every other UI needs `./lab.
 | Kiali, the Istio console | http://localhost:20001 | none | none |
 | Headlamp, a web UI for the whole cluster | http://localhost:4466 | none | none |
 
-Module 11 adds HTTPS for the shop on https://localhost:8443. Redis has no local port, and its password is `k8s-lab-redis`. On the practice cluster, ingress-nginx answers on http://localhost:30080 and https://localhost:30443.
+Module 3.10 adds HTTPS for the shop on https://localhost:8443. Redis has no local port, and its password is `k8s-lab-redis`. On the practice cluster, ingress-nginx answers on http://localhost:30080 and https://localhost:30443.
 
 Every secret is a fixed default stored in Git, so every copy of the lab behaves the same. That choice stays safe only because nothing listens outside your machine. Headlamp has no login and acts as `cluster-admin`, so never publish its port on a network.
 
@@ -101,7 +101,7 @@ Every secret is a fixed default stored in Git, so every copy of the lab behaves 
 | ArgoCD `admin` | `k8s-lab-admin` | `helm/argocd-values.yaml`, as a bcrypt hash | Make a new hash with the command in that file's comment, and update `argocdServerAdminPasswordMtime`. |
 | Redis | `k8s-lab-redis` | `manifests/base/03-lab-credentials.yaml`, Secret `shop/redis-auth` | Edit it there, then restart Redis and the backends. |
 | Kiali token signing key | `k8s-lab-kiali-signing-key-32chrs` | `helm/kiali-values.yaml`, `login_token.signing_key` | Use 16, 24 or 32 characters, and keep the value fixed, because Kiali restarts on every sync otherwise ([problem 16](docs/troubleshooting.md#16-kiali-restarts-every-few-minutes)). |
-| Gitea `lab`, module 22 only | `lab-gitops-pass` | the `gitea admin user create` command in [module 22](platform-engineering/2-intermediate/22-gitops-with-argocd.md) | Use another password there and in your `git push` URL. |
+| Gitea `lab`, module 2.6 only | `lab-gitops-pass` | the `gitea admin user create` command in [module 2.6](platform-engineering/2-observability/06-gitops-with-argocd.md) | Use another password there and in your `git push` URL. |
 
 ## Everyday commands
 
@@ -116,7 +116,7 @@ Run every command from the repository folder. `./lab.sh help` prints the same li
 | `./lab.sh status` | Shows the nodes, the ArgoCD applications and every pod that is not running. |
 | `./lab.sh ui` | Opens the web UIs on localhost until you press Ctrl-C. |
 | `./lab.sh test` | Sends 100 requests to the shop and prints the status codes, the versions and the latency. |
-| `./lab.sh test 4 5` | Runs the course checks for modules 4 and 5. `./lab.sh test all` runs every module that is safe to repeat, in about 50 minutes. |
+| `./lab.sh test 4 5` | Runs the course checks for modules 3.4 and 3.5. `./lab.sh test all` runs every module that is safe to repeat, in about 50 minutes. |
 | `./lab.sh reset` | Removes the course exercises and restores the Git baseline. `--all` also removes the course namespaces. |
 | `./lab.sh down` | Deletes the cluster after it asks. `--yes` skips the question. |
 | **The practice cluster** | |
@@ -125,8 +125,8 @@ Run every command from the repository folder. `./lab.sh help` prints the same li
 | `./lab.sh practice reset` | Builds the practice cluster again from scratch. |
 | `./lab.sh practice down` | Deletes the practice cluster after it asks. |
 | **Timed tasks and exams** | |
-| `./lab.sh task list` | Lists every timed task id, such as `38.3`. |
-| `./lab.sh task setup 38.3` | Prepares a task. `check` scores it and `solve` applies the reference solution. |
+| `./lab.sh task list` | Lists every timed task id, such as `4.1.3`. |
+| `./lab.sh task setup 4.1.3` | Prepares a task. `check` scores it and `solve` applies the reference solution. |
 | `./lab.sh exam setup 4` | Prepares practice exam 4 and starts its 2-hour clock. `score` and `solve` follow the same pattern. |
 | **AI models** | |
 | `./lab.sh ai` | Copies the AI settings from `lab.env` into the cluster. |
@@ -157,9 +157,9 @@ ArgoCD deploys the lab from the `main` branch on GitHub, not from your working c
 
 ## The course
 
-[Start here: Istio in one picture](platform-engineering/start-here.md) takes 15 minutes, needs no cluster, and shows every Istio resource the mesh modules use on one diagram. Read it before module 0.
+[Start here: Istio in one picture](platform-engineering/start-here.md) takes 15 minutes, needs no cluster, and shows every Istio resource the mesh modules use on one diagram. Read it before module 1.1.
 
-The course has four levels and one extra domain. Each level mixes topics, so the difficulty climbs while you work on applications, the mesh, platform tools and security side by side. Module numbers never change, so `./lab.sh test 4` always checks module 4. The last column names what a module runs on: *lab* is the k3d lab from the quick start, *practice* is the practice cluster with its timed tasks, *VM* is the Lima VM `cks-lima`, and *AI* means the module also calls a language model, as [AI models](#ai-models) explains.
+The course has four levels and one extra domain. Each level mixes topics, so the difficulty climbs while you work on applications, the mesh, platform tools and security side by side. Module numbers never change, so `./lab.sh test 4` always checks module 3.4. The last column names what a module runs on: *lab* is the k3d lab from the quick start, *practice* is the practice cluster with its timed tasks, *VM* is the Lima VM `cks-lima`, and *AI* means the module also calls a language model, as [AI models](#ai-models) explains.
 
 ### 1. Foundations
 
@@ -167,22 +167,22 @@ How an application gets built, shipped, configured, reached and debugged, and ho
 
 | Module | You learn | Runs on |
 |---|---|---|
-| [33. Building and running applications](platform-engineering/1-foundations/33-building-and-running-applications.md) | Images, Jobs and CronJobs, init and sidecar containers, volumes | practice |
-| [34. Deploying and updating applications](platform-engineering/1-foundations/34-deploying-and-updating-applications.md) | Rolling updates and rollbacks, blue-green and canary, Helm, Kustomize | practice |
-| [35. Observing and debugging applications](platform-engineering/1-foundations/35-observing-and-debugging-applications.md) | Probes, logs, `kubectl top`, debugging containers without a shell, API deprecations | practice |
-| [36. Configuration and secrets](platform-engineering/1-foundations/36-configuration-and-secrets.md) | ConfigMaps and Secrets, requests, limits and quotas, ServiceAccounts and RBAC, security contexts, CRDs | practice |
-| [37. Services and networking](platform-engineering/1-foundations/37-services-and-networking.md) | Services, NodePorts, Ingress, NetworkPolicies | practice |
-| [0. Setup](platform-engineering/1-foundations/00-setup.md) | Check the lab and the Istio command line | lab |
-| [1. What a mesh adds](platform-engineering/1-foundations/01-what-a-mesh-adds.md) | What Kubernetes networking leaves out, and Istio's two data plane designs | lab |
-| [2. Identity and mTLS](platform-engineering/1-foundations/02-identity-and-mtls.md) | Where workload identity comes from and how the tunnel works | lab |
-| [3. Authorization](platform-engineering/1-foundations/03-authorization.md) | Policy at layer 4 and layer 7, and why you need both | lab |
-| [4. Traffic routing](platform-engineering/1-foundations/04-traffic-routing.md) | Weighted and content-based routing with the Gateway API | lab |
-| [5. Resilience](platform-engineering/1-foundations/05-resilience.md) | Timeouts, faults, circuit breaking, rate limiting | lab |
-| [6. Observability](platform-engineering/1-foundations/06-observability.md) | What the mesh measures by itself, and how to follow one request | lab |
-| [8. Incidents](platform-engineering/1-foundations/08-incidents.md) | Find and fix four broken setups without being told the cause | lab |
-| [9. Command reference](platform-engineering/1-foundations/09-command-reference.md) | Troubleshooting commands for the cluster and for Istio, by layer | lab |
-| [29. The life of a request](platform-engineering/1-foundations/29-life-of-a-request.md) | From kubectl to the API server, scheduler, kubelet and CNI, then one request with and without the mesh, hop by hop | lab |
-| [Practice exams 1](platform-engineering/1-foundations/practice-exam-1.md), [2](platform-engineering/1-foundations/practice-exam-2.md) and [3](platform-engineering/1-foundations/practice-exam-3.md) | Modules 33 to 37 against a 2-hour clock, each harder than the one before | practice |
+| [33. Building and running applications](platform-engineering/1-applications/02-building-and-running-applications.md) | Images, Jobs and CronJobs, init and sidecar containers, volumes | practice |
+| [34. Deploying and updating applications](platform-engineering/1-applications/03-deploying-and-updating-applications.md) | Rolling updates and rollbacks, blue-green and canary, Helm, Kustomize | practice |
+| [35. Observing and debugging applications](platform-engineering/1-applications/04-observing-and-debugging-applications.md) | Probes, logs, `kubectl top`, debugging containers without a shell, API deprecations | practice |
+| [36. Configuration and secrets](platform-engineering/1-applications/05-configuration-and-secrets.md) | ConfigMaps and Secrets, requests, limits and quotas, ServiceAccounts and RBAC, security contexts, CRDs | practice |
+| [37. Services and networking](platform-engineering/1-applications/06-services-and-networking.md) | Services, NodePorts, Ingress, NetworkPolicies | practice |
+| [0. Setup](platform-engineering/1-applications/01-setup.md) | Check the lab and the Istio command line | lab |
+| [1. What a mesh adds](platform-engineering/3-istio/01-what-a-mesh-adds.md) | What Kubernetes networking leaves out, and Istio's two data plane designs | lab |
+| [2. Identity and mTLS](platform-engineering/3-istio/02-identity-and-mtls.md) | Where workload identity comes from and how the tunnel works | lab |
+| [3. Authorization](platform-engineering/3-istio/03-authorization.md) | Policy at layer 4 and layer 7, and why you need both | lab |
+| [4. Traffic routing](platform-engineering/3-istio/04-traffic-routing.md) | Weighted and content-based routing with the Gateway API | lab |
+| [5. Resilience](platform-engineering/3-istio/05-resilience.md) | Timeouts, faults, circuit breaking, rate limiting | lab |
+| [6. Observability](platform-engineering/3-istio/06-mesh-observability.md) | What the mesh measures by itself, and how to follow one request | lab |
+| [8. Incidents](platform-engineering/3-istio/07-incidents.md) | Find and fix four broken setups without being told the cause | lab |
+| [9. Command reference](platform-engineering/3-istio/08-command-reference.md) | Troubleshooting commands for the cluster and for Istio, by layer | lab |
+| [29. The life of a request](platform-engineering/3-istio/15-life-of-a-request.md) | From kubectl to the API server, scheduler, kubelet and CNI, then one request with and without the mesh, hop by hop | lab |
+| [Practice exams 1](platform-engineering/1-applications/practice-exam-1.md), [2](platform-engineering/1-applications/practice-exam-2.md) and [3](platform-engineering/1-applications/practice-exam-3.md) | Modules 1.2 to 1.6 against a 2-hour clock, each harder than the one before | practice |
 
 ### 2. Intermediate
 
@@ -190,19 +190,19 @@ More of Istio, the everyday tools of a platform team, and the first steps in sec
 
 | Module | You learn | Runs on |
 |---|---|---|
-| [7. Sidecar mode](platform-engineering/2-intermediate/07-sidecar-mode.md) | The classic sidecar design, side by side with ambient | lab |
-| [11. TLS at the edge](platform-engineering/2-intermediate/11-edge-tls.md) | HTTPS on the ingress gateway, cert-manager, redirects, renewal without downtime | lab |
-| [12. Egress](platform-engineering/2-intermediate/12-egress.md) | ServiceEntry, TLS origination, rules on outbound calls, locking a pod in | lab |
-| [13. JWT](platform-engineering/2-intermediate/13-jwt.md) | End-user identity, rules on token claims, 401 against 403 | lab |
-| [15. Outlier detection and retries](platform-engineering/2-intermediate/15-outlier-detection-and-retries.md) | One bad pod out of three: retries hide it, outlier detection removes it | lab |
-| [16. The Istio API](platform-engineering/2-intermediate/16-istio-api.md) | The same ingress and canary with Istio's Gateway, VirtualService and subsets | lab |
-| [20. Nodes, drains and cleanup](platform-engineering/2-intermediate/20-nodes-and-cleanup.md) | A second node, drains under traffic, PodDisruptionBudgets, cleaning up what piles up | lab |
-| [22. GitOps with ArgoCD](platform-engineering/2-intermediate/22-gitops-with-argocd.md) | Your own Git server, drift and self-heal, rollbacks, sync waves, AppProjects, ApplicationSets | lab |
-| [23. Prometheus and alerting](platform-engineering/2-intermediate/23-prometheus-and-alerting.md) | PromQL, recording rules, an SLO with a burn-rate alert, Alertmanager routing | lab |
-| [24. Grafana as code](platform-engineering/2-intermediate/24-grafana-as-code.md) | Dashboards from ConfigMaps, variables, Grafana-managed alerts, trace-to-logs links | lab |
-| [26. Kyverno, policy as code](platform-engineering/2-intermediate/26-kyverno-policy-as-code.md) | Audit then Enforce, exceptions, mutation, generated defaults, PolicyReports | lab |
-| [38. Setting up a secure cluster](platform-engineering/2-intermediate/38-setting-up-a-secure-cluster.md) | Default-deny NetworkPolicies, the metadata endpoint, kube-bench, Ingress with TLS, binary checksums | practice |
-| [39. Hardening access to the API](platform-engineering/2-intermediate/39-hardening-access-to-the-api.md) | RBAC, service account tokens, anonymous access, a kubeadm upgrade, repairing the API server and etcd | practice |
+| [7. Sidecar mode](platform-engineering/3-istio/09-sidecar-mode.md) | The classic sidecar design, side by side with ambient | lab |
+| [11. TLS at the edge](platform-engineering/3-istio/10-edge-tls.md) | HTTPS on the ingress gateway, cert-manager, redirects, renewal without downtime | lab |
+| [12. Egress](platform-engineering/3-istio/11-egress.md) | ServiceEntry, TLS origination, rules on outbound calls, locking a pod in | lab |
+| [13. JWT](platform-engineering/3-istio/12-jwt.md) | End-user identity, rules on token claims, 401 against 403 | lab |
+| [15. Outlier detection and retries](platform-engineering/3-istio/13-outlier-detection-and-retries.md) | One bad pod out of three: retries hide it, outlier detection removes it | lab |
+| [16. The Istio API](platform-engineering/3-istio/14-istio-api.md) | The same ingress and canary with Istio's Gateway, VirtualService and subsets | lab |
+| [20. Nodes, drains and cleanup](platform-engineering/2-observability/08-nodes-and-cleanup.md) | A second node, drains under traffic, PodDisruptionBudgets, cleaning up what piles up | lab |
+| [22. GitOps with ArgoCD](platform-engineering/2-observability/06-gitops-with-argocd.md) | Your own Git server, drift and self-heal, rollbacks, sync waves, AppProjects, ApplicationSets | lab |
+| [23. Prometheus and alerting](platform-engineering/2-observability/01-prometheus-and-alerting.md) | PromQL, recording rules, an SLO with a burn-rate alert, Alertmanager routing | lab |
+| [24. Grafana as code](platform-engineering/2-observability/02-grafana-as-code.md) | Dashboards from ConfigMaps, variables, Grafana-managed alerts, trace-to-logs links | lab |
+| [26. Kyverno, policy as code](platform-engineering/2-observability/07-kyverno-policy-as-code.md) | Audit then Enforce, exceptions, mutation, generated defaults, PolicyReports | lab |
+| [38. Setting up a secure cluster](platform-engineering/4-security/01-setting-up-a-secure-cluster.md) | Default-deny NetworkPolicies, the metadata endpoint, kube-bench, Ingress with TLS, binary checksums | practice |
+| [39. Hardening access to the API](platform-engineering/4-security/02-hardening-access-to-the-api.md) | RBAC, service account tokens, anonymous access, a kubeadm upgrade, repairing the API server and etcd | practice |
 
 ### 3. Advanced
 
@@ -210,39 +210,39 @@ Hardening nodes, workloads and the supply chain, catching attacks at runtime, an
 
 | Module | You learn | Runs on |
 |---|---|---|
-| [40. Hardening nodes](platform-engineering/3-advanced/40-hardening-nodes.md) | Unneeded services, users with too much power, NodeRestriction, sshd, credentials on disk | practice |
-| [41. Hardening workloads](platform-engineering/3-advanced/41-hardening-workloads.md) | Pod Security Standards, Secrets encrypted at rest, gVisor sandboxes | practice |
-| [42. Supply chain security](platform-engineering/3-advanced/42-supply-chain-security.md) | Small images, vulnerability scans, SBOMs, static analysis, allowed registries | practice |
-| [43. Runtime security and auditing](platform-engineering/3-advanced/43-runtime-security-and-auditing.md) | Audit logs, Falco rules, immutable containers, seccomp, investigating an attack | practice |
-| [10. eBPF and Cilium](platform-engineering/3-advanced/10-ebpf-and-cilium.md) | The other sidecarless design, compared with ambient, in theory | lab |
-| [14. Upgrading Istio](platform-engineering/3-advanced/14-upgrading-istio.md) | A canary upgrade with revisions, tags and rollback. One way: rebuild the lab afterwards | lab |
-| [21. k3s certificates, backups, upgrades](platform-engineering/3-advanced/21-k3s-lifecycle.md) | Certificate rotation, a datastore backup and restore, a k3s upgrade. One way: rebuild afterwards | lab |
-| [25. OpenTelemetry Collector and Tempo](platform-engineering/3-advanced/25-opentelemetry-and-tempo.md) | A Collector between apps and back ends, span metrics, Tempo and TraceQL | lab |
-| [28. Continuous profiling with Pyroscope](platform-engineering/3-advanced/28-continuous-profiling.md) | Flame graphs, self against total time, memory allocations, the cost of profiling | lab |
-| [30. Sidecar mode in depth](platform-engineering/3-advanced/30-sidecar-in-depth.md) | Injection webhooks, iptables capture, the Sidecar resource, sidecar against ambient | lab |
-| [31. Debugging Envoy with istioctl](platform-engineering/3-advanced/31-debugging-envoy.md) | Listeners, routes, clusters and endpoints, response flags, four break-and-fix exercises | lab |
-| [32. Installing Istio with istioctl](platform-engineering/3-advanced/32-installing-istio.md) | Install profiles, IstioOperator files, switching to ambient, on a throwaway cluster | its own k3d cluster |
-| [45. The life of an outbound request](platform-engineering/3-advanced/45-life-of-an-outbound-request.md) | One call from a pod to the internet through every layer of NAT, then controlled egress | lab |
-| [Practice exams 4](platform-engineering/3-advanced/practice-exam-4.md), [5](platform-engineering/3-advanced/practice-exam-5.md) and [6](platform-engineering/3-advanced/practice-exam-6.md) | Modules 38 to 43 against a 2-hour clock, each harder than the one before | practice, and the VM for exams 5 and 6 |
+| [40. Hardening nodes](platform-engineering/4-security/03-hardening-nodes.md) | Unneeded services, users with too much power, NodeRestriction, sshd, credentials on disk | practice |
+| [41. Hardening workloads](platform-engineering/4-security/04-hardening-workloads.md) | Pod Security Standards, Secrets encrypted at rest, gVisor sandboxes | practice |
+| [42. Supply chain security](platform-engineering/4-security/05-supply-chain-security.md) | Small images, vulnerability scans, SBOMs, static analysis, allowed registries | practice |
+| [43. Runtime security and auditing](platform-engineering/4-security/06-runtime-security-and-auditing.md) | Audit logs, Falco rules, immutable containers, seccomp, investigating an attack | practice |
+| [10. eBPF and Cilium](platform-engineering/3-istio/21-ebpf-and-cilium.md) | The other sidecarless design, compared with ambient, in theory | lab |
+| [14. Upgrading Istio](platform-engineering/3-istio/19-upgrading-istio.md) | A canary upgrade with revisions, tags and rollback. One way: rebuild the lab afterwards | lab |
+| [21. k3s certificates, backups, upgrades](platform-engineering/2-observability/09-k3s-lifecycle.md) | Certificate rotation, a datastore backup and restore, a k3s upgrade. One way: rebuild afterwards | lab |
+| [25. OpenTelemetry Collector and Tempo](platform-engineering/2-observability/04-opentelemetry-and-tempo.md) | A Collector between apps and back ends, span metrics, Tempo and TraceQL | lab |
+| [28. Continuous profiling with Pyroscope](platform-engineering/2-observability/05-continuous-profiling.md) | Flame graphs, self against total time, memory allocations, the cost of profiling | lab |
+| [30. Sidecar mode in depth](platform-engineering/3-istio/17-sidecar-in-depth.md) | Injection webhooks, iptables capture, the Sidecar resource, sidecar against ambient | lab |
+| [31. Debugging Envoy with istioctl](platform-engineering/3-istio/18-debugging-envoy.md) | Listeners, routes, clusters and endpoints, response flags, four break-and-fix exercises | lab |
+| [32. Installing Istio with istioctl](platform-engineering/3-istio/20-installing-istio.md) | Install profiles, IstioOperator files, switching to ambient, on a throwaway cluster | its own k3d cluster |
+| [45. The life of an outbound request](platform-engineering/3-istio/16-life-of-an-outbound-request.md) | One call from a pod to the internet through every layer of NAT, then controlled egress | lab |
+| [Practice exams 4](platform-engineering/4-security/practice-exam-4.md), [5](platform-engineering/4-security/practice-exam-5.md) and [6](platform-engineering/4-security/practice-exam-6.md) | Modules 4.1 to 4.6 against a 2-hour clock, each harder than the one before | practice, and the VM for exams 5 and 6 |
 
 ### 4. AI on Kubernetes
 
-AI workloads in the mesh. Modules 17 to 19 build on modules 3 to 6 and 12, and module 27 needs only module 0.
+AI workloads in the mesh. Modules 5.1 to 5.3 build on modules 3.3 to 3.6 and 3.11, and module 5.4 needs only module 1.1.
 
 | Module | You learn | Runs on |
 |---|---|---|
-| [17. An LLM as a mesh service](platform-engineering/4-ai/17-llm-in-the-mesh.md) | A shop assistant that calls a model, a locked-down model API, token metrics, GenAI traces | lab, AI |
-| [18. Serving models in the cluster](platform-engineering/4-ai/18-serving-models.md) | Two small models on llama.cpp, readiness, why LLM load balancing is hard, the Inference Extension | lab, downloads about 900 MB |
-| [19. AI agents and their tools](platform-engineering/4-ai/19-ai-agents.md) | kagent, MCP and A2A, mesh policy and RBAC around agents | lab, AI |
-| [27. RAG on Kubernetes](platform-engineering/4-ai/27-rag-on-kubernetes.md) | Qdrant, embeddings, ingesting the course, retrieval misses, top-k against tokens | lab, AI |
+| [17. An LLM as a mesh service](platform-engineering/5-ai/01-llm-in-the-shop.md) | A shop assistant that calls a model, a locked-down model API, token metrics, GenAI traces | lab, AI |
+| [18. Serving models in the cluster](platform-engineering/5-ai/02-serving-models.md) | Two small models on llama.cpp, readiness, why LLM load balancing is hard, the Inference Extension | lab, downloads about 900 MB |
+| [19. AI agents and their tools](platform-engineering/5-ai/03-ai-agents.md) | kagent, MCP and A2A, mesh policy and RBAC around agents | lab, AI |
+| [27. RAG on Kubernetes](platform-engineering/5-ai/04-rag-on-kubernetes.md) | Qdrant, embeddings, ingesting the course, retrieval misses, top-k against tokens | lab, AI |
 
 ### 5. Kernel and host security on a VM
 
-The seven tasks that change the kernel itself. Take each task after the module it comes from: the Cilium tasks after module 38, the kernel module task after 40, WireGuard after 41, and AppArmor after 43.
+The seven tasks that change the kernel itself. Take each task after the module it comes from: the Cilium tasks after module 4.1, the kernel module task after 40, WireGuard after 41, and AppArmor after 43.
 
 | Module | You learn | Runs on |
 |---|---|---|
-| [44. Kernel and host security](platform-engineering/kernel-and-host/44-kernel-and-host-security.md) | Cilium policies at layers 3, 4 and 7, keeping kernel modules out, WireGuard between pods, AppArmor | VM |
+| [44. Kernel and host security](platform-engineering/4-security/07-kernel-and-host-security.md) | Cilium policies at layers 3, 4 and 7, keeping kernel modules out, WireGuard between pods, AppArmor | VM |
 
 ### How to study
 
@@ -250,23 +250,23 @@ Every lab module follows the same pattern. It explains one problem and the desig
 
 The practice cluster modules open with theory and diagrams, then hand you timed tasks of 3 to 10 minutes each. You prepare a task, solve it against the clock, and let the script check your work, as [Practice cluster and timed tasks](#practice-cluster-and-timed-tasks) shows. Levels 1 and 3 each end with three practice exams of 2 hours, which score your cluster out of 100 points with partial credit.
 
-![Routes through the lab modules: module 0, then the Istio, operations, platform and AI routes](docs/diagrams/chapters/readme-course-routes.svg)
+![Routes through the lab modules: module 1.1, then the Istio, operations, platform and AI routes](docs/diagrams/chapters/readme-course-routes.svg)
 
 The routes in the picture run on the lab. The application and security modules run on the practice cluster, so you take them alongside any lab route. A good order through the whole course:
 
-1. [Start here](platform-engineering/start-here.md), then module 0.
-2. Modules 33 to 37, then practice exams 1 to 3.
-3. Modules 1 to 7, then 29 to tie them together, then 8 to test yourself.
-4. Modules 11, 12, 13, 15 and 16, then 30, 31 and 45.
-5. Modules 38 and 39, then 40 to 43 with module 44 alongside, then practice exams 4 to 6.
-6. Modules 17 to 19, the AI route.
-7. Modules 22 to 28, the platform tools. Module 27 is AI and needs a model.
-8. Module 20.
-9. Module 14, then rebuild the lab with `./lab.sh down --yes` and `./lab.sh up`.
-10. Module 32, on its own throwaway cluster.
-11. Module 21, then rebuild the lab again.
+1. [Start here](platform-engineering/start-here.md), then module 1.1.
+2. Modules 1.2 to 1.6, then practice exams 1 to 3.
+3. Modules 3.1 to 3.6 and 3.9, then 29 to tie them together, then 8 to test yourself.
+4. Modules 3.10, 3.11, 3.12, 3.13 and 3.14, then 30, 31 and 45.
+5. Modules 4.1 and 4.2, then 40 to 43 with module 4.7 alongside, then practice exams 4 to 6.
+6. Modules 5.1 to 5.3, the AI route.
+7. Modules 2.1 and 2.2, 2.4 to 2.7 and 5.4, the platform tools. Module 5.4 is AI and needs a model.
+8. Module 2.8.
+9. Module 3.19, then rebuild the lab with `./lab.sh down --yes` and `./lab.sh up`.
+10. Module 3.20, on its own throwaway cluster.
+11. Module 2.9, then rebuild the lab again.
 
-Modules 14 and 21 come last, because they upgrade Istio and k3s in place and only a rebuild brings the lab back. Keep module 9 open as a reference, and read module 10 any time after module 7.
+Modules 3.19 and 2.9 come last, because they upgrade Istio and k3s in place and only a rebuild brings the lab back. Keep module 3.8 open as a reference, and read module 3.21 any time after module 3.9.
 
 ### Check a module
 
@@ -277,7 +277,7 @@ Every lab module has automatic checks that apply its manifests, test the results
 ./lab.sh test all
 ```
 
-`./lab.sh test all` covers every lab module that is safe to repeat. Two groups stay out of it, so run them by number: modules 14, 21 and 32, which upgrade the lab or build a cluster of their own, and the AI modules 17, 18, 19 and 27, which need a language model or download one. Modules 9 and 10 have no checks, because one is a reference and the other is theory.
+`./lab.sh test all` covers every lab module that is safe to repeat. Two groups stay out of it, so run them by number: modules 3.19, 2.9 and 3.20, which upgrade the lab or build a cluster of their own, and the AI modules 5.1, 5.2, 5.3 and 5.4, which need a language model or download one. Modules 3.8 and 3.21 have no checks, because one is a reference and the other is theory.
 
 If you prepare for the CKAD or CKS exam, [Timed tasks and exam preparation](platform-engineering/timed-tasks.md#which-modules-cover-each-exam-domain) maps each exam domain to its modules.
 
@@ -291,16 +291,16 @@ The practice cluster is two kubeadm nodes, `practice-control-plane` and `practic
    ./lab.sh practice up
    ```
 
-2. For the application modules 33 to 37, add metrics-server. The command checks the extra tools and is safe to run again.
+2. For the application modules 1.2 to 1.6, add metrics-server. The command checks the extra tools and is safe to run again.
 
    ```bash
    ./platform-engineering/practice/app-extras/extras.sh
    ```
 
-3. Prepare a task on your machine, in the repository folder. A task id joins the module and the task number, so task 3 of module 38 is `38.3`.
+3. Prepare a task on your machine, in the repository folder. A task id joins the module and the task number, so task 3 of module 4.1 is `4.1.3`.
 
    ```bash
-   ./lab.sh task setup 38.3
+   ./lab.sh task setup 4.1.3
    ```
 
 4. Read the brief in the module, start a timer, and solve the task in a root shell on the node the brief names.
@@ -312,13 +312,13 @@ The practice cluster is two kubeadm nodes, `practice-control-plane` and `practic
 5. Back on your machine, check your work. The script prints PASS or FAIL for each thing the task asks.
 
    ```bash
-   ./lab.sh task check 38.3
+   ./lab.sh task check 4.1.3
    ```
 
 6. When the time runs out, apply the reference solution and read it in the module.
 
    ```bash
-   ./lab.sh task solve 38.3
+   ./lab.sh task solve 4.1.3
    ```
 
 Every setup starts its task from scratch, so you repeat a task by running its setup again. Between modules, reset the cluster:
@@ -327,7 +327,7 @@ Every setup starts its task from scratch, so you repeat a task by running its se
 |---|---|
 | An application module, 33 to 37 | `./platform-engineering/practice/app-extras/reset.sh` |
 | A security module, 38 to 43 | `./lab.sh practice reset`, then `extras.sh` again before the next application module |
-| A task of module 44 | `./platform-engineering/practice/cluster/lima.sh reset` |
+| A task of module 4.7 | `./platform-engineering/practice/cluster/lima.sh reset` |
 
 The practice exams work the same way for a whole exam. Each one gives you 2 hours for 16 or 17 tasks worth 100 points, and `score` prints the minutes since `setup` next to your points.
 
@@ -341,7 +341,7 @@ Aim for 80 points or more inside the time before you move on. [Timed tasks and e
 
 ## AI models
 
-The AI modules use Ollama on your machine with the model `qwen2.5:3b` by default, for free and offline. Install it from [ollama.com](https://ollama.com), then pull the chat model and the embedding model that module 27 uses for search:
+The AI modules use Ollama on your machine with the model `qwen2.5:3b` by default, for free and offline. Install it from [ollama.com](https://ollama.com), then pull the chat model and the embedding model that module 5.4 uses for search:
 
 ```bash
 ollama pull qwen2.5:3b
@@ -384,13 +384,13 @@ To use another model or a hosted provider, write your settings in `lab.env`, whi
    ./lab.sh ai
    ```
 
-4. Once module 17 has deployed the shop assistant, check which model it uses.
+4. Once module 5.1 has deployed the shop assistant, check which model it uses.
 
    ```bash
    curl -s localhost:8080/api/model
    ```
 
-[Choosing the model](docs/ai-models.md) has the details: embeddings for module 27, kagent's own settings in module 19, and the mesh setup that sends module 17's calls to Claude over HTTPS.
+[Choosing the model](docs/ai-models.md) has the details: embeddings for module 5.4, kagent's own settings in module 5.3, and the mesh setup that sends module 5.1's calls to Claude over HTTPS.
 
 ## Where it runs
 
@@ -537,9 +537,9 @@ On the test network, cloud-init's first-boot upgrade hung, because plain HTTP do
 
 Nobody has tested the lab on Windows yet. The likely route is Docker Desktop with its WSL2 back end, or Docker Engine inside an Ubuntu distribution in WSL2, with the repository cloned inside the Linux file system and the [Linux](#linux) steps from there. Treat it as a starting point and check each step.
 
-### The VM for module 44
+### The VM for module 4.7
 
-The practice cluster's nodes share one kernel with every container on your machine. That kernel has no AppArmor and no WireGuard module, and Cilium would rewire every container's network if it loaded there. So the seven kernel tasks of module 44, and two tasks each in practice exams 5 and 6, run on a VM with a kernel of its own.
+The practice cluster's nodes share one kernel with every container on your machine. That kernel has no AppArmor and no WireGuard module, and Cilium would rewire every container's network if it loaded there. So the seven kernel tasks of module 4.7, and two tasks each in practice exams 5 and 6, run on a VM with a kernel of its own.
 
 On a Mac, [Lima](https://lima-vm.io) runs that VM. `cks-lima` runs Ubuntu 24.04 with AppArmor and a one-node kubeadm cluster with Cilium as its network plugin, in 2 CPUs and 3 GiB of memory that come from the Mac directly, not from OrbStack.
 
@@ -555,7 +555,7 @@ On a Mac, [Lima](https://lima-vm.io) runs that VM. `cks-lima` runs Ubuntu 24.04 
    ./platform-engineering/practice/cluster/lima.sh create
    ```
 
-3. Open a root shell on the node. Module 44 marks each task that runs here with **Host:** `cks-lima`.
+3. Open a root shell on the node. Module 4.7 marks each task that runs here with **Host:** `cks-lima`.
 
    ```bash
    ./platform-engineering/practice/cluster/lima.sh shell
@@ -583,7 +583,7 @@ Start with `./lab.sh status`. It shows the sync and health of every ArgoCD appli
 | Your exercise disappeared in the middle of a module. | A new commit on `main` made ArgoCD sync. Apply the step's manifests again. |
 | A pod never appears, because a quota or LimitRange refused it. | Run `kubectl get events -A --field-selector reason=FailedCreate`. |
 | Pods fail with "too many open files" on Linux. | Raise the inotify limits as [Linux](#linux) shows. |
-| The AI modules get no answer. | Check that Ollama runs and has the models with `ollama list`. After module 17, `curl -s localhost:8080/api/model` shows the model the assistant calls. |
+| The AI modules get no answer. | Check that Ollama runs and has the models with `ollama list`. After module 5.1, `curl -s localhost:8080/api/model` shows the model the assistant calls. |
 
 To see the most recent warnings in the cluster:
 
@@ -614,7 +614,7 @@ The built images stay in your local Docker store, so a new `./lab.sh up` takes a
 | Page | What it holds |
 |---|---|
 | [Glossary](platform-engineering/glossary.md) | Every term in the course, explained in plain words |
-| [Start here: Istio in one picture](platform-engineering/start-here.md) | Every Istio resource on one diagram, before module 0 |
+| [Start here: Istio in one picture](platform-engineering/start-here.md) | Every Istio resource on one diagram, before module 1.1 |
 | [Architecture](docs/architecture.md) | How a request travels, where mTLS applies, and how Git changes reach the cluster |
 | [How the lab was built](docs/build-from-scratch.md) | The lab rebuilt step by step, with the reason behind each choice |
 | [The life of a request](docs/life-of-a-request.md) | One request through every layer, from the API server to the packets, with real output |

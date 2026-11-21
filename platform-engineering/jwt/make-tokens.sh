@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Make the lab's JWT signing key, its public JWKS and four test tokens for module 13.
+# Make the lab's JWT signing key, its public JWKS and four test tokens for module 3.12.
 # The repository already contains the output. Run this only to make new ones.
 # Needs openssl and python3 (standard library only).
 set -euo pipefail

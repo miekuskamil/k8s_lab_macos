@@ -27,7 +27,7 @@ apt-get install -y -qq --no-install-recommends \
 
 echo "--- kubeadm, kubelet and kubectl $K8S_VERSION from pkgs.k8s.io, held like on a kubeadm node"
 # The kind image carries v1.37.0 binaries without a package manager entry. The packages replace
-# them at /usr/bin, and apt then upgrades them the same way it does on an exam node (module 39).
+# them at /usr/bin, and apt then upgrades them the same way it does on an exam node (module 4.2).
 mkdir -p /etc/apt/keyrings
 curl -fsSL "https://pkgs.k8s.io/core:/stable:/v${K8S_MINOR}/deb/Release.key" \
   | gpg --batch --yes --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
@@ -119,7 +119,7 @@ EOF
 printf 'runtime-endpoint: unix:///run/containerd/containerd.sock\nimage-endpoint: unix:///run/containerd/containerd.sock\n' > /etc/crictl.yaml
 
 # The package lists stay, so "apt-get install kubeadm=1.37.2-1.1" finds the package without an
-# "apt-get update" first, as in module 39. Package upgrades keep the node's changed config files.
+# "apt-get update" first, as in module 4.2. Package upgrades keep the node's changed config files.
 printf 'Dpkg::Options {"--force-confdef";"--force-confold";};\n' > /etc/apt/apt.conf.d/90-practice
 apt-get clean
 rm -rf "$tmp" /root/.cache

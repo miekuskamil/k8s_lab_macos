@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Prepares and checks the application modules' timed tasks under their original ids.
-# Run ./platform-engineering/task.sh instead: it takes the module ids (38.3) the chapters show,
+# Run ./platform-engineering/task.sh instead: it takes the task ids (4.1.3) the chapters show,
 # finds the task here, and passes its id as TASK_LABEL so the output shows the module id.
 #   task.sh setup|check|solve 1.3    task 3 of this folder's tasks/01.sh
 #   task.sh list                     every task, by its id here

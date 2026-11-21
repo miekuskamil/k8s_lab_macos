@@ -49,7 +49,7 @@ claude = (
 )
 COLLECTION = os.getenv("COLLECTION", "course")
 DOCS_DIR = Path(os.getenv("DOCS_DIR", "/docs"))
-# Files to leave out of the index, comma-separated. Module 27 quotes its own test
+# Files to leave out of the index, comma-separated. Module 5.4 quotes its own test
 # questions and answers; indexing it would let the test set leak into the data.
 EXCLUDE_FILES = {f.strip() for f in os.getenv("EXCLUDE_FILES", "").split(",") if f.strip()}
 CHUNK_CHARS = int(os.getenv("CHUNK_CHARS", "1500"))

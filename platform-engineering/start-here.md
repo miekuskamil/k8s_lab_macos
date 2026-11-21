@@ -1,6 +1,6 @@
 # Start here: Istio in one picture
 
-Read this before module 0. It takes about 15 minutes and needs no cluster, and by the end you'll know what each Istio resource is for and which proxy acts on it, which matters just as much. The modules then fill in the details one by one.
+Read this before module 1.1. It takes about 15 minutes and needs no cluster, and by the end you'll know what each Istio resource is for and which proxy acts on it, which matters just as much. The modules then fill in the details one by one.
 
 ![Istio in one picture: the lab's request path, with every Istio resource grouped by the proxy that enforces it](../docs/diagrams/istio-resources.svg)
 
@@ -20,9 +20,9 @@ Your resources and the proxies need something to connect them, and that's istiod
 
 Walk through the picture with a single call, `GET http://localhost:8080/api/orders`.
 
-1. **The browser reaches the ingress gateway.** The ingress gateway is the front door of the cluster, and the **Gateway** resource opened that port. If you added TLS (module 11), the encryption behind HTTPS, the gateway also decrypts the session here, with the certificate that the Gateway resource points to.
+1. **The browser reaches the ingress gateway.** The ingress gateway is the front door of the cluster, and the **Gateway** resource opened that port. If you added TLS (module 3.10), the encryption behind HTTPS, the gateway also decrypts the session here, with the certificate that the Gateway resource points to.
 2. **The gateway checks the caller and picks a route.** This is the first place where the mesh decides who gets in.
-   - A **RequestAuthentication** checks the user's token, if one arrives (module 13).
+   - A **RequestAuthentication** checks the user's token, if one arrives (module 3.12).
    - An **AuthorizationPolicy** on the gateway decides whether the caller needs a token at all.
    - An **HTTPRoute** says that path `/` belongs to the frontend.
 3. **ztunnel carries the request to the frontend.** Every hop between mesh pods travels through a tunnel that ztunnel builds with mTLS, so both ends prove who they are and ztunnel encrypts the traffic. A **PeerAuthentication** set to `STRICT` refuses any traffic that arrives as plain text, because without it a pod outside the mesh would still get through unencrypted.
@@ -32,9 +32,9 @@ Walk through the picture with a single call, `GET http://localhost:8080/api/orde
    - An **HTTPRoute** (or a **VirtualService**) decides *where* the request goes, for example 90% to v1 and 10% to v2, or a version picked by header.
    - A **DestinationRule** decides *how* the waypoint talks to the chosen pods: how many connections to open at once, which pods to skip because they keep failing, and whether to use TLS.
 6. **ztunnel carries it again, from the waypoint to a backend pod.** A second **AuthorizationPolicy** works at L4, the connection level, and lets only the waypoint open that connection, so no other pod skips past the waypoint's HTTP (L7) rules.
-7. **On the way out of the mesh**, a **ServiceEntry** gives an outside host like `httpbin.org` a name in the mesh, so the same kinds of rules then apply to it (module 12).
+7. **On the way out of the mesh**, a **ServiceEntry** gives an outside host like `httpbin.org` a name in the mesh, so the same kinds of rules then apply to it (module 3.11).
 
-All along the way the proxies report metrics, traces and logs, and the **Telemetry** resource sets where traces go and which logs to write (module 6).
+All along the way the proxies report metrics, traces and logs, and the **Telemetry** resource sets where traces go and which logs to write (module 3.6).
 
 ## Where, how, and whether
 
@@ -60,16 +60,16 @@ Istio grew its own routing API in 2017, and later the Kubernetes project wrote a
 | Inject faults | not available | `VirtualService` with `fault` |
 | Connection pool, outlier detection, TLS to a backend | not available | `DestinationRule` (works together with HTTPRoute too) |
 
-Two different resources both carry the name `Gateway`, so check the `apiVersion` line to see which one you're reading. Module 16 builds the same setup with both APIs side by side.
+Two different resources both carry the name `Gateway`, so check the `apiVersion` line to see which one you're reading. Module 3.14 builds the same setup with both APIs side by side.
 
 ## Ambient mode and sidecar mode in one sentence each
 
 - In **ambient** mode, one shared ztunnel per node encrypts traffic and handles L4, the connection level, while a waypoint runs only for the services that need HTTP features. The picture shows ambient mode, and the lab's `shop` namespace runs it.
-- In **sidecar** mode (module 7), an Envoy proxy inside every pod does both jobs.
+- In **sidecar** mode (module 3.9), an Envoy proxy inside every pod does both jobs.
 
 The resources stay the same in both modes, and only the proxy that applies them changes.
 
 ## Next
 
 - Keep the [glossary](glossary.md) open in a tab. It explains every resource and term in this course, with small examples.
-- Then start with [module 0: setup](1-foundations/00-setup.md).
+- Then start with [module 1.1: setup](1-applications/01-setup.md).

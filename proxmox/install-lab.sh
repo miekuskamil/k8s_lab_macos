@@ -3,7 +3,7 @@
 # the pe-lab VM on Proxmox. Run it on that machine as a normal user with sudo rights:
 #
 #   ./install-lab.sh                 Docker, the tools, the repository, then provision.sh
-#   ./install-lab.sh --with-ollama   the same, plus Ollama and its models for modules 17, 18, 19 and 27
+#   ./install-lab.sh --with-ollama   the same, plus Ollama and its models for modules 5.1, 5.2, 5.3 and 5.4
 #   ./install-lab.sh --no-provision  install everything but leave the cluster alone
 #
 # Safe to run again: every step checks what is already there and skips it.
@@ -17,7 +17,7 @@ set -euo pipefail
 KUBECTL_VERSION=1.31.5
 HELM_VERSION=4.3.1
 K3D_VERSION=5.9.0
-ISTIO_VERSION=1.32.0   # the client; the control plane stays at 1.24.2 (module 31 needs a client this new)
+ISTIO_VERSION=1.32.0   # the client; the control plane stays at 1.24.2 (module 3.18 needs a client this new)
 OLLAMA_VERSION=0.40.13
 OLLAMA_MODELS="qwen2.5:3b nomic-embed-text"
 LAB_REPO_URL="${LAB_REPO_URL:-https://github.com/miekuskamil/k8s_lab_macos}"

@@ -1,0 +1,46 @@
+# Module 3.18: three mistakes in one file, for istioctl analyze to find.
+#   1. The VirtualService routes to subset v2, which the DestinationRule never defines.
+#   2. A second VirtualService claims the same host, so the two conflict.
+#   3. Subset v3 selects pods with version=v3, and no such pod exists.
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: httpbin
+  namespace: course-debug
+spec:
+  host: httpbin
+  subsets:
+    - name: v1
+      labels:
+        version: v1
+    - name: v3
+      labels:
+        version: v3
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: httpbin
+  namespace: course-debug
+spec:
+  hosts:
+    - httpbin
+  http:
+    - route:
+        - destination:
+            host: httpbin
+            subset: v2
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: httpbin-copy
+  namespace: course-debug
+spec:
+  hosts:
+    - httpbin.course-debug.svc.cluster.local
+  http:
+    - route:
+        - destination:
+            host: httpbin
+            subset: v1

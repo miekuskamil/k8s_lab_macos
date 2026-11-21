@@ -9,8 +9,8 @@ A module is finished only when a learner follows it on a fresh lab and sees exac
 
 ## 1. Before writing anything
 
-- **Read two finished modules** as the reference for structure and tone: `platform-engineering/2-intermediate/22-gitops-with-argocd.md` (a tool installed and used) and `platform-engineering/2-intermediate/23-prometheus-and-alerting.md` (concepts plus a measured incident).
-- **Pick the number, the level and the domain.** The course is one path in four level folders, and each level groups its modules by topic, and the root `README.md` (the guide) lists them in one table per level under "The course": `1-foundations/` holds the application basics (33 to 37) and the mesh basics, `2-intermediate/` the mesh in practice, platform operations and a secure cluster (38, 39), `3-advanced/` hardening, supply chain, runtime security and platform internals, and `4-ai/` AI workloads. `kernel-and-host/` sits outside the levels and holds module 44, the tasks that need a VM with a kernel of its own. Put the new module under the domain and level that fit, and give it the next free number, 45 at the time of writing, with the `NN-` prefix in its file name, because `verify.sh NN`, `task.sh NN.N` and every "Module NN" reference go by that number. Never renumber a module. Name modules by what they teach, never by an exam: exam names appear only in the exam mapping of `platform-engineering/timed-tasks.md`. Modules after 19 must work after `./platform-engineering/reset.sh` with only module 0 behind them. Use their own namespace, `course-<topic>`, and stay out of `shop` unless the module is about the mesh.
+- **Read two finished modules** as the reference for structure and tone: `platform-engineering/2-observability/06-gitops-with-argocd.md` (a tool installed and used) and `platform-engineering/2-observability/01-prometheus-and-alerting.md` (concepts plus a measured incident).
+- **Pick the number, the level and the domain.** The course is one path in four level folders, and each level groups its modules by topic, and the root `README.md` (the guide) lists them in one table per level under "The course": `1-foundations/` holds the application basics (33 to 37) and the mesh basics, `2-intermediate/` the mesh in practice, platform operations and a secure cluster (38, 39), `3-advanced/` hardening, supply chain, runtime security and platform internals, and `4-ai/` AI workloads. `kernel-and-host/` sits outside the levels and holds module 4.7, the tasks that need a VM with a kernel of its own. Put the new module under the domain and level that fit, and give it the next free number, 45 at the time of writing, with the `NN-` prefix in its file name, because `verify.sh NN`, `task.sh NN.N` and every "Module NN" reference go by that number. Never renumber a module. Name modules by what they teach, never by an exam: exam names appear only in the exam mapping of `platform-engineering/timed-tasks.md`. Modules after 19 must work after `./platform-engineering/reset.sh` with only module 1.1 behind them. Use their own namespace, `course-<topic>`, and stay out of `shop` unless the module is about the mesh.
 - **Pick versions at least two weeks old.** Read release dates from the Helm index (`~/Library/Caches/helm/repository/<repo>-index.yaml`, field `created`). If every release shows the same date, the index was regenerated; pick a release line that's clearly older. Pin the exact chart version everywhere.
 - **Check memory.** The user's Mac has 24 GB and the lab uses about 5 GB. Give every new pod requests and limits, and say in the module how much it adds.
 
@@ -69,7 +69,7 @@ Before and after, the target voice:
 
 **Values differ per run.** Quote real output, but never hard-code an IP or pod name in a command: look it up (`SVCIP=$(kubectl ... -o jsonpath=...)`). Say "in the test run" next to measured numbers.
 
-**Diagrams.** Draw every diagram with the kit in `docs/diagrams/bbg.py`, in a script `docs/diagrams/chapters/make-NN.py` that writes `NN-slug.svg` and `.excalidraw`. Copy the patterns in `docs/diagrams/make-life-of-a-request.py` and `docs/diagrams/chapters/make-02.py`. No mermaid.
+**Diagrams.** Draw every diagram with the kit in `docs/diagrams/bbg.py`, in a script `docs/diagrams/chapters/make-NN.py` that writes `NN-slug.svg` and `.excalidraw`. Copy the patterns in `docs/diagrams/make-life-of-a-request.py` and `docs/diagrams/chapters/make-3.2.py`. No mermaid.
 
 A course diagram is a structure diagram, not a chain of boxes. First draw where things run, then draw the flow on top of it:
 
@@ -98,7 +98,7 @@ Render and look before you embed it. Pad the SVG to a square so Quick Look shows
 
 ## 4. verify.sh
 
-Add `module_NN()` to `platform-engineering/verify.sh`, before the `# Module 21 upgrades k3s` comment. It replays the module from a clean lab and checks each claim the text makes.
+Add `module_NN()` to `platform-engineering/verify.sh`, before the `# Module 2.9 upgrades k3s` comment. It replays the module from a clean lab and checks each claim the text makes.
 
 - Start with `section "NN: title"` and `baseline`; end with `baseline` and one check that the reset removed everything, including the leftovers from step 2.
 - `expect "description" "$actual" 'regex'` for values, `between "description" "$n" min max` for counts. Use ranges, never exact counts or timings.
@@ -116,7 +116,7 @@ Add a cleanup block to `platform-engineering/reset.sh` above the previous module
 
 - `helm uninstall` before deleting the namespace, guarded by `helm status`.
 - Delete cluster-scoped leftovers by name, with `--ignore-not-found`.
-- Grafana objects are read-only once provisioned and survive their ConfigMap. Remove a data source by replacing its ConfigMap with a `deleteDatasources` file, waiting until Grafana drops it, then deleting the ConfigMap. Remove alert rules and folders through Grafana's API from inside its pod (see module 24's block).
+- Grafana objects are read-only once provisioned and survive their ConfigMap. Remove a data source by replacing its ConfigMap with a `deleteDatasources` file, waiting until Grafana drops it, then deleting the ConfigMap. Remove alert rules and folders through Grafana's API from inside its pod (see module 2.2's block).
 - Every line must succeed when the module was never run.
 
 ## 6. Shell traps while building
@@ -130,8 +130,8 @@ Add a cleanup block to `platform-engineering/reset.sh` above the previous module
 
 1. `README.md`, the guide: a row in the table of the module's level under "The course" (number, title link, what you learn, what it runs on), and a place in the recommended order under "How to study". Add the module to the routes map in `docs/diagrams/chapters/make-course-readme.py` when it runs on the lab, and to the exam mapping in `platform-engineering/timed-tasks.md` when it covers an exam domain.
 
-A module with timed tasks on the practice cluster, like 33 to 44, follows the same parts but replaces `verify.sh` with task functions: `setup_D_N`, `check_D_N` and `solve_D_N` in `platform-engineering/practice/apps/tasks/0D.sh` or `practice/security/tasks/0D.sh`, and the module number in the `resolve` and `module_id` functions of `platform-engineering/task.sh`, so that `./platform-engineering/task.sh check NN.N` finds it. A task that needs its own kernel goes into module 44 and the `KERNEL_TASKS` list of `task.sh`.
-2. Module 27 loads the README, the glossary, start-here and the lab modules 0 to 32 into one ConfigMap, which holds at most 1 MiB. A new lab module needs its number in that glob, in module 27's step 3 and in `module_27` of `verify.sh`. Check the size after adding a module: `kubectl create configmap x --dry-run=client -o yaml $(printf -- '--from-file=%s ' README.md platform-engineering/{glossary,start-here}.md platform-engineering/*/[0-2][0-9]-*.md platform-engineering/*/3[0-2]-*.md) | wc -c`, and update the numbers in module 27's step 3.
+A module with timed tasks on the practice cluster, like 33 to 44, follows the same parts but replaces `verify.sh` with task functions: `setup_D_N`, `check_D_N` and `solve_D_N` in `platform-engineering/practice/apps/tasks/0D.sh` or `practice/security/tasks/0D.sh`, and the module number in the `resolve` and `module_id` functions of `platform-engineering/task.sh`, so that `./platform-engineering/task.sh check NN.N` finds it. A task that needs its own kernel goes into module 4.7 and the `KERNEL_TASKS` list of `task.sh`.
+2. Module 5.4 loads the README, the glossary, start-here and the lab modules 1.1, 2.1 and 2.2, 2.4 to 2.9, 3.1 to 3.15, 3.17 to 3.21 and 5.1 to 5.4 into one ConfigMap, which holds at most 1 MiB. A new lab module needs its number in that glob, in module 5.4's step 3 and in `module_27` of `verify.sh`. Check the size after adding a module: `kubectl create configmap x --dry-run=client -o yaml $(printf -- '--from-file=%s ' README.md platform-engineering/{glossary,start-here}.md platform-engineering/*/[0-2][0-9]-*.md platform-engineering/*/3[0-2]-*.md) | wc -c`, and update the numbers in module 5.4's step 3.
 3. The tables under "Logins and addresses" in `README.md` if the module adds a UI, a port or a credential.
 4. **Never push while a test runs:** a push makes ArgoCD resync `istio-config` and wipes the exercise in progress.
 5. Rebuild and run the full check: `./lab.sh down --yes && ./lab.sh up && ./lab.sh test all`. Record the total in the commit message.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Break the lab on purpose for module 8. The script does not say what it changed.
+# Break the lab on purpose for module 3.7. The script does not say what it changed.
 #   ./platform-engineering/incident.sh 1|2|3|4   start an incident
 #   ./platform-engineering/incident.sh stop      repair everything (same as ./platform-engineering/reset.sh)
 set -euo pipefail

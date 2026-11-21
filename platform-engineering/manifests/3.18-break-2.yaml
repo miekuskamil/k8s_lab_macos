@@ -1,0 +1,10 @@
+# Module 3.18, break 2. Apply it without reading it first, then find the cause with istioctl.
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: default
+  namespace: course-debug
+spec:
+  egress:
+    - hosts:
+        - "istio-system/*"

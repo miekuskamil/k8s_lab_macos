@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the course map for the course section of README.md with the kit in ../bbg.py.
 
-  readme-course-routes   module 0, then the Istio, operations and platform tracks
+  readme-course-routes   module 1.1, then the Istio, operations and platform tracks
 
 Run from anywhere: python3 docs/diagrams/chapters/make-course-readme.py
 """
@@ -17,7 +17,7 @@ OUT = Path(__file__).resolve().parent
 def routes():
     c = Canvas(1600, 900)
     c.title("Routes through", "the course")
-    c.subtitle("Every route starts at module 0. Each line is a route, each stop a module.")
+    c.subtitle("Every route starts at module 1.1. Each line is a route, each stop a module.")
 
     start = c.node(40, 400, 230, 100, SLATE, "Start here", "doc", "Istio in one picture")
     x0, y0 = 340, 450
@@ -41,7 +41,7 @@ def routes():
     stop(x0, y0, 0, SLATE, 30)
     ist = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 30, 31, 45]
     lane(200, BLUE, ist, "Istio", "", gap=56)
-    # module 32 branches off after 14, the AI route after the core
+    # module 3.20 branches off after 14, the AI route after the core
     x14 = 420 + ist.index(14) * 56
     c.line([(x14, 200), (x14, 290), (x14 + 60, 290)], BLUE, 4, True)
     stop(x14 + 84, 290, 32, BLUE)
@@ -51,9 +51,9 @@ def routes():
     for i, n in enumerate([17, 18, 19]):
         stop(x8 + 64 + i * 62, 360, n, PINK)
     c.text(x8 + 64 + 2 * 62 + 50, 358, "AI on Kubernetes", 19, DEEP[PINK], True)
-    c.text(x8 + 64 + 2 * 62 + 50, 382, "needs modules 3 to 6 and 12", 16, SOFT)
+    c.text(x8 + 64 + 2 * 62 + 50, 382, "needs modules 3.3 to 3.6 and 3.11", 16, SOFT)
 
-    lane(560, GREEN, [20, 21], "Kubernetes operations", "only module 0 needed")
+    lane(560, GREEN, [20, 21], "Kubernetes operations", "only module 1.1 needed")
     lane(670, ORANGE, [22, 23, 24, 25, 26, 28], "Platform tools", "GitOps, alerts, dashboards, OTel, policy, profiling")
     lane(780, PINK, [27], "AI without Istio", "RAG, needs Ollama")
 

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Draw the life-of-a-request diagrams with the kit in bbg.py.
 
-  life-of-a-request       the big picture, used at the top of module 29
+  life-of-a-request       the big picture, used at the top of module 3.15
   life-1-control-plane    one write through the API server, then the watchers
   life-2-pod-startup      from a Deployment to a ready pod with endpoints
   life-3-plain-request    scenario A: client pod to nginx, no mesh
   life-4-ambient-request  scenario B: your Mac to Redis through the ambient mesh
 
 The circled numbers match the numbered steps in docs/life-of-a-request.md and in
-module 29. Addresses come from one test run of the lab.
+module 3.15. Addresses come from one test run of the lab.
 
 Run from anywhere: python3 docs/diagrams/make-life-of-a-request.py
 """
