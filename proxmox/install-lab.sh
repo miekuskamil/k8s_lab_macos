@@ -54,7 +54,7 @@ fetch() { curl -fsSL --retry 3 -o "$TMP/$2" "$1"; }
 check() { echo "$2  $TMP/$1" | sha256sum -c --quiet - || die "checksum mismatch for $1"; }
 
 packages() {
-  say "Ubuntu packages: Docker Engine, git, curl, python3"
+  say "Ubuntu packages: Docker Engine with Compose and Buildx, git, curl, python3"
   # On a fresh cloud image, cloud-init's first-boot upgrade holds the apt lock for a while.
   if command -v cloud-init >/dev/null; then cloud-init status --wait >/dev/null 2>&1 || true; fi
   local sources=/etc/apt/sources.list.d/ubuntu.sources
@@ -63,7 +63,8 @@ packages() {
     ok "apt uses $LAB_APT_MIRROR"
   fi
   local need=()
-  for p in docker.io git curl python3 ca-certificates; do
+  # ./lab.sh shell starts the toolbox with docker compose, which needs the Compose and Buildx plugins.
+  for p in docker.io docker-compose-v2 docker-buildx git curl python3 ca-certificates; do
     dpkg -s "$p" >/dev/null 2>&1 || need+=("$p")
   done
   [ "$with_ollama" = 0 ] || dpkg -s zstd >/dev/null 2>&1 || need+=(zstd)

@@ -88,7 +88,7 @@ Every part of the course runs in Docker, so the same four containers appear on e
 | Disk | 80 GB | 30 GB each | 30 GB |
 | Software | Ubuntu 24.04 with Docker and git, from `install-lab.sh` | Ubuntu 24.04, reached over SSH from the toolbox | Ubuntu 24.04 with kubeadm and Cilium, the Proxmox counterpart of the Mac's Lima VM |
 
-`create-vms.sh` builds `pe-lab`, `cks-cp` and `cks-w1` today. The Cilium VM comes with a later version of the script, and until then the four Cilium tasks of module 4.7 stop with a message on Proxmox while every other task works.
+`create-vms.sh course` builds `pe-lab`, and `create-vms.sh cks` builds the three small VMs, `cks-cp`, `cks-w1` and `practice-cilium`.
 
 ## Logins and addresses
 
@@ -362,19 +362,20 @@ Ollama now answers every machine on your network, so block port 11434 with a fir
 
 ### Proxmox
 
-On Proxmox the whole course runs on the host's own VMs, driven from one of them, as the [topology](#topologies) shows. One Docker VM is the intended layout: `pe-lab` is the lab host, it runs the lab and the kind practice cluster exactly as a Linux machine does, and you work in a shell on it. Three small VMs serve only module 4.7, and `pe-lab` drives them over SSH: `cks-cp` and `cks-w1` form a second practice cluster with kernels of their own for the AppArmor and kernel module tasks, and the Cilium VM `practice-cilium` takes the Cilium tasks once a later version of `create-vms.sh` builds it.
+On Proxmox the whole course runs on the host's own VMs, driven from one of them, as the [topology](#topologies) shows. One Docker VM is the intended layout: `pe-lab` is the lab host, it runs the lab and the kind practice cluster exactly as a Linux machine does, and you work in a shell on it. Three small VMs serve only module 4.7, and `pe-lab` drives them over SSH: `cks-cp` and `cks-w1` form a second practice cluster with kernels of their own for the AppArmor and kernel module tasks, and the Cilium VM `practice-cilium` holds a one-node cluster with Cilium for the Cilium tasks, as the Lima VM does on a Mac.
 
 | VMID | Name | Address | CPU | Memory | Disk |
 |---|---|---|---|---|---|
 | 231 | pe-lab | 192.168.1.231 | 4 | 8 GB, 12 to 16 GB comfortable | 80 GB |
 | 221 | cks-cp | 192.168.1.221 | 2 | 3 GB | 30 GB |
 | 222 | cks-w1 | 192.168.1.222 | 2 | 2.5 GB | 30 GB |
+| 223 | practice-cilium | 192.168.1.223 | 2 | 3 GB | 30 GB |
 
 1. In the Proxmox shell, as root, copy [proxmox/create-vms.sh](proxmox/create-vms.sh) and an SSH public key to `/root/`, then create the VMs. The addresses, bridge and storage match one homelab, so set `NET_PREFIX`, `GATEWAY`, `BRIDGE` and `STORAGE` for yours, and run with `DRY_RUN=1` first to print every `qm` command.
 
    ```bash
    SSH_KEY_FILE=/root/cks_proxmox.pub ./create-vms.sh course     # pe-lab
-   SSH_KEY_FILE=/root/cks_proxmox.pub ./create-vms.sh cks        # cks-cp and cks-w1
+   SSH_KEY_FILE=/root/cks_proxmox.pub ./create-vms.sh cks        # cks-cp, cks-w1 and practice-cilium
    ```
 
 2. Log in to `pe-lab`, clone the repository and run the installer. It follows the [Linux](#linux) steps, checks the checksum of every download and builds the lab, and `--with-ollama` adds Ollama for track 5.
@@ -384,9 +385,9 @@ On Proxmox the whole course runs on the host's own VMs, driven from one of them,
    ./proxmox/install-lab.sh
    ```
 
-3. Work from `./lab.sh shell` on `pe-lab` for every track, and open the UIs from your laptop through an SSH tunnel, for example `ssh -L 8080:localhost:8080 -L 3000:localhost:3000 ubuntu@192.168.1.231`, while `./lab.sh ui` runs on `pe-lab`. For the kernel tasks, put the private key for `cks-cp` and `cks-w1` in `~/.ssh/cks_proxmox` on `pe-lab` and set `PRACTICE_PLATFORM=vms` in `lab.env` while you work on module 4.7, as [the practice cluster on Proxmox VMs](platform-engineering/practice-cluster.md#the-practice-cluster-on-proxmox-vms) shows.
+3. Work from `./lab.sh shell` on `pe-lab` for every track, and open the UIs from your laptop through an SSH tunnel, for example `ssh -L 8080:localhost:8080 -L 3000:localhost:3000 ubuntu@192.168.1.231`, while `./lab.sh ui` runs on `pe-lab`. For the kernel tasks, put the private key for the three small VMs in `~/.ssh/cks_proxmox` on `pe-lab`, set `PRACTICE_PLATFORM=vms` in `lab.env` while you work on module 4.7, and build the clusters with `./lab.sh practice up` and `./lab.sh practice cilium up`, as [the practice cluster on Proxmox VMs](platform-engineering/practice-cluster.md#the-practice-cluster-on-proxmox-vms) shows.
 
-The `cks` VMs use 5.5 GB of memory and `pe-lab` 8 GB, so on a 16 GB host stop one set while you use the other. If apt hangs on first boot, change `http://` to `https://` in `/etc/apt/sources.list.d/ubuntu.sources`.
+`pe-lab` drives the small VMs, so it runs whenever they do, and memory decides which of them run together. `pe-lab` takes 8 GB, `cks-cp` and `cks-w1` 5.5 GB, and `practice-cilium` 3 GB. On a 16 GB host, start `cks-cp` and `cks-w1` for the AppArmor and kernel module tasks, then stop them and start `practice-cilium` for the Cilium tasks; in the test run, `pe-lab` with the two `cks` VMs left the host 1.3 GB. The setup of practice exams 5 and 6 needs all four VMs at once, about 17 GB, so it needs a bigger host. If apt hangs on first boot, change `http://` to `https://` in `/etc/apt/sources.list.d/ubuntu.sources`.
 
 ### Windows with WSL2
 
@@ -403,7 +404,7 @@ brew install lima
 ./platform-engineering/practice/cluster/lima.sh stop       # frees the memory; start brings it back
 ```
 
-`reset` builds a fresh cluster on the same VM, and `destroy` deletes it. [Where each task runs](platform-engineering/practice-cluster.md#where-each-task-runs) lists the host of every kernel task on a Mac and on Proxmox.
+`reset` builds a fresh cluster on the same VM, and `destroy` deletes it. On [Proxmox](#proxmox) no Lima is needed, because the kernels of `cks-w1` and the Cilium VM `practice-cilium` belong to those VMs: `./lab.sh practice cilium up` builds the same one-node Cilium cluster on `practice-cilium` over SSH. [Where each task runs](platform-engineering/practice-cluster.md#where-each-task-runs) lists the host of every kernel task on a Mac and on Proxmox.
 
 ## Troubleshooting
 

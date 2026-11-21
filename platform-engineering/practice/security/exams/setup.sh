@@ -3,6 +3,7 @@
 # Run it on your Mac, on a fresh cluster:
 #   ./lab.sh practice reset && ./platform-engineering/practice-exam.sh setup 4          practice exam 4
 #   ./lab.sh practice reset && ./platform-engineering/practice/cluster/lima.sh reset && ./platform-engineering/practice-exam.sh setup 5
+# With PRACTICE_PLATFORM=vms, ./lab.sh practice cilium reset takes the place of lima.sh reset.
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 MOCK="${MOCK:-1}"

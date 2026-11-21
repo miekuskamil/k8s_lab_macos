@@ -37,6 +37,22 @@ need_lima() {
     return 1
   fi
 }
+# With PRACTICE_PLATFORM=vms there is no Lima, so the same helpers reach the Cilium VM over
+# ssh instead: a one-node cluster with Cilium that ./lab.sh practice cilium up builds.
+if [ "$PRACTICE_PLATFORM" = vms ]; then
+  onlima() { { _pc_env; echo; cat; } | _pc_ssh "$PRACTICE_CILIUM_HOST" "sudo -H bash -s $(_pc_quote "$@")"; }
+  # ssh reads stdin, which may hold the caller's script, so these two get /dev/null instead.
+  lima_sh() { _pc_ssh "$PRACTICE_CILIUM_HOST" "sudo -H bash -c $(printf '%q' "$*")" </dev/null; }
+  kl() { _pc_ssh "$PRACTICE_CILIUM_HOST" "sudo -H kubectl $(_pc_quote "$@")"; }
+  need_lima() {
+    if ! lima_sh 'test -f /etc/kubernetes/admin.conf && kubectl -n kube-system get ds cilium' >/dev/null 2>&1; then
+      echo "  this task runs on the Cilium VM $PRACTICE_CILIUM at $PRACTICE_CILIUM_HOST, which has no Cilium cluster yet or does not answer:"
+      echo "  create the VM (proxmox/create-vms.sh cks), then run ./lab.sh practice cilium up"
+      return 1
+    fi
+  }
+  export PRACTICE_CILIUM_HOST PRACTICE_CILIUM
+fi
 
 # The AppArmor and kernel module tasks need a kernel that belongs to one machine. OrbStack's
 # shared kernel has no AppArmor, so there they run on the Lima VM. A real VM has a kernel of its
