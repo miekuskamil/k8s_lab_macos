@@ -1357,6 +1357,68 @@ module_0_1() {
   expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
 }
 
+# build_steps: one line per BuildKit step, "CACHED" or "ran", from --progress=plain output
+build_steps() { awk '/^#[0-9]+ \[/ && !/internal\]/ {id=$1; sub(/^#[0-9]+ /,""); if (!(id in name)) {name[id]=$0; order[++n]=id}} /^#[0-9]+ CACHED/ {st[$1]="CACHED"} /^#[0-9]+ DONE/ {if (!st[$1]) st[$1]="ran"} END {for (i=1;i<=n;i++) printf "%s %s\n", st[order[i]], name[order[i]]}'; }
+
+module_0_2() {
+  section "0.2: building images"
+  docker_reset
+  local app="$DW/app" out size d1 d2
+  mkdir -p "$DW" && cp -R "$DT/lab/app" "$app"
+  out="$(docker build --no-cache --progress=plain -f "$app/Dockerfile.single" -t course/hits:single "$app" 2>&1 | build_steps)"
+  expect "1. with --no-cache the compile runs" "$(echo "$out" | grep 'go build')" '^ran '
+  size="$(docker image inspect -f '{{.Size}}' course/hits:single)"
+  between "1. the one-stage image is big (MB)" "$((size / 1000000))" 300 600
+  out="$(docker build --progress=plain -f "$app/Dockerfile.single" -t course/hits:single "$app" 2>&1 | build_steps)"
+  expect "2. the same build again is fully cached" "$(echo "$out" | grep -c '^ran ' | tr -d ' ')$(echo "$out" | grep -c '^CACHED' | tr -d ' ')" '^[01][3-4]$'
+  echo "// changed at $(date +%s)-$RANDOM" >> "$app/main.go"
+  out="$(docker build --progress=plain -f "$app/Dockerfile.single" -t course/hits:single "$app" 2>&1 | build_steps)"
+  expect "2. after a code change, COPY . . runs again" "$(echo "$out" | grep 'COPY \. \.')" '^ran '
+  expect "2. and so does go build below it" "$(echo "$out" | grep 'go build')" '^ran '
+  docker build -q --build-arg VERSION=1.0.0 -t course/hits:1.0.0 "$app" >/dev/null 2>&1
+  echo "// changed again at $(date +%s)-$RANDOM" >> "$app/main.go"
+  out="$(docker build --progress=plain --build-arg VERSION=1.0.0 -t course/hits:1.0.0 "$app" 2>&1 | build_steps)"
+  expect "3. multi-stage: COPY go.mod stays cached after a code change" "$(echo "$out" | grep 'COPY go.mod')" '^CACHED '
+  expect "3. multi-stage: go mod download stays cached" "$(echo "$out" | grep 'go mod download')" '^CACHED '
+  expect "3. multi-stage: COPY *.go runs" "$(echo "$out" | grep 'COPY \*.go')" '^ran '
+  size="$(docker image inspect -f '{{.Size}}' course/hits:1.0.0)"
+  between "3. the multi-stage image is small (MB)" "$((size / 1000000))" 3 15
+  docker run -d --name course-hits -p 8881:8000 course/hits:1.0.0 >/dev/null
+  expect "4. the app answers with its version" "$(dcurl "http://$PUB:8881/")" 'visit 1, version 1\.0\.0$'
+  expect "4. the image has no shell" "$(docker exec course-hits sh -c 'echo hi' 2>&1)" 'executable file not found'
+  expect "4. it runs as user 65532" "$(docker inspect -f '{{.Config.User}}' course-hits)" '^65532:65532$'
+  local h=""
+  for _ in $(seq 1 20); do h="$(docker inspect -f '{{.State.Health.Status}}' course-hits)"; [[ "$h" == healthy ]] && break; settle 1; done
+  expect "4. the HEALTHCHECK reports healthy" "$h" '^healthy$'
+  expect "4. the app logs its uid" "$(docker logs course-hits 2>&1 | head -1)" 'uid=65532'
+  mkdir -p "$app/notes" && dd if=/dev/zero of="$app/notes/big.log" bs=1M count=100 2>/dev/null
+  out="$(docker build --progress=plain -f "$app/Dockerfile.single" -t course/hits:single "$app" 2>&1 | grep 'transferring context' | tail -1)"
+  expect "5. with .dockerignore the context stays small" "$out" 'transferring context: [0-9.]+k?B '
+  mv "$app/.dockerignore" "$app/.dockerignore.off"
+  out="$(docker build --progress=plain -f "$app/Dockerfile.single" -t course/hits:fat "$app" 2>&1 | grep 'transferring context' | tail -1)"
+  expect "5. without it, BuildKit transfers the 100 MB folder" "$out" 'transferring context: 10[0-9]\.[0-9]+MB'
+  expect "5. and COPY . . puts the log file into the image" "$(docker run --rm course/hits:fat ls /src/notes)" '^big\.log$'
+  mv "$app/.dockerignore.off" "$app/.dockerignore"
+  docker run -d --name course-registry --network k8s-lab-toolbox_default -p 127.0.0.1:5555:5000 registry:3.1.2 >/dev/null 2>&1 \
+    || docker run -d --name course-registry -p 127.0.0.1:5555:5000 registry:3.1.2 >/dev/null
+  docker tag course/hits:1.0.0 localhost:5555/hits:1.0.0
+  for _ in $(seq 1 10); do docker push -q localhost:5555/hits:1.0.0 >/dev/null 2>&1 && break; settle 1; done
+  d1="$(onhost "wget -S --spider --header 'Accept: application/vnd.oci.image.index.v1+json' http://127.0.0.1:5555/v2/hits/manifests/1.0.0 2>&1 | awk -F': ' 'tolower(\$1) ~ /docker-content-digest/ {print \$2}'" | tr -d '\r')"
+  expect "6. the registry reports a digest for hits:1.0.0" "$d1" '^sha256:[0-9a-f]{64}$'
+  expect "6. the local image's repo digest is the same hash" "$(docker image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' localhost:5555/hits:1.0.0 | grep '^localhost:5555/')" "@${d1}$"
+  docker build -q --build-arg VERSION=1.0.1 -t localhost:5555/hits:1.0.0 "$app" >/dev/null 2>&1
+  docker push -q localhost:5555/hits:1.0.0 >/dev/null 2>&1
+  d2="$(onhost "wget -S --spider --header 'Accept: application/vnd.oci.image.index.v1+json' http://127.0.0.1:5555/v2/hits/manifests/1.0.0 2>&1 | awk -F': ' 'tolower(\$1) ~ /docker-content-digest/ {print \$2}'" | tr -d '\r')"
+  expect "7. pushing 1.0.1 under the same tag moves it to a new digest" "$([[ -n "$d2" && "$d2" != "$d1" ]] && echo moved)" '^moved$'
+  docker run --rm -d --name course-by-tag -p 8882:8000 localhost:5555/hits:1.0.0 >/dev/null
+  docker run --rm -d --name course-by-digest -p 8883:8000 "localhost:5555/hits@$d1" >/dev/null 2>&1
+  expect "7. the container started by tag runs 1.0.1" "$(dcurl "http://$PUB:8882/")" 'version 1\.0\.1$'
+  expect "7. the container started by digest still runs 1.0.0" "$(dcurl "http://$PUB:8883/")" 'version 1\.0\.0$'
+  docker_reset
+  expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
+  expect "clean up: no localhost:5555 images" "$(docker image ls -q --filter 'reference=localhost:5555/*' | wc -l | tr -d ' ')" '^0$'
+}
+
 # Module 2.9 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 2.9
 module_2_9() {
   section "2.9: k3s certificates, backups and upgrades (the upgrade is one-way)"

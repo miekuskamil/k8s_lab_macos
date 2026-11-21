@@ -10,6 +10,7 @@ ARG VERSION=dev
 RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /out/hits .
 
 FROM scratch
+LABEL org.opencontainers.image.title="hits" lab.course="docker"
 COPY --from=build /out/hits /hits
 # A numeric user, because scratch has no /etc/passwd to look a name up in.
 USER 65532:65532
