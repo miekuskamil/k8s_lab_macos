@@ -4,7 +4,7 @@
 
 **Before this module:** module 0. Module 6 helps, because it explains traces and spans. No Istio needed: this module runs its own app outside the mesh.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `helm`, internet access for the charts, about 250 MB of free memory, and `./scripts/port-forward.sh` running in a spare terminal for Grafana.
+**You need:** the lab running (`./lab.sh start` starts or repairs it), `helm`, internet access for the charts, about 250 MB of free memory, and `./lab.sh ui` running in a spare terminal for Grafana.
 
 In the lab so far, every app sends its traces straight to Jaeger, which stops working well once you have 50 services, three tracing back ends, and a security team that wants every trace scrubbed of customer data. At that point you want one place in the middle that does four jobs:
 

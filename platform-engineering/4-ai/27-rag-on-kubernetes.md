@@ -4,7 +4,7 @@
 
 **Before this module:** module 0. Module 17 helps: it introduced RAG with a handful of orders. No Istio needed.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `helm`, Ollama with `nomic-embed-text` and `qwen2.5:3b`, and internet access for the Qdrant chart. [What you need](#what-you-need) below has the details.
+**You need:** the lab running (`./lab.sh start` starts or repairs it), `helm`, Ollama with `nomic-embed-text` and `qwen2.5:3b`, and internet access for the Qdrant chart. [What you need](#what-you-need) below has the details.
 
 The most common AI system in companies today isn't a chatbot that knows everything but a model that answers from *your* documents, such as runbooks, policies, tickets and wikis. A plain chat model has never seen those documents, so the system answers in two moves:
 
@@ -29,7 +29,7 @@ Time: about 45 minutes. The module adds about 200 MB to the cluster. The two mod
 
 ### On Linux (Ubuntu 24.04)
 
-Pods reach Ollama under the name `host.docker.internal`, which plain Docker Engine on Linux doesn't answer. If you already did the Ollama setup for module 17 in [Running the lab on Linux](../../docs/linux.md#the-ai-modules-17-18-19-and-27), you need nothing more, and otherwise do those two steps first.
+Pods reach Ollama under the name `host.docker.internal`, which plain Docker Engine on Linux doesn't answer. If you already did the Ollama setup for module 17 in [Ollama on Linux](../../README.md#ollama-on-linux), you need nothing more, and otherwise do those two steps first.
 
 ## Concept: two phases
 
@@ -180,7 +180,7 @@ INFO[0003] Successfully imported 1 image(s) into 1 cluster(s)
 
 ```console
 $ kubectl -n course-rag create configmap course-docs \
-    $(printf -- '--from-file=%s ' platform-engineering/{README,glossary,start-here}.md platform-engineering/*/[0-2][0-9]-*.md platform-engineering/*/3[0-2]-*.md platform-engineering/*/45-*.md)
+    $(printf -- '--from-file=%s ' README.md platform-engineering/{glossary,start-here}.md platform-engineering/*/[0-2][0-9]-*.md platform-engineering/*/3[0-2]-*.md platform-engineering/*/45-*.md)
 configmap/course-docs created
 
 $ cat platform-engineering/manifests/27-rag-app.yaml
@@ -248,7 +248,7 @@ deployment "rag" successfully rolled out
 $ kubectl -n course-rag port-forward svc/rag 8090:8000 >/dev/null 2>&1 &
 ```
 
-**What you should see.** The modules sit in four level folders below `platform-engineering/`, so the `printf` builds one `--from-file` flag for the README, the glossary, the Istio picture and each lab module, 0 to 32 and 45, and each file becomes one key in the ConfigMap. The ConfigMap holds 37 files and about 920 KiB. A ConfigMap holds at most 1 MiB, so the lab modules still fit with about 100 KiB to spare, while modules 33 to 44 with their long transcripts would push it over, so the glob leaves them out, and most of the space goes to the terminal transcripts in the modules. The app leaves one file out on purpose, this module itself, because the manifest sets `EXCLUDE_FILES: 27-rag-on-kubernetes.md`.
+**What you should see.** The modules sit in four level folders below `platform-engineering/`, so the `printf` builds one `--from-file` flag for the README, the glossary, the Istio picture and each lab module, 0 to 32 and 45, and each file becomes one key in the ConfigMap. The ConfigMap holds 37 files and about 935 KiB. A ConfigMap holds at most 1 MiB, so the lab modules still fit with about 90 KiB to spare, while modules 33 to 44 with their long transcripts would push it over, so the glob leaves them out, and most of the space goes to the terminal transcripts in the modules. The app leaves one file out on purpose, this module itself, because the manifest sets `EXCLUDE_FILES: 27-rag-on-kubernetes.md`.
 
 This module quotes its own test questions and the answers they got, so if the index held them, a question like "What is the capital of Denmark?" would find step 6's table, and the model would repeat what it read there. The test would leak into the data, like exam answers left inside the textbook, and teams keep evaluation questions out of the index for the same reason.
 

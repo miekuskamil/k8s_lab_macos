@@ -1,8 +1,8 @@
-# Lab guide
+# Lab tour
 
-This guide assumes `./scripts/provision.sh` finished and you can open http://localhost:8080. Run all commands from the repository root. Start `./scripts/port-forward.sh` in a spare terminal so Grafana, Jaeger and ArgoCD are open while you work. `./lab.sh up` and `./lab.sh ui` run the same two scripts.
+This tour assumes `./lab.sh up` finished and you can open http://localhost:8080. Run all commands from the repository root, in the toolbox from `./lab.sh shell`. Start `./lab.sh ui` in a spare terminal so Grafana, Jaeger and ArgoCD are open while you work.
 
-This guide is the short tour. For a full introduction to Istio with diagrams, design reasons and investigation exercises in Kiali, Grafana, Jaeger and Loki, take the [Kubernetes Platform Engineering course](../platform-engineering/README.md).
+This page is the short tour. For a full introduction to Istio with diagrams, design reasons and investigation exercises in Kiali, Grafana, Jaeger and Loki, take the [Kubernetes Platform Engineering course](../README.md#the-course).
 
 Contents:
 
@@ -177,7 +177,7 @@ For a change you want to keep, edit the two `weight` values in `manifests/istio/
 
 ## 5. Debugging mTLS drops
 
-Install the CLI with `brew install istioctl`. Its version should match the control plane (`istioctl version`). Work from the outside in.
+The toolbox has `istioctl`. On a machine without the toolbox, install it with `brew install istioctl`. Work from the outside in.
 
 **1. Is the pod in the mesh?**
 

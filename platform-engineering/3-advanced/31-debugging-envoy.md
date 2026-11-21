@@ -4,7 +4,7 @@
 
 **Before this module:** modules 5, 7 and 16. Module 30 helps.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `istioctl`, and Docker access to the lab node for step 5.
+**You need:** the lab running (`./lab.sh start` starts or repairs it), `istioctl`, and Docker access to the lab node for step 5.
 
 A request fails with `503` while the app's own log shows nothing, which is the most common Istio support question. The answer almost always sits inside an Envoy, as a route that never matched, a cluster with no endpoints or a pool that overflowed, and because Envoy records every one of those decisions, `istioctl` reads them out. This module teaches you to read them in a fixed order, then makes you fix four broken setups without being told the cause, in four parts:
 

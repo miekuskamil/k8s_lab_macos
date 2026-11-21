@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1760" height="1000" viewBox="0 0 1760 1000" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1760" height="1000" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">How the lab <tspan fill="#7c3aed">fits together</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Two clusters in one Docker engine on your machine, and a VM only for module 44.</text>
+<rect x="40.0" y="150.0" width="1680.0" height="820.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="57.5,181.0 76.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Your machine</text>
+<rect x="70.0" y="250.0" width="250.0" height="110.0" rx="14.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<rect x="86.0" y="283.0" width="44.0" height="44.0" rx="10.0" fill="#475569" stroke="none"/>
+<rect x="95.8" y="294.8" width="24.3" height="20.5" rx="3.2" fill="none" stroke="#ffffff" stroke-width="1.536"/>
+<polyline points="100.3,301.2 104.2,305.0 100.3,308.8" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="106.7,309.5 113.1,309.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="144.0" y="298.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Terminal</text>
+<text x="144.0" y="324.0" font-size="17.0" fill="#475569" text-anchor="start">./lab.sh</text>
+<rect x="70.0" y="480.0" width="250.0" height="110.0" rx="14.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<rect x="86.0" y="513.0" width="44.0" height="44.0" rx="10.0" fill="#475569" stroke="none"/>
+<ellipse cx="108.0" cy="535.0" rx="11.5" ry="11.5" fill="none" stroke="#ffffff" stroke-width="1.54"/>
+<ellipse cx="108.0" cy="535.0" rx="5.1" ry="11.5" fill="none" stroke="#ffffff" stroke-width="1.28"/>
+<polyline points="96.5,535.0 119.5,535.0" fill="none" stroke="#ffffff" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="144.0" y="528.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Browser</text>
+<text x="144.0" y="554.0" font-size="17.0" fill="#475569" text-anchor="start">localhost ports</text>
+<rect x="70.0" y="730.0" width="250.0" height="110.0" rx="14.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<rect x="86.0" y="763.0" width="44.0" height="44.0" rx="10.0" fill="#475569" stroke="none"/>
+<polygon points="108.0,772.8 110.6,782.4 120.2,785.0 110.6,787.6 108.0,797.2 105.4,787.6 95.8,785.0 105.4,782.4" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linejoin="round"/>
+<text x="144.0" y="778.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Ollama</text>
+<text x="144.0" y="804.0" font-size="17.0" fill="#475569" text-anchor="start">AI modules</text>
+<rect x="540.0" y="200.0" width="860.0" height="740.0" rx="16.0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="558.5" y="217.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="558.5,221.5 575.5,221.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="586.0" y="230.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Docker engine</text>
+<rect x="570.0" y="250.0" width="800.0" height="110.0" rx="14.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<rect x="586.0" y="283.0" width="44.0" height="44.0" rx="10.0" fill="#0891b2" stroke="none"/>
+<rect x="595.8" y="294.8" width="24.3" height="20.5" rx="3.2" fill="none" stroke="#ffffff" stroke-width="1.536"/>
+<polyline points="600.3,301.2 604.2,305.0 600.3,308.8" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="606.7,309.5 613.1,309.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="644.0" y="298.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">toolbox</text>
+<text x="644.0" y="324.0" font-size="17.0" fill="#475569" text-anchor="start">kubectl, helm, k3d, kind, istioctl</text>
+<rect x="570.0" y="410.0" width="390.0" height="500.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<rect x="588.0" y="425.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="591.5" cy="427.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="597.0,427.5 602.5,427.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="588.0" y="431.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="591.5" cy="434.0" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="597.0,434.0 602.5,434.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="588.0" y="438.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="591.5" cy="440.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="597.0,440.5 602.5,440.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="616.0" y="440.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">k3d lab k8s-lab</text>
+<rect x="595.0" y="460.0" width="340.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="765.0" y="492.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">the shop</text>
+<text x="765.0" y="513.3" font-size="17.0" fill="#475569" text-anchor="middle">frontend, backend, Redis</text>
+<rect x="595.0" y="555.0" width="340.0" height="80.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="765.0" y="587.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">Istio ambient</text>
+<text x="765.0" y="608.3" font-size="17.0" fill="#475569" text-anchor="middle">gateway, ztunnel, waypoint</text>
+<rect x="595.0" y="650.0" width="340.0" height="80.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="765.0" y="682.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">ArgoCD</text>
+<text x="765.0" y="703.3" font-size="17.0" fill="#475569" text-anchor="middle">syncs from GitHub</text>
+<rect x="595.0" y="745.0" width="340.0" height="80.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="765.0" y="777.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">Grafana, Prometheus</text>
+<text x="765.0" y="798.3" font-size="17.0" fill="#475569" text-anchor="middle">Jaeger, Loki, Kiali</text>
+<text x="765.0" y="875.0" font-size="16.0" fill="#475569" text-anchor="middle">modules 0 to 32 and 45</text>
+<rect x="980.0" y="410.0" width="390.0" height="500.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<rect x="998.0" y="425.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="1001.5" cy="427.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="1007.0,427.5 1012.5,427.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="998.0" y="431.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="1001.5" cy="434.0" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="1007.0,434.0 1012.5,434.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="998.0" y="438.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="1001.5" cy="440.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="1007.0,440.5 1012.5,440.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1026.0" y="440.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">practice cluster</text>
+<rect x="1005.0" y="460.0" width="340.0" height="80.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="1175.0" y="492.2" font-size="17.0" fill="#0f172a" font-weight="700" text-anchor="middle">practice-control-plane</text>
+<text x="1175.0" y="511.9" font-size="17.0" fill="#475569" text-anchor="middle">kubeadm control plane</text>
+<rect x="1005.0" y="555.0" width="340.0" height="80.0" rx="10.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<text x="1175.0" y="587.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">practice-worker</text>
+<text x="1175.0" y="608.3" font-size="17.0" fill="#475569" text-anchor="middle">gVisor, Falco</text>
+<rect x="1005.0" y="650.0" width="340.0" height="80.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="1175.0" y="682.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">practice-registry</text>
+<text x="1175.0" y="703.3" font-size="17.0" fill="#475569" text-anchor="middle">registry.practice:5000</text>
+<text x="1175.0" y="875.0" font-size="16.0" fill="#475569" text-anchor="middle">modules 33 to 43, exams 1 to 6</text>
+<rect x="1430.0" y="200.0" width="260.0" height="740.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<rect x="1448.0" y="215.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="1451.5" cy="217.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="1457.0,217.5 1462.5,217.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="1448.0" y="221.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="1451.5" cy="224.0" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="1457.0,224.0 1462.5,224.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="1448.0" y="228.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="1451.5" cy="230.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="1457.0,230.5 1462.5,230.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1476.0" y="230.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">VM cks-lima</text>
+<rect x="1450.0" y="250.0" width="220.0" height="120.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="1560.0" y="302.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">its own kernel</text>
+<text x="1560.0" y="323.3" font-size="17.0" fill="#475569" text-anchor="middle">Cilium, AppArmor</text>
+<text x="1560.0" y="875.0" font-size="16.0" fill="#475569" text-anchor="middle">module 44 only</text>
+<polyline points="320.0,305.0 560.5,305.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="570.0,305.0 558.5,310.8 558.5,299.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="445.0" y="295.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">./lab.sh shell</text>
+<polyline points="762.0,360.0 762.0,385.0 765.0,385.0 765.0,400.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="765.0,410.0 759.2,398.5 770.8,398.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="772.0" y="378.5" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">kubectl</text>
+<polyline points="1170.0,360.0 1170.0,385.0 1175.0,385.0 1175.0,400.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1175.0,410.0 1169.2,398.5 1180.8,398.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="1180.0" y="378.5" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">kind</text>
+<polyline points="320.0,535.0 560.5,535.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="570.0,535.0 558.5,540.8 558.5,529.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="445.0" y="525.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">8080 and the UIs</text>
+<polyline points="570.0,785.0 329.5,785.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="320.0,785.0 331.5,779.2 331.5,790.8" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="445.0" y="775.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">host.docker.internal</text>
+</svg>

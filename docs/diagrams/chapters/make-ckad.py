@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the diagrams for the application modules (platform-engineering/practice-cluster.md and modules 33 to 37) with the kit in ../bbg.py.
 
-  ckad-practice-cluster   the practice cluster with the application extras (README)
+  ckad-practice-cluster   the practice cluster with the application extras (practice-cluster.md)
   ckad-image-flow         Dockerfile to registry to node, the four steps of tasks 1 and 2 (01)
   ckad-pod-patterns       init container, native sidecar and app in one pod (01)
   ckad-rolling-update     a Deployment moving pods from one ReplicaSet to the next (02)

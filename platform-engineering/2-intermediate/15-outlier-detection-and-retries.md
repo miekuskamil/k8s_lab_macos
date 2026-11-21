@@ -4,7 +4,7 @@
 
 **Before this module:** modules 4 and 5.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it).
+**You need:** the lab running (`./lab.sh start` starts or repairs it).
 
 Module 5 broke the whole backend at once with a delay, a fault and a full connection pool, but real outages often look different, because only one pod out of three goes bad. Its disk fills up, a node problem leaves it with a broken config, or it leaks memory, while the Service keeps sending it its share of traffic, so a third of your users see errors. This module adds a misbehaving pod, fixes the damage in two ways, and compares the two fixes.
 

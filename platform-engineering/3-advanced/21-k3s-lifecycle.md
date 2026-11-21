@@ -4,7 +4,7 @@
 
 **Before this module:** module 0, and module 20 helps. This module covers plain Kubernetes operations, except for one surprise in step 4.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `openssl`, and internet access for the newer k3s image. Steps 2 and 4 restart k3s, and step 4 breaks the mesh on purpose until step 5 repairs it. Finish other modules' exercises first.
+**You need:** the lab running (`./lab.sh start` starts or repairs it), `openssl`, and internet access for the newer k3s image. Steps 2 and 4 restart k3s, and step 4 breaks the mesh on purpose until step 5 repairs it. Finish other modules' exercises first.
 
 Three jobs keep a cluster alive for years instead of months:
 
@@ -367,9 +367,9 @@ $ ./scripts/provision.sh            # re-reads the plugin directory and moves is
   HBONE tunnel 15008, ztunnel metrics 15020, istiod xDS 15012, istiod metrics 15014
 
 Next steps
-  ./scripts/traffic-test.sh 200                 send 200 requests and print the version split
+  ./lab.sh test                                 send 100 requests and print the version split
   kubectl apply -f manifests/scenarios/a-canary-httproute.yaml
-  see docs/lab-guide.md for scenarios B and C, and platform-engineering/README.md for the Kubernetes Platform Engineering course
+  README.md is the guide: everyday commands, the course, and help when something breaks
 
 $ ./platform-engineering/fix-ip-leases.sh         # frees the IPs that no pod holds
 IP leases on k3d-k8s-lab-server-0: 250 before, 32 after (pods hold 32)

@@ -4,7 +4,7 @@
 
 **Before this module:** modules 3 and 11.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it).
+**You need:** the lab running (`./lab.sh start` starts or repairs it).
 
 Modules 2 and 3 answered "which workload is calling?" with certificates, which is enough between services. A shop also has people, though: Alice browses orders, and Bob the admin creates them. A person has no mesh certificate, so their identity arrives in each request as a token instead, and in this module the ingress gateway learns two things:
 

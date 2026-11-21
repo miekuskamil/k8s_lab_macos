@@ -4,13 +4,13 @@
 
 **Before this module:** the theory in the modules these tasks come from. [Module 38](../2-intermediate/38-setting-up-a-secure-cluster.md#concept-layer-3-and-4-and-layer-7) explains Cilium's policies, [module 40](../3-advanced/40-hardening-nodes.md#concept-kernel-modules) kernel modules, [module 41](../3-advanced/41-hardening-workloads.md#concept-pod-to-pod-encryption) pod-to-pod encryption, and [module 43](../3-advanced/43-runtime-security-and-auditing.md#concept-apparmor-a-filter-on-paths) AppArmor.
 
-**You need:** a virtual machine with a kernel of its own, as [the VM page](README.md) explains. On a Mac that is the Lima VM `cks-lima`, which `./platform-engineering/practice/cluster/lima.sh create` builds.
+**You need:** a virtual machine with a kernel of its own, as [The VM for module 44](../../README.md#the-vm-for-module-44) explains. On a Mac that is the Lima VM `cks-lima`, which `./platform-engineering/practice/cluster/lima.sh create` builds.
 
 The practice cluster runs on two kind nodes, which are containers that share one Linux kernel with each other and with every other container in the Docker engine. Most security controls live in Kubernetes or in a container runtime, so the shared kernel never gets in their way. Seven tasks are different, because they change the kernel itself: three Cilium tasks load eBPF programs into it, one task keeps kernel modules out of it, one turns on WireGuard encryption in it, and two load AppArmor profiles into it. That shared kernel has no AppArmor and no WireGuard, and Cilium there would rewire the network of every container at once. So these tasks run on a VM whose kernel belongs to it alone, and they sit together in this module.
 
 gVisor and Falco stay in their modules on the practice cluster. gVisor brings its own user-space kernel, and Falco only watches system calls, so neither needs a kernel to itself, and the test runs passed both on kind.
 
-Each task names its host. On a Mac, `cks-lima` is the Lima VM, and `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell there. On [your own VMs](../practice-cluster.md#the-practice-cluster-on-your-own-vms-proxmox-or-any-ssh-reachable-ubuntu), the kernel module and AppArmor tasks run on `cks-w1` instead, as [the VM page](README.md#where-each-task-runs) explains, while the Cilium tasks still need the Lima VM. Task ids run from 44.1 to 44.7, so `./platform-engineering/task.sh setup 44.6` prepares task 6.
+Each task names its host. On a Mac, `cks-lima` is the Lima VM, and `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell there. On [your own VMs](../practice-cluster.md#the-practice-cluster-on-your-own-vms-proxmox-or-any-ssh-reachable-ubuntu), the kernel module and AppArmor tasks run on `cks-w1` instead, as [the VM page](../practice-cluster.md#where-each-task-runs) explains, while the Cilium tasks still need the Lima VM. Task ids run from 44.1 to 44.7, so `./platform-engineering/task.sh setup 44.6` prepares task 6.
 
 | Task | Topic | Kernel feature |
 |---|---|---|

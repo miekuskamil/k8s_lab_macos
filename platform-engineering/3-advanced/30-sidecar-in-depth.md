@@ -4,7 +4,7 @@
 
 **Before this module:** modules 1, 2 and 7. Module 29 helps with the iptables part.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `istioctl`, and Docker access to the lab node (`docker exec k3d-k8s-lab-server-0 ...`), as in module 29.
+**You need:** the lab running (`./lab.sh start` starts or repairs it), `istioctl`, and Docker access to the lab node (`docker exec k3d-k8s-lab-server-0 ...`), as in module 29.
 
 Module 7 showed that a sidecar appears in your pod and carries its traffic, and this module opens the box. A team that runs sidecars in production meets four puzzles sooner or later: a pod comes up without a sidecar, one connection skips the mesh, every proxy uses 40 MiB while its app uses 5, and somebody asks whether ambient would cost less. You work through each one on the lab, with numbers, in four topics:
 

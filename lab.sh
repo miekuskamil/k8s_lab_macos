@@ -57,6 +57,8 @@ The toolbox (toolbox/Dockerfile and compose.yaml):
   Every command above works the same inside the toolbox. Run outside it, on a machine
   without kubectl, helm or k3d, a command goes through the toolbox by itself.
   LAB_USE_TOOLBOX=always or LAB_USE_TOOLBOX=never overrides that choice.
+
+README.md is the guide: logins, everyday commands, the course and troubleshooting.
 HELP
 }
 

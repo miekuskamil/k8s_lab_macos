@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the course map for platform-engineering/README.md with the kit in ../bbg.py.
+"""Draw the course map for the course section of README.md with the kit in ../bbg.py.
 
   readme-course-routes   module 0, then the Istio, operations and platform tracks
 

@@ -7,7 +7,7 @@
 #   ./install-lab.sh --no-provision  install everything but leave the cluster alone
 #
 # Safe to run again: every step checks what is already there and skips it.
-# The steps follow docs/linux.md. Settings come from the environment:
+# The steps follow README.md, section "Linux". Settings come from the environment:
 #   LAB_DIR=~/k8s_lab_macos   where the repository lives (ignored when the script runs from a checkout)
 #   LAB_REPO_URL=https://github.com/miekuskamil/k8s_lab_macos
 #   LAB_APT_MIRROR=https://gb.archive.ubuntu.com/ubuntu   the apt mirror to use; set it where
@@ -183,7 +183,7 @@ ollama_install() {
   fi
   id ollama >/dev/null 2>&1 || sudo useradd -r -s /bin/false -U -m -d /usr/share/ollama ollama
   # Pods reach Ollama through the k3d network's gateway, not through 127.0.0.1,
-  # so Ollama listens on every interface (docs/linux.md explains the trade-off).
+  # so Ollama listens on every interface (README.md, section "Ollama on Linux", explains the trade-off).
   sudo tee /etc/systemd/system/ollama.service >/dev/null <<'UNIT'
 [Unit]
 Description=Ollama Service

@@ -4,7 +4,7 @@
 
 **Before this module:** module 0. No Istio knowledge needed.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `git`, and `./scripts/port-forward.sh` running in a spare terminal for the ArgoCD UI (http://localhost:8081). The lab's own Git server on http://localhost:3001 comes with the lab.
+**You need:** the lab running (`./lab.sh start` starts or repairs it), `git`, and `./lab.sh ui` running in a spare terminal for the ArgoCD UI (http://localhost:8081). The lab's own Git server on http://localhost:3001 comes with the lab.
 
 The whole lab runs on ArgoCD, and so far you've mostly worked around it, because `reset.sh` re-syncs it and the course warns you not to push in the middle of an exercise. In this module ArgoCD becomes the subject: you run your own Git server inside the cluster, deploy an app from it, and practise the tasks that come up in every platform team and every GitOps interview:
 

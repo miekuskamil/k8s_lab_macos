@@ -833,7 +833,7 @@ module_27() {
   # The course Markdown: README, start-here and glossary, plus the lab modules 0 to 32 and 45.
   # Modules 33 to 44 stay out, because with them the ConfigMap passes its 1 MiB limit.
   local docs=() f
-  for f in "$ROOT"/platform-engineering/{README,glossary,start-here}.md "$ROOT"/platform-engineering/*/[0-2][0-9]-*.md "$ROOT"/platform-engineering/*/3[0-2]-*.md "$ROOT"/platform-engineering/*/45-*.md; do docs+=(--from-file="$f"); done
+  for f in "$ROOT"/README.md "$ROOT"/platform-engineering/{glossary,start-here}.md "$ROOT"/platform-engineering/*/[0-2][0-9]-*.md "$ROOT"/platform-engineering/*/3[0-2]-*.md "$ROOT"/platform-engineering/*/45-*.md; do docs+=(--from-file="$f"); done
   "${K[@]}" -n course-rag create configmap course-docs "${docs[@]}" >/dev/null
   "${K[@]}" apply -f "$M/27-rag-app.yaml" >/dev/null
   expect "the rag app starts" "$("${K[@]}" -n course-rag rollout status deploy/rag --timeout=120s 2>&1 | grep -c 'successfully rolled out')" '^1$'

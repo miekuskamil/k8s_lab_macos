@@ -4,7 +4,7 @@
 
 **Before this module:** module 23 for the SLO ideas, and module 22 helps.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it), and `./scripts/port-forward.sh` running in a spare terminal for Grafana (http://localhost:3000, `admin` / `k8s-lab-admin`).
+**You need:** the lab running (`./lab.sh start` starts or repairs it), and `./lab.sh ui` running in a spare terminal for Grafana (http://localhost:3000, `admin` / `k8s-lab-admin`).
 
 Most teams start with Grafana by clicking, adding a panel here and a dashboard there while Grafana saves them in its own database, and a year later three things have gone wrong:
 

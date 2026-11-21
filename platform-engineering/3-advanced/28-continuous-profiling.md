@@ -4,7 +4,7 @@
 
 **Before this module:** module 0. Module 24 helps for Grafana. No Istio needed.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `helm`, internet access for the chart, and about 350 MB of free memory.
+**You need:** the lab running (`./lab.sh start` starts or repairs it), `helm`, internet access for the chart, and about 350 MB of free memory.
 
 Metrics tell you a service uses a whole CPU core, and traces tell you which request was slow, but neither tells you *which line of code* burns the CPU or fills the memory. A **profile** answers that question, because it records which functions used the CPU or the memory, and how much.
 

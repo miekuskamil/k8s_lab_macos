@@ -712,7 +712,7 @@ These terms come from the [practice cluster](practice-cluster.md) and the securi
 
 **AppArmor.** AppArmor is a Linux security module that limits which files, capabilities and network access a program gets, through a text profile loaded with `apparmor_parser`. A pod asks for a loaded profile with `securityContext.appArmorProfile`. OrbStack's kernel lacks it, so the AppArmor tasks run on a VM. Modules 43 and 44.
 
-**Lima VM.** Lima is a macOS tool that runs Linux virtual machines, each with a kernel of its own. The third practice machine, `cks-lima`, is a Lima VM with AppArmor and a one-node kubeadm cluster that runs Cilium. [The VM page](kernel-and-host/README.md#the-lima-vm-on-a-mac), module 44.
+**Lima VM.** Lima is a macOS tool that runs Linux virtual machines, each with a kernel of its own. The third practice machine, `cks-lima`, is a Lima VM with AppArmor and a one-node kubeadm cluster that runs Cilium. [The VM page](../README.md#the-vm-for-module-44), module 44.
 
 **CiliumNetworkPolicy.** A CiliumNetworkPolicy is Cilium's own policy resource. It selects pods with `endpointSelector` and adds what a NetworkPolicy lacks: HTTP rules at layer 7, named peer groups called entities, and deny rules that beat every allow. Modules 38 and 44.
 

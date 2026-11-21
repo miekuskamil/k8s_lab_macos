@@ -4,7 +4,7 @@
 
 **Before this module:** module 1.
 
-**You need:** the lab running (`./scripts/start.sh` starts or repairs it), `istioctl`, and `./scripts/port-forward.sh` running in a spare terminal for Kiali (http://localhost:20001).
+**You need:** the lab running (`./lab.sh start` starts or repairs it), `istioctl`, and `./lab.sh ui` running in a spare terminal for Kiali (http://localhost:20001).
 
 Every pod in the mesh gets an identity that it proves with a certificate, and every connection between mesh pods uses that certificate for two jobs: it encrypts the traffic, and it proves who sent it. This module shows three things:
 

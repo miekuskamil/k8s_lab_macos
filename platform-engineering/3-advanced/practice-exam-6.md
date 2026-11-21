@@ -2,7 +2,7 @@
 
 > New to a term here? The [glossary](../glossary.md#the-practice-cluster-and-the-security-modules) explains every term the security modules use.
 
-**Before this practice exam:** [practice exam 5](practice-exam-5.md) under time, and the [practice cluster](../practice-cluster.md) and the [Lima VM](../kernel-and-host/README.md#the-lima-vm-on-a-mac), both freshly reset.
+**Before this practice exam:** [practice exam 5](practice-exam-5.md) under time, and the [practice cluster](../practice-cluster.md) and the [Lima VM](../../README.md#the-vm-for-module-44), both freshly reset.
 
 This is the hardest of the three. When the clock starts, the API server refuses to start, the scheduler and the controller manager crash, every caller is cluster admin, and Secrets sit encrypted with a key you're asked to retire. Nothing tells you which of those to fix first, except the order in which the layers depend on each other, so reading that order is part of the test. You get 2 hours for 17 tasks worth 100 points, on the OrbStack cluster and the Lima VM.
 

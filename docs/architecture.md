@@ -137,7 +137,7 @@ The node used 3.3 GiB in total, including k3s itself. Loki took 84 MiB, Alloy 57
 | Traffic enters through the gateway | 300 of 300 requests returned 200 | `./scripts/traffic-test.sh 300` |
 | Gateway to frontend uses mTLS | ztunnel logged the connection on port 15008 with source identity `spiffe://cluster.local/ns/shop-ingress/sa/shop-gateway-istio` | `kubectl -n istio-system logs ds/ztunnel \| grep 'src.workload="shop-gateway'` |
 | Backend calls go through the waypoint | ztunnel logged frontend to waypoint, then waypoint to backend, both on port 15008 | `kubectl -n istio-system logs ds/ztunnel \| grep waypoint` |
-| Only the backend may reach Redis | A pod with the `default` service account got its Redis connection cut, and ztunnel logged the denial | see [the lab guide](lab-guide.md#5-debugging-mtls-drops), step 5 |
+| Only the backend may reach Redis | A pod with the `default` service account got its Redis connection cut, and ztunnel logged the denial | see [the lab tour](lab-guide.md#5-debugging-mtls-drops), step 5 |
 | Only the frontend may call the backend | The same pod got `403 Forbidden` from the waypoint | same |
 | Scenario A splits 90/10 | 273 responses from v1, 27 from v2 | `kubectl apply -f manifests/scenarios/a-canary-httproute.yaml` |
 | Scenario B injects faults | 15 of 200 returned 503, average latency 526 ms, `/api/version` unaffected at 23 ms | see `manifests/scenarios/b-fault-injection.yaml` |
@@ -150,7 +150,7 @@ The node used 3.3 GiB in total, including k3s itself. Loki took 84 MiB, Alloy 57
 | The course works | On a cluster built from nothing, `./platform-engineering/verify.sh` passed 54 of 54 checks | `./platform-engineering/verify.sh` |
 | The lab runs on Linux | On Ubuntu 24.04.5 with Docker Engine 29.1.3 from Ubuntu's packages, a fresh clone ran `provision.sh` to exit 0 in 195 s with all 16 health checks passing, and the course verification passed every module. The Ubuntu machine ran in OrbStack, so it shared OrbStack's kernel (7.2), whose inotify limits are already high. | `./scripts/provision.sh` on Linux |
 | Traces join across the mesh | 200 of 200 recent backend traces start at the gateway, most with 7 spans across gateway, waypoint and backend | http://localhost:16686, service `backend` |
-| The default logins work | ArgoCD issued a session token, Grafana accepted the password and rejected a wrong one, Redis answered `PONG` | see the [README](../README.md#open-the-uis) |
+| The default logins work | ArgoCD issued a session token, Grafana accepted the password and rejected a wrong one, Redis answered `PONG` | see the [README](../README.md#logins-and-addresses) |
 
 ### What was not verified
 
@@ -177,7 +177,7 @@ The lab has three credentials, and all three are fixed defaults stored in Git:
 - `shop/redis-auth` and `observability/grafana-admin` are Secrets in `manifests/base/03-lab-credentials.yaml`. ArgoCD manages them through `shop-base`.
 - The ArgoCD admin password is a bcrypt hash in `helm/argocd-values.yaml`.
 
-The [README](../README.md#open-the-uis) lists the values. Committing them keeps the lab reproducible and is safe only because nothing listens outside your Mac. [the lab guide](lab-guide.md#secrets) covers what to use on a shared cluster.
+The [guide](../README.md#logins-and-addresses) lists the values. Committing them keeps the lab reproducible and is safe only because nothing listens outside your Mac. [the lab tour](lab-guide.md#secrets) covers what to use on a shared cluster.
 
 ## Editing the diagrams
 
