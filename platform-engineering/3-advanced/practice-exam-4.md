@@ -8,11 +8,11 @@ The real exam gives you 2 hours for 15 to 20 tasks on several clusters, and this
 
 ## Rules
 
-1. Start fresh with `./lab.sh practice reset`, then `./platform-engineering/practice-exam.sh setup 4`. In the test run, the reset took 67 seconds and the setup 19 seconds, because the nodes already had the images, while on a new cluster the first run also downloads them.
+1. Start fresh with `./lab.sh practice reset`, then `./lab.sh exam setup 4`. In the test run, the reset took 67 seconds and the setup 19 seconds, because the nodes already had the images, while on a new cluster the first run also downloads them.
 2. The clock starts when `setup.sh` ends, because it writes the start time, and `score.sh` prints the minutes since then and flags a run over 120 minutes.
 3. Work only on the nodes, through `./lab.sh practice shell` and `./lab.sh practice shell worker`, and use only the documentation the exam allows: kubernetes.io, and the docs of Falco, bom, etcd, ingress-nginx, Cilium and Istio.
 4. Don't open the solutions while the timer runs, because the score only means something when you worked without them.
-5. When time is up, score from your Mac with `./platform-engineering/practice-exam.sh score 4`, or score single tasks with `./platform-engineering/practice-exam.sh score 4 4 9`.
+5. When time is up, score from your Mac with `./lab.sh exam score 4`, or score single tasks with `./lab.sh exam score 4 4 9`.
 
 **Do task 1 first.** `kubeadm upgrade apply` rewrites every static pod manifest from the cluster's stored configuration, so it wipes any API server flag you added before it. The real exam avoids this by giving the upgrade its own cluster, but this practice exam shares one cluster, so the order matters, and noticing that is part of the test.
 
@@ -533,4 +533,4 @@ The transcript ran the first command with the name of the reporter pod from the 
 
 `score.sh` runs between two and six checks per task and splits the task's points evenly over them, rounded down, then prints each check, the points per task and the total.
 
-In the test run, on a cluster fresh from `reset.sh` and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` After `./platform-engineering/practice-exam.sh solve 4`, which applies every solution above in order and took 5 minutes 57 seconds in the final run, it was `TOTAL: 100 of 100 points (100%).` A task scores only when its first check, the main change, passes, because without that rule an untouched cluster scored 18, since checks such as "the scheduler still runs" pass by themselves.
+In the test run, on a cluster fresh from `reset.sh` and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` After `./lab.sh exam solve 4`, which applies every solution above in order and took 5 minutes 57 seconds in the final run, it was `TOTAL: 100 of 100 points (100%).` A task scores only when its first check, the main change, passes, because without that rule an untouched cluster scored 18, since checks such as "the scheduler still runs" pass by themselves.

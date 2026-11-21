@@ -31,4 +31,4 @@ done
 date +%s > "$HERE/.started-$MOCK"
 echo
 echo "Ready. The clock runs from now: 2 hours. Open platform-engineering/1-foundations/practice-exam-$MOCK.md."
-echo "Score yourself at any time with ./platform-engineering/practice-exam.sh score $MOCK"
+echo "Score yourself at any time with ./lab.sh exam score $MOCK"

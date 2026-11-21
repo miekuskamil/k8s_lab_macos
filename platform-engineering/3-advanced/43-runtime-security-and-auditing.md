@@ -263,7 +263,7 @@ Real platform teams ship audit logs and Falco alerts off the node to a central s
 **Time budget:** 10 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 43.1
+$ ./lab.sh task setup 43.1
 == setup task 43.1
 secret/token created
 0
@@ -353,7 +353,7 @@ root@practice-control-plane:~# tail -1 /var/log/kubernetes/audit/audit.log | pyt
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 43.1
+$ ./lab.sh task check 43.1
 == check task 43.1
   PASS  --audit-policy-file is /etc/kubernetes/audit/policy.yaml
   PASS  --audit-log-path is /var/log/kubernetes/audit/audit.log
@@ -372,7 +372,7 @@ The check makes three requests of its own and looks for each one in the log.
 **Time budget:** 8 minutes. **Host:** `practice-worker`.
 
 ```console
-$ ./platform-engineering/task.sh setup 43.2
+$ ./lab.sh task setup 43.2
 == setup task 43.2
 pod/target created
 pod/target condition met
@@ -408,7 +408,7 @@ Falco's documentation, which the exam allows, lists every field under "Supported
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 43.2
+$ ./lab.sh task check 43.2
 == check task 43.2
   PASS  a rule named 'Shell in container (cks)' exists in /etc/falco/rules.d/
   PASS  falco accepts every rules file
@@ -421,7 +421,7 @@ $ ./platform-engineering/task.sh check 43.2
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 43.3
+$ ./lab.sh task setup 43.3
 == setup task 43.3
 deployment.apps/web created
 service/web exposed
@@ -469,7 +469,7 @@ If you don't see a command prompt, try pressing enter.
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 43.3
+$ ./lab.sh task check 43.3
 == check task 43.3
   PASS  container web has readOnlyRootFilesystem: true
   PASS  the Deployment's pod is Ready
@@ -483,7 +483,7 @@ $ ./platform-engineering/task.sh check 43.3
 **Time budget:** 6 minutes. **Hosts:** `practice-worker`, then `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 43.4
+$ ./lab.sh task setup 43.4
 == setup task 43.4
 -rw-r--r-- 1 root root 149 Nov 15 15:17 /root/cks/no-chmod.json
 ```
@@ -531,7 +531,7 @@ In the test run, that printed `chmod: /tmp/f: Operation not permitted`, while wr
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 43.4
+$ ./lab.sh task check 43.4
 == check task 43.4
   PASS  the kubelet finds the profile at /var/lib/kubelet/seccomp/profiles/no-chmod.json
   PASS  pod locked in seccomp uses the Localhost profile profiles/no-chmod.json
@@ -550,7 +550,7 @@ The AppArmor tasks need a kernel with AppArmor turned on, which the kernel the k
 **Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 43.6
+$ ./lab.sh task setup 43.6
 == setup task 43.6
 serviceaccount/ci-bot created
 serviceaccount/docs-bot created
@@ -613,7 +613,7 @@ no
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 43.6
+$ ./lab.sh task check 43.6
 == check task 43.6
   PASS  /root/cks/culprit.txt names the ServiceAccount and the pod
   PASS  RoleBinding ci-bot-secrets is gone
@@ -627,7 +627,7 @@ $ ./platform-engineering/task.sh check 43.6
 **Time budget:** 8 minutes. **Host:** `practice-worker`.
 
 ```console
-$ ./platform-engineering/task.sh setup 43.7
+$ ./lab.sh task setup 43.7
 == setup task 43.7
 active
 ```
@@ -691,7 +691,7 @@ In the alert, everything after the closing bracket is the part Falco 0.45 append
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 43.7
+$ ./lab.sh task check 43.7
 == check task 43.7
   PASS  /etc/falco/rules.d/cks-pkg.yaml defines the list cks_pkg_mgrs with apk, apt, apt-get, dpkg and pip
   PASS  /etc/falco/rules.d/cks-pkg.yaml defines the macro cks_in_pod, and the rule uses the macro and the list
@@ -705,7 +705,7 @@ $ ./platform-engineering/task.sh check 43.7
 **Time budget:** 6 minutes. **Host:** `practice-worker`.
 
 ```console
-$ ./platform-engineering/task.sh setup 43.8
+$ ./lab.sh task setup 43.8
 == setup task 43.8
   /etc/falco/falco_rules.yaml matches the package
 ```
@@ -753,7 +753,7 @@ The rule's name and its output text differ, so find a rule by name with `grep -n
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 43.8
+$ ./lab.sh task check 43.8
 == check task 43.8
   PASS  /etc/falco/falco_rules.yaml is unchanged
   PASS  reading /etc/shadow in falco-test/target raises a Critical alert
@@ -766,7 +766,7 @@ $ ./platform-engineering/task.sh check 43.8
 **Time budget:** 6 minutes. **Hosts:** `practice-worker`, then `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 43.9
+$ ./lab.sh task setup 43.9
 == setup task 43.9
 deployment.apps/cart created
 deployment.apps/inventory created
@@ -808,7 +808,7 @@ The transcript ran the first command with the name of the inventory pod from the
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 43.9
+$ ./lab.sh task check 43.9
 == check task 43.9
   PASS  /root/cks/falco-finding.txt holds the rule name and shop-runtime/inventory
   PASS  Deployment inventory is gone
@@ -821,7 +821,7 @@ $ ./platform-engineering/task.sh check 43.9
 **Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 43.10
+$ ./lab.sh task setup 43.10
 == setup task 43.10
 role.rbac.authorization.k8s.io/secret-admin created
 rolebinding.rbac.authorization.k8s.io/alice-secrets created
@@ -873,7 +873,7 @@ rolebinding.rbac.authorization.k8s.io "bob-secrets" deleted from hr namespace
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 43.10
+$ ./lab.sh task check 43.10
 == check task 43.10
   PASS  line 1 of /root/cks/audit-answers.txt: alice read salaries
   PASS  line 2: bob deleted old-salaries
@@ -887,7 +887,7 @@ $ ./platform-engineering/task.sh check 43.10
 **Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 43.11
+$ ./lab.sh task setup 43.11
 == setup task 43.11
 rolebinding.rbac.authorization.k8s.io/alice-edit created
 secret/s1 created
@@ -956,7 +956,7 @@ root@practice-control-plane:~# tail -3 /var/log/kubernetes/audit/audit.log | gre
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 43.11
+$ ./lab.sh task check 43.11
 == check task 43.11
   PASS  alice's get on a Secret appears at Metadata
   PASS  alice's Deployment create appears at RequestResponse
@@ -978,7 +978,7 @@ This task sits in [module 44](../kernel-and-host/44-kernel-and-host-security.md#
 **Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 43.13
+$ ./lab.sh task setup 43.13
 == setup task 43.13
 pod/frozen created
 pod/frozen-too created
@@ -1020,7 +1020,7 @@ pod "frozen-but-privileged" deleted from immutable-check namespace
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 43.13
+$ ./lab.sh task check 43.13
 == check task 43.13
   PASS  writable, half-frozen and frozen-but-privileged are gone
   PASS  frozen and frozen-too still run

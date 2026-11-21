@@ -8,11 +8,11 @@ This practice exam is the hardest of the three, harder than most real exam tasks
 
 ## Rules
 
-1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./platform-engineering/practice-exam.sh setup 3`. In the test run, the reset took 45 seconds and the setup 59 seconds, most of it for the two Helm releases of task 3.
-2. The clock starts when `setup.sh` ends, and `./platform-engineering/practice-exam.sh score 3` prints the minutes since then.
+1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./lab.sh exam setup 3`. In the test run, the reset took 45 seconds and the setup 59 seconds, most of it for the two Helm releases of task 3.
+2. The clock starts when `setup.sh` ends, and `./lab.sh exam score 3` prints the minutes since then.
 3. Work only on `practice-control-plane`, and use only kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
 4. Don't open the solutions while the timer runs.
-5. Score from your Mac with `./platform-engineering/practice-exam.sh score 3`.
+5. Score from your Mac with `./lab.sh exam score 3`.
 
 Task files sit in `/opt/apps/m3/N` on `practice-control-plane`.
 
@@ -495,6 +495,6 @@ busybox's `httpd` binds port 80 as user 101 here, but not because of the capabil
 
 ## Scoring
 
-`score.sh` runs two to four checks per task, splits the task's points evenly over them, rounded down, and gives a task points only when its first check, the main change, passes. In the final test run it scored `TOTAL: 0 of 100 points (0%).` after `setup.sh`, and `TOTAL: 100 of 100 points (100%).` after `./platform-engineering/practice-exam.sh solve 3`, which took 59 seconds.
+`score.sh` runs two to four checks per task, splits the task's points evenly over them, rounded down, and gives a task points only when its first check, the main change, passes. In the final test run it scored `TOTAL: 0 of 100 points (0%).` after `setup.sh`, and `TOTAL: 100 of 100 points (100%).` after `./lab.sh exam solve 3`, which took 59 seconds.
 
 The first run of this practice exam scored 84, and the four lost tasks taught more than the ones that passed. Task 1's init container waited for a name that only the nodes resolve, task 9's quota deadlock needed the scale to 0, task 8's first check passed on an untouched cluster, and task 10's check counted the ServiceAccount token, which Kubernetes also mounts as a projected volume. The text above includes each fix.

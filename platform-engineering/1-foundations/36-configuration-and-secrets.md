@@ -117,7 +117,7 @@ RBAC has no deny rules because a list of grants is easy to audit: reading the bi
 **Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 36.1
+$ ./lab.sh task setup 36.1
 == setup task 36.1
 shop.currency=EUR
 shop.page-size=20
@@ -173,7 +173,7 @@ The volume shows every key as a file, `LOG_LEVEL` included. `items` in the volum
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 36.1
+$ ./lab.sh task check 36.1
 == check task 36.1
   PASS  ConfigMap app-config has the keys app.properties and LOG_LEVEL=debug
   PASS  pod app has LOG_LEVEL=debug in its environment
@@ -239,7 +239,7 @@ total 4
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 36.2
+$ ./lab.sh task check 36.2
 == check task 36.2
   PASS  Secret db-credentials holds user=admin and password=S3cr3t-pw
   PASS  pod db-client has DB_USER=admin from the Secret
@@ -253,7 +253,7 @@ $ ./platform-engineering/task.sh check 36.2
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 36.3
+$ ./lab.sh task setup 36.3
 == setup task 36.3
 NAME                         DATA   AGE
 configmap/kube-root-ca.crt   1      1s
@@ -292,7 +292,7 @@ The last command proves the ConfigMap is immutable. Changing `web-config` in pla
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 36.3
+$ ./lab.sh task check 36.3
 == check task 36.3
   PASS  ConfigMap web-config-v2 holds COLOR=green and is immutable
   PASS  Deployment web reads COLOR from web-config-v2
@@ -306,7 +306,7 @@ $ ./platform-engineering/task.sh check 36.3
 **Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 36.4
+$ ./lab.sh task setup 36.4
 == setup task 36.4
 NAME     READY   UP-TO-DATE   AVAILABLE   AGE
 worker   0/3     0            0           3s
@@ -349,7 +349,7 @@ The quota names all four numbers, so the pod must name all four too. Three pods 
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 36.4
+$ ./lab.sh task check 36.4
 == check task 36.4
   PASS  worker's container requests 100m CPU and 64Mi, limited to 200m and 128Mi
   PASS  all 3 replicas are ready
@@ -406,7 +406,7 @@ Container   cpu       -    -      50m              200m           -
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 36.5
+$ ./lab.sh task check 36.5
 == check task 36.5
   PASS  LimitRange container-defaults: default 200m/128Mi, default request 50m/64Mi, max memory 256Mi
   PASS  pod plain got the defaults although its spec names none
@@ -453,7 +453,7 @@ The pod count ran out first, while CPU and memory had room left: 5 pods of 50m e
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 36.6
+$ ./lab.sh task check 36.6
 == check task 36.6
   PASS  ResourceQuota team-a-quota: 5 pods, 1 CPU and 1Gi requested, 2 CPU and 2Gi limits, 4 Services
   PASS  Deployment filler asks for 6 replicas and runs 5
@@ -466,7 +466,7 @@ $ ./platform-engineering/task.sh check 36.6
 **Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 36.7
+$ ./lab.sh task setup 36.7
 == setup task 36.7
 NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
 deployment.apps/reporter      1/1     1            1           4s
@@ -512,7 +512,7 @@ command terminated with exit code 1
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 36.7
+$ ./lab.sh task check 36.7
 == check task 36.7
   PASS  Deployment reporter runs as ServiceAccount reporter
   PASS  the reporter pod's token names system:serviceaccount:sa-apps:reporter
@@ -566,7 +566,7 @@ Pods live in the core API group, written `""`, and Deployments in `apps`; `kubec
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 36.8
+$ ./lab.sh task check 36.8
 == check task 36.8
   PASS  deployer may create, update and patch deployments in ci
   PASS  deployer may get and list pods and read pod logs in ci
@@ -580,7 +580,7 @@ $ ./platform-engineering/task.sh check 36.8
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 36.9
+$ ./lab.sh task setup 36.9
 == setup task 36.9
 11:02:27 wget: server returned error: HTTP/1.1 403 Forbidden
 ```
@@ -609,7 +609,7 @@ The RoleBinding sits in `shop-front` and names a ServiceAccount from `observer`,
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 36.9
+$ ./lab.sh task check 36.9
 == check task 36.9
   PASS  watcher may list pods in shop-front
   PASS  watcher may not list pods in other namespaces, or delete them
@@ -622,7 +622,7 @@ $ ./platform-engineering/task.sh check 36.9
 **Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 36.10
+$ ./lab.sh task setup 36.10
 == setup task 36.10
 uid=0(root) gid=0(root) groups=0(root),10(wheel)
 ```
@@ -678,7 +678,7 @@ The heartbeat file belongs to user 1000 and group 2000, because the kubelet give
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 36.10
+$ ./lab.sh task check 36.10
 == check task 36.10
   PASS  the process runs as uid 1000, gid 3000, with group 2000
   PASS  no privilege escalation, every capability dropped, root file system read-only
@@ -691,7 +691,7 @@ $ ./platform-engineering/task.sh check 36.10
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 36.11
+$ ./lab.sh task setup 36.11
 == setup task 36.11
 backups.ckad.io                                         Namespaced   v1(storage)         2026-11-20T10:53:02Z
 ```
@@ -761,7 +761,7 @@ The columns `SCHEDULE`, `TARGET` and `KEEP` come from the CRD's `additionalPrint
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 36.11
+$ ./lab.sh task check 36.11
 == check task 36.11
   PASS  Backup nightly in crd-demo: 0 2 * * *, target postgres, kept 7 days
   PASS  /opt/apps/4.11/backups.txt lists the Backups of every namespace
@@ -774,7 +774,7 @@ $ ./platform-engineering/task.sh check 36.11
 **Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 36.12
+$ ./lab.sh task setup 36.12
 == setup task 36.12
 Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "busybox" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "busybox" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "busybox" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "busybox" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
 NAME   READY   UP-TO-DATE   AVAILABLE   AGE
@@ -827,7 +827,7 @@ Port 8080 works for user 1000 because only ports below 1024 need the capability 
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 36.12
+$ ./lab.sh task check 36.12
 == check task 36.12
   PASS  Deployment web has a ready pod
   PASS  the namespace still enforces restricted

@@ -210,7 +210,7 @@ The industry calls the goal **provenance**, a verifiable record of where every a
 **Time budget:** 4 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 42.1
+$ ./lab.sh task setup 42.1
 == setup task 42.1
 FROM ubuntu:latest
 RUN apt-get update && apt-get install -y python3 curl wget netcat-openbsd vim
@@ -242,7 +242,7 @@ The alpine image already has `python3`, so the `RUN` line goes, and the `USER ro
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 42.1
+$ ./lab.sh task check 42.1
 == check task 42.1
   PASS  the base image has an explicit tag, not latest
   PASS  the base image is a slim, alpine or distroless variant
@@ -256,7 +256,7 @@ $ ./platform-engineering/task.sh check 42.1
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 42.2
+$ ./lab.sh task setup 42.2
 == setup task 42.2
 pod/web created
 pod/cache created
@@ -295,7 +295,7 @@ pod "cache" deleted from scan namespace
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 42.2
+$ ./lab.sh task check 42.2
 == check task 42.2
   PASS  pod web (nginx:1.19.0, CRITICAL findings) is gone
   PASS  pod cache (redis:6.0.5, CRITICAL findings) is gone
@@ -308,7 +308,7 @@ $ ./platform-engineering/task.sh check 42.2
 **Time budget:** 5 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 42.3
+$ ./lab.sh task setup 42.3
 == setup task 42.3
   /root/cks is ready
 ```
@@ -345,7 +345,7 @@ An SBOM is also something trivy scans later, without the image, with `trivy sbom
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 42.3
+$ ./lab.sh task check 42.3
 == check task 42.3
   PASS  /root/cks/kube-proxy.spdx.json is SPDX JSON for kube-proxy v1.37.1
   PASS  /root/cks/kube-proxy.cdx.json is a CycloneDX SBOM
@@ -358,7 +358,7 @@ $ ./platform-engineering/task.sh check 42.3
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 42.4
+$ ./lab.sh task setup 42.4
 == setup task 42.4
 score -39 critical ['Privileged', 'HostPID']
 ```
@@ -443,7 +443,7 @@ In the test run, the score went from -39 to 10. The `sleep` command writes nothi
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 42.4
+$ ./lab.sh task check 42.4
 == check task 42.4
   PASS  kubesec finds no critical issue and scores 8 or more
   PASS  pod report runs in namespace reports
@@ -456,7 +456,7 @@ $ ./platform-engineering/task.sh check 42.4
 **Time budget:** 10 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 42.5
+$ ./lab.sh task setup 42.5
 == setup task 42.5
 active
 registry.k8s.io/
@@ -520,7 +520,7 @@ In the test run, the first command failed with `image policy webhook backend den
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 42.5
+$ ./lab.sh task check 42.5
 == check task 42.5
   PASS  the API server enables ImagePolicyWebhook
   PASS  the admission configuration sets defaultAllow: false
@@ -535,7 +535,7 @@ $ ./platform-engineering/task.sh check 42.5
 **Time budget:** 8 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 42.6
+$ ./lab.sh task setup 42.6
 == setup task 42.6
   the API server restarted with the changed files at 15:06:39
 ```
@@ -576,7 +576,7 @@ In the test run, that printed `image policy webhook backend denied one or more i
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 42.6
+$ ./lab.sh task check 42.6
 == check task 42.6
   PASS  the API server answers
   PASS  ImagePolicyWebhook stays enabled, with defaultAllow: false
@@ -590,7 +590,7 @@ $ ./platform-engineering/task.sh check 42.6
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 42.7
+$ ./lab.sh task setup 42.7
 == setup task 42.7
   quay.io/evil/miner:1 today: pod/probe created (server dry run)
 ```
@@ -639,7 +639,7 @@ Error from server (Forbidden): pods "bad" is forbidden: image policy webhook bac
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 42.7
+$ ./lab.sh task check 42.7
 == check task 42.7
   PASS  the admission configuration sets defaultAllow: false
   PASS  the image-policy service runs and starts at boot
@@ -653,7 +653,7 @@ $ ./platform-engineering/task.sh check 42.7
 **Time budget:** 4 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 42.8
+$ ./lab.sh task setup 42.8
 == setup task 42.8
 deployment.apps/web created
 Waiting for deployment "web" rollout to finish: 0 of 1 updated replicas are available...
@@ -685,7 +685,7 @@ In the test run, the imageID was `docker.io/library/nginx@sha256:65645c7bb6a0661
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 42.8
+$ ./lab.sh task check 42.8
 == check task 42.8
   PASS  Deployment web names its image by a sha256 digest
   PASS  the digest is the one nginx:1.27-alpine had on the node
@@ -698,7 +698,7 @@ $ ./platform-engineering/task.sh check 42.8
 **Time budget:** 7 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 42.9
+$ ./lab.sh task setup 42.9
 == setup task 42.9
 deployment.apps/web created
 deployment.apps/tools created
@@ -741,7 +741,7 @@ In the test run, trivy found 44 CRITICAL findings in `nginx:1.19.0`, 22 in `redi
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 42.9
+$ ./lab.sh task check 42.9
 == check task 42.9
   PASS  /root/cks/critical-images.txt lists exactly the images with CRITICAL findings
   PASS  the Deployments running those images are scaled to 0
@@ -754,7 +754,7 @@ $ ./platform-engineering/task.sh check 42.9
 **Time budget:** 4 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 42.10
+$ ./lab.sh task setup 42.10
 == setup task 42.10
 app-1.cdx.json
 app-2.cdx.json
@@ -782,7 +782,7 @@ In the test run, `app-2.cdx.json` showed `Total: 44 (CRITICAL: 44)`, and the oth
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 42.10
+$ ./lab.sh task check 42.10
 == check task 42.10
   PASS  /root/cks/risky-sboms.txt names exactly the SBOMs with CRITICAL findings
 == task 42.10: 1 passed, 0 failed

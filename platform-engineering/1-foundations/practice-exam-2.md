@@ -8,11 +8,11 @@ Most tasks in this practice exam start from something broken: a pod that never s
 
 ## Rules
 
-1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./platform-engineering/practice-exam.sh setup 2`. In the test run, the reset took 42 seconds and the setup 45 seconds, most of it for the Helm release of task 7.
-2. The clock starts when `setup.sh` ends, and `./platform-engineering/practice-exam.sh score 2` prints the minutes since then.
+1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./lab.sh exam setup 2`. In the test run, the reset took 42 seconds and the setup 45 seconds, most of it for the Helm release of task 7.
+2. The clock starts when `setup.sh` ends, and `./lab.sh exam score 2` prints the minutes since then.
 3. Work only on `practice-control-plane`, and use only kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
 4. Don't open the solutions while the timer runs.
-5. Score from your Mac with `./platform-engineering/practice-exam.sh score 2`, or single tasks with `./platform-engineering/practice-exam.sh score 2 4 9`.
+5. Score from your Mac with `./lab.sh exam score 2`, or single tasks with `./lab.sh exam score 2 4 9`.
 
 Task files sit in `/opt/apps/m2/N` on `practice-control-plane`. A task that says "fix" means: change as little as possible, and leave everything the task doesn't mention as it is.
 
@@ -375,4 +375,4 @@ k -n k2-chain create ingress status --class=nginx --rule='status.k2.local/*=stat
 
 `score.sh` runs two to four checks per task, splits the task's points evenly over them, rounded down, and gives a task points only when its first check, the main fix, passes. It checks the cluster as it is and waits at most 10 seconds for anything, so on an untouched cluster it takes about 4 minutes, and on a solved one under a minute.
 
-In the final test run, the score was `TOTAL: 0 of 100 points (0%).` after `setup.sh`, and `TOTAL: 100 of 100 points (100%).` after `./platform-engineering/practice-exam.sh solve 2`, which took 2 minutes 52 seconds. An earlier run scored 93, because the reference solution of task 7 used `helm upgrade --wait`, and Helm 4 judged the Deployment by the `ProgressDeadlineExceeded` condition that the broken revision had left on it, so it marked the good upgrade `failed`. The solution above now waits with `kubectl rollout status` instead.
+In the final test run, the score was `TOTAL: 0 of 100 points (0%).` after `setup.sh`, and `TOTAL: 100 of 100 points (100%).` after `./lab.sh exam solve 2`, which took 2 minutes 52 seconds. An earlier run scored 93, because the reference solution of task 7 used `helm upgrade --wait`, and Helm 4 judged the Deployment by the `ProgressDeadlineExceeded` condition that the broken revision had left on it, so it marked the good upgrade `failed`. The solution above now waits with `kubectl rollout status` instead.

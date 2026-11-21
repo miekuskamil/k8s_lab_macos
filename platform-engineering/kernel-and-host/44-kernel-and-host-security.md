@@ -10,7 +10,7 @@ The practice cluster runs on two kind nodes, which are containers that share one
 
 gVisor and Falco stay in their modules on the practice cluster. gVisor brings its own user-space kernel, and Falco only watches system calls, so neither needs a kernel to itself, and the test runs passed both on kind.
 
-Each task names its host. On a Mac, `cks-lima` is the Lima VM, and `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell there. On [your own VMs](../practice-cluster.md#the-practice-cluster-on-your-own-vms-proxmox-or-any-ssh-reachable-ubuntu), the kernel module and AppArmor tasks run on `cks-w1` instead, as [the VM page](../practice-cluster.md#where-each-task-runs) explains, while the Cilium tasks still need the Lima VM. Task ids run from 44.1 to 44.7, so `./platform-engineering/task.sh setup 44.6` prepares task 6.
+Each task names its host. On a Mac, `cks-lima` is the Lima VM, and `./platform-engineering/practice/cluster/lima.sh shell` opens a root shell there. On [your own VMs](../practice-cluster.md#the-practice-cluster-on-your-own-vms-proxmox-or-any-ssh-reachable-ubuntu), the kernel module and AppArmor tasks run on `cks-w1` instead, as [the VM page](../practice-cluster.md#where-each-task-runs) explains, while the Cilium tasks still need the Lima VM. Task ids run from 44.1 to 44.7, so `./lab.sh task setup 44.6` prepares task 6. Run the task commands in a terminal on your Mac, outside `./lab.sh shell`, because they reach the VM with `limactl`, which only your Mac has. In the test run on 21 November 2026, from a fresh clone with only Docker, git and Lima on the PATH, every task failed its check after setup and passed after its solution.
 
 | Task | Topic | Kernel feature |
 |---|---|---|
@@ -31,7 +31,7 @@ $ ./platform-engineering/practice/cluster/lima.sh start      # once, when the VM
 ...
 time="2026-11-14T22:52:45Z" level=info msg="READY. Run `limactl shell cks-lima` to open the shell."
 cluster ready
-$ ./platform-engineering/task.sh setup 44.1
+$ ./lab.sh task setup 44.1
 == setup task 44.1
 pod/backend created
 service/backend created
@@ -85,7 +85,7 @@ command terminated with exit code 1
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 44.1
+$ ./lab.sh task check 44.1
 == check task 44.1
   PASS  CiliumNetworkPolicy backend-ingress selects app=backend and opens only TCP 80
   PASS  frontend reaches backend on port 80
@@ -98,7 +98,7 @@ $ ./platform-engineering/task.sh check 44.1
 **Time budget:** 6 minutes. **Host:** `cks-lima`.
 
 ```console
-$ ./platform-engineering/task.sh setup 44.2
+$ ./lab.sh task setup 44.2
 == setup task 44.2
 pod/api created
 service/api created
@@ -159,7 +159,7 @@ In the test run, the second and third commands printed `wget: server returned er
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 44.2
+$ ./lab.sh task check 44.2
 == check task 44.2
   PASS  CiliumNetworkPolicy api-l7 has an HTTP rule
   PASS  client gets /public/ with GET
@@ -176,7 +176,7 @@ In the test run, the check failed four of five items before the solution.
 **Time budget:** 6 minutes. **Host:** `cks-lima`.
 
 ```console
-$ ./platform-engineering/task.sh setup 44.3
+$ ./lab.sh task setup 44.3
 == setup task 44.3
 pod/agent created
 pod/web created
@@ -243,7 +243,7 @@ In the test run, the setup printed `web reaches 1.1.1.1:443 before any policy: y
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 44.3
+$ ./lab.sh task check 44.3
 == check task 44.3
   PASS  CiliumNetworkPolicy deny-world denies egress to the world entity for every pod
   PASS  CiliumNetworkPolicy agent-egress uses the kube-apiserver entity
@@ -260,7 +260,7 @@ $ ./platform-engineering/task.sh check 44.3
 ```console
 $ ./platform-engineering/practice/cluster/lima.sh start      # once, when the VM is off
 cluster ready
-$ ./platform-engineering/task.sh setup 44.4
+$ ./lab.sh task setup 44.4
 == setup task 44.4
 dccp                  114688  0
 tipc                  425984  0
@@ -289,7 +289,7 @@ In the test run, a direct `modprobe tipc` afterwards failed with `Error running 
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 44.4
+$ ./lab.sh task check 44.4
 == check task 44.4
   PASS  tipc is not loaded
   PASS  modprobe refuses to load tipc
@@ -307,7 +307,7 @@ $ ./platform-engineering/practice/cluster/lima.sh start      # once, when the VM
 ...
 time="2026-11-15T12:56:22Z" level=info msg="READY. Run `limactl shell cks-lima` to open the shell."
 cluster ready
-$ ./platform-engineering/task.sh setup 44.5
+$ ./lab.sh task setup 44.5
 == setup task 44.5
 pod/web created
 service/web created
@@ -347,7 +347,7 @@ The upgrade only changes the `cilium-config` ConfigMap, and the agents read it a
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 44.5
+$ ./lab.sh task check 44.5
 == check task 44.5
   PASS  cilium-config has enable-wireguard: true
   PASS  cilium encrypt status reports Wireguard on every node
@@ -363,7 +363,7 @@ $ ./platform-engineering/task.sh check 44.5
 ```console
 $ ./platform-engineering/practice/cluster/lima.sh start      # once, when the VM is off
 cluster ready
-$ ./platform-engineering/task.sh setup 44.6
+$ ./lab.sh task setup 44.6
 == setup task 44.6
 AppArmor parser error for /root/cks/cks-deny-write in profile /root/cks/cks-deny-write at line 6: syntax error, unexpected TOK_DENY, expecting TOK_ID or TOK_MODE or TOK_SET_VAR
 ```
@@ -431,7 +431,7 @@ In the test run, the log said `sh: can't create /tmp/x: Permission denied`, and 
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 44.6
+$ ./lab.sh task check 44.6
 == check task 44.6
   PASS  the profile in /root/cks/cks-deny-write parses and still denies every write
   PASS  profile cks-deny-write is loaded in enforce mode
@@ -448,7 +448,7 @@ In the test run, every check failed before the solution.
 **Time budget:** 6 minutes. **Host:** `cks-lima`.
 
 ```console
-$ ./platform-engineering/task.sh setup 44.7
+$ ./lab.sh task setup 44.7
 == setup task 44.7
 deployment.apps/web created
   web-6c48cbcc8b-87qfj CreateContainerError
@@ -497,7 +497,7 @@ A process started with `kubectl exec` runs under the container's profile too, wh
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 44.7
+$ ./lab.sh task check 44.7
 == check task 44.7
   PASS  profile cks-nginx is loaded in enforce mode
   PASS  Deployment web has a ready pod
@@ -508,7 +508,7 @@ $ ./platform-engineering/task.sh check 44.7
 
 ## Clean up
 
-Every task here changes only the Lima VM, so one reset returns it to a fresh cluster with Cilium and without the profiles and modprobe rules. It takes about 2 minutes:
+Every task here changes only the Lima VM, so one reset returns it to a fresh cluster with Cilium and without the profiles and modprobe rules. It took 3 minutes 27 seconds in the test run:
 
 ```console
 $ ./platform-engineering/practice/cluster/lima.sh reset

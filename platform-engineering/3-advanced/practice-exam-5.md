@@ -25,12 +25,12 @@ Practice exam 4 checks that you know each topic, while this one checks that you 
    === 4/4 Cilium 1.20.4
    ...
    cluster ready
-   $ ./platform-engineering/practice-exam.sh setup 5
+   $ ./lab.sh exam setup 5
    == setting up task 13: The image policy fails open
    == setting up task 16: Who deleted the Secret?
    ...
    Ready. The clock runs from now: 2 hours. Open platform-engineering/3-advanced/practice-exam-5.md.
-   Score yourself at any time with ./platform-engineering/practice-exam.sh score 5
+   Score yourself at any time with ./lab.sh exam score 5
    ```
 
    In the final test run, the practice cluster reset took 71 seconds, the Lima reset 2 minutes 5 seconds, and the setup 2 minutes 22 seconds. The setup breaks the API server in its last step, so it doesn't wait for any pods to start.
@@ -38,7 +38,7 @@ Practice exam 4 checks that you know each topic, while this one checks that you 
 2. The clock starts when `setup.sh` ends, because it writes the start time, and `score.sh` prints the minutes since then and says when you went over 120.
 3. Work only on the nodes, through `./lab.sh practice shell`, `./lab.sh practice shell worker` and `./platform-engineering/practice/cluster/lima.sh shell`, and use only the documentation the exam allows.
 4. Don't open the solutions while the clock runs, because the score only means something when you worked without them.
-5. Score from your Mac with `./platform-engineering/practice-exam.sh score 5`, or score single tasks with `./platform-engineering/practice-exam.sh score 5 3 9`.
+5. Score from your Mac with `./lab.sh exam score 5`, or score single tasks with `./lab.sh exam score 5 3 9`.
 
 Each task names its host, and `kubectl` runs on `practice-control-plane` for the practice cluster and on `cks-lima` for the tasks marked Lima.
 
@@ -479,6 +479,6 @@ Set `readOnlyRootFilesystem: true`, `allowPrivilegeEscalation: false` and `secco
 
 `score.sh` runs two to six checks per task, splits the task's points evenly over them, rounded down, and gives points only when a task's first check passes.
 
-In the final test run, on clusters fresh from both resets and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` with `TIME: 2 minutes since setup, 118 minutes left.` After `./platform-engineering/practice-exam.sh solve 5`, which applies every solution above in its order (1, 13, 11, 5, then the rest) in 3 minutes 43 seconds, it was `TOTAL: 100 of 100 points (100%).`
+In the final test run, on clusters fresh from both resets and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` with `TIME: 2 minutes since setup, 118 minutes left.` After `./lab.sh exam solve 5`, which applies every solution above in its order (1, 13, 11, 5, then the rest) in 3 minutes 43 seconds, it was `TOTAL: 100 of 100 points (100%).`
 
 Earlier test runs found three faults in the scoring, and each changed the checks. A check that asks "is it gone?" passed while the API server was down, so it now also asks something that must succeed. Right after the API server restarts for task 5, Calico needed longer than 30 seconds to apply new policies, so the reachability checks of task 2 retry for up to 3 minutes while the API server answers. `wget` also exits with an error on a `403`, which the scorer read as a failed check until it looked at the output instead. While the API server is down, `score.sh` takes a few minutes, because the network checks retry before they give up.

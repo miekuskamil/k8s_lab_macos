@@ -8,11 +8,11 @@ The real exam gives you 2 hours for 15 to 20 tasks, and this practice exam gives
 
 ## Rules
 
-1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./platform-engineering/practice-exam.sh setup 1`. In the test run, the reset took between 42 and 50 seconds and the setup 6 seconds, because the nodes already had the images; on a new cluster the first run also downloads them.
+1. Start from a clean cluster with `./platform-engineering/practice/app-extras/reset.sh`, then run `./lab.sh exam setup 1`. In the test run, the reset took between 42 and 50 seconds and the setup 6 seconds, because the nodes already had the images; on a new cluster the first run also downloads them.
 2. The clock starts when `setup.sh` ends, because it writes the start time, and `score.sh` prints the minutes since then and flags a run over 120 minutes.
 3. Work only on `practice-control-plane`, in the root shell that `./lab.sh practice shell` opens, and use only the documentation the exam allows: kubernetes.io/docs, the Kubernetes blog and helm.sh/docs.
 4. Don't open the solutions while the timer runs, because the score only means something when you worked without them.
-5. When time is up, score from your Mac with `./platform-engineering/practice-exam.sh score 1`, or score single tasks with `./platform-engineering/practice-exam.sh score 1 4 9`.
+5. When time is up, score from your Mac with `./lab.sh exam score 1`, or score single tasks with `./lab.sh exam score 1 4 9`.
 
 Task files sit in `/opt/apps/m1/N` on `practice-control-plane`, where N is the task's number. Every task names its namespace, and the namespaces already exist.
 
@@ -405,4 +405,4 @@ A default deny for the whole namespace would also stop `batch` from reaching `fr
 
 `score.sh` runs two to four checks per task and splits the task's points evenly over them, rounded down, then prints each check, the points per task and the total. A task scores only when its first check, the main change, passes, so checks such as "the key is not an environment variable" earn nothing on an untouched cluster, where they pass by themselves.
 
-In the test run, on a cluster fresh from `reset.sh` and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` After `./platform-engineering/practice-exam.sh solve 1`, which applies every solution above and took 62 seconds, it was `TOTAL: 100 of 100 points (100%).` The first full run scored 95, because the reference solution of task 9 read the log with `--previous` while the pod sat in `Error`, the trap that [module 35](35-observing-and-debugging-applications.md#concept-logs-events-and-metrics) describes; the solution now reads both logs, and the fixed task scored 5 of 5.
+In the test run, on a cluster fresh from `reset.sh` and `setup.sh`, the score was `TOTAL: 0 of 100 points (0%).` After `./lab.sh exam solve 1`, which applies every solution above and took 62 seconds, it was `TOTAL: 100 of 100 points (100%).` The first full run scored 95, because the reference solution of task 9 read the log with `--previous` while the pod sat in `Error`, the trap that [module 35](35-observing-and-debugging-applications.md#concept-logs-events-and-metrics) describes; the solution now reads both logs, and the fixed task scored 5 of 5.

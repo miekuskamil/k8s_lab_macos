@@ -109,7 +109,7 @@ NetworkPolicies only allow and never deny because allow-lists add up safely: a n
 **Time budget:** 3 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 37.1
+$ ./lab.sh task setup 37.1
 == setup task 37.1
 NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
 deployment.apps/catalog   3/3     3            3           1s
@@ -146,7 +146,7 @@ The Service shows port 80, and its EndpointSlice shows the pods' port 8080 with 
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 37.1
+$ ./lab.sh task check 37.1
 == check task 37.1
   PASS  Service catalog is a ClusterIP on port 80 to target port 8080
   PASS  the Service has 3 endpoints
@@ -159,7 +159,7 @@ $ ./platform-engineering/task.sh check 37.1
 **Time budget:** 4 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 37.2
+$ ./lab.sh task setup 37.2
 == setup task 37.2
 Waiting for deployment "web" rollout to finish: 0 of 2 updated replicas are available...
 Waiting for deployment "web" rollout to finish: 1 of 2 updated replicas are available...
@@ -201,7 +201,7 @@ root@practice-control-plane:~# curl -s http://$(k get node practice-worker -o js
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 37.2
+$ ./lab.sh task check 37.2
 == check task 37.2
   PASS  Service web-np is a NodePort on 30100, port 80
   PASS  nginx answers on practice-worker's address, port 30100
@@ -256,7 +256,7 @@ The EndpointSlice resolved both names to numbers, `8080,9090`, which confirms th
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 37.3
+$ ./lab.sh task check 37.3
 == check task 37.3
   PASS  Service shop has port http 80 and port metrics 9090, both by the container's port names
   PASS  client gets 'shop' from http://shop
@@ -269,7 +269,7 @@ $ ./platform-engineering/task.sh check 37.3
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 37.4
+$ ./lab.sh task setup 37.4
 == setup task 37.4
 NAME    CONTROLLER             PARAMETERS   AGE
 nginx   k8s.io/ingress-nginx   <none>       38m
@@ -320,7 +320,7 @@ nginx picks the longest matching prefix, so `/api/orders` goes to `api` although
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 37.4
+$ ./lab.sh task check 37.4
 == check task 37.4
   PASS  Ingress shop uses class nginx and host shop.ckad.local
   PASS  shop.ckad.local/ answers web
@@ -334,7 +334,7 @@ $ ./platform-engineering/task.sh check 37.4
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 37.5
+$ ./lab.sh task setup 37.5
 == setup task 37.5
 NAME                              CLASS            HOSTS                             ADDRESS   PORTS   AGE
 ingress.networking.k8s.io/sites   nginx-internal   blog.ckad.local,docs.ckad.local             80      1s
@@ -387,7 +387,7 @@ docs
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 37.5
+$ ./lab.sh task check 37.5
 == check task 37.5
   PASS  blog.ckad.local answers blog
   PASS  docs.ckad.local answers docs
@@ -400,7 +400,7 @@ $ ./platform-engineering/task.sh check 37.5
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 37.6
+$ ./lab.sh task setup 37.6
 == setup task 37.6
 NAME       READY   STATUS    RESTARTS   AGE   IP               NODE     NOMINATED NODE   READINESS GATES   LABELS
 backend    1/1     Running   0          1s    10.244.135.173   practice-worker   <none>           <none>            app=backend
@@ -466,7 +466,7 @@ A blocked connection times out rather than failing at once, because Calico drops
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 37.6
+$ ./lab.sh task check 37.6
 == check task 37.6
   PASS  NetworkPolicy default-deny-ingress selects every pod and allows no ingress
   PASS  frontend reaches backend on 8080
@@ -528,7 +528,7 @@ The rule names the pod's port, 5432, not a Service port, because the policy acts
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 37.7
+$ ./lab.sh task check 37.7
 == check task 37.7
   PASS  NetworkPolicy app-egress selects app=app and controls only egress
   PASS  app reaches the database by name: http://db:5432
@@ -542,7 +542,7 @@ $ ./platform-engineering/task.sh check 37.7
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 37.8
+$ ./lab.sh task setup 37.8
 == setup task 37.8
 NAME            STATUS   AGE   LABELS
 np-dev          Active   2s    practice=task,kubernetes.io/metadata.name=np-dev,team=dev
@@ -595,7 +595,7 @@ With two entries instead, grafana would get in through the namespace entry, and 
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 37.8
+$ ./lab.sh task check 37.8
 == check task 37.8
   PASS  NetworkPolicy allow-prometheus exists in np-metrics
   PASS  prometheus in np-monitoring reaches the exporter
@@ -609,7 +609,7 @@ $ ./platform-engineering/task.sh check 37.8
 **Time budget:** 6 minutes. **Host:** `practice-control-plane`.
 
 ```console
-$ ./platform-engineering/task.sh setup 37.9
+$ ./lab.sh task setup 37.9
 == setup task 37.9
 NAME               POD-SELECTOR           AGE
 default-deny       <none>                 0s
@@ -656,7 +656,7 @@ The connection needs permission at both ends, which is why one label alone fails
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 37.9
+$ ./lab.sh task check 37.9
 == check task 37.9
   PASS  checkout reaches http://payments
   PASS  stranger still does not
@@ -739,7 +739,7 @@ The Service name returns both pod addresses instead of one virtual IP, which is 
 </details>
 
 ```console
-$ ./platform-engineering/task.sh check 37.10
+$ ./lab.sh task check 37.10
 == check task 37.10
   PASS  Service db is headless
   PASS  StatefulSet db has 2 ready pods and names db as its Service
