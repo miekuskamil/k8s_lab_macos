@@ -428,7 +428,7 @@ Give the machine at least 12 GB of memory, because the lab needs about 8 GB and 
    sudo sysctl --system
    ```
 
-3. Follow the [quick start](#quick-start). On a remote machine, forward the ports over SSH to open the UIs, for example `ssh -L 8080:localhost:8080 <machine>`, and use `xdg-open` where the course says `open`.
+3. Follow the [quick start](#quick-start). On a remote machine, forward the ports over SSH to open the UIs, for example `ssh -L 8080:localhost:8080 <machine>`, with one `-L` for each port in [Logins and addresses](#logins-and-addresses).
 
 <details>
 <summary>Install the tools without the toolbox</summary>

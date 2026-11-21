@@ -4,9 +4,9 @@
 
 **Before this module:** none. Read [Istio in one picture](../start-here.md) first.
 
-**You need:** the lab from `./scripts/provision.sh` (or `./lab.sh up`, which runs it), and a browser. This module installs `istioctl`.
+**You need:** the lab from `./lab.sh up`, a shell in the toolbox from `./lab.sh shell`, and a browser. The toolbox brings `istioctl`, so nothing needs installing on your machine.
 
-Every later module assumes a healthy lab and a working `istioctl`, so this module checks the first and installs the second. It also shows which tool answers which question, so that you know where to look when something breaks. It takes 15 minutes.
+Every later module assumes a healthy lab and a working `istioctl`, so this module checks both. It also shows which tool answers which question, so that you know where to look when something breaks. It takes 15 minutes.
 
 ## Check the lab
 
@@ -54,36 +54,20 @@ Port-forwards are running. Press Ctrl-C to stop.
 
 The [guide](../../README.md#logins-and-addresses) lists every UI. Keep Headlamp (http://localhost:4466) open in a tab, because it shows every pod with its logs and events in one place and needs no login.
 
-## Install istioctl
+## Check istioctl
 
-`istioctl` does for Istio what `kubectl` does for Kubernetes: it reads the mesh's state and explains it in plain terms. Install it with Homebrew on macOS, or from the [Istio releases page](https://github.com/istio/istio/releases) on Linux.
+`istioctl` does for Istio what `kubectl` does for Kubernetes: it reads the mesh's state and explains it in plain terms. The toolbox installs the client the course was tested with, 1.32.0, so run it from your `./lab.sh shell`:
 
 ```console
-$ brew install istioctl
-Warning: istioctl 1.32.0 is already installed and up-to-date.
-To reinstall 1.32.0, run:
-  brew reinstall istioctl
-
 $ istioctl version
 client version: 1.32.0
 control plane version: 1.24.2
 data plane version: 1.24.2 (3 proxies)
 ```
 
-### On Linux (Ubuntu 24.04)
+Module 31 needs a client this new, because `istioctl proxy-status -o json` and the analyzer it uses don't exist in 1.24. If you prefer to work outside the toolbox, install the same client on your machine, with `brew install istioctl` on macOS or with the download in [Install the tools without the toolbox](../../README.md#linux) on Linux.
 
-Homebrew runs only on macOS, so on Linux you download the same client the course was tested with, 1.32.0:
-
-```bash
-ARCH=$(dpkg --print-architecture)
-curl -fsSL "https://github.com/istio/istio/releases/download/1.32.0/istioctl-1.32.0-linux-$ARCH.tar.gz" | tar xz
-sudo install istioctl /usr/local/bin/ && rm istioctl
-istioctl version
-```
-
-Your client then reports 1.32.0 against control plane 1.24.2, which matches the macOS setup. Module 31 needs a client this new, because `istioctl proxy-status -o json` and the analyzer it uses don't exist in 1.24. [Running the lab on Linux](../../README.md#linux) covers the rest of the setup and the few commands that differ.
-
-**What you should see.** The `istioctl version` lines from the macOS transcript above. A client newer than the control plane works fine, and every command in this course ran with client 1.32 against control plane 1.24. If a command fails with an unknown field error, install the matching client from the releases page.
+**What you should see.** The three `istioctl version` lines above. A client newer than the control plane works fine, and every command in this course ran with client 1.32 against control plane 1.24. If a command fails with an unknown field error, check that the client line says 1.32.0, because an older `istioctl` on your machine may run instead of the toolbox's.
 
 The "3 proxies" line counts the proxies that take their configuration from istiod, the Istio control plane:
 
