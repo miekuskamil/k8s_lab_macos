@@ -1,0 +1,67 @@
+# The Docker track's capstone (module 0.8): the hits app behind a reverse proxy, with Redis
+# on a private network, every container non-root, read-only and without capabilities.
+# API_IMAGE and PROXY_IMAGE come from .env: the signed images, pinned by digest.
+name: course-capstone
+
+x-hardened: &hardened
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  restart: unless-stopped
+
+services:
+  proxy:
+    <<: *hardened
+    image: ${PROXY_IMAGE:?set PROXY_IMAGE in .env}
+    ports:
+      - "8889:8080"
+    tmpfs:
+      - /tmp
+    networks: [front]
+    mem_limit: 64m
+    pids_limit: 100
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    depends_on:
+      api:
+        condition: service_healthy
+
+  api:
+    <<: *hardened
+    image: ${API_IMAGE:?set API_IMAGE in .env}
+    environment:
+      REDIS_ADDR: redis:6379
+    networks: [front, back]
+    mem_limit: 64m
+    pids_limit: 50
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    <<: *hardened
+    image: redis:8.10.2-alpine3.23
+    user: "999:1000"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - data:/data
+    networks: [back]
+    mem_limit: 128m
+    pids_limit: 50
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+
+networks:
+  front: {}
+  # internal: no route out of the host and no published ports, so Redis talks only to the api.
+  back:
+    internal: true
+
+volumes:
+  data:

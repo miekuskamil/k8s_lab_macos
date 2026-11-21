@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="900" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">A debug container <tspan fill="#7c3aed">borrows the namespaces</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">--network container: and --pid container: put a toolbox next to an app that has no shell.</text>
+<rect x="40.0" y="150.0" width="1520.0" height="710.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="58.5" y="167.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="58.5,171.5 75.5,171.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Docker host</text>
+<text x="1542.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">on a Mac: OrbStack&#x27;s Linux VM</text>
+<rect x="80.0" y="210.0" width="1440.0" height="610.0" rx="16.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.6"/>
+<text x="98.0" y="240.0" font-size="18.0" fill="#047857" font-weight="700" text-anchor="start">course-hits network and process namespaces</text>
+<rect x="120.0" y="270.0" width="560.0" height="320.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="147.0,285.0 155.5,289.5 155.5,299.0 147.0,303.5 138.5,299.0 138.5,289.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="138.5,289.5 147.0,294.0 155.5,289.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="147.0,294.0 147.0,303.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="166.0" y="300.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">course-hits</text>
+<rect x="160.0" y="380.0" width="480.0" height="80.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="400.0" y="412.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">its files</text>
+<text x="400.0" y="434.7" font-size="17.0" fill="#475569" text-anchor="middle">image + writable layer</text>
+<rect x="160.0" y="490.0" width="480.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="400.0" y="522.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">/hits</text>
+<text x="400.0" y="544.7" font-size="17.0" fill="#475569" text-anchor="middle">PID 1, user 65532</text>
+<rect x="860.0" y="270.0" width="620.0" height="320.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="887.0,285.0 895.5,289.5 895.5,299.0 887.0,303.5 878.5,299.0 878.5,289.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="878.5,289.5 887.0,294.0 895.5,289.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="887.0,294.0 887.0,303.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="906.0" y="300.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">debug container</text>
+<rect x="900.0" y="320.0" width="540.0" height="60.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="1170.0" y="342.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">course/nettools:1.0</text>
+<text x="1170.0" y="363.3" font-size="17.0" fill="#475569" text-anchor="middle">own tools</text>
+<rect x="900.0" y="400.0" width="540.0" height="60.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="1170.0" y="422.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">ls /proc/1/root</text>
+<text x="1170.0" y="443.3" font-size="17.0" fill="#475569" text-anchor="middle">needs SYS_PTRACE</text>
+<rect x="900.0" y="490.0" width="250.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1025.0" y="522.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">ps</text>
+<text x="1025.0" y="543.3" font-size="17.0" fill="#475569" text-anchor="middle">sees /hits</text>
+<rect x="1190.0" y="490.0" width="250.0" height="80.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="1315.0" y="522.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">ss -ltnp</text>
+<text x="1315.0" y="543.3" font-size="17.0" fill="#475569" text-anchor="middle">port 8123</text>
+<rect x="120.0" y="680.0" width="1360.0" height="90.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="800.0" y="717.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">listening socket :8123</text>
+<text x="800.0" y="739.7" font-size="17.0" fill="#475569" text-anchor="middle">one network namespace, shared by both</text>
+<ellipse cx="140.0" cy="530.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="140.0" cy="530.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="140.0" y="536.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<ellipse cx="880.0" cy="300.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="880.0" cy="300.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="880.0" y="306.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<polyline points="900.0,530.0 649.5,530.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="640.0,530.0 651.5,524.2 651.5,535.8" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="1315.0,570.0 1315.0,670.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1315.0,680.0 1309.2,668.5 1320.8,668.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1315.0" cy="625.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1315.0" cy="625.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1315.0" y="631.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<polyline points="400.0,570.0 400.0,670.5" fill="none" stroke="#059669" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="400.0,680.0 394.2,668.5 405.8,668.5" fill="#059669" stroke="#059669" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="900.0,430.0 649.5,430.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="640.0,430.0 651.5,424.2 651.5,435.8" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="770.0" cy="430.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="770.0" cy="430.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="770.0" y="436.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+</svg>

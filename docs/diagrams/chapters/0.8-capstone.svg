@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="960" viewBox="0 0 1600 960" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="960" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Two networks, <tspan fill="#7c3aed">one way in</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Only the proxy publishes a port. Redis sits on an internal network with no route out.</text>
+<rect x="40.0" y="150.0" width="1520.0" height="770.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="58.5" y="167.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="58.5,171.5 75.5,171.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Docker host</text>
+<text x="1542.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">on a Mac: OrbStack&#x27;s Linux VM</text>
+<rect x="80.0" y="230.0" width="240.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="200.0" y="262.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">client</text>
+<text x="200.0" y="284.7" font-size="17.0" fill="#475569" text-anchor="middle">port 8889</text>
+<rect x="380.0" y="210.0" width="700.0" height="300.0" rx="16.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.6"/>
+<text x="398.0" y="240.0" font-size="18.0" fill="#047857" font-weight="700" text-anchor="start">network front</text>
+<rect x="760.0" y="560.0" width="760.0" height="320.0" rx="16.0" fill="#fdeeee" stroke="#dc2626" stroke-width="1.6"/>
+<text x="778.0" y="590.0" font-size="18.0" fill="#991b1b" font-weight="700" text-anchor="start">network back, internal</text>
+<rect x="420.0" y="290.0" width="280.0" height="90.0" rx="10.0" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="560.0" y="327.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">proxy</text>
+<text x="560.0" y="349.7" font-size="17.0" fill="#475569" text-anchor="middle">user 101, :8080</text>
+<rect x="800.0" y="290.0" width="240.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="920.0" y="327.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">api</text>
+<text x="920.0" y="349.7" font-size="17.0" fill="#475569" text-anchor="middle">user 65532, :8000</text>
+<rect x="1200.0" y="640.0" width="280.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1340.0" y="677.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">redis</text>
+<text x="1340.0" y="699.7" font-size="17.0" fill="#475569" text-anchor="middle">user 999, :6379</text>
+<rect x="1200.0" y="780.0" width="280.0" height="70.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="1340.0" y="818.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">volume data</text>
+<rect x="800.0" y="640.0" width="240.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="920.0" y="677.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">api&#x27;s eth1</text>
+<text x="920.0" y="698.3" font-size="17.0" fill="#475569" text-anchor="middle">on back</text>
+<rect x="1240.0" y="290.0" width="240.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1360.0" y="327.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">internet</text>
+<text x="1360.0" y="348.3" font-size="17.0" fill="#475569" text-anchor="middle">no route from back</text>
+<polyline points="320.0,270.0 350.0,270.0 350.0,335.0 410.5,335.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="420.0,335.0 408.5,340.8 408.5,329.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="385.0" cy="335.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="385.0" cy="335.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="385.0" y="341.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<polyline points="700.0,335.0 790.5,335.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="800.0,335.0 788.5,340.8 788.5,329.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="750.0" cy="335.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="750.0" cy="335.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="750.0" y="341.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<polyline points="920.0,380.0 920.0,630.5" fill="none" stroke="#94a3b8" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="920.0,640.0 914.2,628.5 925.8,628.5" fill="#94a3b8" stroke="#94a3b8" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="1040.0,685.0 1190.5,685.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1200.0,685.0 1188.5,690.8 1188.5,679.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1120.0" cy="685.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1120.0" cy="685.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1120.0" y="691.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<polyline points="1340.0,730.0 1340.0,770.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1340.0,780.0 1334.2,768.5 1345.8,768.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1340.0" cy="755.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1340.0" cy="755.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1340.0" y="761.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<polyline points="1340.0,640.0 1340.0,510.0 1360.0,510.0 1360.0,389.5" fill="none" stroke="#dc2626" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="1360.0,380.0 1365.8,391.5 1354.2,391.5" fill="#dc2626" stroke="#dc2626" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1360.0" cy="480.0" rx="14.0" ry="14.0" fill="#dc2626" stroke="none"/>
+<polyline points="1355.0,475.0 1365.0,485.0" fill="none" stroke="#ffffff" stroke-width="2.60" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1365.0,475.0 1355.0,485.0" fill="none" stroke="#ffffff" stroke-width="2.60" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="420.0" y="426.0" width="275.8" height="28.0" rx="14.0" fill="#ffffff" stroke="#dc2626" stroke-width="1.4"/>
+<text x="557.9" y="445.8" font-size="16.0" fill="#991b1b" font-weight="700" font-family="'SF Mono', Menlo, Consolas, monospace" text-anchor="middle">read-only, no capabilities</text>
+</svg>

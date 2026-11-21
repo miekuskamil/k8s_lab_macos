@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1060" viewBox="0 0 1600 1060" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="1060" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">One bridge, <tspan fill="#7c3aed">a veth pair per container</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Each eth0 is one end of a virtual cable. The other end plugs into the bridge on the host.</text>
+<rect x="40.0" y="150.0" width="1520.0" height="870.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="58.5" y="167.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="58.5,171.5 75.5,171.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Docker host</text>
+<text x="1542.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">on a Mac: OrbStack&#x27;s Linux VM</text>
+<rect x="100.0" y="210.0" width="520.0" height="300.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="127.0,225.0 135.5,229.5 135.5,239.0 127.0,243.5 118.5,239.0 118.5,229.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="118.5,229.5 127.0,234.0 135.5,229.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="127.0,234.0 127.0,243.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="146.0" y="240.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">course-a netns</text>
+<rect x="140.0" y="270.0" width="440.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="360.0" y="302.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">wget course-b</text>
+<text x="360.0" y="324.7" font-size="17.0" fill="#475569" text-anchor="middle">route: own subnet via eth0</text>
+<rect x="140.0" y="400.0" width="440.0" height="80.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="360.0" y="432.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">eth0</text>
+<text x="360.0" y="454.7" font-size="17.0" fill="#475569" text-anchor="middle">192.168.148.2</text>
+<rect x="980.0" y="210.0" width="520.0" height="300.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="1007.0,225.0 1015.5,229.5 1015.5,239.0 1007.0,243.5 998.5,239.0 998.5,229.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="998.5,229.5 1007.0,234.0 1015.5,229.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1007.0,234.0 1007.0,243.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1026.0" y="240.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">course-b netns</text>
+<rect x="1020.0" y="270.0" width="440.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1240.0" y="302.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">nginx</text>
+<text x="1240.0" y="324.7" font-size="17.0" fill="#475569" text-anchor="middle">port 80</text>
+<rect x="1020.0" y="400.0" width="440.0" height="80.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="1240.0" y="432.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">eth0</text>
+<text x="1240.0" y="454.7" font-size="17.0" fill="#475569" text-anchor="middle">192.168.148.3</text>
+<rect x="100.0" y="620.0" width="1400.0" height="360.0" rx="16.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.6"/>
+<text x="118.0" y="650.0" font-size="18.0" fill="#047857" font-weight="700" text-anchor="start">host network namespace</text>
+<rect x="140.0" y="690.0" width="440.0" height="80.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="360.0" y="722.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">vetha4762cb</text>
+<text x="360.0" y="744.7" font-size="17.0" fill="#475569" text-anchor="middle">host end of the cable</text>
+<rect x="1020.0" y="690.0" width="440.0" height="80.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="1240.0" y="722.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">veth of course-b</text>
+<text x="1240.0" y="744.7" font-size="17.0" fill="#475569" text-anchor="middle">host end of the cable</text>
+<rect x="140.0" y="850.0" width="1320.0" height="90.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="800.0" y="887.8" font-size="20.0" fill="#0f172a" font-weight="700" text-anchor="middle">bridge br-6f252504c5d0</text>
+<text x="800.0" y="911.1" font-size="17.0" fill="#475569" text-anchor="middle">gateway 192.168.148.1, learns MACs</text>
+<polyline points="360.0,350.0 360.0,390.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="360.0,400.0 354.2,388.5 365.8,388.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="360.0" cy="375.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="360.0" cy="375.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="360.0" y="381.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<polyline points="360.0,480.0 360.0,680.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="360.0,690.0 354.2,678.5 365.8,678.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="360.0" cy="550.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="360.0" cy="550.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="360.0" y="556.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<text x="386.0" y="556.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">veth pair</text>
+<polyline points="360.0,770.0 360.0,840.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="360.0,850.0 354.2,838.5 365.8,838.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="360.0" cy="810.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="360.0" cy="810.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="360.0" y="816.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<polyline points="1240.0,850.0 1240.0,779.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1240.0,770.0 1245.8,781.5 1234.2,781.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<polyline points="1240.0,690.0 1240.0,489.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1240.0,480.0 1245.8,491.5 1234.2,491.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1240.0" cy="550.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1240.0" cy="550.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1240.0" y="556.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<text x="1266.0" y="556.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">veth pair</text>
+<polyline points="1240.0,400.0 1240.0,359.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1240.0,350.0 1245.8,361.5 1234.2,361.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+</svg>

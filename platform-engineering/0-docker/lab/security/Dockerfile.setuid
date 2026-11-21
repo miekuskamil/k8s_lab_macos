@@ -1,0 +1,6 @@
+# A deliberately unsafe image for module 0.6: a copy of python with the setuid bit, owned by
+# root, so any user who runs it gets root's effective user ID. no-new-privileges stops that.
+FROM python:3.13.9-alpine3.22
+LABEL lab.course="docker"
+RUN cp /usr/local/bin/python3.13 /usr/local/bin/suid-python && chmod 4755 /usr/local/bin/suid-python
+USER 1000

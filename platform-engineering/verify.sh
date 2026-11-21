@@ -1329,6 +1329,459 @@ module_3_16() {
   expect "after the reset course-outbound is gone" "$("${K[@]}" get ns course-outbound 2>&1 | grep -c NotFound)" '^1$'
 }
 
+# ---- Track 0: Docker and Compose ----------------------------------------------------------
+# These checks need only Docker. They run in the toolbox, which has docker compose, trivy and
+# cosign at the versions the track was written with (see the main loop at the end).
+DT="$ROOT/platform-engineering/0-docker"
+DW="$DT/work"
+# Published ports: the toolbox reaches the Docker host as host.docker.internal, your own
+# terminal as localhost.
+PUB=localhost; [[ "${LAB_TOOLBOX:-}" == 1 ]] && PUB=host.docker.internal
+docker_reset() { "$DT/reset.sh" >/dev/null 2>&1; }
+dcurl() { curl -s -m 5 --retry 8 --retry-all-errors --retry-delay 1 "$@" 2>/dev/null || true; }
+# onhost <command>: run a command on the Docker host, the way the track does it
+onhost() { docker run --rm --privileged --net=host --pid=host "${ONHOST_IMAGE:-alpine:3.22.2}" sh -c "$1" 2>/dev/null; }
+docker_left() { echo "$(docker ps -aq --filter name=^course- | wc -l | tr -d ' ') $(docker network ls -q --filter name=^course- | wc -l | tr -d ' ') $(docker volume ls -q --filter name=^course- | wc -l | tr -d ' ') $(docker image ls -q --filter reference='course/*' | wc -l | tr -d ' ')"; }
+
+module_0_1() {
+  section "0.1: containers and images"
+  docker_reset
+  local k1 k2 pid t0 t1
+  k1="$(docker run --rm alpine:3.22.2 uname -r)"; k2="$(onhost 'uname -r')"
+  expect "1. a container runs on the Docker host's kernel" "$k1" "^${k2}$"
+  expect "1. in its own PID namespace a container sees only itself" "$(docker run --rm alpine:3.22.2 ps -o pid= | tr -d ' ' | tr '\n' ' ')" '^1 $'
+  docker run -d --name course-web -p 8880:80 nginx:1.28.0-alpine >/dev/null
+  expect "2. the published port 8880 answers" "$(dcurl -o /dev/null -w '%{http_code}' "http://$PUB:8880/")" '^200$'
+  expect "2. docker logs shows the request" "$(docker logs course-web 2>&1 | grep -c '"GET / HTTP')" '^[1-9]'
+  pid="$(docker inspect -f '{{.State.Pid}}' course-web)"
+  expect "3. the Docker host lists nginx under its host PID" "$(onhost "ps -o pid,args | grep -E '^ *$pid '")" 'nginx: master process'
+  local nsdiff nsuser
+  nsdiff="$(onhost "for n in net pid mnt uts; do [ \"\$(readlink /proc/$pid/ns/\$n)\" != \"\$(readlink /proc/1/ns/\$n)\" ] && echo \$n; done" | tr '\n' ' ')"
+  expect "3. nginx has its own net, pid, mnt and uts namespaces" "$nsdiff" '^net pid mnt uts $'
+  nsuser="$(onhost "[ \"\$(readlink /proc/$pid/ns/user)\" = \"\$(readlink /proc/1/ns/user)\" ] && echo same")"
+  expect "3. nginx shares the host's user namespace" "$nsuser" '^same$'
+  docker run -d --name course-limited --memory 64m --cpus 0.5 --pids-limit 50 alpine:3.22.2 sleep 600 >/dev/null
+  expect "4. the cgroup holds 64 MiB, half a CPU and 50 processes" "$(docker exec course-limited sh -c 'cat /sys/fs/cgroup/memory.max /sys/fs/cgroup/cpu.max /sys/fs/cgroup/pids.max' | tr '\n' ' ')" '^67108864 50000 100000 50 $'
+  expect "4. docker stats shows the 64MiB limit" "$(docker stats --no-stream --format '{{.MemUsage}}' course-limited)" '/ 64MiB$'
+  docker exec course-web sh -c 'echo "hello from a container" > /usr/share/nginx/html/hello.txt'
+  expect "5. docker diff lists the new file in the writable layer" "$(docker diff course-web | grep -c '^A /usr/share/nginx/html/hello.txt$')" '^1$'
+  expect "5. the image history shows the layers that hold megabytes" "$(docker image history nginx:1.28.0-alpine --format '{{.Size}}' | grep -c 'MB')" '^[2-9]'
+  docker rm -f course-web >/dev/null; docker run -d --name course-web -p 8880:80 nginx:1.28.0-alpine >/dev/null
+  expect "5. a new container from the same image lacks the file" "$(dcurl -o /dev/null -w '%{http_code}' "http://$PUB:8880/hello.txt")" '^404$'
+  docker run -d --name course-sleeper alpine:3.22.2 sleep 300 >/dev/null
+  t0=$(date +%s); docker stop course-sleeper >/dev/null; t1=$(date +%s)
+  between "6. sleep as PID 1 ignores SIGTERM, so stop waits about 10 s" "$((t1 - t0))" 9 13
+  expect "6. and kills it: exit code 137" "$(docker inspect -f '{{.State.ExitCode}}' course-sleeper)" '^137$'
+  docker run -d --init --name course-sleeper2 alpine:3.22.2 sleep 300 >/dev/null
+  expect "6. with --init, docker-init is PID 1" "$(docker exec course-sleeper2 ps -o pid,args | awk '$1==1')" 'docker-init'
+  t0=$(date +%s); docker stop course-sleeper2 >/dev/null; t1=$(date +%s)
+  between "6. with --init the stop takes under 3 s" "$((t1 - t0))" 0 3
+  expect "6. and the exit code is 143 (SIGTERM)" "$(docker inspect -f '{{.State.ExitCode}}' course-sleeper2)" '^143$'
+  expect "7. inspect shows the memory limit and the command" "$(docker inspect -f '{{.HostConfig.Memory}} {{json .Config.Cmd}}' course-limited)" '^67108864 \["sleep","600"\]$'
+  docker_reset
+  expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
+}
+
+# build_steps: one line per BuildKit step, "CACHED" or "ran", from --progress=plain output
+build_steps() { awk '/^#[0-9]+ \[/ && !/internal\]/ {id=$1; sub(/^#[0-9]+ /,""); if (!(id in name)) {name[id]=$0; order[++n]=id}} /^#[0-9]+ CACHED/ {st[$1]="CACHED"} /^#[0-9]+ DONE/ {if (!st[$1]) st[$1]="ran"} END {for (i=1;i<=n;i++) printf "%s %s\n", st[order[i]], name[order[i]]}'; }
+
+module_0_2() {
+  section "0.2: building images"
+  docker_reset
+  local app="$DW/app" out size d1 d2
+  mkdir -p "$DW" && cp -R "$DT/lab/app" "$app"
+  out="$(docker build --no-cache --progress=plain -f "$app/Dockerfile.single" -t course/hits:single "$app" 2>&1 | build_steps)"
+  expect "1. with --no-cache the compile runs" "$(echo "$out" | grep 'go build')" '^ran '
+  size="$(docker image inspect -f '{{.Size}}' course/hits:single)"
+  between "1. the one-stage image is big (MB)" "$((size / 1000000))" 300 600
+  out="$(docker build --progress=plain -f "$app/Dockerfile.single" -t course/hits:single "$app" 2>&1 | build_steps)"
+  expect "2. the same build again is fully cached" "$(echo "$out" | grep -c '^ran ' | tr -d ' ')$(echo "$out" | grep -c '^CACHED' | tr -d ' ')" '^[01][3-4]$'
+  echo "// changed at $(date +%s)-$RANDOM" >> "$app/main.go"
+  out="$(docker build --progress=plain -f "$app/Dockerfile.single" -t course/hits:single "$app" 2>&1 | build_steps)"
+  expect "2. after a code change, COPY . . runs again" "$(echo "$out" | grep 'COPY \. \.')" '^ran '
+  expect "2. and so does go build below it" "$(echo "$out" | grep 'go build')" '^ran '
+  docker build -q --build-arg VERSION=1.0.0 -t course/hits:1.0.0 "$app" >/dev/null 2>&1
+  echo "// changed again at $(date +%s)-$RANDOM" >> "$app/main.go"
+  out="$(docker build --progress=plain --build-arg VERSION=1.0.0 -t course/hits:1.0.0 "$app" 2>&1 | build_steps)"
+  expect "3. multi-stage: COPY go.mod stays cached after a code change" "$(echo "$out" | grep 'COPY go.mod')" '^CACHED '
+  expect "3. multi-stage: go mod download stays cached" "$(echo "$out" | grep 'go mod download')" '^CACHED '
+  expect "3. multi-stage: COPY *.go runs" "$(echo "$out" | grep 'COPY \*.go')" '^ran '
+  size="$(docker image inspect -f '{{.Size}}' course/hits:1.0.0)"
+  between "3. the multi-stage image is small (MB)" "$((size / 1000000))" 3 15
+  docker run -d --name course-hits -p 8881:8000 course/hits:1.0.0 >/dev/null
+  expect "4. the app answers with its version" "$(dcurl "http://$PUB:8881/")" 'visit 1, version 1\.0\.0$'
+  expect "4. the image has no shell" "$(docker exec course-hits sh -c 'echo hi' 2>&1)" 'executable file not found'
+  expect "4. it runs as user 65532" "$(docker inspect -f '{{.Config.User}}' course-hits)" '^65532:65532$'
+  local h=""
+  for _ in $(seq 1 20); do h="$(docker inspect -f '{{.State.Health.Status}}' course-hits)"; [[ "$h" == healthy ]] && break; settle 1; done
+  expect "4. the HEALTHCHECK reports healthy" "$h" '^healthy$'
+  expect "4. the app logs its uid" "$(docker logs course-hits 2>&1 | head -1)" 'uid=65532'
+  mkdir -p "$app/notes" && dd if=/dev/zero of="$app/notes/big.log" bs=1M count=100 2>/dev/null
+  out="$(docker build --progress=plain -f "$app/Dockerfile.single" -t course/hits:single "$app" 2>&1 | grep 'transferring context' | tail -1)"
+  expect "5. with .dockerignore the context stays small" "$out" 'transferring context: [0-9.]+k?B '
+  mv "$app/.dockerignore" "$app/.dockerignore.off"
+  out="$(docker build --progress=plain -f "$app/Dockerfile.single" -t course/hits:fat "$app" 2>&1 | grep 'transferring context' | tail -1)"
+  expect "5. without it, BuildKit transfers the 100 MB folder" "$out" 'transferring context: 10[0-9]\.[0-9]+MB'
+  expect "5. and COPY . . puts the log file into the image" "$(docker run --rm course/hits:fat ls /src/notes)" '^big\.log$'
+  mv "$app/.dockerignore.off" "$app/.dockerignore"
+  docker run -d --name course-registry --network k8s-lab-toolbox_default -p 127.0.0.1:5555:5000 registry:3.1.2 >/dev/null 2>&1 \
+    || docker run -d --name course-registry -p 127.0.0.1:5555:5000 registry:3.1.2 >/dev/null
+  docker tag course/hits:1.0.0 localhost:5555/hits:1.0.0
+  for _ in $(seq 1 10); do docker push -q localhost:5555/hits:1.0.0 >/dev/null 2>&1 && break; settle 1; done
+  d1="$(onhost "wget -S --spider --header 'Accept: application/vnd.oci.image.index.v1+json' http://127.0.0.1:5555/v2/hits/manifests/1.0.0 2>&1 | awk -F': ' 'tolower(\$1) ~ /docker-content-digest/ {print \$2}'" | tr -d '\r')"
+  expect "6. the registry reports a digest for hits:1.0.0" "$d1" '^sha256:[0-9a-f]{64}$'
+  expect "6. the local image's repo digest is the same hash" "$(docker image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' localhost:5555/hits:1.0.0 | grep '^localhost:5555/')" "@${d1}$"
+  docker build -q --build-arg VERSION=1.0.1 -t localhost:5555/hits:1.0.0 "$app" >/dev/null 2>&1
+  docker push -q localhost:5555/hits:1.0.0 >/dev/null 2>&1
+  d2="$(onhost "wget -S --spider --header 'Accept: application/vnd.oci.image.index.v1+json' http://127.0.0.1:5555/v2/hits/manifests/1.0.0 2>&1 | awk -F': ' 'tolower(\$1) ~ /docker-content-digest/ {print \$2}'" | tr -d '\r')"
+  expect "7. pushing 1.0.1 under the same tag moves it to a new digest" "$([[ -n "$d2" && "$d2" != "$d1" ]] && echo moved)" '^moved$'
+  docker run --rm -d --name course-by-tag -p 8882:8000 localhost:5555/hits:1.0.0 >/dev/null
+  docker run --rm -d --name course-by-digest -p 8883:8000 "localhost:5555/hits@$d1" >/dev/null 2>&1
+  expect "7. the container started by tag runs 1.0.1" "$(dcurl "http://$PUB:8882/")" 'version 1\.0\.1$'
+  expect "7. the container started by digest still runs 1.0.0" "$(dcurl "http://$PUB:8883/")" 'version 1\.0\.0$'
+  docker_reset
+  expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
+  expect "clean up: no localhost:5555 images" "$(docker image ls -q --filter 'reference=localhost:5555/*' | wc -l | tr -d ' ')" '^0$'
+}
+
+module_0_3() {
+  section "0.3: Docker Compose"
+  docker_reset
+  mkdir -p "$DW" && cp -R "$DT/lab/app" "$DT/lab/compose" "$DW/"
+  local f="$DW/compose/compose.yaml" out names h
+  dc() { docker compose -f "$f" "$@"; }
+  expect "1. without the profile, three services" "$(dc config --services | sort | tr '\n' ' ')" '^api proxy redis $'
+  expect "1. .env fills the image tag" "$(dc config | grep 'image: course')" 'course/hits:2\.0\.0'
+  out="$(dc up -d --build 2>&1 | grep -E 'Started|Healthy' | uniq | awk '{print $2 "-" $3}' | tr '\n' ' ')"
+  expect "2. order: redis healthy, then api healthy, then proxy" "$out" 'course-compose-redis-1-Started course-compose-redis-1-Healthy course-compose-api-1-Started course-compose-api-1-Healthy course-compose-proxy-1-Started'
+  dcurl -o /dev/null "http://$PUB:8884/"
+  out="$(dcurl "http://$PUB:8884/")"
+  expect "2. the proxy forwards to the api, which counts in redis" "$out" 'visit [0-9]+, version 2\.0\.0$'
+  expect "3. one bridge network for the project" "$(docker network ls --filter name=course-compose --format '{{.Name}} {{.Driver}}')" '^course-compose_default bridge$'
+  expect "3. inside the project, api resolves through 127.0.0.11" "$(dc exec -T proxy nslookup api. 127.0.0.11 2>/dev/null | grep -c '^Address: [0-9]')" '^1$'
+  expect "3. resolv.conf points at 127.0.0.11" "$(dc exec -T proxy cat /etc/resolv.conf | grep nameserver)" '^nameserver 127\.0\.0\.11$'
+  expect "3. on the default network, api has no name" "$(docker run --rm alpine:3.22.2 sh -c 'nslookup api >/dev/null 2>&1 && echo found || echo none')" '^none$'
+  dc stop redis >/dev/null 2>&1
+  h=""; for _ in $(seq 1 30); do h="$(docker inspect -f '{{.State.Health.Status}}' course-compose-api-1)"; [[ "$h" == unhealthy ]] && break; settle 1; done
+  expect "4. without redis the api turns unhealthy" "$h" '^unhealthy$'
+  expect "4. the api answers 503 with a DNS error for redis" "$(curl -s -m 5 -w ' %{http_code}' "http://$PUB:8884/" | tr -d '\n')" 'no such host 503$'
+  dc start redis >/dev/null 2>&1
+  h=""; for _ in $(seq 1 30); do h="$(docker inspect -f '{{.State.Health.Status}}' course-compose-api-1)"; [[ "$h" == healthy ]] && break; settle 1; done
+  expect "4. with redis back, the api is healthy again" "$h" '^healthy$'
+  expect "4. and the counter kept its value" "$(dcurl "http://$PUB:8884/")" 'visit ([3-9]|[1-9][0-9]+),'
+  expect "5. the shell variable wins over .env" "$(APP_VERSION=2.1.0 dc config | grep 'image: course')" 'course/hits:2\.1\.0'
+  out="$(APP_VERSION=2.1.0 dc up -d --build api 2>&1 | grep -E 'Recreated' | uniq)"
+  expect "5. only the api container gets recreated" "$out" 'course-compose-api-1 Recreated'
+  expect "5. the new version answers" "$(dcurl "http://$PUB:8884/")" 'version 2\.1\.0$'
+  APP_VERSION=2.1.0 dc up -d --scale api=3 --wait >/dev/null 2>&1
+  expect "6. three api containers" "$(docker ps -q --filter label=com.docker.compose.project=course-compose --filter label=com.docker.compose.service=api | wc -l | tr -d ' ')" '^3$'
+  expect "6. Docker's DNS answers api with three addresses" "$(dc exec -T proxy nslookup api. 127.0.0.11 2>/dev/null | grep -c '^Address: [0-9]')" '^3$'
+  settle 6
+  names="$(for _ in $(seq 1 12); do dcurl "http://$PUB:8884/"; done | awk '{print $3}' | sort -u | wc -l | tr -d ' ')"
+  expect "6. nginx spreads requests over all three" "$names" '^3$'
+  dc --profile debug up -d debug >/dev/null 2>&1
+  expect "7. the debug profile starts a container on the project network" "$(dc exec -T debug wget -qO- http://api:8000/healthz)" '^ok$'
+  dc --profile debug down >/dev/null 2>&1
+  expect "8. down keeps the named volume" "$(docker volume ls -q --filter name=course-compose_data)" '^course-compose_data$'
+  APP_VERSION=2.1.0 dc up -d --wait >/dev/null 2>&1
+  expect "8. after up, the counter continues" "$(dcurl "http://$PUB:8884/")" 'visit ([5-9]|[1-9][0-9]+),'
+  dc down -v >/dev/null 2>&1
+  expect "8. down -v removes the volume" "$(docker volume ls -q --filter name=course-compose_data | wc -l | tr -d ' ')" '^0$'
+  unset -f dc
+  docker_reset
+  expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
+}
+
+module_0_4() {
+  section "0.4: storage"
+  docker_reset
+  local site="$DW/site" bk="$DW/backup" note
+  docker volume create course-data >/dev/null
+  docker run --rm -v course-data:/data alpine:3.22.2 sh -c 'echo "saved at $(date +%T)" > /data/note.txt'
+  note="$(docker run --rm -v course-data:/data alpine:3.22.2 cat /data/note.txt)"
+  expect "1. a new container reads what an earlier one wrote to the volume" "$note" '^saved at '
+  expect "1. the volume lives under /var/lib/docker/volumes" "$(docker volume inspect -f '{{.Mountpoint}}' course-data)" '^/var/lib/docker/volumes/course-data/_data$'
+  expect "1. the Docker host holds the file there" "$(onhost 'cat /proc/1/root/var/lib/docker/volumes/course-data/_data/note.txt')" "^${note}$"
+  mkdir -p "$site" && echo '<h1>from the repo</h1>' > "$site/index.html"
+  docker run -d --name course-site -p 8885:80 -v "$site":/usr/share/nginx/html:ro nginx:1.28.0-alpine >/dev/null
+  expect "2. nginx serves the bind-mounted file" "$(dcurl "http://$PUB:8885/")" 'from the repo'
+  echo '<h1>changed in the toolbox</h1>' > "$site/index.html"
+  expect "2. an edit on the host shows at once" "$(dcurl "http://$PUB:8885/")" 'changed in the toolbox'
+  expect "2. :ro makes the mount read-only" "$(docker exec course-site touch /usr/share/nginx/html/new.txt 2>&1)" 'Read-only file system'
+  docker run --rm -v "$site":/site alpine:3.22.2 sh -c 'echo from-a-container > /site/c.txt'
+  expect "2. a file written in a container appears on the host" "$(cat "$site/c.txt")" '^from-a-container$'
+  expect "2. a toolbox-only path does not exist for the engine" "$(docker run --rm --mount type=bind,src=/home/lab/not-on-the-host,dst=/x alpine:3.22.2 true 2>&1)" 'bind source path does not exist'
+  expect "3. an empty volume gets the image's files" "$(docker run --rm -v course-html:/usr/share/nginx/html nginx:1.28.0-alpine ls /usr/share/nginx/html | tr '\n' ' ')" '^50x\.html index\.html $'
+  mkdir -p "$DW/empty"
+  expect "3. an empty bind mount hides them" "$(docker run --rm -v "$DW/empty":/usr/share/nginx/html nginx:1.28.0-alpine ls -A /usr/share/nginx/html | wc -l | tr -d ' ')" '^0$'
+  expect "4. tmpfs has its 16 MB limit" "$(docker run --rm --tmpfs /scratch:size=16m alpine:3.22.2 sh -c 'dd if=/dev/zero of=/scratch/f bs=1M count=20 2>&1 | head -1')" 'No space left on device'
+  docker run -d --name course-tmp --tmpfs /scratch alpine:3.22.2 sleep 600 >/dev/null
+  docker exec course-tmp sh -c 'echo temp > /scratch/t.txt; echo kept > /kept.txt'
+  docker restart course-tmp >/dev/null
+  expect "4. after a restart tmpfs is empty, the writable layer kept its file" "$(docker exec course-tmp sh -c 'ls /scratch | wc -l; cat /kept.txt' | tr '\n' ' ')" '^0 kept $'
+  expect "5. user 1000 may not write to a root-owned volume" "$(docker run --rm --user 1000 -v course-data:/data alpine:3.22.2 touch /data/x 2>&1)" 'Permission denied'
+  printf 'FROM alpine:3.22.2\nLABEL lab.course=docker\nRUN mkdir /data && chown 1000:1000 /data\nUSER 1000\n' | docker build -q -t course/owner:1 - >/dev/null 2>&1
+  expect "5. a fresh volume copies the image's owner, so user 1000 writes" "$(docker run --rm -v course-owned:/data course/owner:1 sh -c 'touch /data/x && stat -c %u /data/x')" '^1000$'
+  docker volume create --label com.docker.compose.project=course-demo course-demo_data >/dev/null
+  expect "6. a project's volumes carry its label" "$(docker volume ls --filter label=com.docker.compose.project=course-demo --format '{{.Name}}')" '^course-demo_data$'
+  mkdir -p "$bk"
+  docker run --rm -v course-data:/data:ro -v "$bk":/backup alpine:3.22.2 tar czf /backup/course-data.tgz -C /data .
+  expect "7. the backup holds note.txt" "$(tar tzf "$bk/course-data.tgz" | grep -c 'note.txt')" '^1$'
+  docker volume create course-restored >/dev/null
+  docker run --rm -v course-restored:/data -v "$bk":/backup:ro alpine:3.22.2 tar xzf /backup/course-data.tgz -C /data
+  expect "7. the restored volume gives the same note" "$(docker run --rm -v course-restored:/data alpine:3.22.2 cat /data/note.txt)" "^${note}$"
+  docker_reset
+  expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
+}
+
+module_0_5() {
+  section "0.5: networking in depth"
+  docker_reset
+  local idx veth br pida ipb ipc ipa ipw sub ex gw cnt0 cnt1 out orb=0
+  [[ "$(docker info -f '{{.OperatingSystem}}' 2>/dev/null)" == *OrbStack* ]] && orb=1
+  docker build -q -t course/nettools:1.0 "$DT/lab/nettools" >/dev/null 2>&1
+  local ONHOST_IMAGE=course/nettools:1.0
+  expect "1. the debug container sees iptables with the nf_tables backend" "$(onhost 'iptables -V')" 'nf_tables'
+  gw="$(docker network inspect bridge -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}')"
+  expect "1. docker0 holds the default network's gateway" "$(onhost 'ip -4 -o addr show docker0' | awk '{print $4}')" "^${gw//./\\.}/"
+  docker run -d --name course-a alpine:3.22.2 sleep 3600 >/dev/null
+  docker run -d --name course-b nginx:1.28.0-alpine >/dev/null
+  expect "2. the container's default route points at the gateway" "$(docker exec course-a ip route | head -1)" "^default via ${gw//./\\.} dev eth0"
+  idx="$(docker exec course-a cat /sys/class/net/eth0/iflink)"
+  veth="$(onhost 'ip -o link' | awk -F': ' -v i="$idx" '$1==i {print $2}' | cut -d@ -f1)"
+  expect "2. iflink names a veth on the host" "$veth" '^veth[0-9a-f]+$'
+  expect "2. that veth is a port of docker0" "$(onhost 'bridge link show master docker0' | grep -c "$veth")" '^1$'
+  expect "2. the default network has no names" "$(docker exec course-a ping -c1 -W1 course-b 2>&1)" 'bad address'
+  docker rm -f course-a course-b >/dev/null
+  docker network create course-net >/dev/null
+  br="br-$(docker network inspect -f '{{slice .Id 0 12}}' course-net)"
+  expect "3. a new network gets its own bridge br-<id>" "$(onhost "ip -4 -o addr show $br" | awk '{print $2}')" "^$br$"
+  docker run -d --name course-a --network course-net alpine:3.22.2 sleep 3600 >/dev/null
+  docker run -d --name course-b --network course-net nginx:1.28.0-alpine >/dev/null
+  expect "3. resolv.conf names 127.0.0.11" "$(docker exec course-a grep nameserver /etc/resolv.conf)" '^nameserver 127\.0\.0\.11$'
+  ipb="$(docker inspect -f '{{(index .NetworkSettings.Networks "course-net").IPAddress}}' course-b)"
+  expect "3. Docker's DNS answers course-b" "$(docker exec course-a getent hosts course-b | awk '{print $1}')" "^${ipb//./\\.}$"
+  pida="$(docker inspect -f '{{.State.Pid}}' course-a)"
+  expect "3. NAT rules in the container's namespace redirect port 53" "$(onhost "nsenter -t $pida -n iptables -t nat -S" | grep -c 'DOCKER_OUTPUT.*--dport 53 -j DNAT')" '^2$'
+  expect "3. dockerd listens inside the container's namespace" "$(onhost "nsenter -t $pida -n ss -lntup" | grep -c 'dockerd')" '^2$'
+  out="$( (onhost "timeout 8 tcpdump -lnni any -c 4 'host $ipb and tcp port 80' 2>/dev/null" &) ; settle 3; docker exec course-a wget -qO /dev/null http://course-b/; settle 4)"
+  expect "4. the SYN crosses two veths with unchanged addresses" "$(echo "$out" | grep -c "veth.*IP [0-9.]*\.[0-9]* > ${ipb//./\\.}\.80: Flags \[S\]")" '^2$'
+  docker network create course-net2 >/dev/null
+  docker run -d --name course-c --network course-net2 nginx:1.28.0-alpine >/dev/null
+  ipc="$(docker inspect -f '{{(index .NetworkSettings.Networks "course-net2").IPAddress}}' course-c)"
+  if (( orb )); then
+    expect "5. OrbStack: no raw drop rule, so the other network answers" "$(docker exec course-a wget -qO /dev/null -T 3 "http://$ipc/" >/dev/null 2>&1 && echo reached)$(onhost 'iptables -t raw -S PREROUTING' | grep -c "$ipc")" '^reached0$'
+  else
+    expect "5. Linux: a raw rule drops packets for course-c from other bridges" "$(onhost 'iptables -t raw -S PREROUTING' | grep -c -- "-d $ipc/32 ! -i br-.* -j DROP")" '^1$'
+    expect "5. Linux: so the request across networks times out" "$(docker exec course-a wget -qO /dev/null -T 3 "http://$ipc/" 2>&1)" 'timed out'
+  fi
+  docker network connect course-net2 course-a
+  expect "5. connected, course-a gets eth1 on course-net2" "$(docker exec course-a ip -4 -o addr show eth1 | awk '{print $2}')" '^eth1$'
+  expect "5. and reaches course-c by name" "$(docker exec course-a wget -qO /dev/null -T 3 http://course-c/ 2>&1 && echo ok)" '^ok$'
+  sub="$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' course-net)"
+  expect "6. a MASQUERADE rule covers course-net's subnet" "$(onhost 'iptables -t nat -S POSTROUTING' | grep -c -- "-s $sub ! -o $br -j MASQUERADE")" '^1$'
+  ipa="$(docker inspect -f '{{(index .NetworkSettings.Networks "course-net").IPAddress}}' course-a)"
+  ex="$(docker exec course-a nslookup example.com 2>/dev/null | awk '/^Address: / && !/:.*:/ {print $2; exit}')"
+  local hostip; hostip="$(onhost 'ip route get 1.1.1.1' | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -1)"
+  out="$( (onhost "timeout 10 tcpdump -lnni any -c 4 'host $ex and tcp[tcpflags] & tcp-syn != 0' 2>/dev/null" &) ; settle 3; docker exec course-a wget -qO /dev/null -T 5 --header 'Host: example.com' "http://$ex/" >/dev/null 2>&1; settle 5)"
+  expect "6. the SYN leaves eth0 with the host's address" "$(echo "$out" | grep -c "eth0 *Out IP ${hostip//./\\.}\.")" '^[1-9]'
+  docker exec -d course-a sh -c "sleep 20 | nc $ex 80"
+  settle 2
+  expect "6. conntrack maps course-a's connection to the host's address" "$(onhost "conntrack -L -p tcp -d $ex 2>/dev/null" | grep "src=$ipa" | grep -c "dst=$hostip")" '^[1-9]'
+  docker run -d --name course-web --network course-net -p 8886:80 nginx:1.28.0-alpine >/dev/null
+  ipw="$(docker inspect -f '{{(index .NetworkSettings.Networks "course-net").IPAddress}}' course-web)"
+  expect "7. -p adds a DNAT rule to the container" "$(onhost 'iptables -t nat -S DOCKER' | grep -c -- "--dport 8886 -j DNAT --to-destination $ipw:80")" '^1$'
+  expect "7. and a filter ACCEPT for its port 80" "$(onhost 'iptables -S DOCKER' | grep -c -- "-d $ipw/32 .*--dport 80 -j ACCEPT")" '^1$'
+  expect "7. a userland proxy listens on 8886" "$(onhost 'ss -ltnp' | grep ':8886 ' | head -1)" '(docker-proxy|orbstack-agent)'
+  cnt0="$(onhost 'iptables -t nat -L DOCKER -v -n -x' | awk '/dpt:8886/ {print $1}')"
+  docker run --rm alpine:3.22.2 wget -qO /dev/null -T 3 "http://$gw:8886/" >/dev/null 2>&1
+  cnt1="$(onhost 'iptables -t nat -L DOCKER -v -n -x' | awk '/dpt:8886/ {print $1}')"
+  expect "7. a request to the gateway's port 8886 counts on the DNAT rule" "$((cnt1 - cnt0))" '^[1-9]'
+  expect "7. the published port answers from the toolbox or the host" "$(dcurl -o /dev/null -w '%{http_code}' "http://$PUB:8886/")" '^200$'
+  expect "7. nginx logs the network's gateway as the source" "$(docker logs course-web 2>&1 | grep GET | awk '{print $1}' | sort -u)" "^${sub%.0/*}\.1$"
+  expect "8. --network host sees docker0" "$(docker run --rm --network host alpine:3.22.2 ip -o link | grep -c ': docker0:')" '^1$'
+  expect "8. --network none has no eth0" "$(docker run --rm --network none alpine:3.22.2 ip -o link | grep -c 'eth0')" '^0$'
+  docker_reset
+  expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
+}
+
+module_0_6() {
+  section "0.6: security"
+  docker_reset
+  local p out d k="$DW/keys" sec="$DW/secrets" orb=0 n0 n1
+  [[ "$(docker info -f '{{.OperatingSystem}}' 2>/dev/null)" == *OrbStack* ]] && orb=1
+  expect "1. a container runs as root by default" "$(docker run --rm alpine:3.22.2 id -u)" '^0$'
+  expect "1. --user runs it as 1000" "$(docker run --rm --user 1000:1000 alpine:3.22.2 id -u)" '^1000$'
+  docker run -d --name course-root alpine:3.22.2 sleep 600 >/dev/null
+  p="$(docker inspect -f '{{.State.Pid}}' course-root)"
+  expect "1. its uid_map is the identity map" "$(onhost "cat /proc/$p/uid_map" | tr -s ' ')" '^ ?0 0 4294967295$'
+  out="$(docker run --rm alpine:3.22.2 sh -c 'cat /proc/self/attr/current 2>/dev/null || echo "no LSM profile"')"
+  if (( orb )); then expect "1. OrbStack: no LSM profile" "$out" '^no LSM profile$'
+  else expect "1. Linux: a Linux security module profile applies" "$out" '(docker-default|container_t|no LSM profile)'; fi
+  docker build -q -t course/nettools:1.0 "$DT/lab/nettools" >/dev/null 2>&1
+  expect "2. Docker's default capability set" "$(docker run --rm alpine:3.22.2 grep CapEff /proc/self/status | awk '{print $2}')" '^00000000a80425fb$'
+  expect "2. it decodes to 14 capabilities" "$(docker run --rm course/nettools:1.0 capsh --decode=00000000a80425fb | tr ',' '\n' | grep -c cap_)" '^14$'
+  expect "2. --cap-drop ALL makes root's chown fail" "$(docker run --rm --cap-drop ALL alpine:3.22.2 chown nobody /tmp 2>&1)" 'Operation not permitted'
+  expect "2. adding back CHOWN makes it work" "$(docker run --rm --cap-drop ALL --cap-add CHOWN alpine:3.22.2 sh -c 'chown nobody /tmp && echo ok')" '^ok$'
+  expect "2. without capabilities, user 1000 still pings" "$(docker run --rm --cap-drop ALL --user 1000 alpine:3.22.2 sh -c 'ping -c1 -W1 127.0.0.1 >/dev/null && echo ok')" '^ok$'
+  expect "2. and Docker opens every port to every user" "$(docker run --rm alpine:3.22.2 cat /proc/sys/net/ipv4/ip_unprivileged_port_start)" '^0$'
+  expect "3. the builtin seccomp profile is active" "$(docker info -f '{{.SecurityOptions}}')" 'seccomp,profile=builtin'
+  expect "3. it blocks a user namespace for non-root" "$(docker run --rm --user 1000 alpine:3.22.2 unshare -U -r id 2>&1)" 'Operation not permitted'
+  expect "3. unconfined, root inside maps to 1000 outside" "$(docker run --rm --user 1000 --security-opt seccomp=unconfined alpine:3.22.2 unshare -U -r sh -c 'id -u; cat /proc/self/uid_map' | tr -s ' \n' ' ')" '^0 0 1000 1 $'
+  expect "3. a custom profile blocks chmod" "$(docker run --rm --security-opt seccomp="$DT/lab/security/no-chmod.json" alpine:3.22.2 sh -c 'touch /tmp/f && chmod 600 /tmp/f' 2>&1)" 'chmod: /tmp/f: Operation not permitted'
+  expect "4. --read-only stops writes" "$(docker run --rm --read-only alpine:3.22.2 touch /x 2>&1)" 'Read-only file system'
+  expect "4. a tmpfs gives one writable place" "$(docker run --rm --read-only --tmpfs /tmp alpine:3.22.2 sh -c 'touch /tmp/x && echo ok')" '^ok$'
+  docker build -q -t course/setuid:1 -f "$DT/lab/security/Dockerfile.setuid" "$DT/lab/security" >/dev/null 2>&1
+  expect "4. a setuid binary gives user 1000 euid 0" "$(docker run --rm course/setuid:1 suid-python -c 'import os; print(os.getuid(), os.geteuid())')" '^1000 0$'
+  expect "4. no-new-privileges keeps euid 1000" "$(docker run --rm --security-opt no-new-privileges course/setuid:1 suid-python -c 'import os; print(os.getuid(), os.geteuid())')" '^1000 1000$'
+  docker run --name course-oom --memory 32m alpine:3.22.2 sh -c 'head -c 100m /dev/zero | tail' >/dev/null 2>&1
+  expect "5. the memory limit ends in an OOM kill" "$(docker inspect -f '{{.State.OOMKilled}} {{.State.ExitCode}}' course-oom)" '^true 137$'
+  expect "5. the process limit stops forks" "$(docker run --rm --pids-limit 20 alpine:3.22.2 sh -c 'for i in $(seq 1 40); do sleep 5 & done 2>&1 | tail -1')" "can't fork"
+  if command -v trivy >/dev/null 2>&1; then
+    expect "6. trivy finds CRITICAL vulnerabilities in nginx:1.28.0-alpine" "$(trivy image --quiet --scanners vuln --format json nginx:1.28.0-alpine 2>/dev/null | jq '[.Results[].Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length')" '^[1-9]'
+    docker build -q --build-arg VERSION=1.0.0 -t course/hits:1.0.0 "$DT/lab/app" >/dev/null 2>&1
+    docker build -q --build-arg VERSION=1.0.1 --build-arg GO_IMAGE=golang:1.27.3-alpine3.24 -t course/hits:1.0.1 "$DT/lab/app" >/dev/null 2>&1
+    n0="$(trivy image --quiet --scanners vuln --format json course/hits:1.0.0 2>/dev/null | jq '[.Results[].Vulnerabilities[]?] | length')"
+    n1="$(trivy image --quiet --scanners vuln --format json course/hits:1.0.1 2>/dev/null | jq '[.Results[].Vulnerabilities[]?] | length')"
+    expect "6. the Go 1.25.3 binary carries stdlib vulnerabilities ($n0)" "$n0" '^[1-9]'
+    expect "6. building with Go 1.27.3 leaves fewer ($n1)" "$(( ${n1:-999} < ${n0:-0} ))" '^1$'
+    trivy image --quiet --scanners vuln --severity CRITICAL --exit-code 1 course/hits:1.0.1 >/dev/null 2>&1
+    expect "6. the CRITICAL gate passes for hits:1.0.1" "$?" '^0$'
+  else
+    fail "6. trivy is missing: run the Docker track checks in the toolbox" "no trivy"
+  fi
+  docker run -d --name course-registry --network k8s-lab-toolbox_default -p 127.0.0.1:5555:5000 registry:3.1.2 >/dev/null 2>&1 \
+    || docker run -d --name course-registry -p 127.0.0.1:5555:5000 registry:3.1.2 >/dev/null
+  docker image inspect course/hits:1.0.1 >/dev/null 2>&1 || docker build -q --build-arg VERSION=1.0.1 --build-arg GO_IMAGE=golang:1.27.3-alpine3.24 -t course/hits:1.0.1 "$DT/lab/app" >/dev/null 2>&1
+  docker tag course/hits:1.0.1 localhost:5555/hits:1.0.1
+  for _ in $(seq 1 10); do docker push -q localhost:5555/hits:1.0.1 >/dev/null 2>&1 && break; settle 1; done
+  if command -v cosign >/dev/null 2>&1 && [[ "${LAB_TOOLBOX:-}" == 1 ]]; then
+    mkdir -p "$k"
+    COSIGN_PASSWORD= cosign generate-key-pair --output-key-prefix "$k/cosign" >/dev/null 2>&1
+    expect "7. cosign writes a key pair" "$(ls "$k" | tr '\n' ' ')" '^cosign\.key cosign\.pub $'
+    d="$(curl -s -I -H 'Accept: application/vnd.oci.image.index.v1+json' http://localhost:5555/v2/hits/manifests/1.0.1 | tr -d '\r' | awk '/Docker-Content-Digest/ {print $2}')"
+    COSIGN_PASSWORD= cosign sign --yes --key "$k/cosign.key" --use-signing-config=false --tlog-upload=false "localhost:5555/hits@$d" >/dev/null 2>&1
+    expect "7. verify by digest returns the signed digest" "$(cosign verify --key "$k/cosign.pub" --insecure-ignore-tlog "localhost:5555/hits@$d" 2>/dev/null | jq -r '.[0].critical.image."docker-manifest-digest"')" "^${d}$"
+    docker build -q --build-arg VERSION=6.6.6 -t localhost:5555/hits:1.0.1 "$DT/lab/app" >/dev/null 2>&1 && docker push -q localhost:5555/hits:1.0.1 >/dev/null 2>&1
+    expect "7. after a push under the same tag, verify fails" "$(cosign verify --key "$k/cosign.pub" --insecure-ignore-tlog localhost:5555/hits:1.0.1 2>&1 | tail -1)" 'no signatures found'
+  else
+    fail "7. cosign and the registry forward need the toolbox" "not in the toolbox"
+  fi
+  mkdir -p "$DW" && cp -R "$DT/lab/security" "$sec" && echo 's3cret-from-file' > "$sec/db_password.txt"
+  docker compose -f "$sec/compose.yaml" up -d >/dev/null 2>&1
+  expect "8. an environment variable shows in docker inspect" "$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' course-secrets-env-way-1 | grep PASSWORD)" '^DB_PASSWORD=s3cret-from-env$'
+  expect "8. a Compose secret leaves the configuration clean" "$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' course-secrets-secret-way-1 | grep -c PASSWORD)" '^0$'
+  expect "8. and appears as a file in /run/secrets" "$(docker compose -f "$sec/compose.yaml" exec -T secret-way cat /run/secrets/db_password)" '^s3cret-from-file$'
+  docker compose -f "$sec/compose.yaml" down >/dev/null 2>&1
+  docker_reset
+  expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
+}
+
+module_0_7() {
+  section "0.7: debugging containers"
+  docker_reset
+  local f="$DW/broken/compose.yaml" h
+  docker run -d --name course-crash alpine:3.22.2 sh -c 'echo "reading /etc/app.conf"; cat /etc/app.conf; echo "config missing, giving up" >&2; exit 3' >/dev/null
+  settle 2
+  expect "1. ps -a shows Exited (3)" "$(docker ps -a --filter name=course-crash --format '{{.Status}}')" '^Exited \(3\)'
+  expect "1. the log holds stdout and stderr" "$(docker logs course-crash 2>&1 | tr '\n' '|')" 'reading /etc/app\.conf\|.*giving up\|'
+  expect "1. it was the app's own exit, not an OOM kill" "$(docker inspect -f '{{.State.ExitCode}} {{.State.OOMKilled}}' course-crash)" '^3 false$'
+  docker run -d --name course-loop --restart on-failure:3 alpine:3.22.2 sh -c 'echo "attempt at $(date +%T)"; exit 1' >/dev/null
+  for _ in $(seq 1 20); do [[ "$(docker inspect -f '{{.State.Status}} {{.RestartCount}}' course-loop)" == "exited 3" ]] && break; settle 1; done
+  expect "2. on-failure:3 restarts three times, then stops" "$(docker inspect -f '{{.State.Status}} {{.RestartCount}}' course-loop)" '^exited 3$'
+  expect "2. the log keeps all four runs" "$(docker logs course-loop | grep -c attempt)" '^4$'
+  settle 3
+  expect "2. events count four starts and four deaths" "$(docker events --since "$(docker inspect -f '{{.Created}}' course-loop)" --until 0s --filter container=course-loop --format '{{.Action}}' | sort | uniq -c | awk '{print $2 "=" $1}' | tr '\n' ' ')" 'die=4 start=4'
+  docker build -q -t course/hits:1.0.0 "$DT/lab/app" >/dev/null 2>&1
+  docker run -d --name course-sick -e REDIS_ADDR=nowhere:6379 course/hits:1.0.0 >/dev/null
+  h=""; for _ in $(seq 1 40); do h="$(docker inspect -f '{{.State.Health.Status}}' course-sick)"; [[ "$h" == unhealthy ]] && break; settle 1; done
+  expect "3. the app runs but turns unhealthy" "$(docker inspect -f '{{.State.Status}}' course-sick) $h" '^running unhealthy$'
+  docker run -d --name course-hits -e PORT=8123 course/hits:1.0.0 >/dev/null
+  expect "4. exec fails: no shell" "$(docker exec course-hits sh -c 'echo hi' 2>&1)" 'executable file not found'
+  docker build -q -t course/nettools:1.0 "$DT/lab/nettools" >/dev/null 2>&1
+  settle 1
+  local dbg; dbg="$(docker run --rm --network container:course-hits --pid container:course-hits --cap-add SYS_PTRACE course/nettools:1.0 sh -c 'ps -o pid,user,args; ss -ltn; ls /proc/1/root/' 2>&1)"
+  expect "4. the debug container sees the app as PID 1, user 65532" "$(echo "$dbg" | awk '$1==1 {print $2, $3}')" '^65532 /hits$'
+  expect "4. it sees the listening port 8123" "$(echo "$dbg" | grep -c ':8123 ')" '^1$'
+  expect "4. it reads the app's files through /proc/1/root" "$(echo "$dbg" | grep -cx 'hits')" '^1$'
+  expect "4. without SYS_PTRACE, /proc/1/root is closed" "$(docker run --rm --pid container:course-hits course/nettools:1.0 ls /proc/1/root/ 2>&1)" 'Permission denied'
+  mkdir -p "$DW" && cp -R "$DT/lab/app" "$DT/lab/broken" "$DW/"
+  docker compose -f "$f" up -d --build >/dev/null 2>&1
+  h=""; for _ in $(seq 1 40); do h="$(docker inspect -f '{{.State.Health.Status}}' course-broken-api-1 2>/dev/null)"; [[ "$h" == unhealthy ]] && break; settle 1; done
+  expect "5. the broken project's api turns unhealthy" "$h" '^unhealthy$'
+  expect "5. the proxy answers 502" "$(curl -s -m 5 -o /dev/null -w '%{http_code}' "http://$PUB:8887/")" '^502$'
+  expect "5. its log names upstream port 8080" "$(docker compose -f "$f" logs proxy 2>&1 | grep -c 'upstream: "http://[0-9.]*:8080/"')" '^[1-9]'
+  sed -i.bak 's/api:8080/api:8000/' "$DW/broken/nginx.conf"
+  docker compose -f "$f" restart proxy >/dev/null 2>&1; settle 3
+  expect "5. fault 2: the api cannot resolve redsi" "$(curl -s -m 5 -w ' %{http_code}' "http://$PUB:8887/" | tr -d '\n')" 'lookup redsi .* 503$'
+  sed -i.bak 's/redsi:6379/redis:6379/' "$f"
+  docker compose -f "$f" up -d api >/dev/null 2>&1; settle 3
+  expect "5. fault 3: Redis wants a password" "$(curl -s -m 5 -w ' %{http_code}' "http://$PUB:8887/" | tr -d '\n')" 'NOAUTH.* 503$'
+  sed -i.bak 's/    command: \["redis-server", "--requirepass", "change-me"\]//' "$f"
+  docker compose -f "$f" up -d redis >/dev/null 2>&1; settle 3
+  expect "5. with three fixes, the project answers" "$(dcurl -w ' %{http_code}' "http://$PUB:8887/" | tr -d '\n')" 'visit 1, version 3\.0\.0 200$'
+  docker compose -f "$f" down >/dev/null 2>&1
+  docker_reset
+  expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
+}
+
+module_0_8() {
+  section "0.8: capstone"
+  docker_reset
+  local C="$DW/capstone" c u out
+  cc() { docker compose -f "$C/compose.yaml" "$@"; }
+  mkdir -p "$DW" && cp -R "$DT/lab/capstone" "$C"
+  docker build -q --build-arg VERSION=2.0.0 --build-arg GO_IMAGE=golang:1.27.3-alpine3.24 -t localhost:5555/hits:2.0.0 "$DT/lab/app" >/dev/null 2>&1
+  docker build -q -t localhost:5555/proxy:1.0.0 "$C/proxy" >/dev/null 2>&1
+  if command -v trivy >/dev/null 2>&1; then
+    trivy image --quiet --scanners vuln --severity CRITICAL --exit-code 1 nginxinc/nginx-unprivileged:1.31.7-alpine3.24 >/dev/null 2>&1
+    expect "1. the base proxy image fails the CRITICAL gate" "$?" '^1$'
+    for i in localhost:5555/hits:2.0.0 localhost:5555/proxy:1.0.0 redis:8.10.2-alpine3.23; do
+      trivy image --quiet --scanners vuln --severity CRITICAL --exit-code 1 "$i" >/dev/null 2>&1
+      expect "1. $i passes the CRITICAL gate" "$?" '^0$'
+    done
+  else
+    fail "1. trivy is missing: run the Docker track checks in the toolbox" "no trivy"
+  fi
+  docker run -d --name course-registry --network k8s-lab-toolbox_default -p 127.0.0.1:5555:5000 registry:3.1.2 >/dev/null 2>&1 \
+    || docker run -d --name course-registry -p 127.0.0.1:5555:5000 registry:3.1.2 >/dev/null
+  for _ in $(seq 1 10); do docker push -q localhost:5555/hits:2.0.0 >/dev/null 2>&1 && break; settle 1; done
+  docker push -q localhost:5555/proxy:1.0.0 >/dev/null 2>&1
+  dg() { curl -s -I -H 'Accept: application/vnd.oci.image.index.v1+json' "http://localhost:5555/v2/$1/manifests/$2" | tr -d '\r' | awk '/Docker-Content-Digest/ {print $2}'; }
+  printf 'API_IMAGE=localhost:5555/hits@%s\nPROXY_IMAGE=localhost:5555/proxy@%s\n' "$(dg hits 2.0.0)" "$(dg proxy 1.0.0)" > "$C/.env"
+  expect "2. .env pins both images by digest" "$(grep -c '@sha256:[0-9a-f]\{64\}$' "$C/.env")" '^2$'
+  if command -v cosign >/dev/null 2>&1 && [[ "${LAB_TOOLBOX:-}" == 1 ]]; then
+    COSIGN_PASSWORD= cosign generate-key-pair --output-key-prefix "$C/cosign" >/dev/null 2>&1
+    for i in $(cut -d= -f2 "$C/.env"); do COSIGN_PASSWORD= cosign sign --yes --key "$C/cosign.key" --use-signing-config=false --tlog-upload=false "$i" >/dev/null 2>&1; done
+    out=0; for i in $(cut -d= -f2 "$C/.env"); do cosign verify --key "$C/cosign.pub" --insecure-ignore-tlog "$i" >/dev/null 2>&1 && out=$((out + 1)); done
+    expect "3. both pinned images verify" "$out" '^2$'
+  else
+    fail "3. cosign and the registry forward need the toolbox" "not in the toolbox"
+  fi
+  cc up -d --wait >/dev/null 2>&1
+  expect "3. all three services report healthy" "$(cc ps --format '{{.Service}} {{.Health}}' | sort | tr '\n' ' ')" '^api healthy proxy healthy redis healthy $'
+  expect "3. the proxy serves the app with a shared counter" "$(dcurl "http://$PUB:8889/")" 'visit 1, version 2\.0\.0$'
+  for c in proxy api redis; do
+    u="$(docker inspect -f '{{.Config.User}}' course-capstone-$c-1)"
+    expect "4. $c: non-root, read-only, all caps dropped, no-new-privileges, limits" \
+      "$(docker inspect -f '{{.HostConfig.ReadonlyRootfs}} {{json .HostConfig.CapDrop}} {{json .HostConfig.SecurityOpt}} {{.HostConfig.Memory}} {{.HostConfig.PidsLimit}}' course-capstone-$c-1) user=${u%%:*}" \
+      '^true \["ALL"\] \["no-new-privileges:true"\] [1-9][0-9]* [1-9][0-9]* user=[1-9]'
+  done
+  expect "4. the proxy fails to write to its root filesystem" "$(cc exec -T proxy touch /etc/x 2>&1 </dev/null)" 'Read-only file system'
+  expect "5. back is an internal network" "$(docker network inspect course-capstone_back -f '{{.Internal}}')" '^true$'
+  expect "5. redis has no way out" "$(cc exec -T redis sh -c 'wget -q -T 3 -O /dev/null http://example.com 2>&1; echo "exit $?"' </dev/null)" 'exit 1'
+  expect "5. the proxy finds no name redis" "$(cc exec -T proxy sh -c 'getent hosts redis || echo none' </dev/null)" '^none$'
+  expect "5. only the proxy publishes a port" "$(cc ps --format '{{.Service}} {{.Ports}}' | grep -c -- '->')" '^1$'
+  cc kill api >/dev/null 2>&1; settle 2
+  expect "6. killed through Docker, the api stays down (unless-stopped)" "$(docker inspect -f '{{.State.Status}} {{.State.ExitCode}}' course-capstone-api-1)" '^exited 137$'
+  cc up -d --wait >/dev/null 2>&1
+  expect "6. after up, the counter continues from the volume" "$(dcurl "http://$PUB:8889/")" 'visit 2, version 2\.0\.0$'
+  cc down -v >/dev/null 2>&1
+  unset -f cc dg
+  docker_reset
+  expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
+}
+
 # Module 2.9 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 2.9
 module_2_9() {
   section "2.9: k3s certificates, backups and upgrades (the upgrade is one-way)"
@@ -1437,17 +1890,39 @@ module_3_19() {
 }
 
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(1.1 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.9 3.10 3.11 3.12 3.13 3.14 3.15 3.16 3.17 3.18); fi
-# Start from the Git baseline, in case an exercise is still applied.
-printf 'Restoring the baseline before the checks\n'
-"$ROOT/platform-engineering/reset.sh" >/dev/null 2>&1
+if (( ${#modules[@]} == 0 )); then modules=(0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 1.1 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.9 3.10 3.11 3.12 3.13 3.14 3.15 3.16 3.17 3.18); fi
+# The Docker track (0.x) needs no cluster, so the cluster baseline runs only for the others.
+need_lab=0
+for m in "${modules[@]}"; do [[ "$m" == 0.* ]] || need_lab=1; done
+# Docker track checks run in the toolbox, which has docker compose, trivy and cosign. Outside
+# it, they go there through lab.sh, and their counts join this run's.
+in_docker_toolbox() { [[ "${LAB_TOOLBOX:-}" == 1 || "${LAB_USE_TOOLBOX:-auto}" == never ]]; }
+docker_track_via_toolbox() {
+  local out p f
+  out="$(mktemp)"
+  LAB_USE_TOOLBOX=always "$ROOT/lab.sh" test "$1" > "$out" 2>&1
+  grep -vE '^[0-9]+ checks passed|^$' "$out"
+  p="$(sed -nE 's/^([0-9]+) checks passed, ([0-9]+) failed$/\1/p' "$out" | tail -1)"
+  f="$(sed -nE 's/^([0-9]+) checks passed, ([0-9]+) failed$/\2/p' "$out" | tail -1)"
+  if [[ -z "$p" ]]; then FAIL=$((FAIL + 1)); printf '  FAIL  module %s did not run in the toolbox\n' "$1"; fi
+  PASS=$((PASS + ${p:-0})); FAIL=$((FAIL + ${f:-0}))
+  rm -f "$out"
+}
+if (( need_lab )); then
+  # Start from the Git baseline, in case an exercise is still applied.
+  printf 'Restoring the baseline before the checks\n'
+  "$ROOT/platform-engineering/reset.sh" >/dev/null 2>&1
+fi
 for m in "${modules[@]}"; do
+  if [[ "$m" == 0.* ]] && ! in_docker_toolbox; then docker_track_via_toolbox "$m"; continue; fi
   if declare -F "module_${m//./_}" >/dev/null; then "module_${m//./_}"; else echo "No module $m"; fi
 done
 
-printf '\nRestoring the baseline\n'
-# --all also removes the module 3.9 namespaces and the course client, so the lab ends
-# exactly as a fresh provision leaves it (module 3.1 expects 3 proxies).
-"$ROOT/platform-engineering/reset.sh" --all >/dev/null 2>&1
+if (( need_lab )); then
+  printf '\nRestoring the baseline\n'
+  # --all also removes the module 3.9 namespaces and the course client, so the lab ends
+  # exactly as a fresh provision leaves it (module 3.1 expects 3 proxies).
+  "$ROOT/platform-engineering/reset.sh" --all >/dev/null 2>&1
+fi
 printf '\n%d checks passed, %d failed\n' "$PASS" "$FAIL"
 (( FAIL == 0 ))

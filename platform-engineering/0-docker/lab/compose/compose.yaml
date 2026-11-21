@@ -1,0 +1,46 @@
+# The hits app behind a proxy, with Redis for the shared counter (module 0.3).
+name: course-compose
+
+services:
+  proxy:
+    image: nginx:1.28.0-alpine
+    ports:
+      - "${PROXY_PORT:-8884}:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      api:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ../app
+      args:
+        VERSION: ${APP_VERSION:-dev}
+    image: course/hits:${APP_VERSION:-dev}
+    environment:
+      REDIS_ADDR: redis:6379
+    # No healthcheck here: the image's HEALTHCHECK (/hits healthcheck) applies.
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:8.2.2-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+
+  # Started only with --profile debug: a small shell on the same network.
+  debug:
+    image: alpine:3.22.2
+    profiles: [debug]
+    command: ["sleep", "infinity"]
+
+volumes:
+  data:

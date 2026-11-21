@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="900" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Three places a folder <tspan fill="#7c3aed">can come from</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">A mount replaces one folder of the container with storage outside the image&#x27;s layers.</text>
+<rect x="40.0" y="150.0" width="1520.0" height="710.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="58.5" y="167.5" width="17.0" height="14.0" rx="2.0" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="58.5,171.5 75.5,171.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Docker host</text>
+<text x="1542.0" y="180.0" font-size="17.0" fill="#475569" text-anchor="end">on a Mac: OrbStack&#x27;s Linux VM</text>
+<rect x="80.0" y="210.0" width="1440.0" height="220.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="107.0,225.0 115.5,229.5 115.5,239.0 107.0,243.5 98.5,239.0 98.5,229.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="98.5,229.5 107.0,234.0 115.5,229.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="107.0,234.0 107.0,243.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="126.0" y="240.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">container course-site</text>
+<rect x="110.0" y="290.0" width="320.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="270.0" y="327.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">/data</text>
+<text x="270.0" y="349.7" font-size="17.0" fill="#475569" text-anchor="middle">volume mount</text>
+<rect x="480.0" y="290.0" width="380.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="670.0" y="327.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">/usr/share/nginx/html</text>
+<text x="670.0" y="348.3" font-size="17.0" fill="#475569" text-anchor="middle">bind mount</text>
+<rect x="910.0" y="290.0" width="280.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1050.0" y="327.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">/scratch</text>
+<text x="1050.0" y="349.7" font-size="17.0" fill="#475569" text-anchor="middle">tmpfs mount</text>
+<rect x="1240.0" y="290.0" width="250.0" height="90.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="1365.0" y="327.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">everything else</text>
+<text x="1365.0" y="348.3" font-size="17.0" fill="#475569" text-anchor="middle">image + writable layer</text>
+<ellipse cx="1365.0" cy="260.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1365.0" cy="260.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1365.0" y="266.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<rect x="80.0" y="500.0" width="820.0" height="320.0" rx="16.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.6"/>
+<text x="98.0" y="530.0" font-size="18.0" fill="#9a3412" font-weight="700" text-anchor="start">Docker host&#x27;s disk</text>
+<rect x="110.0" y="580.0" width="320.0" height="90.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="270.0" y="617.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">volumes folder</text>
+<text x="270.0" y="638.3" font-size="17.0" fill="#475569" text-anchor="middle">/var/lib/docker/volumes</text>
+<rect x="480.0" y="580.0" width="380.0" height="90.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="670.0" y="617.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">repo folder</text>
+<text x="670.0" y="638.3" font-size="17.0" fill="#475569" text-anchor="middle">same path as your machine</text>
+<rect x="480.0" y="710.0" width="380.0" height="80.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="670.0" y="742.4" font-size="18.0" fill="#0f172a" font-weight="700" text-anchor="middle">Mac file share</text>
+<text x="670.0" y="763.3" font-size="17.0" fill="#475569" text-anchor="middle">virtiofs, Mac only</text>
+<rect x="910.0" y="580.0" width="280.0" height="90.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="1050.0" y="617.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">memory</text>
+<text x="1050.0" y="639.7" font-size="17.0" fill="#475569" text-anchor="middle">gone at stop</text>
+<polyline points="270.0,380.0 270.0,570.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="270.0,580.0 264.2,568.5 275.8,568.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="270.0" cy="480.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="270.0" cy="480.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="270.0" y="486.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<polyline points="670.0,380.0 670.0,570.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="670.0,580.0 664.2,568.5 675.8,568.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="670.0" cy="480.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="670.0" cy="480.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="670.0" y="486.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<polyline points="1050.0,380.0 1050.0,570.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1050.0,580.0 1044.2,568.5 1055.8,568.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1050.0" cy="480.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1050.0" cy="480.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1050.0" y="486.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<polyline points="670.0,670.0 670.0,700.5" fill="none" stroke="#059669" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="670.0,710.0 664.2,698.5 675.8,698.5" fill="#059669" stroke="#059669" stroke-width="1" stroke-linejoin="round"/>
+</svg>

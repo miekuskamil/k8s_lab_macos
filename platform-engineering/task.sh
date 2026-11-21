@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prepares and checks the timed tasks of tracks 1 and 4. Run it from the repo.
+# Prepares and checks the timed tasks of tracks 0, 1 and 4. Run it from the repo.
 #   ./platform-engineering/task.sh setup 4.1.3    seeds the starting state for task 3 of module 4.1
 #   ./platform-engineering/task.sh check 4.1.3    prints PASS or FAIL for each thing the task asks
 #   ./platform-engineering/task.sh solve 4.1.3    applies the reference solution (the one in the <details> block)
@@ -45,13 +45,18 @@ task_id() {
 action="${1:-}"; id="${2:-}"
 case "$action" in
   list)
-    for folder in apps security; do
-      "$HERE/practice/$folder/task.sh" list | while read -r old; do task_id "$folder" "$old"; done
-    done | sort -t. -k1,1n -k2,2n -k3,3n
+    {
+      "$HERE/0-docker/task.sh" list
+      for folder in apps security; do
+        "$HERE/practice/$folder/task.sh" list | while read -r old; do task_id "$folder" "$old"; done
+      done
+    } | sort -t. -k1,1n -k2,2n -k3,3n
     exit 0 ;;
   setup|check|solve) ;;
   *) sed -n '2,6p' "$0"; exit 1 ;;
 esac
+# The Docker track (0.x) keeps its tasks in 0-docker/ under their own ids.
+case "$id" in 0.*) exec "$HERE/0-docker/task.sh" "$action" "$id" ;; esac
 where="$(resolve "$id")"
 if [ -z "$where" ]; then
   echo "no task $id (try: $0 list)"; exit 1

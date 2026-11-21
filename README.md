@@ -16,7 +16,7 @@ A Kubernetes platform lab and a hands-on course that run on your own machine, wi
 
 ## What this is
 
-The lab is a small online shop that runs in a Kubernetes cluster on your machine, together with the tools a platform team uses every day: Istio, ArgoCD, cert-manager, Prometheus, Grafana, Jaeger, Loki, Kiali and Headlamp. You change the cluster on purpose, for example by sending 10% of the traffic to a new backend, and then watch the result in the web UIs. The course builds on it in five tracks that each start from scratch and get harder as they go.
+The lab is a small online shop that runs in a Kubernetes cluster on your machine, together with the tools a platform team uses every day: Istio, ArgoCD, cert-manager, Prometheus, Grafana, Jaeger, Loki, Kiali and Headlamp. You change the cluster on purpose, for example by sending 10% of the traffic to a new backend, and then watch the result in the web UIs. The course builds on it in six tracks that each start from scratch and get harder as they go, beginning with track 0 on Docker itself, which needs no cluster at all.
 
 ![How the lab fits together: your terminal and browser, the toolbox, the k3d lab and the practice cluster in one Docker engine, Ollama on your machine, and the VM for module 4.7](docs/diagrams/chapters/lab-map.svg)
 
@@ -53,7 +53,7 @@ Your machine needs Docker and git. On a Mac, Docker comes from [OrbStack](https:
    ./lab.sh up
    ```
 
-4. Open the shop at http://localhost:8080, then start [module 1.1](platform-engineering/1-applications/01-setup.md), or the first module of any [track](#the-course).
+4. Open the shop at http://localhost:8080, then start [module 1.1](platform-engineering/1-applications/01-setup.md), or the first module of any [track](#the-course). New to containers? Start with track 0, [module 0.1](platform-engineering/0-docker/01-containers-and-images.md), which needs only `./lab.sh shell`.
 
 The clusters run as containers on your Docker engine, so they keep running after you leave the shell. Every `./lab.sh` command works the same inside and outside the toolbox, except `./lab.sh task` and `./lab.sh exam` for module 4.7 and exams 5 and 6, which reach the Lima VM with `limactl` and so run in a terminal on your Mac.
 
@@ -141,11 +141,26 @@ ArgoCD deploys the lab from the `main` branch on GitHub, not from your working c
 
 ## The course
 
-The course has five tracks. Each one starts on a fresh lab with no other track behind it, and its modules get harder in order, so start at the first module of the track you want and go down its table. A module id joins the track and the module, so module 3.2 is the second module of track 3. The last column says where a module runs: *lab* is the k3d lab, *practice* the practice cluster, *VM* the Lima VM, and *AI* means it also calls a language model.
+The course has six tracks. Each one starts on a fresh lab with no other track behind it, and its modules get harder in order, so start at the first module of the track you want and go down its table. A module id joins the track and the module, so module 3.2 is the second module of track 3. If you're new to containers, take track 0 first: it builds the Docker knowledge every other track assumes. The last column says where a module runs: *docker* needs only Docker and the toolbox, *lab* is the k3d lab, *practice* the practice cluster, *VM* the Lima VM, and *AI* means it also calls a language model.
 
 Every module explains one problem and the design that solves it, then gives you commands with the output you should see, then questions with answers, and ends with a clean-up. Run `./lab.sh reset` after each lab module.
 
-![The five tracks: each starts from the quick start, and its modules run from easy to hard](docs/diagrams/chapters/readme-course-routes.svg)
+![The six tracks: each starts from the quick start, and its modules run from easy to hard](docs/diagrams/chapters/readme-course-routes.svg)
+
+### 0. Docker and Compose
+
+For anyone new to containers, and the suggested starting point: what a container is, how images, Compose, storage, networking and security work on one Docker host, down to the packets. Every module runs in the toolbox with plain `docker` and `docker compose`, has tasks, and starts clean with `./lab.sh reset docker`.
+
+| Id | Module | You learn | Runs on |
+|---|---|---|---|
+| 0.1 | [Containers and images](platform-engineering/0-docker/01-containers-and-images.md) | Namespaces and cgroups seen from the Docker host, layers, PID 1 and stop signals | docker |
+| 0.2 | [Building images](platform-engineering/0-docker/02-building-images.md) | Dockerfiles, the build cache, multi-stage builds, .dockerignore, tags and digests | docker |
+| 0.3 | [Docker Compose](platform-engineering/0-docker/03-docker-compose.md) | Services, networks, healthchecks and start order, .env, profiles, scaling | docker |
+| 0.4 | [Storage](platform-engineering/0-docker/04-storage.md) | Volumes, bind mounts and tmpfs, what survives what, owners, backups | docker |
+| 0.5 | [Networking in depth](platform-engineering/0-docker/05-networking-in-depth.md) | Bridges, veth pairs, Docker's DNS, isolation, masquerade, DNAT, tcpdump and conntrack | docker |
+| 0.6 | [Security](platform-engineering/0-docker/06-security.md) | Non-root, capabilities, seccomp, read-only, limits, Trivy scans, cosign, secrets | docker |
+| 0.7 | [Debugging containers](platform-engineering/0-docker/07-debugging.md) | A ladder from `ps -a` to a debug container, a broken Compose project | docker |
+| 0.8 | [Capstone](platform-engineering/0-docker/08-capstone.md) | A scanned, signed, hardened app with a private network, proved from outside | docker |
 
 ### 1. Applications
 
@@ -240,7 +255,7 @@ Every lab module has checks that apply its manifests, test the results and resto
 ./lab.sh test all
 ```
 
-`./lab.sh test all` covers every lab module that is safe to repeat. Run the others by id: 2.9, 3.19 and 3.20 upgrade the lab or build a cluster of their own, and track 5 needs a language model. Modules 3.8 and 3.21 have no checks, because one is a reference and the other is theory. [Timed tasks and exam preparation](platform-engineering/timed-tasks.md#which-modules-cover-each-exam-domain) maps the CKAD and CKS domains to modules.
+`./lab.sh test all` covers every lab module that is safe to repeat, and every module of track 0, which runs in the toolbox and needs no cluster. Run the others by id: 2.9, 3.19 and 3.20 upgrade the lab or build a cluster of their own, and track 5 needs a language model. Modules 3.8 and 3.21 have no checks, because one is a reference and the other is theory. [Timed tasks and exam preparation](platform-engineering/timed-tasks.md#which-modules-cover-each-exam-domain) maps the CKAD and CKS domains to modules.
 
 ## Practice cluster and timed tasks
 
@@ -451,7 +466,7 @@ Each `down` asks first. The built images stay in Docker, so a new `./lab.sh up` 
 
 ### Old module numbers
 
-Earlier versions numbered the modules 0 to 45 in four levels. Task ids follow the module, so old task 38.3 is now 4.1.3, and the kernel tasks 44.1 to 44.7 are now 4.7.1 to 4.7.7.
+Earlier versions numbered the modules 0 to 45 in four levels. Track 0 is new and has no old numbers. Task ids follow the module, so old task 38.3 is now 4.1.3, and the kernel tasks 44.1 to 44.7 are now 4.7.1 to 4.7.7.
 
 | Old | New | Old | New | Old | New | Old | New |
 |---|---|---|---|---|---|---|---|

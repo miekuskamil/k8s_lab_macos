@@ -3,6 +3,7 @@
 Every resource and term the course uses, in plain words. Each entry starts with one sentence that says what the thing is for. Then it gives the detail, a small example where that helps, and the module that puts it to work. If a module mentions something and you're not sure what it is, look here first.
 
 - [Find the right resource](#find-the-right-resource)
+- [Docker and Compose](#docker-and-compose)
 - [The pieces of Istio](#the-pieces-of-istio)
 - [Traffic resources](#traffic-resources)
 - [Security resources](#security-resources)
@@ -1073,3 +1074,99 @@ An object with HTTP routing rules, host and path to Service and port, for the in
 #### NetworkPolicy
 
 A firewall rule for pods: it selects pods by label and lists the peers and ports that may reach them, or that they may reach. The network plugin enforces it.
+
+## Docker and Compose
+
+**Container.** A container is an ordinary process on the Docker host that runs with its own namespaces and a cgroup, so it sees a private view of the system and uses only what its limits allow. All containers share the host's one kernel. Module 0.1.
+
+**Namespace.** A namespace gives a process its own private copy of one kind of resource: process IDs (`pid`), network interfaces (`net`), mounts (`mnt`), the hostname (`uts`) or user IDs (`user`). Docker creates all but the user namespace for every container by default. Modules 0.1 and 0.5.
+
+**cgroup.** A control group caps what a set of processes may use, such as memory, CPU time or the number of processes, and the kernel enforces the cap. `--memory`, `--cpus` and `--pids-limit` write the container's cgroup files. Modules 0.1 and 0.6.
+
+**Docker host.** The Docker host is the Linux machine whose kernel runs the containers. On a Mac it's OrbStack's Linux VM, on Linux the machine itself; the toolbox reaches it through the Docker socket. Module 0.1.
+
+**dockerd, containerd and runc.** dockerd serves the Docker API, containerd manages container lifecycles, and runc creates the namespaces and the cgroup and starts the process, then exits. Module 0.1.
+
+**Image and layer.** An image is an ordered list of read-only layers, each a set of file changes named by the hash of its content, plus settings such as the command and the ports. Containers share an image's layers. Modules 0.1 and 0.2.
+
+**Writable layer.** The writable layer is the thin layer on top of the image that belongs to one container. Files the container changes land there by copy-on-write, and the layer disappears with the container. `docker diff` lists it. Module 0.1.
+
+**PID 1 and --init.** The first process of a PID namespace ignores signals it has no handler for, so a plain `sleep` as PID 1 ignores the SIGTERM of `docker stop` and dies by SIGKILL ten seconds later. `--init` starts a tiny init as PID 1 that passes signals on. Module 0.1.
+
+**Exit codes 137 and 143.** An exit code above 128 means a signal ended the container: 137 is 128 plus 9, SIGKILL, often from the out-of-memory killer or a stop timeout, and 143 is 128 plus 15, SIGTERM. Modules 0.1 and 0.7.
+
+**Dockerfile.** A Dockerfile is the recipe for an image: a base image after `FROM`, then steps such as `COPY` and `RUN`, each making one layer, and settings such as `USER`, `ENTRYPOINT` and `HEALTHCHECK`. Module 0.2.
+
+**Build context.** The build context is the folder that `docker build` sends to the builder; `COPY` reads only from it, and `.dockerignore` keeps files out of it. Module 0.2.
+
+**Build cache.** BuildKit reuses a step's layer when the step's instruction, the layer below and the checksums of the files it copies match an earlier build. The first changed step and every step after it run again. Module 0.2.
+
+**Multi-stage build.** A multi-stage build has several `FROM` stages; only the last becomes the image, and `COPY --from=<stage>` takes files across. It keeps compilers and sources out of the image you ship. Module 0.2.
+
+**scratch.** `scratch` is the empty image, with no files at all, the base for a static binary. Module 0.2.
+
+**Tag and digest.** A tag such as `hits:1.0.0` is a movable name for an image; a digest, `sha256:` and 64 hex characters, is the hash of the image's manifest and always means the same bytes. Modules 0.2 and 0.8.
+
+**Registry.** A registry stores images by repository, tag and digest. The track runs `registry:3.1.2` as `course-registry` on `localhost:5555`. Modules 0.2, 0.6 and 0.8.
+
+**Docker Compose.** Compose describes a set of containers, their networks and volumes in `compose.yaml` and creates, starts, scales and removes them as one project. Module 0.3.
+
+**Compose project.** A project is one running copy of a Compose file, named by `name:` or the folder. Its containers, networks and volumes carry the project's name and label. Module 0.3.
+
+**Service.** A service is one entry under `services:` in a Compose file; Compose runs it as one or more containers that share its name in DNS. Module 0.3.
+
+**Healthcheck.** A healthcheck is a command Docker runs inside a container every few seconds; three failures in a row mark the container `unhealthy`. Docker records the result and changes nothing else. Modules 0.2, 0.3 and 0.7.
+
+**depends_on and service_healthy.** `depends_on` orders a project's start, and `condition: service_healthy` makes Compose wait until the dependency's healthcheck passes before it starts the dependent service. Module 0.3.
+
+**Profile.** A profile keeps a Compose service out of the default start; `--profile <name>` includes it. Module 0.3.
+
+**.env file.** Compose reads `.env` next to `compose.yaml` and fills `${VARIABLE}` from it; a variable set in the shell wins. Modules 0.3 and 0.8.
+
+**Named volume.** A named volume is storage that Docker manages under `/var/lib/docker/volumes` and that outlives every container using it. An empty volume gets the image's files and their owners on its first mount. Module 0.4.
+
+**Bind mount.** A bind mount shows a path of the Docker host inside a container, both ways. The engine resolves the path on the Docker host, not where the `docker` command runs. Module 0.4.
+
+**tmpfs mount.** A tmpfs mount is memory of the Docker host shown as a folder, with an optional size limit; its content disappears when the container stops. Modules 0.4 and 0.6.
+
+**Bridge network.** A Docker bridge network is a Linux bridge on the Docker host, `docker0` for the default network and `br-` plus 12 characters of the network ID for others, with the network's gateway address on it. Module 0.5.
+
+**veth pair (Docker).** A veth pair is a virtual cable with two ends: one is a container's `eth0`, the other plugs into the bridge on the Docker host. `/sys/class/net/eth0/iflink` inside the container names the host end's interface number. Module 0.5.
+
+**Embedded DNS (127.0.0.11).** On a network you create, Docker's DNS server answers container and service names. NAT rules inside each container's namespace send port 53 on `127.0.0.11` to a socket of dockerd there. Modules 0.3 and 0.5.
+
+**Masquerade and conntrack (Docker).** Masquerade rewrites a packet's source to the address of the interface it leaves through; Docker adds one rule per network for traffic that leaves the host. conntrack, the kernel's connection table, remembers each rewrite and undoes it on the reply. Module 0.5.
+
+**DNAT and the userland proxy.** A published port becomes a DNAT rule that rewrites the destination to the container's address and port, plus a filter rule that accepts it. The userland proxy, `docker-proxy` on Linux and OrbStack's agent on a Mac, carries connections to the port from the host itself. Module 0.5.
+
+**Network isolation (raw drop rule).** Docker 29 on Linux drops packets for a container that arrive through any bridge other than its own, with a rule in the `raw` table. OrbStack switches that isolation off on a Mac. Module 0.5.
+
+**Internal network.** An internal Docker network has no masquerade and no published ports, so its containers reach each other and nothing outside. Module 0.8.
+
+**Debug image (course/nettools).** The track's debug image holds `ip`, `iptables`, `nft`, `tcpdump`, `conntrack`, `nsenter` and `capsh`. Run with `--privileged --net=host --pid=host`, it works on the Docker host's network and processes, the same on a Mac and on Linux. Modules 0.5 to 0.7.
+
+**Capability.** A capability is one piece of root's power, such as `CAP_CHOWN` or `CAP_NET_RAW`. Docker gives a container 14 by default; `--cap-drop ALL` removes them and `--cap-add` puts single ones back. Module 0.6.
+
+**seccomp.** seccomp filters system calls. Docker's default profile blocks about 50 rare and risky calls, such as creating a user namespace without `CAP_SYS_ADMIN`; a JSON profile of your own blocks the calls you list. Module 0.6.
+
+**AppArmor and SELinux.** These Linux security modules add a profile per container on hosts that run them, such as `docker-default` on Ubuntu. OrbStack's kernel on a Mac runs without one. Module 0.6.
+
+**no-new-privileges.** `no-new-privileges` stops every process in a container from gaining rights through a setuid or setcap program. Modules 0.6 and 0.8.
+
+**User namespace and rootless.** A user namespace maps user IDs, so root inside maps to an unprivileged user outside. Rootless Docker and `userns-remap` use it on Linux; by default, root in a container is root on the host. Modules 0.1 and 0.6.
+
+**Read-only root filesystem.** `--read-only` turns the container's writable layer off; a tmpfs or a volume gives the app the few writable places it needs. Modules 0.6 and 0.8.
+
+**OOM kill.** When a container exceeds its memory limit, the kernel's out-of-memory killer ends a process in it; Docker records `OOMKilled=true` and exit code 137. Modules 0.6 and 0.7.
+
+**Trivy.** Trivy scans an image's packages and the libraries inside its binaries against a vulnerability database; `--exit-code 1` with `--severity` turns it into a gate. Modules 0.6 and 0.8.
+
+**cosign.** cosign signs an image's digest with a private key and stores the signature in the registry; `cosign verify` checks it with the public key. A signature covers a digest, never a tag. Modules 0.6 and 0.8.
+
+**Compose secret.** A Compose secret reaches a container as a read-only file under `/run/secrets`, so it never shows in `docker inspect` the way an environment variable does. Module 0.6.
+
+**docker events.** `docker events` streams what Docker did to its objects, such as `create`, `start`, `die`, `kill` and health changes, with times. Module 0.7.
+
+**Debug container.** A debug container joins a target's namespaces with `--network container:<name>` and `--pid container:<name>` and brings its own tools, so you look inside an image without a shell. Module 0.7.
+
+**YAML anchor.** An anchor, `&name`, marks a block in a YAML file, and `<<: *name` merges it into another block, so a Compose file states shared settings once. Module 0.8.

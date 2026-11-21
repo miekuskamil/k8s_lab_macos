@@ -5,3 +5,4 @@ __pycache__/
 .venv/
 platform-engineering/practice/cluster/kind/.bin/
 lab.env
+/platform-engineering/0-docker/work/
