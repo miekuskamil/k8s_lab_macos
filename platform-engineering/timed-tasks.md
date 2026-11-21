@@ -12,7 +12,7 @@ Read the brief, start a timer, and solve the task on the node the brief names. O
 
 The six timed practice exams work the same way for a whole exam, through `./lab.sh exam`. Exams 1 to 3 cover the application modules and sit at the end of [level 1](../README.md#1-foundations), and exams 4 to 6 cover the security modules and sit at the end of [level 3](../README.md#3-advanced). Each gives you 2 hours for 16 or 17 tasks worth 100 points, and `score` prints the minutes since `setup` and flags a run over 120. Two forms go beyond the guide: `./lab.sh exam score 4 3 9` scores only tasks 3 and 9, and `./lab.sh exam solve 4 9` applies the reference solution of task 9 alone.
 
-In the test run on the live clusters, every task's check failed after its setup and passed after its reference solution, and each practice exam scored 0 on a fresh setup and 100 after its reference solution.
+In the test run on the live clusters, every task's check failed after its setup and passed after its reference solution, and each practice exam scored 0 on a fresh setup and 100 after its reference solution. The run on 21 November 2026 repeated all six exams from a fresh clone with only Docker, git and Lima on the PATH, with the resets from the guide between them. Exam 2 scored 94 at first, because the reference LimitRange of task 6 filled the quota and the rolling restart waited for room, and after a fix to its defaults it scored 100 like the other five. A whole exam cycle of setup, score, solve and score took between 3 and 14 minutes.
 
 ## Where you type
 
