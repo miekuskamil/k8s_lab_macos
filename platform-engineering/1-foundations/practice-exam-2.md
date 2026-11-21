@@ -150,8 +150,8 @@ metadata: {name: defaults, namespace: k2-quota}
 spec:
   limits:
   - type: Container
-    default: {cpu: 200m, memory: 128Mi}
-    defaultRequest: {cpu: 100m, memory: 64Mi}
+    default: {cpu: 100m, memory: 64Mi}
+    defaultRequest: {cpu: 50m, memory: 32Mi}
 ```
 
 ```bash
@@ -159,7 +159,7 @@ k apply -f lr.yaml
 k -n k2-quota rollout restart deploy search
 ```
 
-The ReplicaSet retries on its own with growing pauses, and the restart only speeds that up. Four pods use 400m of CPU requests, exactly the quota.
+The ReplicaSet retries on its own with growing pauses, and the restart only speeds that up. Four pods use 200m of CPU requests, half the quota, so the extra pod that a rolling restart starts still fits. Defaults that fill the quota exactly, such as 100m each, leave the restart waiting minutes for the quota to free up.
 
 </details>
 
