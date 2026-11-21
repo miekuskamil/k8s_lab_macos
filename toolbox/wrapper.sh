@@ -2,7 +2,7 @@
 # Installed as both k3d and kind in the toolbox. Runs the real tool from /usr/local/lib/lab,
 # then fixes the toolbox kubeconfig (kube-sync.sh) after a command that creates or starts a
 # cluster. Before k3d deletes a cluster, the toolbox leaves that cluster's network, so k3d
-# can remove the network as it does on the host.
+# removes the network as it does on the host.
 tool="$(basename "$0")"
 real="/usr/local/lib/lab/$tool"
 

@@ -29,6 +29,8 @@ docker run --rm hello-world
 
 ## Install the tools
 
+The toolbox makes this section optional. `./lab.sh shell` builds a container with every tool below at the same versions and opens a shell in it, so the machine needs only Docker and git. Skip to the inotify limit at the end of this section, which the toolbox doesn't change, because the clusters share the host's kernel.
+
 Homebrew is the macOS route. On Ubuntu, download each tool at the version the lab was tested with. `dpkg --print-architecture` prints `amd64` on Intel and AMD machines and `arm64` on ARM machines.
 
 ```bash
