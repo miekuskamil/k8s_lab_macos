@@ -116,7 +116,7 @@ Run every command from the repository folder. `./lab.sh help` prints the same li
 | `./lab.sh status` | Shows the nodes, the ArgoCD applications and every pod that is not running. |
 | `./lab.sh ui` | Opens the web UIs on localhost until you press Ctrl-C. |
 | `./lab.sh test` | Sends 100 requests to the shop and prints the status codes, the versions and the latency. |
-| `./lab.sh test 4 5` | Runs the course checks for modules 4 and 5. `./lab.sh test all` runs every module that is safe to repeat, in about 40 minutes. |
+| `./lab.sh test 4 5` | Runs the course checks for modules 4 and 5. `./lab.sh test all` runs every module that is safe to repeat, in about 50 minutes. |
 | `./lab.sh reset` | Removes the course exercises and restores the Git baseline. `--all` also removes the course namespaces. |
 | `./lab.sh down` | Deletes the cluster after it asks. `--yes` skips the question. |
 | **The practice cluster** | |

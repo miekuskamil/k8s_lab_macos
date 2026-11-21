@@ -128,4 +128,4 @@ The course uses Kiali only to look. You make every change with `kubectl`, so tha
 
 ## What the verification run showed
 
-`./platform-engineering/verify.sh` replays every module against the lab, so run it whenever you change the lab and again after the course to check your own work. The summary of the last run sits at the end of [the course README](../../README.md#check-a-module).
+`./platform-engineering/verify.sh`, or `./lab.sh test all`, replays every module that is safe to repeat against the lab, so run it whenever you change the lab and again after the course to check your own work. On 21 November 2026 it passed 322 of 322 checks for its 25 default modules in 49 minutes. [Check a module](../../README.md#check-a-module) in the guide lists the modules it leaves out.

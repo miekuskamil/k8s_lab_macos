@@ -2,7 +2,7 @@
 # Replay the key exercise of every course module and check the result.
 # Use it to confirm the course works on your lab, or to check your own work.
 #
-#   ./platform-engineering/verify.sh          run every module (about 40 minutes)
+#   ./platform-engineering/verify.sh          run every module (about 50 minutes)
 #   ./platform-engineering/verify.sh 4 5      run only modules 4 and 5
 #
 # The script changes routing and policies while it runs and restores the baseline at the end.
