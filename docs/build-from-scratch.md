@@ -8,7 +8,7 @@ Every step has three parts:
 - **Why this way.** The decision behind the step and the alternatives that were rejected.
 - **What went wrong here.** Problems hit at this step while the lab was built, with a link to the full diagnosis in [troubleshooting.md](troubleshooting.md).
 
-Plan on 45 minutes if you type everything, or 10 if you run `./scripts/provision.sh` and read along.
+Plan on 45 minutes if you type everything, or 10 if you run `./lab.sh up` and read along.
 
 ## What you are building
 
@@ -258,7 +258,7 @@ Five ArgoCD Applications: `kube-prometheus-stack`, `observability-config`, `loki
 ```bash
 kubectl -n observability get pods
 kubectl -n istio-system get pods -l app=kiali
-./scripts/port-forward.sh
+./lab.sh ui
 ```
 
 **Why this way.**
@@ -290,15 +290,15 @@ When Docker restarts the k3d containers by itself, after a reboot or when OrbSta
 
 - Pods whose network sandbox came back before the Istio CNI agent was ready get broken traffic redirection. Some never become Ready; others look Ready while all mesh traffic into them fails. [Problem 15](troubleshooting.md#15-mesh-pods-break-after-a-restart).
 
-`./scripts/start.sh` repairs all three:
+`./lab.sh start` repairs all three:
 
 ```bash
-./scripts/start.sh
+./lab.sh start
 ```
 
 ## Rebuilding
 
 ```bash
-./scripts/teardown.sh --yes      # deletes the k3d cluster, keeps the images
-./scripts/provision.sh           # under 2 minutes with cached images, about 10 on a fresh machine
+./lab.sh down --yes   # deletes the k3d cluster, keeps the images
+./lab.sh up          # about 2 minutes with cached images, about 10 on a fresh machine
 ```

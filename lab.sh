@@ -85,7 +85,7 @@ toolbox_start() {
   docker compose version >/dev/null 2>&1 || { echo "The toolbox needs Docker Compose v2 (the 'docker compose' command)." >&2; exit 1; }
   toolbox_compose_env
   if [[ "$(docker image inspect -f '{{index .Config.Labels "lab.toolbox.hash"}}' "$TOOLBOX_IMAGE" 2>/dev/null)" != "$TOOLBOX_HASH" ]]; then
-    echo "Building the toolbox image $TOOLBOX_IMAGE (about 2 minutes the first time)" >&2
+    echo "Building the toolbox image $TOOLBOX_IMAGE (about a minute the first time)" >&2
     "${COMPOSE[@]}" build lab >&2
   fi
   local out

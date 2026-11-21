@@ -186,7 +186,7 @@ install_istio_ambient() {
   upgraded="$(helm -n istio-system list -q 2>/dev/null | grep '^istiod-' || true)"
   if [[ -n "$upgraded" ]]; then
     warn "Istio was upgraded in course module 14 (Helm release ${upgraded}). Leaving it as it is."
-    warn "To return to Istio ${ISTIO_VERSION}: ./scripts/teardown.sh --yes && ./scripts/provision.sh"
+    warn "To return to Istio ${ISTIO_VERSION}: ./lab.sh down --yes && ./lab.sh up"
     return 0
   fi
   helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update >/dev/null

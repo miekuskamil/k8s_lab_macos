@@ -1274,7 +1274,7 @@ module_21() {
   local N="k3d-${CLUSTER_NAME:-k8s-lab}-server-0" B="${TMPDIR:-/tmp}/k8s-lab-k3s-backup" target=v1.31.14+k3s1
   local suc=https://github.com/rancher/system-upgrade-controller/releases/download/v0.20.2
   if [[ "$("${K[@]}" get node "$N" -o jsonpath='{.status.nodeInfo.kubeletVersion}')" == "$target" ]]; then
-    fail "the lab runs the course version of k3s" "already $target; run ./scripts/teardown.sh --yes && ./scripts/provision.sh first"
+    fail "the lab runs the course version of k3s" "already $target; run ./lab.sh down --yes && ./lab.sh up first"
     return
   fi
   baseline
@@ -1321,7 +1321,7 @@ module_14() {
   section "14: upgrading Istio (one-way: rebuild the lab to return)"
   local NEW=1.25.5 REV=1-25-5 H=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" -n istio-system)
   if "${H[@]}" list -q | grep -q '^istiod-'; then
-    fail "the lab runs the course version of Istio" "already upgraded; run ./scripts/teardown.sh --yes && ./scripts/provision.sh first"
+    fail "the lab runs the course version of Istio" "already upgraded; run ./lab.sh down --yes && ./lab.sh up first"
     return
   fi
   baseline

@@ -45,13 +45,13 @@ Your machine needs Docker and git. On a Mac, Docker comes from [OrbStack](https:
    cd k8s_lab_macos
    ```
 
-2. Open a shell in the toolbox. The first time, Docker builds the toolbox image, which takes about 2 minutes. The prompt then starts with `(lab)`, and `kubectl` (alias `k`), `helm`, `k3d`, `kind` and `istioctl` are ready.
+2. Open a shell in the toolbox. The first time, Docker builds the toolbox image, which takes about a minute: 35 seconds in the test run on a fast connection. The prompt then starts with `(lab)`, and `kubectl` (alias `k`), `helm`, `k3d`, `kind` and `istioctl` are ready.
 
    ```bash
    ./lab.sh shell
    ```
 
-3. Build the lab from inside the toolbox. The first run downloads the images and takes about 10 minutes. The command waits until every health check passes, and running it again is safe.
+3. Build the lab from inside the toolbox. The first run downloads the images and takes about 10 minutes, and a run with the images already in Docker took 2 minutes 20 seconds in the test. The command waits until every health check passes, and running it again is safe.
 
    ```bash
    ./lab.sh up

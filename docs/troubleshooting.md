@@ -86,7 +86,7 @@ The first command returned 255 while only 6 pods existed.
 
 **Cause.** A consequence of problem 2. For each sandbox attempt, flannel reserved an address and then the `istio-cni` step failed. The reservation was never released. The kubelet retried every few seconds until the node's /24 range was used up.
 
-**Fix.** Delete and recreate the cluster (`./scripts/teardown.sh --yes`, then `./scripts/provision.sh`). With problem 2 fixed, no sandbox fails and nothing leaks.
+**Fix.** Delete and recreate the cluster (`./lab.sh down --yes`, then `./lab.sh up`). With problem 2 fixed, no sandbox fails and nothing leaks.
 
 ## 5. Backend in CrashLoopBackOff
 
@@ -193,11 +193,11 @@ The containers were "Up 48 seconds", so Docker had just restarted them. The even
 
 **Cause.** When k3d starts a cluster, it adds a `NodeHosts` key to the CoreDNS ConfigMap. When Docker restarts the containers by itself, k3d is not involved, k3s rewrites the ConfigMap without that key, and the CoreDNS pod cannot mount it. With no cluster DNS, ztunnel cannot resolve istiod, gets no certificates or config, and every mesh pod fails its readiness check.
 
-**Fix.** `./scripts/start.sh`. It runs `k3d cluster stop` and `k3d cluster start` when the key is missing, which lets k3d add it back, then waits for every pod. `provision.sh` calls the same script when the cluster already exists.
+**Fix.** `./lab.sh start`. It runs `k3d cluster stop` and `k3d cluster start` when the key is missing, which lets k3d add it back, then waits for every pod. `provision.sh` calls the same script when the cluster already exists.
 
 ## 12. kubectl talks to the wrong cluster
 
-**Symptom.** `./scripts/port-forward.sh` prints `namespaces "argocd" not found`, and course commands report that resources do not exist.
+**Symptom.** `./lab.sh ui` prints `namespaces "argocd" not found`, and course commands report that resources do not exist.
 
 **Found with.**
 
@@ -260,7 +260,7 @@ kubectl -n shop rollout restart deploy
 kubectl -n observability rollout restart deploy,statefulset
 ```
 
-**Fix in `./scripts/start.sh`.** Kubernetes records when each pod's sandbox was set up (the `PodReadyToStartContainers` condition). `start.sh` waits for `istio-cni` and ztunnel, takes the window from the moment the `istio-cni` pod's own sandbox came up to the moment `istio-cni` and ztunnel both became Ready, and recreates every pod in an ambient namespace whose sandbox falls inside that window, Ready or not. Tested with `docker restart k3d-k8s-lab-server-0`: it recreated 13 pods, and a 100-request burst then returned 100 times `200` with no ztunnel errors. On a healthy cluster it recreates nothing. As a second safety net, it still recreates any mesh pod that stays not Ready for three minutes.
+**Fix in `scripts/start.sh`.** Kubernetes records when each pod's sandbox was set up (the `PodReadyToStartContainers` condition). `start.sh` waits for `istio-cni` and ztunnel, takes the window from the moment the `istio-cni` pod's own sandbox came up to the moment `istio-cni` and ztunnel both became Ready, and recreates every pod in an ambient namespace whose sandbox falls inside that window, Ready or not. Tested with `docker restart k3d-k8s-lab-server-0`: it recreated 13 pods, and a 100-request burst then returned 100 times `200` with no ztunnel errors. On a healthy cluster it recreates nothing. As a second safety net, it still recreates any mesh pod that stays not Ready for three minutes.
 
 ## 16. Kiali restarts every few minutes
 
@@ -277,7 +277,7 @@ Every ReplicaSet had a different `checksum/config` annotation, and nothing in Gi
 
 **Cause.** When `login_token.signing_key` is empty, the Kiali chart generates a random one each time it renders. Helm renders once at install. ArgoCD renders on every poll, so each poll produced a new ConfigMap, a new checksum, a new pod template and a rollout.
 
-**Fix.** `helm/kiali-values.yaml` sets a fixed 32-character `signing_key`. The same trap exists in any chart that calls `randAlphaNum` in a template: under ArgoCD, set the value yourself. After a rollout, restart `./scripts/port-forward.sh`.
+**Fix.** `helm/kiali-values.yaml` sets a fixed 32-character `signing_key`. The same trap exists in any chart that calls `randAlphaNum` in a template: under ArgoCD, set the value yourself. After a rollout, restart `./lab.sh ui`.
 
 ## 17. Headlamp login fails with an authentication error
 

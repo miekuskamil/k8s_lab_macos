@@ -69,7 +69,7 @@ After module 17, check the switch with `curl -s localhost:8080/api/model`. Memor
 
 The shop assistant (module 17) and the RAG app (module 27) both have a `PROVIDER` setting. With `PROVIDER=anthropic`, they send the question to Claude through the official Anthropic Python SDK. kagent (module 19) supports Anthropic natively.
 
-The `PROVIDER` setting arrived with the images `assistant:1.1.0` and `rag:1.2.0`, and the `LLM_*` settings and the `openai` provider with `assistant:1.2.0` and `rag:1.3.0`. If your lab is older than 21 November 2026, run `./scripts/provision.sh` once to build the new assistant image. Module 27 builds its own image in its steps.
+The `PROVIDER` setting arrived with the images `assistant:1.1.0` and `rag:1.2.0`, and the `LLM_*` settings and the `openai` provider with `assistant:1.2.0` and `rag:1.3.0`. If your lab is older than 21 November 2026, run `./lab.sh up` once to build the new assistant image. Module 27 builds its own image in its steps.
 
 Some things work differently from Ollama:
 

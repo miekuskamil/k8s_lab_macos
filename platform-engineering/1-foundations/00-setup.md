@@ -11,12 +11,12 @@ Every later module assumes a healthy lab and a working `istioctl`, so this modul
 ## Check the lab
 
 ```console
-$ ./scripts/start.sh               # safe to run any time, repairs the cluster after a reboot
+$ ./lab.sh start               # safe to run any time, repairs the cluster after a reboot
 Cluster k8s-lab is running and CoreDNS is healthy.
 kubectl context is k3d-k8s-lab
 Waiting for istio-cni and ztunnel
 Waiting for every pod to become Ready (up to 3 minutes)
-All pods are Ready. The shop is at http://localhost:8080. Run ./scripts/port-forward.sh for the other UIs.
+All pods are Ready. The shop is at http://localhost:8080. Run ./lab.sh ui for the other UIs.
 
 $ kubectl config current-context   # k3d-k8s-lab
 k3d-k8s-lab
@@ -40,7 +40,7 @@ shop-base               Synced        Healthy
 All twelve Applications should show `Synced` and `Healthy`, because ArgoCD reports any drift from Git on this list. Then open the UIs in a spare terminal and leave it running:
 
 ```console
-$ ./scripts/port-forward.sh
+$ ./lab.sh ui
 ArgoCD      http://localhost:8081
 Grafana     http://localhost:3000
 Prometheus  http://localhost:9090

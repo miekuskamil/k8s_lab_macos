@@ -105,4 +105,4 @@ if [[ -n "$(not_ready_pods)" ]]; then
   not_ready_pods | sed 's/^/  /' >&2
   exit 1
 fi
-say "All pods are Ready. The shop is at http://localhost:8080. Run ./scripts/port-forward.sh for the other UIs."
+say "All pods are Ready. The shop is at http://localhost:8080. Run ./lab.sh ui for the other UIs."
