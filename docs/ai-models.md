@@ -50,7 +50,7 @@ A machine without Ollama runs it as a container next to the clusters:
 ./lab.sh ollama
 ```
 
-The command starts the `ollama` service from `compose.yaml` and pulls `qwen2.5:3b` and `nomic-embed-text`, about 2.2 GB, into a Docker volume. It listens on port 11434 of your machine, where pods find it as `host.docker.internal:11434`, so the course commands work unchanged. It runs on the CPU, and answers take a few times longer than from Ollama on a Mac, which uses the GPU. When something else holds port 11434, set `LAB_OLLAMA_PORT` in `lab.env` and use that port in `LLM_URL`. On Linux, also set `LAB_OLLAMA_BIND=0.0.0.0`, because pods reach the host there through the Docker network's gateway, not through its loopback.
+The command starts the `ollama` service from `compose.yaml` and pulls `qwen2.5:3b` and `nomic-embed-text`, about 2.2 GB, into a Docker volume. It listens on port 11434 of your machine, where pods find it as `host.docker.internal:11434`, so the course commands work unchanged. It runs on the CPU, because containers on a Mac get no GPU, so it suits a Linux machine or a test more than daily work on a Mac. In the test run on an Apple silicon Mac, the assistant's first answer took 42 seconds instead of under one, and module 27's ingest of the whole course took about 15 minutes instead of under one. When something else holds port 11434, set `LAB_OLLAMA_PORT` in `lab.env` and use that port in `LLM_URL`. On Linux, also set `LAB_OLLAMA_BIND=0.0.0.0`, because pods reach the host there through the Docker network's gateway, not through its loopback.
 
 ## Another Ollama model, by hand
 
@@ -136,7 +136,9 @@ The answers in module 27's text came from `qwen2.5:3b`. Claude answers the same 
 
 ## What was tested
 
-The Ollama path is the course default. With the new app images, `./platform-engineering/verify.sh 17 27` passed every check. The Claude path was tested without an API key:
+The Ollama path is the course default. With the new app images, `./platform-engineering/verify.sh 17 27` passed every check.
+
+The `lab.env` settings were tested from the toolbox on a fresh lab, with Ollama 0.32.13 and `qwen2.5:3b` throughout. With no `lab.env`, `./lab.sh test 17 27` passed 21 of 21 checks. With `LLM_PROVIDER=openai` and Ollama's `/v1` endpoint, the same run passed 21 of 21 once module 17's AuthorizationPolicy also allowed `/v1/chat/completions`, and `/api/model` reported the `openai` provider. Against the `ollama` service in a container, the assistant answered, `./lab.sh test 27` passed 11 of 11 checks, and the RAG app also ingested, searched and answered through the service's `/v1` API. The Claude path was tested without an API key:
 
 - Both apps ran against a stand-in server that recorded each request. The SDK sent `POST /v1/messages` with the model, the system prompt, `effort: low` and the fallback setting, and the apps read the answer and the token counts from the reply.
 - In the cluster, the request went from the assistant through the waypoint to `api.anthropic.com` over HTTPS. With a fake key, Anthropic answered `401 authentication_error`, which shows the route and the TLS origination work. A pod with another service account got `403` from the waypoint, before its request left the cluster. The policy matches `/v1/messages` even though the SDK adds `?beta=true`, because Istio leaves the query string out of path matching.

@@ -839,7 +839,8 @@ module_27() {
   expect "the rag app starts" "$("${K[@]}" -n course-rag rollout status deploy/rag --timeout=120s 2>&1 | grep -c 'successfully rolled out')" '^1$'
   "${K[@]}" -n course-rag port-forward svc/rag 8091:8000 >/dev/null 2>&1 &
   pf=$!; settle 3
-  local ingest; ingest="$(curl -s -m 300 -X POST localhost:8091/ingest)"
+  # Ollama on a CPU (the ollama service in compose.yaml) takes about 15 minutes for the ingest.
+  local ingest; ingest="$(curl -s -m 1500 -X POST localhost:8091/ingest)"
   between "ingest splits the course into chunks" "$(echo "$ingest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["chunks"])' 2>/dev/null || echo 0)" 300 1500
   expect "nomic-embed-text makes 768-dimension vectors" "$(echo "$ingest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["dimensions"])' 2>/dev/null)" '^768$'
   expect "Qdrant holds every chunk" "$("${K[@]}" get --raw /api/v1/namespaces/course-rag/services/qdrant:6333/proxy/collections/course 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["points_count"])' 2>/dev/null)" "^$(echo "$ingest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["chunks"])' 2>/dev/null)\$"
