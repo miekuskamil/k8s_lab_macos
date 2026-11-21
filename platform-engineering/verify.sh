@@ -1467,6 +1467,48 @@ module_0_3() {
   expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
 }
 
+module_0_4() {
+  section "0.4: storage"
+  docker_reset
+  local site="$DW/site" bk="$DW/backup" note
+  docker volume create course-data >/dev/null
+  docker run --rm -v course-data:/data alpine:3.22.2 sh -c 'echo "saved at $(date +%T)" > /data/note.txt'
+  note="$(docker run --rm -v course-data:/data alpine:3.22.2 cat /data/note.txt)"
+  expect "1. a new container reads what an earlier one wrote to the volume" "$note" '^saved at '
+  expect "1. the volume lives under /var/lib/docker/volumes" "$(docker volume inspect -f '{{.Mountpoint}}' course-data)" '^/var/lib/docker/volumes/course-data/_data$'
+  expect "1. the Docker host holds the file there" "$(onhost 'cat /proc/1/root/var/lib/docker/volumes/course-data/_data/note.txt')" "^${note}$"
+  mkdir -p "$site" && echo '<h1>from the repo</h1>' > "$site/index.html"
+  docker run -d --name course-site -p 8885:80 -v "$site":/usr/share/nginx/html:ro nginx:1.28.0-alpine >/dev/null
+  expect "2. nginx serves the bind-mounted file" "$(dcurl "http://$PUB:8885/")" 'from the repo'
+  echo '<h1>changed in the toolbox</h1>' > "$site/index.html"
+  expect "2. an edit on the host shows at once" "$(dcurl "http://$PUB:8885/")" 'changed in the toolbox'
+  expect "2. :ro makes the mount read-only" "$(docker exec course-site touch /usr/share/nginx/html/new.txt 2>&1)" 'Read-only file system'
+  docker run --rm -v "$site":/site alpine:3.22.2 sh -c 'echo from-a-container > /site/c.txt'
+  expect "2. a file written in a container appears on the host" "$(cat "$site/c.txt")" '^from-a-container$'
+  expect "2. a toolbox-only path does not exist for the engine" "$(docker run --rm --mount type=bind,src=/home/lab/not-on-the-host,dst=/x alpine:3.22.2 true 2>&1)" 'bind source path does not exist'
+  expect "3. an empty volume gets the image's files" "$(docker run --rm -v course-html:/usr/share/nginx/html nginx:1.28.0-alpine ls /usr/share/nginx/html | tr '\n' ' ')" '^50x\.html index\.html $'
+  mkdir -p "$DW/empty"
+  expect "3. an empty bind mount hides them" "$(docker run --rm -v "$DW/empty":/usr/share/nginx/html nginx:1.28.0-alpine ls -A /usr/share/nginx/html | wc -l | tr -d ' ')" '^0$'
+  expect "4. tmpfs has its 16 MB limit" "$(docker run --rm --tmpfs /scratch:size=16m alpine:3.22.2 sh -c 'dd if=/dev/zero of=/scratch/f bs=1M count=20 2>&1 | head -1')" 'No space left on device'
+  docker run -d --name course-tmp --tmpfs /scratch alpine:3.22.2 sleep 600 >/dev/null
+  docker exec course-tmp sh -c 'echo temp > /scratch/t.txt; echo kept > /kept.txt'
+  docker restart course-tmp >/dev/null
+  expect "4. after a restart tmpfs is empty, the writable layer kept its file" "$(docker exec course-tmp sh -c 'ls /scratch | wc -l; cat /kept.txt' | tr '\n' ' ')" '^0 kept $'
+  expect "5. user 1000 may not write to a root-owned volume" "$(docker run --rm --user 1000 -v course-data:/data alpine:3.22.2 touch /data/x 2>&1)" 'Permission denied'
+  printf 'FROM alpine:3.22.2\nLABEL lab.course=docker\nRUN mkdir /data && chown 1000:1000 /data\nUSER 1000\n' | docker build -q -t course/owner:1 - >/dev/null 2>&1
+  expect "5. a fresh volume copies the image's owner, so user 1000 writes" "$(docker run --rm -v course-owned:/data course/owner:1 sh -c 'touch /data/x && stat -c %u /data/x')" '^1000$'
+  docker volume create --label com.docker.compose.project=course-demo course-demo_data >/dev/null
+  expect "6. a project's volumes carry its label" "$(docker volume ls --filter label=com.docker.compose.project=course-demo --format '{{.Name}}')" '^course-demo_data$'
+  mkdir -p "$bk"
+  docker run --rm -v course-data:/data:ro -v "$bk":/backup alpine:3.22.2 tar czf /backup/course-data.tgz -C /data .
+  expect "7. the backup holds note.txt" "$(tar tzf "$bk/course-data.tgz" | grep -c 'note.txt')" '^1$'
+  docker volume create course-restored >/dev/null
+  docker run --rm -v course-restored:/data -v "$bk":/backup:ro alpine:3.22.2 tar xzf /backup/course-data.tgz -C /data
+  expect "7. the restored volume gives the same note" "$(docker run --rm -v course-restored:/data alpine:3.22.2 cat /data/note.txt)" "^${note}$"
+  docker_reset
+  expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
+}
+
 # Module 2.9 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 2.9
 module_2_9() {
   section "2.9: k3s certificates, backups and upgrades (the upgrade is one-way)"
