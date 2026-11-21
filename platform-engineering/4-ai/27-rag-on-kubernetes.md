@@ -110,7 +110,7 @@ resources:
 $ helm install qdrant qdrant/qdrant --version 1.20.0 -n course-rag --create-namespace \
   -f platform-engineering/manifests/27-qdrant-values.yaml --wait
 NAME: qdrant
-LAST DEPLOYED: Sun Nov 15 11:00:50 2026
+LAST DEPLOYED: Sat Nov 21 05:38:57 2026
 NAMESPACE: course-rag
 STATUS: deployed
 REVISION: 1
@@ -124,10 +124,10 @@ NAME           READY   STATUS    RESTARTS   AGE
 pod/qdrant-0   1/1     Running   0          14s
 
 NAME                                            STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
-persistentvolumeclaim/qdrant-storage-qdrant-0   Bound    pvc-63189388-1487-469b-a6b4-b4fa23591d14   1Gi        RWO            local-path     <unset>                 14s
+persistentvolumeclaim/qdrant-storage-qdrant-0   Bound    pvc-bc1e1f87-dbd2-499c-9842-f03794bbf051   1Gi        RWO            local-path     <unset>                 14s
 ```
 
-**What you should see.** In the test run the install took 24 seconds. Qdrant runs as a StatefulSet pod, `qdrant-0`, with a `Bound` 1 GiB volume from k3s' `local-path` storage, so the vectors survive a pod restart.
+**What you should see.** In the test run the install took 15 seconds. Qdrant runs as a StatefulSet pod, `qdrant-0`, with a `Bound` 1 GiB volume from k3s' `local-path` storage, so the vectors survive a pod restart.
 
 ### 2. Build the service and give it to the cluster
 
@@ -174,7 +174,7 @@ INFO[0003] Successfully imported 1 image(s) into 1 cluster(s)
 
 `less` opens the file in a pager, where you scroll with the arrow keys and press `q` to quit, and the transcript shows the first lines of the file and the last lines of the build.
 
-**What you should see.** Docker built a 274 MB image in about 10 seconds, and then k3d printed `Successfully imported 1 image(s)`, because the lab has no registry, so `k3d image import` copies the image straight into the node, like the shop's images. Read `main.py` top to bottom: it defines the functions `chunks_of`, `embed` and `search`, and then the `/ingest`, `/search` and `/ask` endpoints.
+**What you should see.** Docker built a 310 MB image in about 10 seconds, and then k3d printed `Successfully imported 1 image(s)`, because the lab has no registry, so `k3d image import` copies the image straight into the node, like the shop's images. Read `main.py` top to bottom: it defines the functions `chunks_of`, `embed` and `search`, and then the `/ingest`, `/search` and `/ask` endpoints.
 
 ### 3. Give it the documents, and start it
 
@@ -248,7 +248,7 @@ deployment "rag" successfully rolled out
 $ kubectl -n course-rag port-forward svc/rag 8090:8000 >/dev/null 2>&1 &
 ```
 
-**What you should see.** The modules sit in four level folders below `platform-engineering/`, so the `printf` builds one `--from-file` flag for the README, the glossary, the Istio picture and each lab module, 0 to 32 and 45, and each file becomes one key in the ConfigMap. The ConfigMap holds 37 files and about 935 KiB. A ConfigMap holds at most 1 MiB, so the lab modules still fit with about 90 KiB to spare, while modules 33 to 44 with their long transcripts would push it over, so the glob leaves them out, and most of the space goes to the terminal transcripts in the modules. The app leaves one file out on purpose, this module itself, because the manifest sets `EXCLUDE_FILES: 27-rag-on-kubernetes.md`.
+**What you should see.** The modules sit in four level folders below `platform-engineering/`, so the `printf` builds one `--from-file` flag for the README, the glossary, the Istio picture and each lab module, 0 to 32 and 45, and each file becomes one key in the ConfigMap. The ConfigMap holds 37 files and about 890 KiB. A ConfigMap holds at most 1 MiB, so the lab modules still fit with about 130 KiB to spare, while modules 33 to 44 with their long transcripts would push it over, so the glob leaves them out, and most of the space goes to the terminal transcripts in the modules. The app leaves one file out on purpose, this module itself, because the manifest sets `EXCLUDE_FILES: 27-rag-on-kubernetes.md`.
 
 This module quotes its own test questions and the answers they got, so if the index held them, a question like "What is the capital of Denmark?" would find step 6's table, and the model would repeat what it read there. The test would leak into the data, like exam answers left inside the textbook, and teams keep evaluation questions out of the index for the same reason.
 
@@ -258,16 +258,16 @@ The app reaches Ollama on your Mac as `host.docker.internal:11434`, the same way
 
 ```console
 $ curl -s -X POST localhost:8090/ingest; echo
-{"files":35,"chunks":717,"dimensions":768,"embed_model":"nomic-embed-text","embed_prefixes":true,"embed_seconds":11.4,"total_seconds":11.7}
+{"files":36,"chunks":818,"dimensions":768,"embed_model":"nomic-embed-text","embed_prefixes":true,"embed_seconds":13.7,"total_seconds":14.1}
 
 $ kubectl get --raw /api/v1/namespaces/course-rag/services/qdrant:6333/proxy/collections/course | python3 -m json.tool | grep -E "points_count|status"
         "status": "green",
         "optimizer_status": "ok",
-        "points_count": 717,
+        "points_count": 818,
     "status": "ok",
 ```
 
-**What you should see.** `"files":32,"chunks":543,"dimensions":768,"embed_prefixes":true` in one test run, and `"files":35,"chunks":717` in the run above, after the course grew. The embedding took 8 to 12 seconds on the Mac's GPU, and Qdrant reports the same number as `points_count`, with `"status": "green"`. Your counts drift a little whenever the course text changes.
+**What you should see.** `"files":36,"chunks":818,"dimensions":768,"embed_prefixes":true`, because 37 files went into the ConfigMap and the app left this module out. The embedding took 13 to 14 seconds on the Mac's GPU, and Qdrant reports the same number as `points_count`, with `"status": "green"`. Your counts drift a little whenever the course text changes.
 
 ### Concept: task prefixes
 
@@ -277,12 +277,12 @@ The app adds both labels for you, which is what `"embed_prefixes":true` means. T
 
 | Question | Prefixes off | Prefixes on |
 |---|---|---|
-| What does ztunnel do? | first hit: a ztunnel upgrade step | first hit: module 29's "ztunnel's sockets" |
-| Which Kyverno chart version does module 26 install? | first hit: the README's version table | first hit: module 26 itself |
-| Synced and Degraded at the same time? | `Concept: the reconcile loop` first, 0.767 | `Concept: the reconcile loop` first, 0.784 |
-| Capital of Denmark (off-topic) | best score 0.486 | best score 0.545 |
+| What does ztunnel do? | first hit: module 14's "Upgrade ztunnel in place", 0.698 | first hit: module 2's "Concept: HBONE, the tunnel between nodes", 0.719 |
+| Which Kyverno chart version does module 26 install? | first hit: module 26's install step, 0.677 | first hit: module 26's opening section, 0.731 |
+| Synced and Degraded at the same time? | module 22's sync concept first, 0.675 | the same section first, 0.679 |
+| Capital of Denmark (off-topic) | best score 0.476 | best score 0.535 |
 
-The prefixes put the more specific passage first, but they also raise every score, including off-topic ones, so a score threshold tuned with prefixes off is wrong with prefixes on. Read the model's documentation before you embed anything, because other models have their own conventions.
+The prefixes put the passage that explains a thing ahead of one that only mentions it, but they also raise every score, including off-topic ones, so a score threshold tuned with prefixes off is wrong with prefixes on. Read the model's documentation before you embed anything, because other models have their own conventions.
 
 ### Concept: what a vector search does
 
@@ -292,7 +292,7 @@ Think of each embedding as an arrow from the origin in a space with 768 directio
 2. Qdrant compares the question's arrow with the stored arrows by cosine similarity, the cosine of the angle between two arrows, which is 1 for the same direction and 0 for a right angle. That's why the collection says `"distance": "Cosine"`.
 3. Qdrant returns the `k` closest chunks with their scores and stored text.
 
-With about 540 chunks, comparing the question against every chunk costs little, but with millions of chunks that gets too slow. So Qdrant uses an **HNSW** index, short for Hierarchical Navigable Small World, a graph that links each vector to its near neighbours, and walks the graph toward the question instead of checking everything, like asking for directions in a city where each neighbour points you a bit closer to the address. The result is approximate, so now and then the walk misses a close chunk, but answers come back in milliseconds.
+With about 800 chunks, comparing the question against every chunk costs little, but with millions of chunks that gets too slow. So Qdrant uses an **HNSW** index, short for Hierarchical Navigable Small World, a graph that links each vector to its near neighbours, and walks the graph toward the question instead of checking everything, like asking for directions in a city where each neighbour points you a bit closer to the address. The result is approximate, so now and then the walk misses a close chunk, but answers come back in milliseconds.
 
 Read the score as a ranking, not a probability: 0.70 doesn't mean "70% right" but "closer than the chunks below it". Each embedding model gives different scores, so you measure what counts as a good score on your own questions, as step 6 does.
 
@@ -304,9 +304,14 @@ $ curl -s -G localhost:8090/search --data-urlencode "q=how do I roll back a bad 
     "question": "how do I roll back a bad release with ArgoCD",
     "results": [
         {
-            "score": 0.703,
+            "score": 0.714,
             "file": "22-gitops-with-argocd.md",
             "heading": "Investigate"
+        },
+        {
+            "score": 0.696,
+            "file": "22-gitops-with-argocd.md",
+            "heading": "6. Ordered deploys: hooks and waves"
         },
         {
             "score": 0.685,
@@ -314,14 +319,9 @@ $ curl -s -G localhost:8090/search --data-urlencode "q=how do I roll back a bad 
             "heading": "5. A bad release, and `git revert`"
         },
         {
-            "score": 0.682,
+            "score": 0.683,
             "file": "README.md",
-            "heading": "A note on ArgoCD"
-        },
-        {
-            "score": 0.678,
-            "file": "22-gitops-with-argocd.md",
-            "heading": "Investigate"
+            "heading": "Git and ArgoCD"
         }
     ]
 }
@@ -331,9 +331,14 @@ $ curl -s -G localhost:8090/search --data-urlencode "q=Why is my pod stuck in Pe
     "question": "Why is my pod stuck in Pending?",
     "results": [
         {
-            "score": 0.688,
+            "score": 0.694,
             "file": "21-k3s-lifecycle.md",
             "heading": "Concept: how a pod gets its network, and how one missing file stops it"
+        },
+        {
+            "score": 0.691,
+            "file": "20-nodes-and-cleanup.md",
+            "heading": "Concept: PodDisruptionBudgets"
         },
         {
             "score": 0.688,
@@ -341,23 +346,23 @@ $ curl -s -G localhost:8090/search --data-urlencode "q=Why is my pod stuck in Pe
             "heading": "4. Break it, get paged"
         },
         {
-            "score": 0.678,
-            "file": "20-nodes-and-cleanup.md",
-            "heading": "Concept: PodDisruptionBudgets"
+            "score": 0.682,
+            "file": "45-life-of-an-outbound-request.md",
+            "heading": "1. Start a client in its own ambient namespace"
         },
-        {
-            "score": 0.677,
 ...
-            "file": "30-sidecar-in-depth.md",
-            "heading": "8. Set the sidecar's own resources"
+        {
+            "score": 0.666,
+            "file": "24-grafana-as-code.md",
+            "heading": "4. A Grafana-managed alert"
         }
     ]
 }
 ```
 
-**What you should see.** For the rollback question, every result in the top five comes from the right place, mostly module 22. The step that does the rollback, `5. A bad release, and git revert`, came second in the test runs (score 0.685 to 0.691), just behind module 22's Investigate section (0.703), so the search found it although the question shares few words with it, which is the strength of embeddings.
+**What you should see.** For the rollback question, all four results come from the right place: three from module 22 and one from the guide's section on Git and ArgoCD. The step that does the rollback, `5. A bad release, and git revert`, came third with 0.685, close behind module 22's Investigate section with 0.714, so the search found it although the question shares few words with it, which is the strength of embeddings.
 
-The second question shows the weakness. The section that answers it best is module 29's `4. Make the scheduler say no`, which makes two pods stay Pending and reads the scheduler's reasons, yet it came **8th** in the test runs and **6th** in the run above. Ahead of it were passages that mention pods and problems, such as a network failure in module 21, an alert in module 23 and PodDisruptionBudgets in module 20, so with the default of 4 results the model never sees the right section, which is a retrieval miss.
+The second question shows the weakness. The section that answers it best is module 29's `4. Make the scheduler say no`, which makes two pods stay Pending and reads the scheduler's reasons, yet it is missing from the top 10. With `k=30` it shows up in **19th** place, with 0.654. Ahead of it were passages that mention pods and problems, such as a network failure in module 21, PodDisruptionBudgets in module 20 and an alert in module 23, so with the default of 4 results the model never sees the right section, which is a retrieval miss.
 
 ### Concept: what the chat model actually receives
 
@@ -378,39 +383,35 @@ The chunks also make up most of the input. Models count their input in tokens, p
 $ ask() { curl -s -X POST localhost:8090/ask -H 'content-type: application/json' -d "{\"question\":\"$1\"}" | python3 -m json.tool; }
 $ ask "Why is my pod stuck in Pending?"
 {
-    "answer": "A pod stuck in Pending state could be due to a missing CNI (Container Networking Interface) plugin. This is mentioned in the context where it states that a missing plugin causes no new pod to start and keeps an address, keeping the pod in a Pending state.",
+    "answer": "A pod is stuck in the Pending state if there is a missing file or configuration that is required for its initialization. This can happen if the configuration file for the pod is not present or if the file is corrupted. In the context provided, it is mentioned that a missing plugin can cause a pod to be stuck in the Pending state.",
     "sources": [
         {
             "n": 1,
-            "score": 0.688,
+            "score": 0.694,
             "file": "21-k3s-lifecycle.md",
             "heading": "Concept: how a pod gets its network, and how one missing file stops it"
         },
         {
             "n": 2,
-            "score": 0.688,
-            "file": "23-prometheus-and-alerting.md",
-            "heading": "4. Break it, get paged"
-        },
-        {
-            "n": 3,
-            "score": 0.678,
+            "score": 0.691,
             "file": "20-nodes-and-cleanup.md",
             "heading": "Concept: PodDisruptionBudgets"
+        },
 ...
-    "input_tokens": 1198,
-    "output_tokens": 54,
-    "retrieve_seconds": 0.03,
-    "total_seconds": 0.8
+    "chat_model": "qwen2.5:3b",
+    "input_tokens": 837,
+    "output_tokens": 68,
+    "retrieve_seconds": 0.06,
+    "total_seconds": 3.4
 }
 
 $ ask "Which Kyverno chart version does module 26 install?"
 {
-    "answer": "Module 26 installs the Kyverno chart version 3.8.2. This information is provided in the command executed to install Kyverno: `helm install kyverno kyverno/kyverno --version 3.8.2 -n kyverno --create-namespace -f platform-engineering/manifests/26-kyverno-values.yaml --wait`.",
+    "answer": "Module 26 installs the Kyverno chart version 3.8.2. This is indicated in the command `helm install kyverno kyverno/kyverno --version 3.8.2`.",
     "sources": [
         {
             "n": 1,
-            "score": 0.734,
+            "score": 0.731,
             "file": "26-kyverno-policy-as-code.md",
             "heading": "Module 26: Kyverno, policy as code"
         },
@@ -420,16 +421,12 @@ $ ask "Which Kyverno chart version does module 26 install?"
             "file": "26-kyverno-policy-as-code.md",
             "heading": "1. Install Kyverno"
         },
-        {
-            "n": 3,
-            "score": 0.716,
-            "file": "26-kyverno-policy-as-code.md",
-            "heading": "1. Install Kyverno"
 ...
-    "input_tokens": 1420,
-    "output_tokens": 83,
+    "chat_model": "qwen2.5:3b",
+    "input_tokens": 1857,
+    "output_tokens": 47,
     "retrieve_seconds": 0.03,
-    "total_seconds": 1.6
+    "total_seconds": 2.2
 }
 
 $ ask "What is the capital of Denmark?"
@@ -438,26 +435,22 @@ $ ask "What is the capital of Denmark?"
     "sources": [
         {
             "n": 1,
-            "score": 0.534,
-            "file": "glossary.md",
-            "heading": "CKS exam track"
+            "score": 0.535,
+            "file": "17-llm-in-the-mesh.md",
+            "heading": "On Linux (Ubuntu 24.04)"
         },
         {
             "n": 2,
-            "score": 0.525,
-            "file": "glossary.md",
-            "heading": "CKS exam track"
+            "score": 0.532,
+            "file": "45-life-of-an-outbound-request.md",
+            "heading": "2. DNS: how the pod finds example.com"
         },
-        {
-            "n": 3,
-            "score": 0.519,
-            "file": "17-llm-in-the-mesh.md",
-            "heading": "On Linux (Ubuntu 24.04)"
 ...
-    "input_tokens": 1355,
+    "chat_model": "qwen2.5:3b",
+    "input_tokens": 1071,
     "output_tokens": 6,
     "retrieve_seconds": 0.03,
-    "total_seconds": 0.3
+    "total_seconds": 0.8
 }
 ```
 
@@ -465,11 +458,11 @@ $ ask "What is the capital of Denmark?"
 
 | Question | Answer | Notes |
 |---|---|---|
-| Pod stuck in Pending | "a PodDisruptionBudget (PDB) can cause a pod to be stuck in the Pending state" | wrong, and confident. A PDB never keeps a pod Pending. The model had only the four related passages from step 5 |
+| Pod stuck in Pending | "a missing plugin can cause a pod to be stuck in the Pending state" | wrong for this question, and confident. A missing CNI plugin is a rare node failure, while the usual cause, a scheduler that finds no node, never reached the model, which had only the four related passages from step 5 |
 | Kyverno chart version | "3.8.2" | right, from module 26 |
-| Capital of Denmark | "I don't know." | right. The best match scored 0.534 to 0.545, against about 0.70 to 0.78 for course questions |
+| Capital of Denmark | "I don't know." | right. The best match scored 0.535, against about 0.68 to 0.73 for course questions |
 
-Answers took 0.3 to 2.8 seconds, nearly all of it the chat model, while retrieval took 0.03 to 0.05 seconds. The first question used 1,024 to 1,198 input tokens, mostly the four chunks. In the run above, the Pending answer blamed a missing CNI plugin instead of a PDB, from the first of the same four passages, just as wrong and just as confident.
+Answers took 0.8 to 3.4 seconds, nearly all of it the chat model, while retrieval took 0.03 to 0.06 seconds. The first question used 837 input tokens, mostly the four chunks. In earlier runs, with less course text in the index, the same question drew a PodDisruptionBudget into the answer instead, just as wrong and just as confident.
 
 Look at the first answer's sources. Retrieval found *related* text, about pods and things that go wrong, and the model built a plausible answer from it while following its rules, using only the context and citing it, so the context was simply the wrong context. That's the most common way RAG fails, and no better prompt fixes it.
 
@@ -487,43 +480,40 @@ deployment "rag" successfully rolled out
 $ kill %1 2>/dev/null; kubectl -n course-rag port-forward svc/rag 8090:8000 >/dev/null 2>&1 &
 $ ask "Why is my pod stuck in Pending?"
 {
-    "answer": "A pod stuck in the \"Pending\" state can occur due to several reasons, including issues with the node's resource availability, node taints, or node's nodeSelector requirements not being met. Additionally, the pod might be waiting for a required dependency, such as a service or a network configuration, to be available. In the context provided, a missing CNI plugin file can also cause a pod to remain in the \"Pending\" state. When the CNI plugin file is missing, the CNI chain stops, preventing the pod from getting its network, and thus the pod remains in the \"Pending\" state. To resolve this, the missing CNI plugin file needs to be restored or replaced.",
+    "answer": "A pod is stuck in the Pending status if the node on which it is scheduled cannot be assigned a pod IP address. This can happen due to several reasons such as the node not being ready, missing CNI (Container Networking Interface) plugins, or the node not having enough available IP addresses. In the context provided, it is mentioned that in k3d, a k3s restart restarts the whole node container, so every pod on that node needs a new sandbox at once. This can cause pods to remain in the Pending state until the node is ready again.",
     "sources": [
         {
             "n": 1,
-            "score": 0.688,
+            "score": 0.694,
             "file": "21-k3s-lifecycle.md",
             "heading": "Concept: how a pod gets its network, and how one missing file stops it"
         },
-        {
-            "n": 2,
-            "score": 0.688,
-            "file": "23-prometheus-and-alerting.md",
-            "heading": "4. Break it, get paged"
-        },
-        {
-            "n": 3,
-            "score": 0.678,
-            "file": "20-nodes-and-cleanup.md",
-            "heading": "Concept: PodDisruptionBudgets"
 ...
-    "input_tokens": 2816,
-    "output_tokens": 143,
-    "retrieve_seconds": 0.07,
-    "total_seconds": 4.2
+        {
+            "n": 8,
+            "score": 0.672,
+            "file": "15-outlier-detection-and-retries.md",
+            "heading": "Investigate"
+        }
+    ],
+    "chat_model": "qwen2.5:3b",
+    "input_tokens": 2136,
+    "output_tokens": 116,
+    "retrieve_seconds": 0.06,
+    "total_seconds": 3.2
 }
 ```
 
-**What you should see.** The sources now include `4. Make the scheduler say no`, in 8th place in the test run and 6th in the run above, and the answer changes with it, because it now names the scheduler, which finds no node with enough resources or with matching labels. Some of the earlier noise stays in, because the PDB passage is still among the eight. The input grows from 1,024 to 2,332 tokens for the same question in the test run, and from 1,198 to 2,816 in the run above.
+**What you should see.** The eight sources are the first eight from step 5, so `4. Make the scheduler say no`, in 19th place, is still missing. The answer grows longer and lists more causes, yet every one of them is about networks and nodes, because that is all the model received. The input grows from 837 to 2,136 tokens for the same question, more than double, and buys nothing here. In an earlier run with less course text, the scheduler section ranked 8th, so the same setting fixed the answer, which shows how much a fixed `TOP_K` depends on the documents around it.
 
-More results means fewer misses and a higher bill per question, because with a hosted model input tokens cost money and with a local one they cost time. Put it back with `kubectl -n course-rag set env deploy/rag TOP_K-`.
+More results means fewer misses only when the right section ranks just below the cut, and it always means a higher bill per question, because with a hosted model input tokens cost money and with a local one they cost time. Put it back with `kubectl -n course-rag set env deploy/rag TOP_K-`.
 
 ## Investigate
 
 1. You edit module 22 and push. A colleague asks the RAG service about the change, and it answers with the old text. Why, and how would you fix it for good?
-2. The off-topic question scored 0.545 and course questions 0.70 to 0.78. How would you use that, and what's the risk?
+2. The off-topic question scored 0.535 and course questions 0.68 to 0.73. How would you use that, and what's the risk?
 3. Your company wants to swap `nomic-embed-text` for a better embedding model. What must happen to the data in Qdrant, and why?
-4. Step 7 fixed one question by raising `TOP_K`. How would you know, across 200 questions, whether a change to chunking or `TOP_K` made things better or worse?
+4. Step 7 raised `TOP_K` for one question and paid more tokens without a better answer, while an earlier run with less text saw the same change fix it. How would you know, across 200 questions, whether a change to chunking or `TOP_K` made things better or worse?
 
 <details>
 <summary>Answers</summary>
