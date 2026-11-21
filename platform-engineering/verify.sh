@@ -1419,6 +1419,54 @@ module_0_2() {
   expect "clean up: no localhost:5555 images" "$(docker image ls -q --filter 'reference=localhost:5555/*' | wc -l | tr -d ' ')" '^0$'
 }
 
+module_0_3() {
+  section "0.3: Docker Compose"
+  docker_reset
+  mkdir -p "$DW" && cp -R "$DT/lab/app" "$DT/lab/compose" "$DW/"
+  local f="$DW/compose/compose.yaml" out names h
+  dc() { docker compose -f "$f" "$@"; }
+  expect "1. without the profile, three services" "$(dc config --services | sort | tr '\n' ' ')" '^api proxy redis $'
+  expect "1. .env fills the image tag" "$(dc config | grep 'image: course')" 'course/hits:2\.0\.0'
+  out="$(dc up -d --build 2>&1 | grep -E 'Started|Healthy' | uniq | awk '{print $2 "-" $3}' | tr '\n' ' ')"
+  expect "2. order: redis healthy, then api healthy, then proxy" "$out" 'course-compose-redis-1-Started course-compose-redis-1-Healthy course-compose-api-1-Started course-compose-api-1-Healthy course-compose-proxy-1-Started'
+  dcurl -o /dev/null "http://$PUB:8884/"
+  out="$(dcurl "http://$PUB:8884/")"
+  expect "2. the proxy forwards to the api, which counts in redis" "$out" 'visit [0-9]+, version 2\.0\.0$'
+  expect "3. one bridge network for the project" "$(docker network ls --filter name=course-compose --format '{{.Name}} {{.Driver}}')" '^course-compose_default bridge$'
+  expect "3. inside the project, api resolves through 127.0.0.11" "$(dc exec -T proxy nslookup api 127.0.0.11 2>/dev/null | grep -c '^Address: [0-9]')" '^1$'
+  expect "3. resolv.conf points at 127.0.0.11" "$(dc exec -T proxy cat /etc/resolv.conf | grep nameserver)" '^nameserver 127\.0\.0\.11$'
+  expect "3. on the default network, api has no name" "$(docker run --rm alpine:3.22.2 sh -c 'nslookup api >/dev/null 2>&1 && echo found || echo none')" '^none$'
+  dc stop redis >/dev/null 2>&1
+  h=""; for _ in $(seq 1 30); do h="$(docker inspect -f '{{.State.Health.Status}}' course-compose-api-1)"; [[ "$h" == unhealthy ]] && break; settle 1; done
+  expect "4. without redis the api turns unhealthy" "$h" '^unhealthy$'
+  expect "4. the api answers 503 with a DNS error for redis" "$(curl -s -m 5 -w ' %{http_code}' "http://$PUB:8884/" | tr -d '\n')" 'no such host 503$'
+  dc start redis >/dev/null 2>&1
+  h=""; for _ in $(seq 1 30); do h="$(docker inspect -f '{{.State.Health.Status}}' course-compose-api-1)"; [[ "$h" == healthy ]] && break; settle 1; done
+  expect "4. with redis back, the api is healthy again" "$h" '^healthy$'
+  expect "4. and the counter kept its value" "$(dcurl "http://$PUB:8884/")" 'visit ([3-9]|[1-9][0-9]+),'
+  expect "5. the shell variable wins over .env" "$(APP_VERSION=2.1.0 dc config | grep 'image: course')" 'course/hits:2\.1\.0'
+  out="$(APP_VERSION=2.1.0 dc up -d --build api 2>&1 | grep -E 'Recreated' | uniq)"
+  expect "5. only the api container gets recreated" "$out" 'course-compose-api-1 Recreated'
+  expect "5. the new version answers" "$(dcurl "http://$PUB:8884/")" 'version 2\.1\.0$'
+  APP_VERSION=2.1.0 dc up -d --scale api=3 --wait >/dev/null 2>&1
+  expect "6. three api containers" "$(docker ps -q --filter label=com.docker.compose.project=course-compose --filter label=com.docker.compose.service=api | wc -l | tr -d ' ')" '^3$'
+  expect "6. Docker's DNS answers api with three addresses" "$(dc exec -T proxy nslookup api 127.0.0.11 2>/dev/null | grep -c '^Address: [0-9]')" '^3$'
+  settle 6
+  names="$(for _ in $(seq 1 12); do dcurl "http://$PUB:8884/"; done | awk '{print $3}' | sort -u | wc -l | tr -d ' ')"
+  expect "6. nginx spreads requests over all three" "$names" '^3$'
+  dc --profile debug up -d debug >/dev/null 2>&1
+  expect "7. the debug profile starts a container on the project network" "$(dc exec -T debug wget -qO- http://api:8000/healthz)" '^ok$'
+  dc --profile debug down >/dev/null 2>&1
+  expect "8. down keeps the named volume" "$(docker volume ls -q --filter name=course-compose_data)" '^course-compose_data$'
+  APP_VERSION=2.1.0 dc up -d --wait >/dev/null 2>&1
+  expect "8. after up, the counter continues" "$(dcurl "http://$PUB:8884/")" 'visit ([5-9]|[1-9][0-9]+),'
+  dc down -v >/dev/null 2>&1
+  expect "8. down -v removes the volume" "$(docker volume ls -q --filter name=course-compose_data | wc -l | tr -d ' ')" '^0$'
+  unset -f dc
+  docker_reset
+  expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
+}
+
 # Module 2.9 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 2.9
 module_2_9() {
   section "2.9: k3s certificates, backups and upgrades (the upgrade is one-way)"
