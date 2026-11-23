@@ -1,4 +1,4 @@
-# Module 6.4: an S3-compatible object store inside the cluster, for Velero's backups.
+# Module 6.5: an S3-compatible object store inside the cluster, for Velero's backups.
 # MinIO no longer publishes its server images, so the lab runs SeaweedFS, whose S3 gateway
 # speaks the same API. It lives in its own namespace, so deleting the app's namespace in the
 # disaster drill leaves the backups alone. Its data sits in an emptyDir: fine for a lab, never

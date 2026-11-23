@@ -1,0 +1,21 @@
+# A small CPU-bound worker makes HPA scaling visible without overwhelming the lab.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-demo
+  namespace: course-sre
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: cpu-demo}
+  template:
+    metadata:
+      labels: {app: cpu-demo}
+    spec:
+      containers:
+        - name: spin
+          image: busybox:1.37.0
+          command: ["sh", "-c", "while true; do :; done"]
+          resources:
+            requests: {cpu: 50m, memory: 8Mi}
+            limits: {cpu: 250m, memory: 32Mi}

@@ -1,0 +1,44 @@
+# OpenCost enables its custom-cost calculations through this chart flag; no plugin image is needed.
+plugins:
+  enabled: true
+  install:
+    enabled: false
+
+opencost:
+  customPricing:
+    enabled: true
+    provider: custom
+    costModel:
+      description: Lab estimate in USD per core-hour and GiB-hour
+      CPU: 0.031611
+      RAM: 0.004237
+      spotCPU: 0.006655
+      spotRAM: 0.000892
+      GPU: 0.95
+      storage: 0.00005479452
+      zoneNetworkEgress: 0.01
+      regionNetworkEgress: 0.01
+      internetNetworkEgress: 0.12
+  prometheus:
+    internal:
+      enabled: true
+      serviceName: kube-prometheus-stack-prometheus
+      namespaceName: observability
+      port: 9090
+      scheme: http
+  exporter:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  ui:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi

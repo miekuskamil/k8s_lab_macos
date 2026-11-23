@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1600" viewBox="0 0 1600 1600" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="1600" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Wake workers <tspan fill="#7c3aed">from a queue</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">KEDA watches Redis even when no worker pod runs, then scales the Deployment with the waiting work.</text>
+<rect x="40.0" y="145.0" width="1520.0" height="710.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<ellipse cx="67.0" cy="169.0" rx="9.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.20"/>
+<ellipse cx="67.0" cy="169.0" rx="4.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.00"/>
+<polyline points="58.0,169.0 76.0,169.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="175.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">OrbStack cluster</text>
+<rect x="100.0" y="220.0" width="1450.0" height="590.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<rect x="118.0" y="235.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="121.5" cy="237.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="127.0,237.5 132.5,237.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="118.0" y="241.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="121.5" cy="244.0" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="127.0,244.0 132.5,244.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="118.0" y="248.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="121.5" cy="250.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="127.0,250.5 132.5,250.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="146.0" y="250.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">node k3d-k8s-lab-server-0</text>
+<rect x="140.0" y="300.0" width="800.0" height="450.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="158.0" y="330.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace course-sre</text>
+<rect x="175.0" y="390.0" width="200.0" height="105.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="202.0,405.0 210.5,409.5 210.5,419.0 202.0,423.5 193.5,419.0 193.5,409.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="193.5,409.5 202.0,414.0 210.5,409.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="202.0,414.0 202.0,423.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="221.0" y="420.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">producer pod</text>
+<rect x="195.0" y="435.0" width="160.0" height="45.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="275.0" y="461.1" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">loadgen</text>
+<rect x="470.0" y="370.0" width="220.0" height="145.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="497.0,385.0 505.5,389.5 505.5,399.0 497.0,403.5 488.5,399.0 488.5,389.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="488.5,389.5 497.0,394.0 505.5,389.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="497.0,394.0 497.0,403.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="516.0" y="400.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">queue pod</text>
+<rect x="490.0" y="425.0" width="180.0" height="60.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="580.0" y="447.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">Redis</text>
+<text x="580.0" y="469.7" font-size="17.0" fill="#475569" text-anchor="middle">list: orders</text>
+<rect x="470.0" y="565.0" width="220.0" height="125.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="488.0" y="595.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">worker pods</text>
+<rect x="490.0" y="610.0" width="180.0" height="58.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="580.0" y="631.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">worker</text>
+<text x="580.0" y="653.7" font-size="17.0" fill="#475569" text-anchor="middle">0 to 5 replicas</text>
+<rect x="740.0" y="335.0" width="165.0" height="70.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="822.5" y="362.2" font-size="17.0" fill="#0f172a" font-weight="700" text-anchor="middle">ScaledObject</text>
+<text x="822.5" y="381.9" font-size="17.0" fill="#475569" text-anchor="middle">list length: 10</text>
+<rect x="1080.0" y="300.0" width="390.0" height="390.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="1098.0" y="330.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace keda</text>
+<rect x="1110.0" y="385.0" width="330.0" height="100.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="1275.0" y="427.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">KEDA operator</text>
+<text x="1275.0" y="449.7" font-size="17.0" fill="#475569" text-anchor="middle">polls Redis every 5 s</text>
+<rect x="1110.0" y="535.0" width="330.0" height="80.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="1275.0" y="567.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">generated HPA</text>
+<text x="1275.0" y="589.7" font-size="17.0" fill="#475569" text-anchor="middle">scales the Deployment</text>
+<polyline points="375.0,442.5 460.5,442.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="470.0,442.5 458.5,448.3 458.5,436.7" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="425.0" cy="445.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="425.0" cy="445.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="425.0" y="451.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<text x="425.0" y="419.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">push orders</text>
+<polyline points="1110.0,440.0 900.0,440.0 900.0,478.8 699.5,478.8" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="690.0,478.8 701.5,473.0 701.5,484.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="890.0" cy="440.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="890.0" cy="440.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="890.0" y="446.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<text x="890.0" y="414.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">length</text>
+<polyline points="1110.0,465.0 1007.5,465.0 1007.5,370.0 914.5,370.0" fill="none" stroke="#7c3aed" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<polygon points="905.0,370.0 916.5,364.2 916.5,375.8" fill="#7c3aed" stroke="#7c3aed" stroke-width="1" stroke-linejoin="round"/>
+<text x="1060.0" y="512.0" font-size="18.0" fill="#5b21b6" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">watches</text>
+<polyline points="1275.0,485.0 1275.0,525.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1275.0,535.0 1269.2,523.5 1280.8,523.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1275.0" cy="510.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1275.0" cy="510.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1275.0" y="516.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<text x="1301.0" y="516.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">desired replicas</text>
+<polyline points="1110.0,599.0 900.0,599.0 900.0,633.8 699.5,633.8" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="690.0,633.8 701.5,628.0 701.5,639.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="850.0" cy="634.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="850.0" cy="634.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="850.0" y="640.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<text x="850.0" y="672.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">start or stop pods</text>
+<polyline points="580.0,565.0 580.0,524.5" fill="none" stroke="#0891b2" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="580.0,515.0 585.8,526.5 574.2,526.5" fill="#0891b2" stroke="#0891b2" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="580.0" cy="540.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="580.0" cy="540.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="580.0" y="546.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<text x="606.0" y="546.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">pop order</text>
+</svg>

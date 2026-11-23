@@ -1,4 +1,4 @@
-# Module 6.3: Chaos engineering with Chaos Mesh
+# Module 6.4: Chaos engineering with Chaos Mesh
 
 > New to a term here, like steady state or blast radius? The [glossary](../glossary.md#reliability-engineering) explains every term in this course.
 
@@ -27,7 +27,7 @@ A fault you inject teaches you something only when you know what you expected. S
 
 ## Concept: how a fault lands in a pod
 
-![How a fault lands in a pod: you apply a NetworkChaos, the controller-manager tells the chaos-daemon on the node, the daemon enters the payments pod's network namespace and adds a delay with tc, checkout's orders get slower, and Prometheus turns that into a latency page](../../docs/diagrams/chapters/6.3-how-a-fault-lands.svg)
+![How a fault lands in a pod: you apply a NetworkChaos, the controller-manager tells the chaos-daemon on the node, the daemon enters the payments pod's network namespace and adds a delay with tc, checkout's orders get slower, and Prometheus turns that into a latency page](../../docs/diagrams/chapters/6.4-how-a-fault-lands.svg)
 
 Chaos Mesh changes nothing in your Deployments. A fault is a custom resource, and two components carry it into the pod, as the numbers show:
 
@@ -63,12 +63,12 @@ OUT-63
 
 Each task gives you a goal without the commands. `./lab.sh task setup` prepares it, you solve it in `./lab.sh shell`, and `./lab.sh task check` tells you what still fails. The solution sits under each task, and `./lab.sh task solve` runs it for you.
 
-### Task 6.3.1: slow down only checkout's calls to payments
+### Task 6.4.1: slow down only checkout's calls to payments
 
 <!-- norun -->
 ```console
-$ ./lab.sh task setup 6.3.1
-TASK-SETUP-6.3.1
+$ ./lab.sh task setup 6.4.1
+TASK-SETUP-6.4.1
 ```
 
 > Create a NetworkChaos named `checkout-to-payments-delay` in `course-sre` that adds 200 ms to the packets checkout sends to payments, and to nothing else: the client must still reach payments directly as fast as before.
@@ -76,22 +76,22 @@ TASK-SETUP-6.3.1
 <details>
 <summary>Solution</summary>
 
-TASK-SOLUTION-6.3.1
+TASK-SOLUTION-6.4.1
 
 </details>
 
 <!-- norun -->
 ```console
-$ ./lab.sh task check 6.3.1
-TASK-CHECK-6.3.1
+$ ./lab.sh task check 6.4.1
+TASK-CHECK-6.4.1
 ```
 
-### Task 6.3.2: find the experiment nobody stopped
+### Task 6.4.2: find the experiment nobody stopped
 
 <!-- norun -->
 ```console
-$ ./lab.sh task setup 6.3.2
-TASK-SETUP-6.3.2
+$ ./lab.sh task setup 6.4.2
+TASK-SETUP-6.4.2
 ```
 
 > Orders started to fail, and nobody changed checkout or payments. Find the cause and make 20 orders in a row succeed again, without changing either Deployment.
@@ -99,14 +99,14 @@ TASK-SETUP-6.3.2
 <details>
 <summary>Solution</summary>
 
-TASK-SOLUTION-6.3.2
+TASK-SOLUTION-6.4.2
 
 </details>
 
 <!-- norun -->
 ```console
-$ ./lab.sh task check 6.3.2
-TASK-CHECK-6.3.2
+$ ./lab.sh task check 6.4.2
+TASK-CHECK-6.4.2
 ```
 
 ## Investigate
@@ -122,7 +122,7 @@ TASK-CHECK-6.3.2
 1. From the gap between a pod's death and the moment checkout stops picking it. The Service's endpoints drop a killed pod within a second or two, but calls already on their way, and connections opened just before, hit a pod that is gone and fail with a refused connection, which checkout turns into a 502. A retry in checkout for idempotent calls, or a `preStop` delay so pods leave the endpoints before they stop, would remove most of them.
 2. Without a timeout, every order would hang until the client's own timeout, here 3 seconds in `loadgen`, and checkout would hold a thread per waiting order, so a slow dependency would exhaust checkout itself. With 30 seconds the same happens, only slower to notice. A good timeout is a little above the dependency's normal p99, so it cuts hangs without cutting slow but healthy calls.
 3. The SLO as an automatic stop condition (abort when the burn rate passes a threshold), a blast radius the budget affords, an owner on call who knows it runs, and evidence from staging that the service survives it. The experiment also needs a budget: if the night run spends 2% of the error budget each time, it uses 60% a month.
-4. Put the fault on checkout's side and limit it with a `target` and `direction: to`, so only packets from checkout to payments' pods get the delay. Task 6.3.1 does exactly that, and its check proves that the client still reaches payments fast.
+4. Put the fault on checkout's side and limit it with a `target` and `direction: to`, so only packets from checkout to payments' pods get the delay. Task 6.4.1 does exactly that, and its check proves that the client still reaches payments fast.
 
 </details>
 

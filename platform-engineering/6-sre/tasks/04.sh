@@ -1,88 +1,94 @@
-# Module 6.4, backup and disaster recovery. Functions for task.sh: setup_6_4_N, check_6_4_N, solve_6_4_N.
+# Module 6.4, chaos engineering. Functions for task.sh: setup_6_4_N, check_6_4_N, solve_6_4_N.
 
-velero6() { "${K[@]}" -n velero exec "$("${K[@]}" -n velero get pod -l name=velero -o name 2>/dev/null)" -c velero -- /velero "$@" 2>/dev/null; }
-sql6() { "${K[@]}" -n "$1" exec orders-db-1 -c postgres -- psql -U postgres -d orders -tAc "$2" 2>/dev/null; }
-
-# The module's stack: SeaweedFS with the bucket, CloudNativePG, Velero and the orders database.
-backup_stack() {
-  echo "Installing the object store, CloudNativePG and Velero, if missing (about 3 minutes)"
-  "${K[@]}" apply -f "$M/6.4-object-store.yaml" >/dev/null
-  "${K[@]}" -n course-backup rollout status deploy/seaweedfs --timeout=300s >/dev/null 2>&1
-  "${K[@]}" -n course-backup exec deploy/seaweedfs -- sh -c 'echo "s3.bucket.create -name velero" | weed shell' >/dev/null 2>&1
-  "${H[@]}" status cnpg -n cnpg-system >/dev/null 2>&1 || "${H[@]}" upgrade --install cnpg cloudnative-pg --repo https://cloudnative-pg.github.io/charts \
-    --version 0.29.1 -n cnpg-system --create-namespace -f "$M/6.4-cnpg-values.yaml" --wait --timeout 5m >/dev/null
-  "${H[@]}" status velero -n velero >/dev/null 2>&1 || "${H[@]}" upgrade --install velero velero --repo https://vmware-tanzu.github.io/helm-charts \
-    --version 12.2.2 -n velero --create-namespace -f "$M/6.4-velero-values.yaml" --wait --timeout 6m >/dev/null
-  bsl() { [ "$("${K[@]}" -n velero get backupstoragelocation default -o jsonpath='{.status.phase}' 2>/dev/null)" = Available ]; }
-  poll 120 bsl
-  "${K[@]}" apply -f "$M/6.4-orders-db.yaml" >/dev/null
-  "${K[@]}" -n course-dr wait --for=condition=Ready cluster/orders-db --timeout=300s >/dev/null 2>&1
-  sql6 course-dr "CREATE TABLE IF NOT EXISTS orders (id serial PRIMARY KEY, item text, placed timestamptz DEFAULT now());" >/dev/null
+# Chaos Mesh 2.8.7 with the module's values, unless it runs already.
+chaos_mesh() {
+  "${H[@]}" -n chaos-mesh status chaos-mesh >/dev/null 2>&1 && return 0
+  echo "Installing Chaos Mesh 2.8.7 (about a minute)"
+  "${H[@]}" upgrade --install chaos-mesh chaos-mesh --repo https://charts.chaos-mesh.org --version 2.8.7 \
+    -n chaos-mesh --create-namespace -f "$M/6.4-chaos-mesh-values.yaml" --wait --timeout 5m >/dev/null
+}
+# order_ms <from-app> <url>: milliseconds one request takes, from a pod of the app
+order_ms() {
+  "${K[@]}" -n course-sre exec "deploy/$1" -- curl -s -o /dev/null -m 5 -w '%{time_total}' "$2" 2>/dev/null | awk '{printf "%d", $1 * 1000}'
+}
+no_chaos() {
+  local kind
+  for kind in networkchaos podchaos stresschaos httpchaos schedules; do
+    "${K[@]}" delete "$kind.chaos-mesh.org" -A --all --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1
+  done
 }
 
-# ---- Task 1: a nightly backup schedule ----------------------------------------------------
+# ---- Task 1: slow down only checkout's calls to payments ----------------------------------
 setup_6_4_1() {
-  backup_stack
-  "${K[@]}" -n velero delete schedules.velero.io orders-nightly --ignore-not-found >/dev/null
-  echo "Velero runs and the orders database lives in course-dr. No schedule named orders-nightly exists."
+  checkout_app
+  chaos_mesh
+  no_chaos
+  echo "Chaos Mesh runs, and no experiment is active. checkout and payments answer in a few ms."
 }
 check_6_4_1() {
-  local s
-  s="$("${K[@]}" -n velero get schedules.velero.io orders-nightly -o json 2>/dev/null | python3 -c 'import json,sys
-s = json.load(sys.stdin)["spec"]; t = s["template"]
-print(s["schedule"], ",".join(t.get("includedNamespaces", [])), t.get("ttl", ""), t.get("defaultVolumesToFsBackup", False), sep="|")' 2>/dev/null)"
-  check "Schedule velero/orders-nightly exists" test -n "$s"
-  check "it runs every day at 02:00" matches "$s" '^0 2 \* \* \*\|'
-  check "it backs up only course-dr" matches "$s" '\|course-dr\|'
-  check "it keeps each backup for 7 days" matches "$s" '\|168h0m0s\|'
-  check "it copies volumes with the file system backup" matches "$s" '\|True$'
-  check "Velero accepted it (phase Enabled)" matches "$("${K[@]}" -n velero get schedules.velero.io orders-nightly -o jsonpath='{.status.phase}' 2>/dev/null)" '^Enabled$'
+  local j t direct
+  j="$("${K[@]}" -n course-sre get networkchaos checkout-to-payments-delay -o json 2>/dev/null)"
+  check "NetworkChaos course-sre/checkout-to-payments-delay exists" test -n "$j"
+  check "it adds a 200 ms delay" matches "$(echo "$j" | python3 -c 'import json,sys; s=json.load(sys.stdin)["spec"]; print(s["action"], s.get("delay",{}).get("latency",""))' 2>/dev/null)" '^delay 200ms$'
+  injected() { [ "$("${K[@]}" -n course-sre get networkchaos checkout-to-payments-delay -o jsonpath='{.status.conditions[?(@.type=="AllInjected")].status}' 2>/dev/null)" = True ]; }
+  poll 60 injected
+  check "Chaos Mesh injected it" injected
+  t="$(order_ms loadgen http://checkout:8080/api/checkout)"
+  check "an order through checkout takes 200 ms or more (${t:-?} ms)" at_least "$t" 200
+  direct="$(order_ms loadgen http://payments:9898/api/info)"
+  check "the client still reaches payments directly in under 100 ms (${direct:-?} ms)" below "$direct" 100
 }
 solve_6_4_1() {
   shown <<'EOF'
-kubectl -n velero exec "$(kubectl -n velero get pod -l name=velero -o name)" -c velero -- /velero schedule create orders-nightly --schedule="0 2 * * *" --include-namespaces course-dr --ttl 168h --default-volumes-to-fs-backup
-kubectl -n velero get schedules.velero.io orders-nightly
+cat platform-engineering/6-sre/tasks/6.4.1-checkout-to-payments-delay.yaml
+kubectl apply -f platform-engineering/6-sre/tasks/6.4.1-checkout-to-payments-delay.yaml
+kubectl -n course-sre wait networkchaos/checkout-to-payments-delay --for=condition=AllInjected --timeout=60s
 EOF
 }
 
-# ---- Task 2: a restore drill, and the data you lose ---------------------------------------
+# ---- Task 2: find the experiment that nobody stopped --------------------------------------
 setup_6_4_2() {
-  local n
-  backup_stack
-  "${K[@]}" delete namespace course-dr-drill --ignore-not-found --wait=true --timeout=180s >/dev/null 2>&1
-  "${K[@]}" -n velero delete restores.velero.io --all --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1
-  velero6 backup delete task-6-4-2 --confirm >/dev/null
-  gone() { ! "${K[@]}" -n velero get backups.velero.io task-6-4-2 >/dev/null 2>&1; }
-  poll 60 gone
-  sql6 course-dr "INSERT INTO orders (item) SELECT 'task-' || g FROM generate_series(1, 100) g;" >/dev/null
-  n="$(sql6 course-dr 'SELECT count(*) FROM orders')"
-  velero6 backup create task-6-4-2 --include-namespaces course-dr --default-volumes-to-fs-backup --wait >/dev/null
-  sql6 course-dr "INSERT INTO orders (item) SELECT 'after-' || g FROM generate_series(1, 7) g;" >/dev/null
-  "${K[@]}" -n course-dr create configmap task-6-4-2 --dry-run=client -o yaml \
-    --from-literal=in-backup="$n" --from-literal=now="$(sql6 course-dr 'SELECT count(*) FROM orders')" | "${K[@]}" apply -f - >/dev/null
-  echo "The backup task-6-4-2 holds $n orders. 7 more arrived after it."
-  echo "Prove the backup works: restore it into course-dr-drill without touching course-dr (task 6.4.2)."
+  checkout_app
+  chaos_mesh
+  no_chaos
+  # An experiment with a harmless name, left behind in another namespace, that drops
+  # 70% of the packets payments sends.
+  "${K[@]}" apply -f - >/dev/null <<'EOF'
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: maintenance-window
+  namespace: chaos-mesh
+spec:
+  action: loss
+  mode: all
+  selector:
+    namespaces: [course-sre]
+    labelSelectors: {app: payments}
+  loss:
+    loss: "70"
+  duration: 2h
+EOF
+  # Remember the Deployments' generations, so the check sees whether they changed.
+  "${K[@]}" -n course-sre create configmap task-6-4-2 --dry-run=client -o yaml \
+    --from-literal=generations="$("${K[@]}" -n course-sre get deploy checkout payments -o jsonpath='{.items[*].metadata.generation}')" \
+    | "${K[@]}" apply -f - >/dev/null
+  echo "Orders started to fail a moment ago, and nobody changed checkout or payments."
+  echo "Find out why and make the orders work again, without changing either Deployment (task 6.4.2)."
 }
 check_6_4_2() {
-  local want now drill orig
-  want="$("${K[@]}" -n course-dr get configmap task-6-4-2 -o jsonpath='{.data.in-backup}' 2>/dev/null)"
-  now="$("${K[@]}" -n course-dr get configmap task-6-4-2 -o jsonpath='{.data.now}' 2>/dev/null)"
-  local restored
-  restored="$("${K[@]}" -n velero get restores.velero.io -o jsonpath='{range .items[*]}{.spec.backupName} {.status.phase}{"\n"}{end}' 2>/dev/null)"
-  check "a restore from task-6-4-2 completed" matches "$restored" 'task-6-4-2 Completed'
-  ready() { [ "$("${K[@]}" -n course-dr-drill get cluster orders-db -o jsonpath='{.status.phase}' 2>/dev/null)" = "Cluster in healthy state" ]; }
-  # The operator needs up to a minute after the restore; without a restore there is nothing to wait for.
-  if matches "$restored" 'task-6-4-2 Completed'; then poll 240 ready; fi
-  check "the drill database in course-dr-drill is healthy" ready
-  drill="$(sql6 course-dr-drill 'SELECT count(*) FROM orders')"
-  check "it holds the $want orders of the backup (got ${drill:-none})" test "$drill" = "$want"
-  orig="$(sql6 course-dr 'SELECT count(*) FROM orders')"
-  check "the original in course-dr still holds all $now orders (got ${orig:-none})" test "$orig" = "$now"
+  local left codes
+  left="$("${K[@]}" get networkchaos,podchaos,stresschaos,httpchaos,schedules.chaos-mesh.org -A --no-headers 2>/dev/null | wc -l | tr -d ' ')"
+  check "no chaos experiment exists in any namespace ($left left)" test "$left" = 0
+  codes="$("${K[@]}" -n course-sre exec deploy/loadgen -- sh -c 'for i in $(seq 1 20); do curl -s -o /dev/null -m 3 -w "%{http_code}\n" http://checkout:8080/api/checkout; done' 2>/dev/null | sort | uniq -c | tr -s ' ' | tr '\n' ' ')"
+  check "20 orders in a row answer 200 (${codes:-none})" matches "$codes" '^ ?20 200 $'
+  check "checkout and payments were not changed" test "$("${K[@]}" -n course-sre get deploy checkout payments -o jsonpath='{.items[*].metadata.generation}')" = \
+    "$("${K[@]}" -n course-sre get configmap task-6-4-2 -o jsonpath='{.data.generations}' 2>/dev/null)"
 }
 solve_6_4_2() {
   shown <<'EOF'
-kubectl -n velero exec "$(kubectl -n velero get pod -l name=velero -o name)" -c velero -- /velero restore create --from-backup task-6-4-2 --namespace-mappings course-dr:course-dr-drill --wait
-kubectl -n course-dr-drill wait --for=condition=Ready cluster/orders-db --timeout=300s
-kubectl -n course-dr-drill exec orders-db-1 -c postgres -- psql -U postgres -d orders -tAc 'SELECT count(*) FROM orders'
+kubectl get networkchaos,podchaos,stresschaos -A
+kubectl -n chaos-mesh describe networkchaos maintenance-window | grep -A3 -E '^  Action|^  Loss'
+kubectl -n chaos-mesh delete networkchaos maintenance-window
 EOF
 }

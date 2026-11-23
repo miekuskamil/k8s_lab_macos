@@ -1,4 +1,4 @@
-# Module 6.4: Backup and disaster recovery
+# Module 6.5: Backup and disaster recovery
 
 > New to a term here, like RPO, restore drill or backup hook? The [glossary](../glossary.md#reliability-engineering) explains every term in this course.
 
@@ -25,7 +25,7 @@ A nightly backup gives an RPO of up to 24 hours, which suits a catalogue but not
 
 ## Concept: what Velero copies, and where
 
-![Two kinds of state, one backup: you start a backup, the Velero server runs a CHECKPOINT hook in the postgres pod, writes every object of the namespace to the bucket as JSON, and the node agent reads the volume's files from the node's disk and uploads them in chunks to SeaweedFS](../../docs/diagrams/chapters/6.4-backup-and-restore.svg)
+![Two kinds of state, one backup: you start a backup, the Velero server runs a CHECKPOINT hook in the postgres pod, writes every object of the namespace to the bucket as JSON, and the node agent reads the volume's files from the node's disk and uploads them in chunks to SeaweedFS](../../docs/diagrams/chapters/6.5-backup-and-restore.svg)
 
 The lab's volumes come from k3s's local-path provisioner, a folder on the node's disk with no snapshot API, so Velero copies files instead of taking snapshots. A backup runs these steps, the numbers in the picture:
 
@@ -60,7 +60,7 @@ For databases the industry moved to two layers. A tool like Velero carries the K
 ### 1. An object store for the backups
 
 ```console
-$ kubectl apply -f platform-engineering/manifests/6.4-object-store.yaml
+$ kubectl apply -f platform-engineering/manifests/6.5-object-store.yaml
 namespace/course-backup created
 secret/s3-config created
 deployment.apps/seaweedfs created
@@ -86,7 +86,7 @@ $ helm repo add cnpg https://cloudnative-pg.github.io/charts
 $ helm repo add vmware-tanzu https://vmware-tanzu.github.io/helm-charts
 "vmware-tanzu" has been added to your repositories
 
-$ helm install cnpg cnpg/cloudnative-pg --version 0.29.1 -n cnpg-system --create-namespace -f platform-engineering/manifests/6.4-cnpg-values.yaml --wait
+$ helm install cnpg cnpg/cloudnative-pg --version 0.29.1 -n cnpg-system --create-namespace -f platform-engineering/manifests/6.5-cnpg-values.yaml --wait
 NAME: cnpg
 LAST DEPLOYED: Sun Nov 22 01:11:55 2026
 NAMESPACE: cnpg-system
@@ -95,7 +95,7 @@ REVISION: 1
 DESCRIPTION: Install complete
 ...
 
-$ helm install velero vmware-tanzu/velero --version 12.2.2 -n velero --create-namespace -f platform-engineering/manifests/6.4-velero-values.yaml --wait
+$ helm install velero vmware-tanzu/velero --version 12.2.2 -n velero --create-namespace -f platform-engineering/manifests/6.5-velero-values.yaml --wait
 NAME: velero
 LAST DEPLOYED: Sun Nov 22 01:12:02 2026
 NAMESPACE: velero
@@ -116,12 +116,12 @@ default   Available   29s              31s   true
 
 Both installs print notes after `...`, a sample cluster and a link to download the Velero client, which the next step does without.
 
-**What you should see.** Two Velero pods: the server, and the node agent, one per node. The backup location turns `Available` once the server has listed the bucket with the credentials from the values file, so if it stays `Unavailable`, check the bucket name, the URL and the keys first. In `6.4-velero-values.yaml`, an init container copies the AWS plugin into the server, because Velero's core only knows how to talk to plugins, and `s3ForcePathStyle` tells it to address the bucket as a path, which SeaweedFS needs.
+**What you should see.** Two Velero pods: the server, and the node agent, one per node. The backup location turns `Available` once the server has listed the bucket with the credentials from the values file, so if it stays `Unavailable`, check the bucket name, the URL and the keys first. In `6.5-velero-values.yaml`, an init container copies the AWS plugin into the server, because Velero's core only knows how to talk to plugins, and `s3ForcePathStyle` tells it to address the bucket as a path, which SeaweedFS needs.
 
 ### 3. A database with orders in it
 
 ```console
-$ kubectl apply -f platform-engineering/manifests/6.4-orders-db.yaml
+$ kubectl apply -f platform-engineering/manifests/6.5-orders-db.yaml
 namespace/course-dr created
 cluster.postgresql.cnpg.io/orders-db created
 
@@ -269,12 +269,12 @@ $ kubectl -n course-dr get events --sort-by=.lastTimestamp | grep -E 'restore-wa
 
 Each task gives you a goal without the commands. `./lab.sh task setup` prepares it, you solve it in `./lab.sh shell`, and `./lab.sh task check` tells you what still fails. The solution sits under each task, and `./lab.sh task solve` runs it for you.
 
-### Task 6.4.1: a nightly backup schedule
+### Task 6.5.1: a nightly backup schedule
 
 <!-- norun -->
 ```console
-$ ./lab.sh task setup 6.4.1
-== setup task 6.4.1
+$ ./lab.sh task setup 6.5.1
+== setup task 6.5.1
 Installing the object store, CloudNativePG and Velero, if missing (about 3 minutes)
 Velero runs and the orders database lives in course-dr. No schedule named orders-nightly exists.
 ```
@@ -299,29 +299,29 @@ orders-nightly   Enabled   0 2 * * *                0s
 
 <!-- norun -->
 ```console
-$ ./lab.sh task check 6.4.1
-== check task 6.4.1
+$ ./lab.sh task check 6.5.1
+== check task 6.5.1
   PASS  Schedule velero/orders-nightly exists
   PASS  it runs every day at 02:00
   PASS  it backs up only course-dr
   PASS  it keeps each backup for 7 days
   PASS  it copies volumes with the file system backup
   PASS  Velero accepted it (phase Enabled)
-== task 6.4.1: 6 passed, 0 failed
+== task 6.5.1: 6 passed, 0 failed
 ```
 
-### Task 6.4.2: a restore drill, and what it misses
+### Task 6.5.2: a restore drill, and what it misses
 
 <!-- norun -->
 ```console
-$ ./lab.sh task setup 6.4.2
-== setup task 6.4.2
+$ ./lab.sh task setup 6.5.2
+== setup task 6.5.2
 Installing the object store, CloudNativePG and Velero, if missing (about 3 minutes)
-The backup task-6-4-2 holds 600 orders. 7 more arrived after it.
-Prove the backup works: restore it into course-dr-drill without touching course-dr (task 6.4.2).
+The backup task-6-5-2 holds 600 orders. 7 more arrived after it.
+Prove the backup works: restore it into course-dr-drill without touching course-dr (task 6.5.2).
 ```
 
-> The backup `task-6-4-2` was taken a moment ago, and 7 more orders arrived after it. Restore it into the namespace `course-dr-drill` while `course-dr` keeps running untouched, and check that the drill database holds exactly the orders of the backup.
+> The backup `task-6-5-2` was taken a moment ago, and 7 more orders arrived after it. Restore it into the namespace `course-dr-drill` while `course-dr` keeps running untouched, and check that the drill database holds exactly the orders of the backup.
 
 <details>
 <summary>Solution</summary>
@@ -330,11 +330,11 @@ Prove the backup works: restore it into course-dr-drill without touching course-
 
 <!-- norun -->
 ```console
-$ kubectl -n velero exec "$(kubectl -n velero get pod -l name=velero -o name)" -c velero -- /velero restore create --from-backup task-6-4-2 --namespace-mappings course-dr:course-dr-drill --wait
-Restore request "task-6-4-2-20261122012229" submitted successfully.
+$ kubectl -n velero exec "$(kubectl -n velero get pod -l name=velero -o name)" -c velero -- /velero restore create --from-backup task-6-5-2 --namespace-mappings course-dr:course-dr-drill --wait
+Restore request "task-6-5-2-20261122012229" submitted successfully.
 Waiting for restore to complete. You may safely press ctrl-c to stop waiting - your restore will continue in the background.
 ...................
-Restore completed with status: Completed. You may check for more information using the commands `velero restore describe task-6-4-2-20261122012229` and `velero restore logs task-6-4-2-20261122012229`.
+Restore completed with status: Completed. You may check for more information using the commands `velero restore describe task-6-5-2-20261122012229` and `velero restore logs task-6-5-2-20261122012229`.
 $ kubectl -n course-dr-drill wait --for=condition=Ready cluster/orders-db --timeout=300s
 cluster.postgresql.cnpg.io/orders-db condition met
 $ kubectl -n course-dr-drill exec orders-db-1 -c postgres -- psql -U postgres -d orders -tAc 'SELECT count(*) FROM orders'
@@ -345,13 +345,13 @@ $ kubectl -n course-dr-drill exec orders-db-1 -c postgres -- psql -U postgres -d
 
 <!-- norun -->
 ```console
-$ ./lab.sh task check 6.4.2
-== check task 6.4.2
-  PASS  a restore from task-6-4-2 completed
+$ ./lab.sh task check 6.5.2
+== check task 6.5.2
+  PASS  a restore from task-6-5-2 completed
   PASS  the drill database in course-dr-drill is healthy
   PASS  it holds the 600 orders of the backup (got 600)
   PASS  the original in course-dr still holds all 607 orders (got 607)
-== task 6.4.2: 4 passed, 0 failed
+== task 6.5.2: 4 passed, 0 failed
 ```
 
 ## Investigate

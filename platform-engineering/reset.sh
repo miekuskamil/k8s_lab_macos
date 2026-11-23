@@ -14,7 +14,7 @@ echo "Removing course rules from the shop namespace"
 "${K[@]}" -n shop delete telemetry waypoint-access-logs --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy backend-allow-course-client --ignore-not-found >/dev/null
 "${K[@]}" -n course-sidecar delete virtualservice,destinationrule,peerauthentication --all --ignore-not-found >/dev/null 2>&1 || true
-# Module 6.4: Velero's restores and backups first, while Velero still runs to clear their
+# Module 6.5: Velero's restores and backups first, while Velero still runs to clear their
 # finalizers, then both releases, the namespaces and the CRDs that Helm leaves behind.
 HK=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}")
 if "${HK[@]}" -n velero status velero >/dev/null 2>&1; then
@@ -31,7 +31,7 @@ if "${HK[@]}" -n cnpg-system status cnpg >/dev/null 2>&1; then
 fi
 "${K[@]}" delete namespace velero cnpg-system course-backup --ignore-not-found >/dev/null
 "${K[@]}" get crd -o name 2>/dev/null | grep -E '\.velero\.io$|\.postgresql\.cnpg\.io$' | xargs -r "${K[@]}" delete --ignore-not-found >/dev/null 2>&1 || true
-# Module 6.3: experiments first, while the controller still runs to undo their faults and clear
+# Module 6.4: experiments first, while the controller still runs to undo their faults and clear
 # their finalizers, then the release and its 23 CRDs.
 if "${HK[@]}" -n chaos-mesh status chaos-mesh >/dev/null 2>&1; then
   for kind in schedules podchaos networkchaos stresschaos httpchaos; do
@@ -41,7 +41,22 @@ if "${HK[@]}" -n chaos-mesh status chaos-mesh >/dev/null 2>&1; then
 fi
 "${K[@]}" delete namespace chaos-mesh --ignore-not-found >/dev/null
 "${K[@]}" get crd -o name 2>/dev/null | grep -E '\.chaos-mesh\.org$' | xargs -r "${K[@]}" delete --ignore-not-found >/dev/null 2>&1 || true
-# Module 6.5: KEDA and prometheus-adapter. Uninstalling them removes their APIServices; the
+# Module 6.7: Fluent Bit's chart installs node-level RBAC, so remove the release before its
+# namespace and remove the named cluster-scoped leftovers as a second guard.
+if "${HK[@]}" -n course-logging status fluent-bit >/dev/null 2>&1; then
+  "${HK[@]}" -n course-logging uninstall fluent-bit --wait >/dev/null 2>&1 || true
+fi
+"${K[@]}" delete namespace course-logging --ignore-not-found >/dev/null
+"${K[@]}" delete clusterrole fluent-bit --ignore-not-found >/dev/null
+"${K[@]}" delete clusterrolebinding fluent-bit --ignore-not-found >/dev/null
+# Module 6.6: OpenCost reads the cluster's metrics but owns its own API and RBAC.
+if "${HK[@]}" -n course-capacity status opencost >/dev/null 2>&1; then
+  "${HK[@]}" -n course-capacity uninstall opencost --wait >/dev/null 2>&1 || true
+fi
+"${K[@]}" delete namespace course-capacity --ignore-not-found >/dev/null
+"${K[@]}" delete clusterrole opencost --ignore-not-found >/dev/null
+"${K[@]}" delete clusterrolebinding opencost --ignore-not-found >/dev/null
+# Module 6.3: KEDA and prometheus-adapter. Uninstalling them removes their APIServices; the
 # ScaledObjects go first, so KEDA deletes the HPAs it made.
 "${K[@]}" -n course-sre delete scaledobjects.keda.sh --all --ignore-not-found >/dev/null 2>&1 || true
 for rel in keda:keda course-autoscale:prometheus-adapter; do
@@ -59,8 +74,7 @@ done
    curl -s -o /dev/null -u "$A" -X DELETE localhost:3000/api/v1/provisioning/alert-rules/checkout-error-logs
    curl -s -o /dev/null -u "$A" -X DELETE "localhost:3000/api/folders/sre?forceDeleteRules=true"
    curl -s -o /dev/null -u "$A" -X DELETE localhost:3000/api/v1/provisioning/contact-points/sre-webhook' >/dev/null 2>&1 || true
-# Module 6.1: checkout, payments and the client, with the SLO rules, all in course-sre.
-# Modules 6.2 to 6.8 add their own objects to course-sre too, so this one delete covers them.
+# Modules 6.1-6.5 and 6.8 put their workloads in course-sre; 6.6 and 6.7 use separate namespaces.
 "${K[@]}" delete namespace course-sre --ignore-not-found >/dev/null
 # Module 3.16: the outbound client, its waypoint, the ServiceEntry and DestinationRule
 "${K[@]}" delete namespace course-outbound --ignore-not-found >/dev/null

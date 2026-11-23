@@ -255,8 +255,9 @@ For anyone who keeps a service running for its users: agree on how reliable it m
 |---|---|---|---|
 | 6.1 | [SLIs, SLOs and error budgets](platform-engineering/6-sre/01-slis-slos-and-error-budgets.md) | SLIs from an app's own metrics, Sloth, multi-window burn-rate alerts, the budget in minutes | lab |
 | 6.2 | [Grafana in depth](platform-engineering/6-sre/02-grafana-in-depth.md) | SLO, RED and USE dashboards as code from Git through ArgoCD, chained variables, a Loki alert rule | lab |
-| 6.3 | [Chaos engineering with Chaos Mesh](platform-engineering/6-sre/03-chaos-engineering.md) | Hypotheses and blast radius, pod kills, latency and a partition, watched on the SLOs | lab, adds about 150 MiB |
-| 6.4 | [Backup and disaster recovery](platform-engineering/6-sre/04-backup-and-disaster-recovery.md) | Velero with an S3 store, a CloudNativePG database, a restore drill, RPO and RTO | lab, adds about 600 MiB |
+| 6.3 | [Autoscaling](platform-engineering/6-sre/03-autoscaling.md) | CPU and request-rate HPAs, queue-based scale-to-zero with KEDA | lab, adds about 312 MiB of requests |
+| 6.4 | [Chaos engineering with Chaos Mesh](platform-engineering/6-sre/04-chaos-engineering.md) | Hypotheses and blast radius, pod kills, latency and a partition, watched on the SLOs | lab, adds about 150 MiB |
+| 6.5 | [Backup and disaster recovery](platform-engineering/6-sre/05-backup-and-disaster-recovery.md) | Velero with an S3 store, a CloudNativePG database, a restore drill, RPO and RTO | lab, adds about 600 MiB |
 
 Planned, not built yet: autoscaling on custom metrics, capacity and cost, an ELK-style logging comparison and a timed game day.
 

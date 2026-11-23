@@ -1,6 +1,6 @@
-# Module 6.5: KEDA 2.20.2, sized for the lab.
-#   helm install keda kedacore/keda --version 2.20.2 -n keda --create-namespace \
-#     -f platform-engineering/manifests/6.5-keda-values.yaml
+# Module 6.3: KEDA 2.17.2, sized for the lab.
+#   helm install keda kedacore/keda --version 2.17.2 -n keda --create-namespace \
+#     -f platform-engineering/manifests/6.3-keda-values.yaml
 # KEDA runs three pods: the operator, which watches ScaledObjects and manages their HPAs;
 # the metrics server, which answers the external metrics API; and the admission webhooks.
 resources:

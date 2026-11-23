@@ -1,4 +1,4 @@
-# Task 6.3.1, the reference solution: 200 ms on the packets checkout sends to payments, and
+# Task 6.4.1, the reference solution: 200 ms on the packets checkout sends to payments, and
 # nothing else. The selector picks where the fault runs (checkout's network namespace); the
 # target and direction "to" limit it to packets addressed to payments' pods.
 apiVersion: chaos-mesh.org/v1alpha1

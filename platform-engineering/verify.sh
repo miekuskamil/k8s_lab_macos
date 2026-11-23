@@ -1879,9 +1879,9 @@ module_6_1() {
   rules_loaded() { [[ "$(p6_groups '^sloth-slo-.*-checkout-|^checkout-budget-minutes$')" == 7 ]]; }
   poll6 180 rules_loaded
   expect "Prometheus loads the 6 Sloth groups and the budget group" "$(p6_groups '^sloth-slo-.*-checkout-|^checkout-budget-minutes$')" '^7$'
-  ratio_there() { [[ -n "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability"}')" ]]; }
+  ratio_there() { [[ -n "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability", sloth_window="5m"}')" ]]; }
   poll6 90 ratio_there
-  expect "with no errors, the availability error ratio is a real 0" "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability"}')" '^0$'
+  expect "with no errors, the availability error ratio is a real 0" "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability", sloth_window="5m"}')" '^0$'
   budget_there() { [[ -n "$(p6 'slo:error_budget_minutes:total{sloth_slo="availability"}')" ]]; }
   poll6 90 budget_there
   expect "the error budget is 0.1% of 30 days, 43.2 minutes" "$(p6 'slo:error_budget_minutes:total{sloth_slo="availability"}' | awk '{printf "%.1f", $1}')" '^43\.2$'
@@ -1900,7 +1900,7 @@ module_6_1() {
   local t0=$SECONDS
   poll6 300 page
   expect "a bad release that fails 20% of orders fires the page alert ($((SECONDS - t0)) s)" "$(p6_alert CheckoutAvailabilityBudgetBurn page)" '^firing$'
-  between "the 5m error ratio in percent" "$(pct "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability"}')")" 3 30
+  between "the 5m error ratio in percent" "$(pct "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability", sloth_window="5m"}')")" 3 30
   # The burn-rate series sits in Sloth's meta group, which runs on its own 30 s schedule.
   burn() { p6 'slo:current_burn_rate:ratio{sloth_service="checkout", sloth_slo="availability"}' | awk '{printf "%d", $1}'; }
   burning() { (( $(burn) >= 15 )); }
@@ -1910,9 +1910,9 @@ module_6_1() {
   "${K[@]}" -n course-sre rollout undo deploy/checkout >/dev/null
   "${K[@]}" -n course-sre rollout status deploy/checkout --timeout=120s >/dev/null 2>&1
   t0=$SECONDS
-  clean5m() { [[ "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability"}')" == 0 ]]; }
+  clean5m() { [[ "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability", sloth_window="5m"}')" == 0 ]]; }
   poll6 420 clean5m
-  expect "after the rollback the 5m error ratio returns to 0 ($((SECONDS - t0)) s)" "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability"}')" '^0$'
+  expect "after the rollback the 5m error ratio returns to 0 ($((SECONDS - t0)) s)" "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability", sloth_window="5m"}')" '^0$'
   between "the incident spent part of the budget, in tenths of a minute" "$(p6 'slo:error_budget_minutes:spent{sloth_slo="availability"}' | awk '{printf "%d", $1 * 10}')" 1 200
   baseline
   expect "after the reset course-sre and its rules are gone" "$("${K[@]}" get ns course-sre 2>&1 | grep -c NotFound)" '^1$'
@@ -1994,14 +1994,70 @@ module_6_2() {
   expect "after the reset the dashboards, the rule and the contact point are gone" "$(gf6 -o /dev/null -w '%{http_code}' localhost:3000/api/dashboards/uid/sre-slo) $(gf6 -o /dev/null -w '%{http_code}' localhost:3000/api/v1/provisioning/alert-rules/checkout-error-logs) $(gf6 localhost:3000/api/v1/provisioning/contact-points | grep -c sre-webhook)" '^404 404 0$'
 }
 
-# chaos6: Chaos Mesh 2.8.7 with the lab's values, as module 6.3 installs it
-chaos6() {
-  helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" upgrade --install chaos-mesh chaos-mesh --version 2.8.7 \
-    --repo https://charts.chaos-mesh.org -n chaos-mesh --create-namespace -f "$M/6.3-chaos-mesh-values.yaml" --wait --timeout 5m >/dev/null 2>&1
+# autoscaling6: install the Prometheus adapter and KEDA from the module's pinned charts.
+autoscaling6() {
+  local HH=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}")
+  "${HH[@]}" upgrade --install prometheus-adapter prometheus-community/prometheus-adapter --version 5.3.0 \
+    -n course-autoscale --create-namespace -f "$M/6.3-adapter-values.yaml" --wait --timeout 3m >/dev/null 2>&1
+  "${HH[@]}" upgrade --install keda kedacore/keda --version 2.17.2 \
+    -n keda --create-namespace -f "$M/6.3-keda-values.yaml" --wait --timeout 3m >/dev/null 2>&1
 }
 
 module_6_3() {
-  section "6.3: chaos engineering with Chaos Mesh"
+  section "6.3: autoscaling"
+  baseline
+  expect "before the module, no autoscaling API or CRD remains" "$("${K[@]}" get apiservice,crd -o name 2>/dev/null | grep -Ec 'custom.metrics.k8s.io|external.metrics.k8s.io|keda.sh')" '^0$'
+  checkout6
+  "${K[@]}" apply -f "$M/6.3-cpu-demo.yaml" -f "$M/6.3-hpa-cpu.yaml" >/dev/null
+  cpu_scaled() { [[ "$("${K[@]}" -n course-sre get deploy cpu-demo -o jsonpath='{.status.readyReplicas}' 2>/dev/null)" =~ ^[4-6]$ ]]; }
+  poll6 180 cpu_scaled
+  between "the CPU HPA adds replicas while the demo uses 500% of its request" "$("${K[@]}" -n course-sre get deploy cpu-demo -o jsonpath='{.status.readyReplicas}' 2>/dev/null)" 4 6
+  expect "the CPU HPA reports load above its 60% target" "$("${K[@]}" -n course-sre get hpa cpu-demo --no-headers 2>/dev/null | awk '{print $3 $4}')" '^cpu:([6-9][0-9]|[1-9][0-9][0-9])%/60%$'
+
+  autoscaling6
+  custom_metric_count() {
+    "${K[@]}" get --raw '/apis/custom.metrics.k8s.io/v1beta1/namespaces/course-sre/pods/*/http_requests_per_second' 2>/dev/null \
+      | python3 -c 'import json,sys; print(sum(1 for x in json.load(sys.stdin).get("items",[]) if x.get("describedObject",{}).get("name","").startswith("checkout-") and x.get("value","0") != "0"))' 2>/dev/null
+  }
+  custom_metric_ready() { [[ "$(custom_metric_count)" =~ ^[1-9] ]]; }
+  poll6 360 custom_metric_ready
+  expect "Prometheus serves request rates for checkout pods through the custom metrics API" "$(custom_metric_count)" '^[1-9]'
+  "${K[@]}" apply -f "$M/6.3-hpa-rps.yaml" >/dev/null
+  "${K[@]}" -n course-sre scale deployment/loadgen --replicas=3 >/dev/null
+  rps_scaled() { [[ "$("${K[@]}" -n course-sre get hpa checkout -o jsonpath='{.status.desiredReplicas}' 2>/dev/null)" =~ ^[3-6]$ ]]; }
+  poll6 180 rps_scaled
+  between "the request-rate HPA adds checkout replicas under load" "$("${K[@]}" -n course-sre get hpa checkout -o jsonpath='{.status.desiredReplicas}' 2>/dev/null)" 3 6
+
+  "${K[@]}" apply -f "$M/6.3-queue.yaml" -f "$M/6.3-scaledobject.yaml" >/dev/null
+  "${K[@]}" -n course-sre rollout status deploy/queue --timeout=120s >/dev/null 2>&1
+  "${K[@]}" -n course-sre exec deploy/queue -- sh -c 'for i in $(seq 1 100); do redis-cli lpush orders "order-$i" >/dev/null; done' >/dev/null
+  workers_scaled() {
+    [[ "$("${K[@]}" -n course-sre get scaledobject worker -o jsonpath='{.status.conditions[?(@.type=="Active")].status}' 2>/dev/null)" == True ]] &&
+      [[ "$("${K[@]}" -n course-sre get deploy worker -o jsonpath='{.status.readyReplicas}' 2>/dev/null)" =~ ^[3-5]$ ]]
+  }
+  poll6 180 workers_scaled
+  expect "KEDA wakes workers for the queued orders" "$("${K[@]}" -n course-sre get deploy worker -o jsonpath='{.status.readyReplicas}' 2>/dev/null)" '^[3-5]$'
+  queue_empty() { [[ "$("${K[@]}" -n course-sre exec deploy/queue -- redis-cli llen orders 2>/dev/null)" == 0 ]]; }
+  poll6 240 queue_empty
+  workers_stopped() {
+    local ready
+    ready="$("${K[@]}" -n course-sre get deploy worker -o jsonpath='{.status.readyReplicas}' 2>/dev/null)"
+    [[ "${ready:-0}" == 0 ]]
+  }
+  poll6 180 workers_stopped
+  expect "after the queue drains, KEDA scales workers back to zero" "$("${K[@]}" -n course-sre get deploy worker -o jsonpath='{.status.readyReplicas}' 2>/dev/null)" '^$|^0$'
+  baseline
+  expect "reset removes the namespaces, metrics APIs and KEDA CRDs" "$("${K[@]}" get ns course-sre course-autoscale keda 2>&1 | grep -c NotFound) $("${K[@]}" get apiservice v1beta1.custom.metrics.k8s.io v1beta1.external.metrics.k8s.io 2>&1 | grep -c NotFound) $("${K[@]}" get crd -o name | grep -c 'keda.sh')" '^3 2 0$'
+}
+
+# chaos6: Chaos Mesh 2.8.7 with the lab's values, as module 6.4 installs it
+chaos6() {
+  helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" upgrade --install chaos-mesh chaos-mesh --version 2.8.7 \
+    --repo https://charts.chaos-mesh.org -n chaos-mesh --create-namespace -f "$M/6.4-chaos-mesh-values.yaml" --wait --timeout 5m >/dev/null 2>&1
+}
+
+module_6_4() {
+  section "6.4: chaos engineering with Chaos Mesh"
   baseline
   expect "before the module, the cluster has no Chaos Mesh CRDs" "$("${K[@]}" get crd -o name | grep -c 'chaos-mesh.org')" '^0$'
   checkout6
@@ -2010,34 +2066,42 @@ module_6_3() {
   chaos6
   expect "Chaos Mesh runs its controller and one daemon per node" "$("${K[@]}" -n chaos-mesh get pods --no-headers 2>/dev/null | grep -c ' Running ')" '^2$'
   between "it installs its CRDs" "$("${K[@]}" get crd -o name | grep -c 'chaos-mesh.org')" 15 40
-  r5() { p6 "slo:sli_error:ratio_rate5m{sloth_service=\"checkout\", sloth_slo=\"$1\"}"; }
+  r5() { p6 "slo:sli_error:ratio_rate5m{sloth_service=\"checkout\", sloth_slo=\"$1\", sloth_window=\"5m\"}"; }
   steady() { [[ "$(r5 availability)" == 0 && "$(r5 latency)" == 0 ]]; }
   poll6 240 steady
   expect "steady state: both SLIs show no bad orders over 5m" "$(r5 availability) $(r5 latency)" '^0 0$'
   # Experiment 1: kill a payments pod every 30 s
-  "${K[@]}" apply -f "$M/6.3-pod-kill.yaml" >/dev/null
-  settle 75
+  "${K[@]}" apply -f "$M/6.4-pod-kill.yaml" >/dev/null
+  pod_kill_runs() { (( $("${K[@]}" -n course-sre get podchaos --no-headers 2>/dev/null | wc -l | tr -d ' ') >= 2 )); }
+  poll6 120 pod_kill_runs
   between "the Schedule killed payments pods (PodChaos runs)" "$("${K[@]}" -n course-sre get podchaos --no-headers 2>/dev/null | wc -l | tr -d ' ')" 2 5
   between "two replicas keep the 5m error ratio under 1% (in tenths of a percent)" "$(r5 availability | awk '{printf "%d", $1 * 1000}')" 0 9
   "${K[@]}" -n course-sre delete schedule payments-pod-kill >/dev/null
   # Experiment 2: 300 ms on every packet that leaves the payments pods
-  "${K[@]}" apply -f "$M/6.3-latency.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/6.4-latency.yaml" >/dev/null
   injected() { [[ "$("${K[@]}" -n course-sre get networkchaos payments-latency -o jsonpath='{.status.conditions[?(@.type=="AllInjected")].status}' 2>/dev/null)" == True ]]; }
   poll6 60 injected
   expect "the delay is injected into both payments pods" "$("${K[@]}" -n course-sre get networkchaos payments-latency -o jsonpath='{.status.conditions[?(@.type=="AllInjected")].status}')" '^True$'
   local secs
   secs="$("${K[@]}" -n course-sre exec deploy/loadgen -- curl -s -o /dev/null -w '%{time_total}' http://checkout:8080/api/checkout 2>/dev/null)"
   between "an order now takes over 300 ms (ms)" "$(awk -v s="$secs" 'BEGIN { printf "%d", s * 1000 }')" 300 3000
+  slow_pct() { pct "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="latency", sloth_window="5m"}')"; }
+  slow_enough() { (( $(slow_pct) >= 50 )); }
+  poll6 300 slow_enough
+  between "the latency SLI counts the delayed orders as slow (percent)" "$(slow_pct)" 50 100
   latency_page() { [[ "$(p6_alert CheckoutLatencyBudgetBurn page)" == firing ]]; }
   local t0=$SECONDS
-  poll6 300 latency_page
+  poll6 420 latency_page
   expect "the latency SLO pages ($((SECONDS - t0)) s)" "$(p6_alert CheckoutLatencyBudgetBurn page)" '^firing$'
   between "while the availability SLI stays under 1% errors (tenths of a percent)" "$(r5 availability | awk '{printf "%d", $1 * 1000}')" 0 9
   "${K[@]}" -n course-sre delete networkchaos payments-latency >/dev/null
   secs="$("${K[@]}" -n course-sre exec deploy/loadgen -- curl -s -o /dev/null -w '%{time_total}' http://checkout:8080/api/checkout 2>/dev/null)"
   between "deleting the experiment removes the delay at once (ms)" "$(awk -v s="$secs" 'BEGIN { printf "%d", s * 1000 }')" 0 150
   # Experiment 3: cut checkout off from payments
-  "${K[@]}" apply -f "$M/6.3-partition.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/6.4-partition.yaml" >/dev/null
+  partition_injected() { [[ "$("${K[@]}" -n course-sre get networkchaos payments-partition -o jsonpath='{.status.conditions[?(@.type=="AllInjected")].status}' 2>/dev/null)" == True ]]; }
+  poll6 60 partition_injected
+  expect "the partition is active before checkout sends an order" "$("${K[@]}" -n course-sre get networkchaos payments-partition -o jsonpath='{.status.conditions[?(@.type=="AllInjected")].status}' 2>/dev/null)" '^True$'
   avail_page() { [[ "$(p6_alert CheckoutAvailabilityBudgetBurn page)" == firing ]]; }
   t0=$SECONDS
   poll6 300 avail_page
@@ -2050,25 +2114,25 @@ module_6_3() {
   expect "after the reset Chaos Mesh, its CRDs and course-sre are gone" "$("${K[@]}" get crd -o name | grep -c 'chaos-mesh.org') $("${K[@]}" get ns chaos-mesh course-sre 2>&1 | grep -c NotFound)" '^0 2$'
 }
 
-module_6_4() {
-  section "6.4: backup and disaster recovery"
+module_6_5() {
+  section "6.5: backup and disaster recovery"
   baseline
   local HH=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}")
   v6() { "${K[@]}" -n velero exec "$("${K[@]}" -n velero get pod -l name=velero -o name 2>/dev/null)" -c velero -- /velero "$@" 2>/dev/null; }
   sql() { "${K[@]}" -n "$1" exec "$2" -c postgres -- psql -U postgres -d orders -tAc "$3" 2>/dev/null; }
   expect "before the module, the cluster has no Velero or CloudNativePG CRDs" "$("${K[@]}" get crd -o name | grep -cE 'velero\.io|cnpg\.io')" '^0$'
-  "${K[@]}" apply -f "$M/6.4-object-store.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/6.5-object-store.yaml" >/dev/null
   "${K[@]}" -n course-backup rollout status deploy/seaweedfs --timeout=300s >/dev/null 2>&1
   expect "SeaweedFS creates the velero bucket" "$("${K[@]}" -n course-backup exec deploy/seaweedfs -- sh -c 'echo "s3.bucket.create -name velero" | weed shell' 2>/dev/null | grep -o 'created bucket velero')" 'created bucket velero'
   "${HH[@]}" upgrade --install cnpg cloudnative-pg --repo https://cloudnative-pg.github.io/charts --version 0.29.1 \
-    -n cnpg-system --create-namespace -f "$M/6.4-cnpg-values.yaml" --wait --timeout 5m >/dev/null 2>&1
+    -n cnpg-system --create-namespace -f "$M/6.5-cnpg-values.yaml" --wait --timeout 5m >/dev/null 2>&1
   "${HH[@]}" upgrade --install velero velero --repo https://vmware-tanzu.github.io/helm-charts --version 12.2.2 \
-    -n velero --create-namespace -f "$M/6.4-velero-values.yaml" --wait --timeout 6m >/dev/null 2>&1
+    -n velero --create-namespace -f "$M/6.5-velero-values.yaml" --wait --timeout 6m >/dev/null 2>&1
   bsl() { [[ "$("${K[@]}" -n velero get backupstoragelocation default -o jsonpath='{.status.phase}' 2>/dev/null)" == Available ]]; }
   poll6 120 bsl
   expect "Velero reaches the bucket: the backup location is Available" "$("${K[@]}" -n velero get backupstoragelocation default -o jsonpath='{.status.phase}')" '^Available$'
   expect "the node agent runs on the node" "$("${K[@]}" -n velero get ds node-agent -o jsonpath='{.status.numberReady}')" '^1$'
-  "${K[@]}" apply -f "$M/6.4-orders-db.yaml" >/dev/null
+  "${K[@]}" apply -f "$M/6.5-orders-db.yaml" >/dev/null
   "${K[@]}" -n course-dr wait --for=condition=Ready cluster/orders-db --timeout=300s >/dev/null 2>&1
   expect "CloudNativePG runs the orders database" "$("${K[@]}" -n course-dr get cluster orders-db -o jsonpath='{.status.phase}')" '^Cluster in healthy state$'
   sql course-dr orders-db-1 "CREATE TABLE orders (id serial PRIMARY KEY, item text, placed timestamptz DEFAULT now()); INSERT INTO orders (item) SELECT 'book-' || g FROM generate_series(1, 500) g;" >/dev/null
@@ -2102,6 +2166,103 @@ module_6_4() {
   expect "the restored database holds the 500 orders of the backup" "$(sql course-dr orders-db-1 'SELECT count(*) FROM orders')" '^500$'
   baseline
   expect "after the reset Velero, CloudNativePG, their CRDs and namespaces are gone" "$("${K[@]}" get crd -o name | grep -cE 'velero\.io|cnpg\.io') $("${K[@]}" get ns velero cnpg-system course-backup course-dr course-dr-drill 2>&1 | grep -c NotFound)" '^0 5$'
+}
+
+module_6_6() {
+  section "6.6: capacity and cost"
+  baseline
+  local HH=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}") api cost
+  expect "before the module, course-capacity and OpenCost are absent" "$("${K[@]}" get ns course-capacity 2>&1 | grep -c NotFound) $("${K[@]}" get clusterrole opencost 2>&1 | grep -c NotFound)" '^1 1$'
+  "${K[@]}" apply -f "$M/6.6-capacity-demo.yaml" >/dev/null
+  for app in overprovisioned right-sized; do
+    "${K[@]}" -n course-capacity rollout status "deploy/$app" --timeout=120s >/dev/null 2>&1
+  done
+  expect "the overprovisioned pods request 250m CPU and 256Mi each" "$("${K[@]}" -n course-capacity get deploy overprovisioned -o jsonpath='{.spec.template.spec.containers[0].resources.requests.cpu} {.spec.template.spec.containers[0].resources.requests.memory}')" '^250m 256Mi$'
+  expect "the right-sized pods request 100m CPU and 128Mi each" "$("${K[@]}" -n course-capacity get deploy right-sized -o jsonpath='{.spec.template.spec.containers[0].resources.requests.cpu} {.spec.template.spec.containers[0].resources.requests.memory}')" '^100m 128Mi$'
+  "${HH[@]}" upgrade --install opencost opencost --repo https://opencost.github.io/opencost-helm-chart --version 2.5.20 \
+    -n course-capacity --create-namespace -f "$M/6.6-opencost-values.yaml" --wait --timeout 5m >/dev/null 2>&1
+  expect "OpenCost's API is ready" "$("${K[@]}" -n course-capacity get deploy opencost -o jsonpath='{.status.readyReplicas}')" '^1$'
+  api='/api/v1/namespaces/course-capacity/services/opencost:9003/proxy/allocation?window=1h&aggregate=namespace&includeIdle=true'
+  allocation() { "${K[@]}" get --raw "$api" 2>/dev/null; }
+  allocation_cost() {
+    allocation | python3 -c 'import json,sys
+data=json.load(sys.stdin).get("data", [])
+row=data[0].get("course-capacity") if data else None
+print(row.get("totalCost", "") if row else "")' 2>/dev/null
+  }
+  cost_ready() {
+    cost="$(allocation_cost)"
+    awk -v n="$cost" 'BEGIN { exit !(n ~ /^[0-9]+([.][0-9]+)?([eE][-+]?[0-9]+)?$/ && n > 0) }'
+  }
+  poll6 180 cost_ready
+  cost="$(allocation_cost)"
+  expect "OpenCost returns a numeric allocation for the last-hour window" "$cost" '^[0-9]+([.][0-9]+)?([eE][-+]?[0-9]+)?$'
+  expect "the course-capacity allocation costs more than zero" "$(awk -v n="$cost" 'BEGIN { print (n + 0 > 0) ? 1 : 0 }')" '^1$'
+  baseline
+  expect "reset removes OpenCost, its RBAC and course-capacity" "$("${K[@]}" get ns course-capacity 2>&1 | grep -c NotFound) $("${K[@]}" get clusterrole opencost 2>&1 | grep -c NotFound) $("${K[@]}" get clusterrolebinding opencost 2>&1 | grep -c NotFound)" '^1 1 1$'
+}
+
+module_6_7() {
+  section "6.7: centralized logs with Fluent Bit and Loki"
+  baseline
+  local HH=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}") now q encoded path n
+  expect "before the module, course-logging and Fluent Bit are absent" "$("${K[@]}" get ns course-logging 2>&1 | grep -c NotFound) $("${K[@]}" get clusterrole fluent-bit 2>&1 | grep -c NotFound)" '^1 1$'
+  expect "the shared Loki service remains available" "$("${K[@]}" -n observability get svc loki -o name 2>/dev/null)" '^service/loki$'
+  checkout6
+  "${HH[@]}" upgrade --install fluent-bit fluent-bit --repo https://fluent.github.io/helm-charts --version 0.58.3 \
+    -n course-logging --create-namespace -f "$M/6.7-fluent-bit-values.yaml" --wait --timeout 3m >/dev/null 2>&1
+  expect "the Fluent Bit DaemonSet runs on the lab node" "$("${K[@]}" -n course-logging get ds fluent-bit -o jsonpath='{.status.numberReady}')" '^1$'
+  "${K[@]}" -n course-sre set env deploy/checkout ERROR_PERCENT=100 >/dev/null
+  "${K[@]}" -n course-sre rollout status deploy/checkout --timeout=120s >/dev/null 2>&1
+  "${K[@]}" -n course-sre exec deploy/loadgen -- sh -c 'for i in $(seq 1 12); do curl -s -o /dev/null http://checkout:8080/api/checkout; done' >/dev/null 2>&1
+  loki_errors() {
+    now="$(date +%s)"
+    q='{collector="fluent-bit",namespace="course-sre",app="checkout"} |= "internal error"'
+    encoded="$(python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$q")"
+    path="/api/v1/namespaces/observability/services/loki:3100/proxy/loki/api/v1/query_range?query=$encoded&start=$((now - 600))000000000&end=${now}000000000&limit=100"
+    "${K[@]}" get --raw "$path" 2>/dev/null | python3 -c 'import json,sys
+data=json.load(sys.stdin)["data"]["result"]
+print(sum(len(stream["values"]) for stream in data))' 2>/dev/null || echo 0
+  }
+  logs_ready() {
+    n="$(loki_errors)"
+    [[ "$n" =~ ^[0-9]+$ ]] && (( n >= 5 ))
+  }
+  poll6 180 logs_ready
+  n="$(loki_errors)"
+  expect "Loki returns a numeric count of checkout errors" "$n" '^[0-9]+$'
+  between "Loki receives at least five checkout errors with Fluent Bit labels" "$n" 5 100
+  baseline
+  expect "reset removes Fluent Bit, its RBAC and course-logging but keeps Loki" "$("${K[@]}" get ns course-logging 2>&1 | grep -c NotFound) $("${K[@]}" get clusterrole fluent-bit 2>&1 | grep -c NotFound) $("${K[@]}" get clusterrolebinding fluent-bit 2>&1 | grep -c NotFound) $("${K[@]}" -n observability get svc loki -o name 2>/dev/null)" '^1 1 1 service/loki$'
+}
+
+module_6_8() {
+  section "6.8: timed SRE game day"
+  baseline
+  expect "before the module, Chaos Mesh is absent" "$("${K[@]}" get crd -o name | grep -c 'chaos-mesh.org')" '^0$'
+  checkout6
+  "${K[@]}" apply -f "$M/6.1-checkout-slo-rules.yaml" -f "$M/6.1-budget-minutes.yaml" >/dev/null
+  chaos6
+  r5() { p6 "slo:sli_error:ratio_rate5m{sloth_service=\"checkout\", sloth_slo=\"$1\", sloth_window=\"5m\"}"; }
+  steady() { [[ "$(r5 availability)" == 0 && "$(r5 latency)" == 0 ]]; }
+  poll6 300 steady
+  expect "the checkout SLIs return to baseline before the game day" "$(r5 availability) $(r5 latency)" '^0 0$'
+  availability_clear() { [[ "$(p6_alert CheckoutAvailabilityBudgetBurn page)" == none ]]; }
+  poll6 120 availability_clear
+  expect "the availability page is clear before the experiment" "$(p6_alert CheckoutAvailabilityBudgetBurn page)" '^none$'
+  "${K[@]}" apply -f "$M/6.8-game-day.yaml" >/dev/null
+  injected() { [[ "$("${K[@]}" -n course-sre get networkchaos payments-maintenance-window -o jsonpath='{.status.conditions[?(@.type=="AllInjected")].status}' 2>/dev/null)" == True ]]; }
+  poll6 60 injected
+  expect "the maintenance-window delay is active" "$("${K[@]}" -n course-sre get networkchaos payments-maintenance-window -o jsonpath='{.status.conditions[?(@.type=="AllInjected")].status}' 2>/dev/null)" '^True$'
+  expect "the game-day fault turns a checkout request into a 504" "$("${K[@]}" -n course-sre exec deploy/loadgen -- curl -s -m 5 -o /dev/null -w '%{http_code}' http://checkout:8080/api/checkout 2>/dev/null)" '^504$'
+  expect "checkout logs the payments timeout" "$("${K[@]}" -n course-sre logs deploy/checkout --tail=50 2>/dev/null | grep -c 'payments timed out')" '^[1-9]'
+  availability_page() { [[ "$(p6_alert CheckoutAvailabilityBudgetBurn page)" == firing ]]; }
+  poll6 300 availability_page
+  expect "the availability SLO pages while users receive 504s" "$(p6_alert CheckoutAvailabilityBudgetBurn page)" '^firing$'
+  "${K[@]}" -n course-sre delete networkchaos payments-maintenance-window >/dev/null
+  expect "deleting the fault restores checkout" "$("${K[@]}" -n course-sre exec deploy/loadgen -- curl -s -m 5 -o /dev/null -w '%{http_code}' http://checkout:8080/api/checkout 2>/dev/null)" '^200$'
+  baseline
+  expect "reset removes the game-day workload, Chaos Mesh and its CRDs" "$("${K[@]}" get crd -o name | grep -c 'chaos-mesh.org') $("${K[@]}" get ns chaos-mesh course-sre 2>&1 | grep -c NotFound)" '^0 2$'
 }
 
 # Module 2.9 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 2.9
@@ -2212,7 +2373,7 @@ module_3_19() {
 }
 
 modules=("$@")
-if (( ${#modules[@]} == 0 )); then modules=(0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 1.1 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.9 3.10 3.11 3.12 3.13 3.14 3.15 3.16 3.17 3.18); fi
+if (( ${#modules[@]} == 0 )); then modules=(0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 1.1 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.9 3.10 3.11 3.12 3.13 3.14 3.15 3.16 3.17 3.18 6.1 6.2 6.3 6.4 6.5 6.6 6.7 6.8); fi
 # The Docker track (0.x) needs no cluster, so the cluster baseline runs only for the others.
 need_lab=0
 for m in "${modules[@]}"; do [[ "$m" == 0.* ]] || need_lab=1; done

@@ -1,4 +1,4 @@
-# Module 6.5: a work queue and the workers that empty it.
+# Module 6.3: a work queue and the workers that empty it.
 # Redis holds a list named "orders". Each worker takes one order, works on it for a second,
 # and takes the next. The workers start at 0 replicas: KEDA decides how many run.
 apiVersion: apps/v1

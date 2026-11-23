@@ -1,7 +1,7 @@
-# Module 6.4: Velero 1.18.2 (chart 12.2.2) with the AWS plugin, pointed at the SeaweedFS
+# Module 6.5: Velero 1.18.2 (chart 12.2.2) with the AWS plugin, pointed at the SeaweedFS
 # S3 gateway in course-backup.
 #   helm install velero vmware-tanzu/velero --version 12.2.2 -n velero --create-namespace \
-#     -f platform-engineering/manifests/6.4-velero-values.yaml
+#     -f platform-engineering/manifests/6.5-velero-values.yaml
 #
 # The plugin teaches Velero to talk S3. An init container copies it into Velero's plugin folder.
 initContainers:

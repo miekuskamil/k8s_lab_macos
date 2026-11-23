@@ -1,4 +1,4 @@
-# Module 6.4: a PostgreSQL database that the CloudNativePG operator runs, in its own namespace.
+# Module 6.5: a PostgreSQL database that the CloudNativePG operator runs, in its own namespace.
 # One instance is enough to practise a restore. Production runs three, across zones.
 apiVersion: v1
 kind: Namespace

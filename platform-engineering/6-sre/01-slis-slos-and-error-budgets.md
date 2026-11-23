@@ -58,7 +58,7 @@ The tooling has converged on the same pattern this module uses. SLOs live as cod
 
 ## Why this way
 
-**Why measure inside checkout, not with the mesh?** Most services in the world run without a mesh, and the app itself knows things a proxy does not, such as which path is an order and how long the order took inside the code. Checkout counts its own requests in one histogram, labelled by path and status, the same names podinfo uses, so one query shape serves both services. Module 6.3 shows what this view misses.
+**Why measure inside checkout, not with the mesh?** Most services in the world run without a mesh, and the app itself knows things a proxy does not, such as which path is an order and how long the order took inside the code. Checkout counts its own requests in one histogram, labelled by path and status, the same names podinfo uses, so one query shape serves both services. Module 6.4 shows what this view misses.
 
 **Why Sloth and not hand-written rules?** Eight windows, two severities and several helper series per SLO add up to over 200 lines of YAML for checkout's two SLOs, and one typo in a window makes an alert that never fires. Sloth writes them from 60 lines, most of them comments and names, the same way for every service, and the spec reads like the SLO itself.
 
@@ -117,11 +117,11 @@ http_request_duration_seconds_count{method="GET",path="/api/checkout",status="20
 checkout_payments_calls_total{result="ok"} 86
 ```
 
-**What you should see.** Five pods, all `Running`. checkout logs one JSON line per order, and its metrics page holds one histogram per status code with a `_bucket` line per latency bound, plus a counter of its calls to payments. The client sends an order about every 0.15 seconds, so in the test run Prometheus counted between 6 and 9 orders a second, depending on how busy the node was.
+**What you should see.** Five pods, all `Running`. checkout logs one JSON line per order, and its metrics page holds one histogram per status code with a `_bucket` line per latency bound, plus a counter of its calls to payments. The client sends an order about every 0.15 seconds, so in the test run Prometheus counted about 5.1 orders a second.
 
 ### 2. Measure the SLIs by hand
 
-A new PodMonitor reaches Prometheus within about a minute. Then open Prometheus (http://localhost:9090) and run these one at a time:
+A new PodMonitor may take up to four minutes to reach Prometheus. Then open Prometheus (http://localhost:9090) and run these one at a time:
 
 ```text
 sum by (status) (rate(http_request_duration_seconds_count{namespace="course-sre", app="checkout"}[1m]))

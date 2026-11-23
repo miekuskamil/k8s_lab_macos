@@ -1,0 +1,14 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: payments-maintenance-window
+  namespace: course-sre
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces: [course-sre]
+    labelSelectors: {app: payments}
+  delay:
+    latency: 2s
+  duration: 30m

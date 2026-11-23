@@ -1,4 +1,4 @@
-# Module 6.5: the same HPA, now on requests per second per pod, which prometheus-adapter
+# Module 6.3: the same HPA, now on requests per second per pod, which prometheus-adapter
 # serves from Prometheus as the custom metric http_requests_per_second.
 # Target: 5 requests a second per pod on average.
 apiVersion: autoscaling/v2

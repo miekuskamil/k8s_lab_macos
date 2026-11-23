@@ -28,8 +28,13 @@ solve_6_2_1() {
 grep -n 'call_total\|chekout' platform-engineering/6-sre/tasks/6.2.1-calls-dashboard.yaml
 sed -e 's/checkout_payments_call_total/checkout_payments_calls_total/g' -e 's/chekout/checkout/' platform-engineering/6-sre/tasks/6.2.1-calls-dashboard.yaml | kubectl apply -f -
 EOF
-  # The sidecar needs a few seconds to hand the new file to Grafana.
-  sleep 15
+  loaded() {
+    grafana localhost:3000/api/dashboards/uid/checkout-calls | python3 -c 'import json,sys
+d=json.load(sys.stdin)["dashboard"]
+ok=d["templating"]["list"][0]["definition"]=="label_values(checkout_payments_calls_total, result)" and any("app=\"checkout\"" in t["expr"] for p in d["panels"] for t in p.get("targets", []))
+sys.exit(0 if ok else 1)' 2>/dev/null
+  }
+  poll 60 loaded
 }
 
 # ---- Task 2: a Grafana alert rule on checkout's p95 ---------------------------------------

@@ -1,4 +1,4 @@
-# Module 6.3: cut the network between checkout and payments in both directions, for 3 minutes.
+# Module 6.4: cut the network between checkout and payments in both directions, for 3 minutes.
 # Packets are dropped, not refused, so checkout waits for its timeout before it answers 504.
 apiVersion: chaos-mesh.org/v1alpha1
 kind: NetworkChaos

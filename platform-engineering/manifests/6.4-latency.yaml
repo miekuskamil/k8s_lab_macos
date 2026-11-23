@@ -1,4 +1,4 @@
-# Module 6.3: add 300 ms to every packet that leaves the payments pods, for 5 minutes.
+# Module 6.4: add 300 ms to every packet that leaves the payments pods, for up to 10 minutes.
 # The delay sits in the pods' network namespace, so checkout's own timer sees it too.
 apiVersion: chaos-mesh.org/v1alpha1
 kind: NetworkChaos
@@ -14,4 +14,4 @@ spec:
   delay:
     latency: 300ms
     jitter: 50ms
-  duration: 5m
+  duration: 10m

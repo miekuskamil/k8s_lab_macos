@@ -1,4 +1,4 @@
-# Module 6.5: KEDA scales the workers on the length of the Redis list.
+# Module 6.3: KEDA scales the workers on the length of the Redis list.
 # One worker per 10 waiting orders, at most 5, and none at all when the list stays empty.
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject

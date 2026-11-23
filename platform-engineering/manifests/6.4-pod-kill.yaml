@@ -1,4 +1,4 @@
-# Module 6.3: kill one payments pod every 30 seconds until you delete this Schedule.
+# Module 6.4: kill one payments pod every 30 seconds until you delete this Schedule.
 # The hypothesis: with two replicas and a readiness probe, checkout's SLOs barely move.
 apiVersion: chaos-mesh.org/v1alpha1
 kind: Schedule

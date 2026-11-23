@@ -516,27 +516,35 @@ Module 2.1.
 
 **Simplified routing.** Simplified routing lets a Grafana alert rule name its contact point directly, so the rule reaches a person without a change to the shared notification policy tree. Module 6.2.
 
-**Chaos engineering.** Chaos engineering breaks a system on purpose, in small and controlled ways, to test a written hypothesis about how it copes, before a real failure tests it for you. Module 6.3.
+**HorizontalPodAutoscaler (HPA).** The HPA compares a workload's current CPU, memory or custom metric with a target, then changes its replica count to close the gap. CPU utilization uses the pod's CPU request as its baseline. Module 6.3.
 
-**Steady state and blast radius.** The steady state is what normal looks like in numbers, here the SLIs. The blast radius is how much an experiment may hurt, kept small with selectors, durations and an abort. Module 6.3.
+**Custom metric and Prometheus Adapter.** A custom metric is an application value outside Kubernetes' built-in CPU and memory readings, such as requests per second per pod. Prometheus Adapter translates that value into the custom metrics API, which the HPA already reads. Module 6.3.
 
-**Chaos Mesh.** Chaos Mesh is a CNCF project that injects faults into Kubernetes pods from custom resources: PodChaos kills pods, NetworkChaos adds delay or cuts the network, StressChaos burns CPU. A daemon on each node applies the fault inside the pod's network namespace or cgroup. Module 6.3.
+**KEDA and ScaledObject.** KEDA is an event-driven autoscaler for Kubernetes. A ScaledObject names a workload and a signal, such as the number of waiting Redis messages, and KEDA creates the HPA that changes its replicas. Module 6.3.
 
-**Network partition.** A partition drops every packet between two groups of pods, so connections hang until a timeout, which hurts more than a fast refusal. Module 6.3.
+**Scale-to-zero.** Scale-to-zero removes every worker pod while its queue stays empty. KEDA keeps watching the queue and starts the workload again when work arrives. Module 6.3.
 
-**RPO and RTO.** The recovery point objective is how much data you may lose, measured as time since the last good backup. The recovery time objective is how long the restore may take. Module 6.4.
+**Chaos engineering.** Chaos engineering breaks a system on purpose, in small and controlled ways, to test a written hypothesis about how it copes, before a real failure tests it for you. Module 6.4.
 
-**Velero.** Velero backs up Kubernetes objects and volume data to object storage and restores them, a whole namespace or a selection, into the same or another cluster. Module 6.4.
+**Steady state and blast radius.** The steady state is what normal looks like in numbers, here the SLIs. The blast radius is how much an experiment may hurt, kept small with selectors, durations and an abort. Module 6.4.
 
-**File system backup (Kopia).** Without volume snapshots, Velero's node agent reads a pod's volume through the node and uploads the files with Kopia, which stores each changed chunk once. Module 6.4.
+**Chaos Mesh.** Chaos Mesh is a CNCF project that injects faults into Kubernetes pods from custom resources: PodChaos kills pods, NetworkChaos adds delay or cuts the network, StressChaos burns CPU. A daemon on each node applies the fault inside the pod's network namespace or cgroup. Module 6.4.
 
-**Backup hook.** A backup hook is a command Velero runs in a pod just before it copies the pod's volumes, such as `CHECKPOINT` in PostgreSQL, so the copy needs less repair after a restore. Module 6.4.
+**Network partition.** A partition drops every packet between two groups of pods, so connections hang until a timeout, which hurts more than a fast refusal. Module 6.4.
 
-**CloudNativePG.** CloudNativePG is an operator that runs PostgreSQL on Kubernetes from a `Cluster` resource: it creates the pods, volumes, Services and replicas, and fails over on its own. Module 6.4.
+**RPO and RTO.** The recovery point objective is how much data you may lose, measured as time since the last good backup. The recovery time objective is how long the restore may take. Module 6.5.
 
-**Object storage (S3).** Object storage keeps files as objects in buckets behind an HTTP API, and S3 is the API most tools speak. The lab runs SeaweedFS's S3 gateway, because MinIO no longer publishes server images. Module 6.4.
+**Velero.** Velero backs up Kubernetes objects and volume data to object storage and restores them, a whole namespace or a selection, into the same or another cluster. Module 6.5.
 
-**Restore drill.** A restore drill restores a backup into a new namespace while the original keeps running, so you prove the backup works without an outage. Module 6.4.
+**File system backup (Kopia).** Without volume snapshots, Velero's node agent reads a pod's volume through the node and uploads the files with Kopia, which stores each changed chunk once. Module 6.5.
+
+**Backup hook.** A backup hook is a command Velero runs in a pod just before it copies the pod's volumes, such as `CHECKPOINT` in PostgreSQL, so the copy needs less repair after a restore. Module 6.5.
+
+**CloudNativePG.** CloudNativePG is an operator that runs PostgreSQL on Kubernetes from a `Cluster` resource: it creates the pods, volumes, Services and replicas, and fails over on its own. Module 6.5.
+
+**Object storage (S3).** Object storage keeps files as objects in buckets behind an HTTP API, and S3 is the API most tools speak. The lab runs SeaweedFS's S3 gateway, because MinIO no longer publishes server images. Module 6.5.
+
+**Restore drill.** A restore drill restores a backup into a new namespace while the original keeps running, so you prove the backup works without an outage. Module 6.5.
 
 ## OpenTelemetry and Tempo
 
