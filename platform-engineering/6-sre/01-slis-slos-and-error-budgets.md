@@ -269,12 +269,10 @@ Query `slo:sli_error:ratio_rate5m{sloth_slo="availability"}` every minute until 
 |---|---|
 | `slo:sli_error:ratio_rate5m{sloth_slo="availability"}` | 0 |
 | `slo:sli_error:ratio_rate30m{sloth_slo="availability"}` | 0.062 |
-| `ALERTS{sloth_service="checkout", alertstate="firing"}` | `CheckoutAvailabilityBudgetBurn`, page and ticket |
+| `ALERTS{sloth_service="checkout", alertstate="firing"}` after rollback | a page may remain while its long window still burns |
 | `slo:error_budget_minutes:spent{sloth_slo="availability"}` | 1.13 |
 
-**What you should see.** The rollback fixed the orders at once, and the 5-minute error ratio fell back to 0 within about 5 to 7 minutes, as the bad minutes slid out of its window. The fast half of the page, 1 hour and 5 minutes, is quiet from then on. The page still fires, because its slow half needs only the 30-minute and 6-hour windows above 6 times the budget, and the 30-minute window still held 6.2% errors. In an earlier test run the page cleared 1,788 seconds after the rollback, almost exactly 30 minutes, the moment the last bad minute left that window, and the ticket kept firing on its 2-hour and 1-day windows.
-
-You don't need to wait for that. The lesson is in the design: the short windows stop paging soon after a fix, while the long ones keep a record that a person should look at the incident, and the budget keeps its cost. The release spent 1.13 minutes of the 43.2 in total, about 2.6% of the month, a number a team uses in its review to decide whether the next release needs more testing.
+**What you should see.** The rollback fixes orders at once, and the 5-minute error ratio returns to 0 within about 5 to 7 minutes. The slower page may remain while the 30-minute and 6-hour windows still meet their burn threshold; it clears when that longer evidence ages out. The error budget keeps the cost: this test run spent about 1.13 minutes of its 43.2-minute availability budget, roughly 2.6%.
 
 ## Tasks
 

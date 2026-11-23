@@ -50,7 +50,35 @@ spec:
   ports:
     - {name: http, port: 3000, targetPort: 3000}
 ---
-# A receiver for Grafana's webhook notifications: it prints every request it gets to its log.
+# A receiver for Grafana's webhook notifications: it prints each JSON payload to its log.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alert-receiver-code
+  namespace: course-sre
+data:
+  receiver.py: |
+    import json
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200 if self.path == "/healthz" else 404)
+            self.end_headers()
+            self.wfile.write(b"ok\n")
+
+        def do_POST(self):
+            size = int(self.headers.get("Content-Length", "0"))
+            payload = json.loads(self.rfile.read(size))
+            print(json.dumps(payload), flush=True)
+            self.send_response(204)
+            self.end_headers()
+
+        def log_message(self, *_):
+            pass
+
+    ThreadingHTTPServer(("", 8080), Handler).serve_forever()
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -65,16 +93,22 @@ spec:
       labels: {app: alert-receiver}
     spec:
       containers:
-        - name: echo
-          image: mendhak/http-https-echo:31
-          env:
-            - {name: HTTP_PORT, value: "8080"}
-            - {name: LOG_IGNORE_PATH, value: "/healthz"}
+        - name: receiver
+          image: public.ecr.aws/docker/library/python:3.13.9-alpine3.22
+          command: ["python", "/app/receiver.py"]
           ports:
             - containerPort: 8080
+          readinessProbe:
+            httpGet: {path: /healthz, port: 8080}
+            periodSeconds: 5
           resources:
             requests: {cpu: 10m, memory: 32Mi}
             limits: {memory: 96Mi}
+          volumeMounts:
+            - {name: code, mountPath: /app}
+      volumes:
+        - name: code
+          configMap: {name: alert-receiver-code}
 ---
 apiVersion: v1
 kind: Service

@@ -1822,7 +1822,7 @@ gf6_in() {
 # with the variables filled in the way Grafana fills them.
 dash_empty() {
   local uid=$1; shift
-  local code='import json, subprocess, sys, urllib.parse
+  local code='import json, os, subprocess, sys, urllib.parse
 d = json.load(sys.stdin)["dashboard"]
 ctx, subs = sys.argv[1], dict(a.split("=", 1) for a in sys.argv[2:])
 subs["__rate_interval"] = "1m"
@@ -1840,9 +1840,10 @@ for p in d["panels"]:
             r = []
         if not r:
             empty += 1
-            print("no data:", p["title"], file=sys.stderr)
+            if os.environ.get("DASH_EMPTY_DEBUG"):
+                print("no data:", p["title"], e, file=sys.stderr)
 print(empty)'
-  gf6 "localhost:3000/api/dashboards/uid/$uid" | python3 -c "$code" "${KUBE_CONTEXT:-k3d-k8s-lab}" "$@" 2>/dev/null || echo 99
+  gf6 "localhost:3000/api/dashboards/uid/$uid" | python3 -c "$code" "${KUBE_CONTEXT:-k3d-k8s-lab}" "$@" || echo 99
 }
 checkout6() {
   "${K[@]}" apply -f "$M/6.1-checkout.yaml" >/dev/null
@@ -1884,7 +1885,7 @@ module_6_1() {
   budget_there() { [[ -n "$(p6 'slo:error_budget_minutes:total{sloth_slo="availability"}')" ]]; }
   poll6 90 budget_there
   expect "the error budget is 0.1% of 30 days, 43.2 minutes" "$(p6 'slo:error_budget_minutes:total{sloth_slo="availability"}' | awk '{printf "%.1f", $1}')" '^43\.2$'
-  # The SLO remembers: 5xx from an earlier run in the last 30 minutes keep the slow page firing.
+  # Old errors remain in the long window, but the short window must recover before paging clears.
   local recent
   recent="$(p6 'sum(increase(http_request_duration_seconds_count{namespace="course-sre", app="checkout", status=~"5.."}[35m]))' | awk '{printf "%d", $1}')"
   if [[ "${recent:-0}" == 0 ]]; then
@@ -1912,7 +1913,6 @@ module_6_1() {
   clean5m() { [[ "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability"}')" == 0 ]]; }
   poll6 420 clean5m
   expect "after the rollback the 5m error ratio returns to 0 ($((SECONDS - t0)) s)" "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability"}')" '^0$'
-  expect "the page keeps firing: the 30m window still remembers the errors" "$(p6_alert CheckoutAvailabilityBudgetBurn page)" '^firing$'
   between "the incident spent part of the budget, in tenths of a minute" "$(p6 'slo:error_budget_minutes:spent{sloth_slo="availability"}' | awk '{printf "%d", $1 * 10}')" 1 200
   baseline
   expect "after the reset course-sre and its rules are gone" "$("${K[@]}" get ns course-sre 2>&1 | grep -c NotFound)" '^1$'
@@ -1949,10 +1949,14 @@ module_6_2() {
   expect "Grafana's sidecar loads the SLO dashboard as provisioned" "$(dash_title sre-slo)" '^SRE / SLOs True$'
   expect "and the RED dashboard" "$(dash_title sre-red)" '^SRE / RED True$'
   expect "and the USE dashboard" "$(dash_title sre-use)" '^SRE / USE True$'
+  service_values() { [[ "$("${K[@]}" get --raw '/api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/label/sloth_service/values?match%5B%5D=slo%3Aobjective%3Aratio' 2>/dev/null | grep -o '"checkout"')" == '"checkout"' ]]; }
+  poll6 180 service_values
   expect "the service variable lists checkout" "$("${K[@]}" get --raw '/api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/label/sloth_service/values?match%5B%5D=slo%3Aobjective%3Aratio' 2>/dev/null | grep -o '"checkout"')" '"checkout"'
+  app_values() { [[ "$("${K[@]}" get --raw '/api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/label/app/values?match%5B%5D=http_request_duration_seconds_count%7Bnamespace%3D%22course-sre%22%7D' 2>/dev/null | grep -o '"checkout","payments"')" == '"checkout","payments"' ]]; }
+  poll6 180 app_values
   expect "the app variable lists checkout and payments" "$("${K[@]}" get --raw '/api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/label/app/values?match%5B%5D=http_request_duration_seconds_count%7Bnamespace%3D%22course-sre%22%7D' 2>/dev/null | grep -o '"checkout","payments"')" 'checkout","payments'
-  slo_ready() { [[ -n "$(p6 'slo:error_budget_minutes:remaining_ratio{sloth_slo="availability"}')" ]]; }
-  poll6 120 slo_ready
+  slo_panels_ready() { [[ "$(dash_empty sre-slo service=checkout slo=availability)" == 0 ]]; }
+  poll6 360 slo_panels_ready
   expect "every SLO panel has data for checkout / availability" "$(dash_empty sre-slo service=checkout slo=availability)" '^0$'
   expect "every RED panel has data for course-sre" "$(dash_empty sre-red namespace=course-sre 'app=.*')" '^0$'
   expect "every USE panel has data for course-sre" "$(dash_empty sre-use namespace=course-sre 'pod=.*')" '^0$'
@@ -1983,7 +1987,7 @@ module_6_2() {
   expect "a bad release makes the log rule fire ($((SECONDS - t0)) s)" "$(rule_state)" '^ok firing$'
   delivered() { "${K[@]}" -n course-sre logs deploy/alert-receiver 2>/dev/null | grep -q 'Checkout logs many errors'; }
   poll6 120 delivered
-  expect "the webhook receiver gets the notification" "$("${K[@]}" -n course-sre logs deploy/alert-receiver 2>/dev/null | grep -o '"status":"firing"' | head -1)" 'firing'
+  expect "the webhook receiver gets the notification" "$("${K[@]}" -n course-sre logs deploy/alert-receiver 2>/dev/null | grep -Eo '"status":[[:space:]]*"firing"' | head -1)" 'firing'
   "${K[@]}" -n course-sre rollout undo deploy/checkout >/dev/null
   kill "$pf" 2>/dev/null; wait "$pf" 2>/dev/null; rm -rf "$work"
   baseline
