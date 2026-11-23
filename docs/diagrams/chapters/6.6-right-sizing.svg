@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1600" viewBox="0 0 1600 1600" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="1600" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Reserve what <tspan fill="#7c3aed">the pod needs</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">The scheduler places pods from their requests. A right-sized request leaves more room for other work.</text>
+<rect x="40.0" y="150.0" width="1520.0" height="1290.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<ellipse cx="67.0" cy="174.0" rx="9.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.20"/>
+<ellipse cx="67.0" cy="174.0" rx="4.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.00"/>
+<polyline points="58.0,174.0 76.0,174.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">OrbStack cluster</text>
+<rect x="90.0" y="230.0" width="370.0" height="1080.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="108.0" y="260.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">control plane</text>
+<rect x="125.0" y="360.0" width="300.0" height="100.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="275.0" y="402.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">scheduler</text>
+<text x="275.0" y="424.7" font-size="17.0" fill="#475569" text-anchor="middle">checks requests</text>
+<rect x="500.0" y="230.0" width="1000.0" height="1080.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<rect x="518.0" y="245.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="521.5" cy="247.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="527.0,247.5 532.5,247.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="518.0" y="251.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="521.5" cy="254.0" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="527.0,254.0 532.5,254.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="518.0" y="258.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="521.5" cy="260.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="527.0,260.5 532.5,260.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="546.0" y="260.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">node k3d-k8s-lab-server-0</text>
+<rect x="540.0" y="310.0" width="910.0" height="910.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="558.0" y="340.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace course-capacity</text>
+<rect x="590.0" y="405.0" width="380.0" height="330.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="608.0" y="435.0" font-size="16.0" fill="#475569" font-weight="700" text-anchor="start">Deployment overprovisioned</text>
+<rect x="620.0" y="480.0" width="145.0" height="190.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="647.0,495.0 655.5,499.5 655.5,509.0 647.0,513.5 638.5,509.0 638.5,499.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="638.5,499.5 647.0,504.0 655.5,499.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="647.0,504.0 647.0,513.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="666.0" y="510.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">pod</text>
+<rect x="635.0" y="540.0" width="115.0" height="64.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="692.5" y="563.8" font-size="15.0" fill="#0f172a" font-weight="700" text-anchor="middle">idle</text>
+<text x="692.5" y="581.1" font-size="17.0" fill="#475569" text-anchor="middle">250m / 256Mi</text>
+<rect x="795.0" y="480.0" width="145.0" height="190.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="822.0,495.0 830.5,499.5 830.5,509.0 822.0,513.5 813.5,509.0 813.5,499.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="813.5,499.5 822.0,504.0 830.5,499.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="822.0,504.0 822.0,513.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="841.0" y="510.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">pod</text>
+<rect x="810.0" y="540.0" width="115.0" height="64.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="867.5" y="563.8" font-size="15.0" fill="#0f172a" font-weight="700" text-anchor="middle">idle</text>
+<text x="867.5" y="581.1" font-size="17.0" fill="#475569" text-anchor="middle">250m / 256Mi</text>
+<rect x="590.0" y="820.0" width="800.0" height="300.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="608.0" y="850.0" font-size="16.0" fill="#475569" font-weight="700" text-anchor="start">Deployment right-sized</text>
+<rect x="630.0" y="895.0" width="145.0" height="175.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="657.0,910.0 665.5,914.5 665.5,924.0 657.0,928.5 648.5,924.0 648.5,914.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="648.5,914.5 657.0,919.0 665.5,914.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="657.0,919.0 657.0,928.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="676.0" y="925.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">pod</text>
+<rect x="645.0" y="950.0" width="115.0" height="64.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="702.5" y="973.8" font-size="15.0" fill="#0f172a" font-weight="700" text-anchor="middle">idle</text>
+<text x="702.5" y="991.1" font-size="17.0" fill="#475569" text-anchor="middle">100m / 128Mi</text>
+<rect x="820.0" y="895.0" width="145.0" height="175.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="847.0,910.0 855.5,914.5 855.5,924.0 847.0,928.5 838.5,924.0 838.5,914.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="838.5,914.5 847.0,919.0 855.5,914.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="847.0,919.0 847.0,928.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="866.0" y="925.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">pod</text>
+<rect x="835.0" y="950.0" width="115.0" height="64.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="892.5" y="973.8" font-size="15.0" fill="#0f172a" font-weight="700" text-anchor="middle">idle</text>
+<text x="892.5" y="991.1" font-size="17.0" fill="#475569" text-anchor="middle">100m / 128Mi</text>
+<text x="1060.0" y="510.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">same work</text>
+<text x="1060.0" y="570.0" font-size="18.0" fill="#059669" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">half the requests</text>
+<text x="1060.0" y="630.0" font-size="16.0" fill="#475569" text-anchor="start">same replica count</text>
+<text x="1060.0" y="955.0" font-size="18.0" fill="#059669" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">more schedulable room</text>
+<polyline points="425.0,410.0 480.0,410.0 480.0,570.0 610.5,574.7" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="620.0,575.0 608.3,580.3 608.7,568.8" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="480.0" cy="490.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="480.0" cy="490.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="480.0" y="496.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<text x="480.0" y="464.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">places</text>
+<polyline points="425.0,410.0 480.0,410.0 480.0,980.0 620.5,982.3" fill="none" stroke="#0891b2" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="630.0,982.5 618.4,988.1 618.6,976.5" fill="#0891b2" stroke="#0891b2" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="480.0" cy="700.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="480.0" cy="700.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="480.0" y="706.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<text x="480.0" y="674.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">places</text>
+</svg>

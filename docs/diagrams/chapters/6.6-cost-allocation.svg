@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1600" viewBox="0 0 1600 1600" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="1600" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Turn resource <tspan fill="#7c3aed">use into cost</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">OpenCost queries Prometheus, applies its price model and returns an allocation for each namespace.</text>
+<rect x="40.0" y="150.0" width="1520.0" height="1270.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<ellipse cx="67.0" cy="174.0" rx="9.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.20"/>
+<ellipse cx="67.0" cy="174.0" rx="4.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.00"/>
+<polyline points="58.0,174.0 76.0,174.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">OrbStack cluster</text>
+<rect x="80.0" y="235.0" width="930.0" height="1100.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<rect x="98.0" y="250.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="101.5" cy="252.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="107.0,252.5 112.5,252.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="98.0" y="256.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="101.5" cy="259.0" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="107.0,259.0 112.5,259.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="98.0" y="263.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="101.5" cy="265.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="107.0,265.5 112.5,265.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="126.0" y="265.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">node k3d-k8s-lab-server-0</text>
+<rect x="120.0" y="310.0" width="520.0" height="890.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="138.0" y="340.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace course-capacity</text>
+<rect x="140.0" y="380.0" width="500.0" height="330.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="158.0" y="410.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">demo workloads</text>
+<rect x="150.0" y="410.0" width="210.0" height="220.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="168.0" y="440.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">overprovisioned</text>
+<rect x="170.0" y="475.0" width="170.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="255.0" y="512.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">two pods</text>
+<text x="255.0" y="534.7" font-size="17.0" fill="#475569" text-anchor="middle">500m / 512Mi</text>
+<rect x="390.0" y="410.0" width="210.0" height="220.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="408.0" y="440.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">right-sized</text>
+<rect x="410.0" y="475.0" width="170.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="495.0" y="512.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">two pods</text>
+<text x="495.0" y="534.7" font-size="17.0" fill="#475569" text-anchor="middle">200m / 256Mi</text>
+<rect x="185.0" y="810.0" width="410.0" height="115.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="390.0" y="860.1" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">OpenCost</text>
+<text x="390.0" y="882.2" font-size="17.0" fill="#475569" text-anchor="middle">price model + allocation API</text>
+<rect x="700.0" y="310.0" width="280.0" height="400.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="718.0" y="340.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace observability</text>
+<rect x="735.0" y="425.0" width="210.0" height="100.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="840.0" y="467.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">Prometheus</text>
+<text x="840.0" y="489.7" font-size="17.0" fill="#475569" text-anchor="middle">requests and usage</text>
+<rect x="1110.0" y="300.0" width="380.0" height="580.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="1130.0" y="317.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="1127.5,331.0 1146.5,331.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1156.0" y="330.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">your terminal</text>
+<rect x="1150.0" y="435.0" width="300.0" height="100.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1300.0" y="477.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">kubectl get --raw</text>
+<text x="1300.0" y="499.7" font-size="17.0" fill="#475569" text-anchor="middle">allocation?window=1h</text>
+<rect x="1150.0" y="625.0" width="300.0" height="110.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="1300.0" y="672.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">namespace cost</text>
+<text x="1300.0" y="694.7" font-size="17.0" fill="#475569" text-anchor="middle">estimate in USD</text>
+<polyline points="640.0,545.0 670.0,545.0 670.0,475.0 725.5,475.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="735.0,475.0 723.5,480.8 723.5,469.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="670.0" cy="510.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="670.0" cy="510.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="670.0" y="516.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<text x="670.0" y="484.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">scrapes metrics</text>
+<polyline points="595.0,867.5 665.0,867.5 665.0,505.0 725.5,505.0" fill="none" stroke="#7c3aed" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="735.0,505.0 723.5,510.8 723.5,499.2" fill="#7c3aed" stroke="#7c3aed" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="665.0" cy="860.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="665.0" cy="860.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="665.0" y="866.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<text x="665.0" y="834.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">queries</text>
+<polyline points="595.0,867.5 1035.0,865.0 1035.0,485.0 1140.5,485.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1150.0,485.0 1138.5,490.8 1138.5,479.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1035.0" cy="670.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1035.0" cy="670.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1035.0" y="676.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<text x="1061.0" y="676.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">serves</text>
+<polyline points="1300.0,535.0 1300.0,615.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1300.0,625.0 1294.2,613.5 1305.8,613.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1300.0" cy="580.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1300.0" cy="580.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1300.0" y="586.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<text x="1326.0" y="586.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">returns</text>
+</svg>
