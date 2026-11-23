@@ -16,13 +16,13 @@ A Kubernetes platform lab and a hands-on course that run on your own machine, wi
 
 ## What this is
 
-The lab is a small online shop that runs in a Kubernetes cluster on your machine, together with the tools a platform team uses every day: Istio, ArgoCD, cert-manager, Prometheus, Grafana, Jaeger, Loki, Kiali and Headlamp. You change the cluster on purpose, for example by sending 10% of the traffic to a new backend, and then watch the result in the web UIs. The course builds on it in six tracks that each start from scratch and get harder as they go, beginning with track 0 on Docker itself, which needs no cluster at all.
+The lab is a small online shop that runs in a Kubernetes cluster on your machine, together with the tools a platform team uses every day: Istio, ArgoCD, cert-manager, Prometheus, Grafana, Jaeger, Loki, Kiali and Headlamp. You change the cluster on purpose, for example by sending 10% of the traffic to a new backend, and then watch the result in the web UIs. The course builds on it in seven tracks that each start from scratch and get harder as they go, beginning with track 0 on Docker itself, which needs no cluster at all.
 
 ![How the lab fits together: your terminal and browser, the toolbox, the k3d lab and the practice cluster in one Docker engine, Ollama on your machine, and the VM for module 4.7](docs/diagrams/chapters/lab-map.svg)
 
 | Name | What it is |
 |---|---|
-| The lab | The k3d cluster `k8s-lab`: one k3s node in Docker with the shop, Istio ambient mesh, ArgoCD and every UI. Tracks 2, 3 and 5 run here. |
+| The lab | The k3d cluster `k8s-lab`: one k3s node in Docker with the shop, Istio ambient mesh, ArgoCD and every UI. Tracks 2, 3, 5 and 6 run here. |
 | The toolbox | A container with kubectl, helm, k3d, kind and istioctl at the tested versions, so your machine needs only Docker and git. |
 | The practice cluster | Two kubeadm nodes that kind runs as containers, for the timed tasks and exams of tracks 1 and 4. |
 | The VM | `cks-lima`, a Lima VM with a kernel of its own, only for module 4.7 and a few tasks of exams 5 and 6. |
@@ -113,6 +113,7 @@ Module 3.10 adds HTTPS for the shop on https://localhost:8443, and the practice 
 | ArgoCD `admin` | `k8s-lab-admin` | `helm/argocd-values.yaml`, as a bcrypt hash |
 | Redis | `k8s-lab-redis` | `manifests/base/03-lab-credentials.yaml` |
 | Gitea `lab`, module 2.6 only | `lab-gitops-pass` | the `gitea admin user create` command in [module 2.6](platform-engineering/2-observability/06-gitops-with-argocd.md) |
+| Gitea `lab`, module 6.2 only | `lab-gitops-pass` | the `gitea admin user create` command in [module 6.2](platform-engineering/6-sre/02-grafana-in-depth.md) |
 
 ## Everyday commands
 
@@ -141,11 +142,11 @@ ArgoCD deploys the lab from the `main` branch on GitHub, not from your working c
 
 ## The course
 
-The course has six tracks. Each one starts on a fresh lab with no other track behind it, and its modules get harder in order, so start at the first module of the track you want and go down its table. A module id joins the track and the module, so module 3.2 is the second module of track 3. If you're new to containers, take track 0 first: it builds the Docker knowledge every other track assumes. The last column says where a module runs: *docker* needs only Docker and the toolbox, *lab* is the k3d lab, *practice* the practice cluster, *VM* the Lima VM, and *AI* means it also calls a language model.
+The course has seven tracks. Each one starts on a fresh lab with no other track behind it, and its modules get harder in order, so start at the first module of the track you want and go down its table. A module id joins the track and the module, so module 3.2 is the second module of track 3. If you're new to containers, take track 0 first: it builds the Docker knowledge every other track assumes. The last column says where a module runs: *docker* needs only Docker and the toolbox, *lab* is the k3d lab, *practice* the practice cluster, *VM* the Lima VM, and *AI* means it also calls a language model.
 
 Every module explains one problem and the design that solves it, then gives you commands with the output you should see, then questions with answers, and ends with a clean-up. Run `./lab.sh reset` after each lab module.
 
-![The six tracks: each starts from the quick start, and its modules run from easy to hard](docs/diagrams/chapters/readme-course-routes.svg)
+![The seven tracks: each starts from the quick start, and its modules run from easy to hard](docs/diagrams/chapters/readme-course-routes.svg)
 
 ### 0. Docker and Compose
 
@@ -245,6 +246,19 @@ For anyone who runs AI features: call a model from an app, serve models in the c
 | 5.2 | [Serving models in the cluster](platform-engineering/5-ai/02-serving-models.md) | Two small models on llama.cpp, why LLM load balancing is hard | lab, downloads about 900 MB |
 | 5.3 | [AI agents and their tools](platform-engineering/5-ai/03-ai-agents.md) | kagent, MCP and A2A, policy and RBAC around agents | lab, AI |
 | 5.4 | [RAG on Kubernetes](platform-engineering/5-ai/04-rag-on-kubernetes.md) | Qdrant, embeddings, ingesting the course, top-k against tokens | lab, AI |
+
+### 6. Reliability engineering (SRE)
+
+For anyone who keeps a service running for its users: agree on how reliable it must be, measure it, alert on what users feel, then test the plan with faults and a restore. Every module works on apps outside the mesh, runs on the lab, has tasks, and removes what it installed with `./lab.sh reset`.
+
+| Id | Module | You learn | Runs on |
+|---|---|---|---|
+| 6.1 | [SLIs, SLOs and error budgets](platform-engineering/6-sre/01-slis-slos-and-error-budgets.md) | SLIs from an app's own metrics, Sloth, multi-window burn-rate alerts, the budget in minutes | lab |
+| 6.2 | [Grafana in depth](platform-engineering/6-sre/02-grafana-in-depth.md) | SLO, RED and USE dashboards as code from Git through ArgoCD, chained variables, a Loki alert rule | lab |
+| 6.3 | [Chaos engineering with Chaos Mesh](platform-engineering/6-sre/03-chaos-engineering.md) | Hypotheses and blast radius, pod kills, latency and a partition, watched on the SLOs | lab, adds about 150 MiB |
+| 6.4 | [Backup and disaster recovery](platform-engineering/6-sre/04-backup-and-disaster-recovery.md) | Velero with an S3 store, a CloudNativePG database, a restore drill, RPO and RTO | lab, adds about 600 MiB |
+
+Planned, not built yet: autoscaling on custom metrics, capacity and cost, an ELK-style logging comparison and a timed game day.
 
 ### Check a module
 

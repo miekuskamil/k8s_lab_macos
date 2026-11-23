@@ -1,0 +1,23 @@
+# Task 6.3.1, the reference solution: 200 ms on the packets checkout sends to payments, and
+# nothing else. The selector picks where the fault runs (checkout's network namespace); the
+# target and direction "to" limit it to packets addressed to payments' pods.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: checkout-to-payments-delay
+  namespace: course-sre
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces: [course-sre]
+    labelSelectors: {app: checkout}
+  direction: to
+  target:
+    mode: all
+    selector:
+      namespaces: [course-sre]
+      labelSelectors: {app: payments}
+  delay:
+    latency: 200ms
+  duration: 10m

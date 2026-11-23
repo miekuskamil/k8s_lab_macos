@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1140" viewBox="0 0 1600 1140" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="1140" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Dashboards from Git, <tspan fill="#7c3aed">alerts from the API</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Orange steps carry a dashboard from a push to the screen. Teal steps carry an alert rule to a person.</text>
+<rect x="40.0" y="150.0" width="360.0" height="950.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="57.5,181.0 76.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">your terminal</text>
+<rect x="70.0" y="220.0" width="300.0" height="90.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="220.0" y="257.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">git push</text>
+<text x="220.0" y="279.7" font-size="17.0" fill="#475569" text-anchor="middle">slo, red, use .json</text>
+<rect x="70.0" y="825.0" width="300.0" height="90.0" rx="10.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<text x="220.0" y="862.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">curl</text>
+<text x="220.0" y="884.7" font-size="17.0" fill="#475569" text-anchor="middle">provisioning API</text>
+<rect x="450.0" y="150.0" width="1120.0" height="970.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<ellipse cx="477.0" cy="174.0" rx="9.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.20"/>
+<ellipse cx="477.0" cy="174.0" rx="4.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.00"/>
+<polyline points="468.0,174.0 486.0,174.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="496.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">cluster</text>
+<rect x="480.0" y="200.0" width="420.0" height="300.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="498.0" y="230.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace course-sre</text>
+<rect x="510.0" y="250.0" width="360.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="690.0" y="282.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">Gitea</text>
+<text x="690.0" y="304.7" font-size="17.0" fill="#475569" text-anchor="middle">sre-dashboards.git</text>
+<rect x="510.0" y="390.0" width="360.0" height="80.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="690.0" y="422.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">3 ConfigMaps</text>
+<text x="690.0" y="444.7" font-size="17.0" fill="#475569" text-anchor="middle">grafana_dashboard=1</text>
+<rect x="980.0" y="200.0" width="560.0" height="140.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="998.0" y="230.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace argocd</text>
+<rect x="1010.0" y="250.0" width="500.0" height="70.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="1260.0" y="277.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">ArgoCD</text>
+<text x="1260.0" y="299.7" font-size="17.0" fill="#475569" text-anchor="middle">Application sre-dashboards</text>
+<rect x="480.0" y="560.0" width="1060.0" height="410.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="1522.0" y="590.0" font-size="17.0" fill="#475569" text-anchor="end">namespace observability</text>
+<rect x="510.0" y="610.0" width="670.0" height="330.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="537.0,625.0 545.5,629.5 545.5,639.0 537.0,643.5 528.5,639.0 528.5,629.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="528.5,629.5 537.0,634.0 545.5,629.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="537.0,634.0 537.0,643.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="556.0" y="640.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Grafana pod</text>
+<rect x="540.0" y="660.0" width="270.0" height="80.0" rx="10.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<text x="675.0" y="692.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">sidecar</text>
+<text x="675.0" y="714.7" font-size="17.0" fill="#475569" text-anchor="middle">watches ConfigMaps</text>
+<rect x="870.0" y="660.0" width="270.0" height="80.0" rx="10.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<text x="1005.0" y="692.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">grafana</text>
+<text x="1005.0" y="714.7" font-size="17.0" fill="#475569" text-anchor="middle">provisioned, read-only</text>
+<rect x="870.0" y="830.0" width="270.0" height="80.0" rx="10.0" fill="#fdeeee" stroke="#dc2626" stroke-width="1.8"/>
+<text x="1005.0" y="862.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">alert rule</text>
+<text x="1005.0" y="884.7" font-size="17.0" fill="#475569" text-anchor="middle">every 30 s</text>
+<rect x="1240.0" y="830.0" width="270.0" height="80.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="1375.0" y="862.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">Loki</text>
+<text x="1375.0" y="884.7" font-size="17.0" fill="#475569" text-anchor="middle">checkout&#x27;s logs</text>
+<rect x="1210.0" y="990.0" width="330.0" height="110.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="1522.0" y="1020.0" font-size="17.0" fill="#475569" text-anchor="end">namespace course-sre</text>
+<rect x="1240.0" y="1035.0" width="210.0" height="55.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1345.0" y="1066.1" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">alert-receiver</text>
+<polyline points="370.0,265.0 430.0,265.0 430.0,290.0 500.5,290.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="510.0,290.0 498.5,295.8 498.5,284.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="430.0" cy="280.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="430.0" cy="280.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="430.0" y="286.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<polyline points="1010.0,285.0 940.0,285.0 940.0,290.0 879.5,290.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="870.0,290.0 881.5,284.2 881.5,295.8" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="940.0" cy="285.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="940.0" cy="285.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="940.0" y="291.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<text x="940.0" y="259.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">fetch</text>
+<polyline points="1160.0,320.0 1160.0,430.0 879.5,430.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="870.0,430.0 881.5,424.2 881.5,435.8" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1160.0" cy="430.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1160.0" cy="430.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1160.0" y="436.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<text x="1186.0" y="436.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">apply</text>
+<polyline points="690.0,470.0 690.0,650.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="690.0,660.0 684.2,648.5 695.8,648.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="690.0" cy="520.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="690.0" cy="520.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="690.0" y="526.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<polyline points="810.0,700.0 860.5,700.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="870.0,700.0 858.5,705.8 858.5,694.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="840.0" cy="700.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="840.0" cy="700.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="840.0" y="706.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">5</text>
+<polyline points="370.0,870.0 860.5,870.0" fill="none" stroke="#0891b2" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="870.0,870.0 858.5,875.8 858.5,864.2" fill="#0891b2" stroke="#0891b2" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="450.0" cy="870.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="450.0" cy="870.0" rx="16.0" ry="16.0" fill="#0891b2" stroke="none"/>
+<text x="450.0" y="876.5" font-size="18.0" fill="#ffffff" font-weight="700" text-anchor="middle">1</text>
+<text x="450.0" y="838.0" font-size="18.0" fill="#155e75" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">POST</text>
+<polyline points="1005.0,740.0 1005.0,820.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1005.0,830.0 999.2,818.5 1010.8,818.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="1015.0" y="791.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">evaluates</text>
+<polyline points="1140.0,870.0 1230.5,870.0" fill="none" stroke="#0891b2" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1240.0,870.0 1228.5,875.8 1228.5,864.2" fill="#0891b2" stroke="#0891b2" stroke-width="1" stroke-linejoin="round"/>
+<text x="1190.0" y="838.0" font-size="18.0" fill="#155e75" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">query</text>
+<ellipse cx="1190.0" cy="870.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1190.0" cy="870.0" rx="16.0" ry="16.0" fill="#0891b2" stroke="none"/>
+<text x="1190.0" y="876.5" font-size="18.0" fill="#ffffff" font-weight="700" text-anchor="middle">2</text>
+<polyline points="1005.0,910.0 1005.0,1062.5 1230.5,1062.5" fill="none" stroke="#0891b2" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1240.0,1062.5 1228.5,1068.3 1228.5,1056.7" fill="#0891b2" stroke="#0891b2" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1005.0" cy="1000.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1005.0" cy="1000.0" rx="16.0" ry="16.0" fill="#0891b2" stroke="none"/>
+<text x="1005.0" y="1006.5" font-size="18.0" fill="#ffffff" font-weight="700" text-anchor="middle">3</text>
+<text x="1030.0" y="1006.0" font-size="18.0" fill="#155e75" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">firing, webhook</text>
+</svg>

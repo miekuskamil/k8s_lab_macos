@@ -1,0 +1,22 @@
+{
+  "uid": "checkout-error-logs",
+  "title": "Checkout logs many errors",
+  "folderUID": "sre",
+  "ruleGroup": "checkout-logs",
+  "condition": "C",
+  "for": "1m",
+  "noDataState": "OK",
+  "execErrState": "Error",
+  "labels": {"severity": "ticket", "team": "shop"},
+  "annotations": {"summary": "checkout wrote {{ $values.A.Value }} error lines in one minute"},
+  "notification_settings": {"receiver": "sre-webhook"},
+  "data": [
+    {"refId": "A", "datasourceUid": "loki", "queryType": "instant",
+     "relativeTimeRange": {"from": 600, "to": 0},
+     "model": {"refId": "A", "queryType": "instant",
+               "expr": "sum(count_over_time({namespace=\"course-sre\", app=\"checkout\"} | json | level=\"error\" [1m]))"}},
+    {"refId": "C", "datasourceUid": "__expr__",
+     "model": {"refId": "C", "type": "threshold", "expression": "A",
+               "conditions": [{"evaluator": {"type": "gt", "params": [10]}}]}}
+  ]
+}

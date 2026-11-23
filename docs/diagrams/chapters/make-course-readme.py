@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the course map for the guide with the kit in ../bbg.py.
 
-  readme-course-routes   the six tracks, each from the quick start, its modules from easy to hard
+  readme-course-routes   the seven tracks, each from the quick start, its modules from easy to hard
 
 Run from anywhere: python3 docs/diagrams/chapters/make-course-readme.py
 """
@@ -15,11 +15,11 @@ OUT = Path(__file__).resolve().parent
 
 
 def routes():
-    c = Canvas(1600, 1040)
-    c.title("Six tracks,", "one lab")
+    c = Canvas(1600, 1180)
+    c.title("Seven tracks,", "one lab")
     c.subtitle("Every track starts from the quick start and needs no other track. Each stop is a module, easy on the left.")
 
-    start = c.node(40, 515, 230, 110, SLATE, "Quick start", "terminal", "lab.sh shell, up")
+    start = c.node(40, 585, 230, 110, SLATE, "Quick start", "terminal", "lab.sh shell, up")
     trunk = 330
 
     def stop(x, y, n, col, r=23):
@@ -42,14 +42,15 @@ def routes():
         c.text(xs - 23, y - 42, label, 19, deep(col), True)
         c.text(xs - 23 + 11 * len(label) + 20, y - 42, sub, 16, SOFT)
 
-    c.line([(270, 570), (trunk, 570)], SLATE, 5)
-    c.line([(trunk, 210), (trunk, 935)], SLATE, 5)
+    c.line([(270, 640), (trunk, 640)], SLATE, 5)
+    c.line([(trunk, 210), (trunk, 1080)], SLATE, 5)
     lane(210, TEAL, 8, "0 Docker and Compose", "Docker only, containers to a hardened capstone")
     lane(355, SLATE, 6, "1 Applications", "practice cluster, build to debug", "exams 1-3")
     lane(500, ORANGE, 9, "2 Observability and platform", "lab, metrics to k3s upgrades")
     lane(645, BLUE, 21, "3 Istio service mesh", "lab, what a mesh adds to installing it")
     lane(790, RED, 7, "4 Cluster security", "practice cluster, network to kernel", "exams 4-6")
     lane(935, PINK, 4, "5 AI on Kubernetes", "lab, a model call to RAG")
+    lane(1080, GREEN, 4, "6 Reliability engineering (SRE)", "lab, SLOs to a restore drill")
     c.save(OUT, "readme-course-routes")
 
 

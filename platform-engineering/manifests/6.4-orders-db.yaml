@@ -1,0 +1,33 @@
+# Module 6.4: a PostgreSQL database that the CloudNativePG operator runs, in its own namespace.
+# One instance is enough to practise a restore. Production runs three, across zones.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-dr
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: orders-db
+  namespace: course-dr
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.6-minimal-bookworm
+  storage:
+    size: 1Gi
+  postgresql:
+    parameters:
+      shared_buffers: 32MB
+  bootstrap:
+    initdb:
+      database: orders
+      owner: orders
+  # Velero runs this hook in the database pod before it copies the volume: CHECKPOINT
+  # writes every change from memory to the data files first, so the copy needs less replay.
+  inheritedMetadata:
+    annotations:
+      pre.hook.backup.velero.io/container: postgres
+      pre.hook.backup.velero.io/command: '["psql", "-U", "postgres", "-c", "CHECKPOINT"]'
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 384Mi}

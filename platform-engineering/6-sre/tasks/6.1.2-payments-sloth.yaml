@@ -1,0 +1,28 @@
+# Task 6.1.2, the reference solution: a Sloth spec for a latency SLO on payments.
+# 99% of payments' requests answer within 100 ms, over 30 days.
+apiVersion: sloth.slok.dev/v1
+kind: PrometheusServiceLevel
+metadata:
+  name: payments
+  namespace: course-sre
+spec:
+  service: payments
+  labels:
+    team: shop
+  slos:
+    - name: latency
+      objective: 99
+      description: "Payments requests answered within 100 ms."
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(http_request_duration_seconds_count{namespace="course-sre", app="payments"}[{{.window}}]))
+            -
+            sum(rate(http_request_duration_seconds_bucket{namespace="course-sre", app="payments", le="0.1"}[{{.window}}]))
+          totalQuery: sum(rate(http_request_duration_seconds_count{namespace="course-sre", app="payments"}[{{.window}}]))
+      alerting:
+        name: PaymentsLatencyBudgetBurn
+        pageAlert:
+          labels: {severity: page}
+        ticketAlert:
+          labels: {severity: ticket}

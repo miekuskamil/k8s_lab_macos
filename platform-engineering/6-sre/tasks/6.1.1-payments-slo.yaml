@@ -1,0 +1,31 @@
+# Task 6.1.1, the reference solution: a 99.5% availability SLO for payments, written by hand.
+# The error budget is 0.5%, so a burn rate of 14.4 means an error ratio of 14.4 x 0.005 = 0.072.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: payments-slo
+  namespace: course-sre
+spec:
+  groups:
+    - name: payments-slo
+      interval: 30s
+      rules:
+        - record: payments:sli_error:ratio_rate5m
+          expr: |
+            (sum(rate(http_request_duration_seconds_count{namespace="course-sre", app="payments", status=~"5.."}[5m])) or vector(0))
+            /
+            sum(rate(http_request_duration_seconds_count{namespace="course-sre", app="payments"}[5m]))
+        - record: payments:sli_error:ratio_rate1h
+          expr: |
+            (sum(rate(http_request_duration_seconds_count{namespace="course-sre", app="payments", status=~"5.."}[1h])) or vector(0))
+            /
+            sum(rate(http_request_duration_seconds_count{namespace="course-sre", app="payments"}[1h]))
+        - alert: PaymentsAvailabilityBurn
+          expr: |
+            payments:sli_error:ratio_rate5m > 0.072
+            and
+            payments:sli_error:ratio_rate1h > 0.072
+          labels:
+            severity: page
+          annotations:
+            summary: "Payments spends its 0.5% error budget 14.4 times too fast."

@@ -1,0 +1,25 @@
+# Module 6.5: scale checkout between 2 and 6 pods on CPU, measured against the CPU request.
+# 60% of a 50m request is 30m per pod: above that average the HPA adds pods.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: checkout
+  namespace: course-sre
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: checkout
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+  behavior:
+    # The default waits 5 minutes before it removes pods. One minute shows the cycle sooner.
+    scaleDown:
+      stabilizationWindowSeconds: 60

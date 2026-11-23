@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="960" viewBox="0 0 1600 960" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="960" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Two kinds of state, <tspan fill="#7c3aed">one backup</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Velero puts the namespace&#x27;s objects and the database&#x27;s files in one bucket. A restore reads both back.</text>
+<rect x="40.0" y="150.0" width="330.0" height="280.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="57.5,181.0 76.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">your terminal</text>
+<rect x="70.0" y="300.0" width="270.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="205.0" y="337.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">velero backup</text>
+<text x="205.0" y="359.7" font-size="17.0" fill="#475569" text-anchor="middle">through kubectl exec</text>
+<rect x="420.0" y="150.0" width="1140.0" height="770.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<rect x="438.0" y="165.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="441.5" cy="167.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="447.0,167.5 452.5,167.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="438.0" y="171.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="441.5" cy="174.0" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="447.0,174.0 452.5,174.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="438.0" y="178.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="441.5" cy="180.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="447.0,180.5 452.5,180.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="466.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">node k3d-k8s-lab-server-0</text>
+<rect x="450.0" y="250.0" width="420.0" height="480.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="468.0" y="280.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace velero</text>
+<rect x="480.0" y="300.0" width="360.0" height="90.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="660.0" y="337.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">velero server</text>
+<text x="660.0" y="359.7" font-size="17.0" fill="#475569" text-anchor="middle">objects and hooks</text>
+<rect x="480.0" y="615.0" width="360.0" height="90.0" rx="10.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<text x="660.0" y="652.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">node-agent</text>
+<text x="660.0" y="674.7" font-size="17.0" fill="#475569" text-anchor="middle">Kopia, one per node</text>
+<rect x="910.0" y="250.0" width="350.0" height="480.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="1242.0" y="280.0" font-size="17.0" fill="#475569" text-anchor="end">namespace course-dr</text>
+<rect x="940.0" y="300.0" width="290.0" height="70.0" rx="10.0" fill="#f2edff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="1085.0" y="327.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">Cluster orders-db</text>
+<text x="1085.0" y="349.7" font-size="17.0" fill="#475569" text-anchor="middle">CloudNativePG</text>
+<rect x="930.0" y="400.0" width="310.0" height="220.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="957.0,415.0 965.5,419.5 965.5,429.0 957.0,433.5 948.5,429.0 948.5,419.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="948.5,419.5 957.0,424.0 965.5,419.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="957.0,424.0 957.0,433.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="976.0" y="430.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">pod orders-db-1</text>
+<rect x="950.0" y="450.0" width="270.0" height="70.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1085.0" y="477.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">postgres</text>
+<text x="1085.0" y="499.7" font-size="17.0" fill="#475569" text-anchor="middle">CHECKPOINT hook</text>
+<rect x="950.0" y="535.0" width="270.0" height="70.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="1085.0" y="562.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">volume pgdata</text>
+<text x="1085.0" y="584.7" font-size="17.0" fill="#475569" text-anchor="middle">PVC, 1 GiB</text>
+<rect x="1290.0" y="250.0" width="240.0" height="480.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="1512.0" y="280.0" font-size="17.0" fill="#475569" text-anchor="end">course-backup</text>
+<rect x="1310.0" y="300.0" width="200.0" height="405.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="1410.0" y="484.0" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">SeaweedFS</text>
+<text x="1410.0" y="506.2" font-size="17.0" fill="#475569" text-anchor="middle">bucket velero</text>
+<text x="1410.0" y="528.3" font-size="17.0" fill="#475569" text-anchor="middle">S3 API</text>
+<rect x="450.0" y="790.0" width="1080.0" height="80.0" rx="14.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<ellipse cx="483.0" cy="821.8" rx="10.2" ry="4.1" fill="none" stroke="#ea580c" stroke-width="1.63"/>
+<polyline points="472.8,821.8 472.8,838.1" fill="none" stroke="#ea580c" stroke-width="1.63" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="493.2,821.8 493.2,838.1" fill="none" stroke="#ea580c" stroke-width="1.63" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="472.8,838.1 474.8,840.8 483.0,842.2 491.1,840.8 493.2,838.1" fill="none" stroke="#ea580c" stroke-width="1.63" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="472.8,830.0 474.8,832.7 483.0,834.0 491.1,832.7 493.2,830.0" fill="none" stroke="#ea580c" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="510.0" y="827.0" font-size="20.0" fill="#9a3412" font-weight="700" text-anchor="start">node disk</text>
+<text x="510.0" y="851.0" font-size="17.0" fill="#475569" text-anchor="start">/var/lib/rancher/k3s/storage holds pgdata</text>
+<polyline points="340.0,345.0 470.5,345.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="480.0,345.0 468.5,350.8 468.5,339.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="395.0" cy="345.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="395.0" cy="345.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="395.0" y="351.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<polyline points="840.0,372.0 895.0,372.0 895.0,485.0 940.5,485.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="950.0,485.0 938.5,490.8 938.5,479.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="885.0" cy="372.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="885.0" cy="372.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="885.0" y="378.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<text x="885.0" y="346.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">hook</text>
+<polyline points="800.0,300.0 800.0,222.0 1360.0,222.0 1360.0,290.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1360.0,300.0 1354.2,288.5 1365.8,288.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1100.0" cy="222.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1100.0" cy="222.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1100.0" y="228.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<text x="1135.0" y="212.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">objects as JSON</text>
+<polyline points="660.0,705.0 660.0,780.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="660.0,790.0 654.2,778.5 665.8,778.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="660.0" cy="748.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="660.0" cy="748.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="660.0" y="754.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<text x="686.0" y="754.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">reads files</text>
+<polyline points="840.0,660.0 1300.5,660.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1310.0,660.0 1298.5,665.8 1298.5,654.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1010.0" cy="660.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1010.0" cy="660.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1010.0" y="666.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">5</text>
+<text x="1010.0" y="634.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">uploads chunks</text>
+</svg>

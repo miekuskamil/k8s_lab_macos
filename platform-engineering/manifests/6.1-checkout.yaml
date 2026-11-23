@@ -1,0 +1,249 @@
+# Track 6: the services every module of the track measures. None of them is in the mesh.
+#
+#   loadgen  --->  checkout  --->  payments
+#   (a client)     (Python, counts     (podinfo)
+#                  its own requests)
+#
+# checkout is a small Python program in a ConfigMap, so you read every line of its
+# instrumentation. It serves /metrics, and the PodMonitor tells Prometheus to scrape it.
+# Three settings change its behaviour without a new image, the way a bad release would:
+#   ERROR_PERCENT     answer this share of requests with 500
+#   EXTRA_LATENCY_MS  wait this long before answering
+#   PAYMENTS_TIMEOUT  give up on payments after this many seconds and answer 504
+# Modules 6.2 to 6.8 apply this file first.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-sre
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: checkout-code
+  namespace: course-sre
+data:
+  checkout.py: |
+    import json, os, random, sys, threading, time, urllib.request
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    PAYMENTS = os.environ.get("PAYMENTS_URL", "http://payments:9898/api/info")
+    BUCKETS = [0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5]
+    lock = threading.Lock()
+    # One histogram, named and labelled like podinfo's, so one dashboard reads both services:
+    # its _count series counts requests by status, its buckets count them by duration.
+    hist = {}                          # (path, status) -> [bucket counts..., +Inf, sum]
+    deps = {}                          # result -> count
+
+    def setting(name, default):
+        return float(os.environ.get(name, default))
+
+    def observe(path, status, seconds):
+        with lock:
+            h = hist.setdefault((path, status), [0] * (len(BUCKETS) + 2))
+            for i, b in enumerate(BUCKETS):
+                if seconds <= b:
+                    h[i] += 1
+            h[len(BUCKETS)] += 1
+            h[-1] += seconds
+
+    def metrics():
+        out = ["# HELP http_request_duration_seconds Time checkout took to answer, by path and status.",
+               "# TYPE http_request_duration_seconds histogram"]
+        with lock:
+            for (path, status), h in sorted(hist.items()):
+                lb = f'method="GET",path="{path}",status="{status}"'
+                for i, b in enumerate(BUCKETS):
+                    out.append(f'http_request_duration_seconds_bucket{{{lb},le="{b}"}} {h[i]}')
+                out.append(f'http_request_duration_seconds_bucket{{{lb},le="+Inf"}} {h[len(BUCKETS)]}')
+                out.append(f'http_request_duration_seconds_sum{{{lb}}} {h[-1]:.6f}')
+                out.append(f'http_request_duration_seconds_count{{{lb}}} {h[len(BUCKETS)]}')
+            out += ["# HELP checkout_payments_calls_total Calls from checkout to payments, by result.",
+                    "# TYPE checkout_payments_calls_total counter"]
+            for result, n in sorted(deps.items()):
+                out.append(f'checkout_payments_calls_total{{result="{result}"}} {n}')
+        return "\n".join(out) + "\n"
+
+    def call_payments():
+        try:
+            urllib.request.urlopen(PAYMENTS, timeout=setting("PAYMENTS_TIMEOUT", "1")).read()
+            result, code = "ok", 200
+        except TimeoutError:
+            result, code = "timeout", 504
+        except Exception as e:
+            result, code = ("timeout", 504) if "timed out" in str(e) else ("error", 502)
+        with lock:
+            deps[result] = deps.get(result, 0) + 1
+        return code
+
+    class Handler(BaseHTTPRequestHandler):
+        def reply(self, code, body, ctype="application/json"):
+            data = body.encode()
+            self.send_response(code)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def do_GET(self):
+            if self.path == "/metrics":
+                return self.reply(200, metrics(), "text/plain; version=0.0.4")
+            if self.path == "/healthz":
+                return self.reply(200, "ok\n", "text/plain")
+            if self.path != "/api/checkout":
+                return self.reply(404, '{"error":"not found"}\n')
+            start = time.monotonic()
+            time.sleep(setting("EXTRA_LATENCY_MS", "0") / 1000)
+            if random.random() * 100 < setting("ERROR_PERCENT", "0"):
+                code = 500
+            else:
+                code = call_payments()
+            seconds = time.monotonic() - start
+            observe(self.path, str(code), seconds)
+            msg = {200: "order placed", 500: "internal error", 502: "payments failed", 504: "payments timed out"}[code]
+            print(json.dumps({"level": "info" if code == 200 else "error", "path": self.path, "code": code,
+                              "duration_ms": round(seconds * 1000, 1), "msg": msg}), flush=True)
+            self.reply(code, json.dumps({"status": msg}) + "\n")
+
+        def log_message(self, *args):
+            pass                       # the JSON line above is the access log
+
+    print(json.dumps({"level": "info", "msg": "checkout listening on :8080"}), flush=True)
+    ThreadingHTTPServer(("", 8080), Handler).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout
+  namespace: course-sre
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: checkout}
+  template:
+    metadata:
+      labels: {app: checkout}
+    spec:
+      containers:
+        - name: checkout
+          image: public.ecr.aws/docker/library/python:3.13.9-alpine3.22
+          command: ["python", "/app/checkout.py"]
+          env:
+            - {name: ERROR_PERCENT, value: "0"}
+            - {name: EXTRA_LATENCY_MS, value: "0"}
+            - {name: PAYMENTS_TIMEOUT, value: "1"}
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /healthz, port: 8080}
+            periodSeconds: 5
+          resources:
+            requests: {cpu: 50m, memory: 32Mi}
+            limits: {cpu: 250m, memory: 64Mi}
+          volumeMounts:
+            - {name: code, mountPath: /app}
+      volumes:
+        - name: code
+          configMap: {name: checkout-code}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout
+  namespace: course-sre
+spec:
+  selector: {app: checkout}
+  ports:
+    - {name: http, port: 8080}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: checkout
+  namespace: course-sre
+spec:
+  selector:
+    matchLabels: {app: checkout}
+  # Copy the pod's app label onto every series, so queries and dashboards filter on app="checkout".
+  podTargetLabels: [app]
+  podMetricsEndpoints:
+    - port: http
+      interval: 15s
+---
+# payments: the dependency checkout calls for every order.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments
+  namespace: course-sre
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: payments}
+  template:
+    metadata:
+      labels: {app: payments}
+    spec:
+      containers:
+        - name: podinfo
+          image: ghcr.io/stefanprodan/podinfo:6.7.1
+          command: ["./podinfo", "--port=9898", "--port-metrics=9797", "--level=warn"]
+          ports:
+            - {name: http, containerPort: 9898}
+            - {name: metrics, containerPort: 9797}
+          readinessProbe:
+            httpGet: {path: /readyz, port: 9898}
+            periodSeconds: 5
+          resources:
+            requests: {cpu: 20m, memory: 32Mi}
+            limits: {cpu: 200m, memory: 64Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payments
+  namespace: course-sre
+spec:
+  selector: {app: payments}
+  ports:
+    - {name: http, port: 9898}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: payments
+  namespace: course-sre
+spec:
+  selector:
+    matchLabels: {app: payments}
+  podTargetLabels: [app]
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 15s
+---
+# A client that places about 8 orders a second, so the SLIs always have traffic.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadgen
+  namespace: course-sre
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: loadgen}
+  template:
+    metadata:
+      labels: {app: loadgen}
+    spec:
+      containers:
+        - name: curl
+          image: curlimages/curl:8.11.1
+          command: ["sh", "-c"]
+          args:
+            - |
+              while true; do
+                curl -s -o /dev/null -m 3 http://checkout:8080/api/checkout
+                sleep 0.1
+              done
+          resources:
+            requests: {cpu: 10m, memory: 8Mi}
+            limits: {cpu: 100m, memory: 32Mi}

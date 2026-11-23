@@ -1,17 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1040" viewBox="0 0 1600 1040" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
-<rect width="1600" height="1040" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1180" viewBox="0 0 1600 1180" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="1180" fill="#ffffff"/>
 <rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
-<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Six tracks, <tspan fill="#7c3aed">one lab</tspan></text>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Seven tracks, <tspan fill="#7c3aed">one lab</tspan></text>
 <text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Every track starts from the quick start and needs no other track. Each stop is a module, easy on the left.</text>
-<rect x="40.0" y="515.0" width="230.0" height="110.0" rx="14.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
-<rect x="56.0" y="548.0" width="44.0" height="44.0" rx="10.0" fill="#475569" stroke="none"/>
-<rect x="65.8" y="559.8" width="24.3" height="20.5" rx="3.2" fill="none" stroke="#ffffff" stroke-width="1.536"/>
-<polyline points="70.3,566.2 74.2,570.0 70.3,573.8" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="76.7,574.5 83.1,574.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="114.0" y="563.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Quick start</text>
-<text x="114.0" y="589.0" font-size="17.0" fill="#475569" text-anchor="start">lab.sh shell, up</text>
-<polyline points="270.0,570.0 330.0,570.0" fill="none" stroke="#475569" stroke-width="5.00" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="330.0,210.0 330.0,935.0" fill="none" stroke="#475569" stroke-width="5.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="40.0" y="585.0" width="230.0" height="110.0" rx="14.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<rect x="56.0" y="618.0" width="44.0" height="44.0" rx="10.0" fill="#475569" stroke="none"/>
+<rect x="65.8" y="629.8" width="24.3" height="20.5" rx="3.2" fill="none" stroke="#ffffff" stroke-width="1.536"/>
+<polyline points="70.3,636.2 74.2,640.0 70.3,643.8" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="76.7,644.5 83.1,644.5" fill="none" stroke="#ffffff" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="114.0" y="633.1" font-size="22.0" fill="#0f172a" font-weight="700" text-anchor="start">Quick start</text>
+<text x="114.0" y="659.0" font-size="17.0" fill="#475569" text-anchor="start">lab.sh shell, up</text>
+<polyline points="270.0,640.0 330.0,640.0" fill="none" stroke="#475569" stroke-width="5.00" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="330.0,210.0 330.0,1080.0" fill="none" stroke="#475569" stroke-width="5.00" stroke-linecap="round" stroke-linejoin="round"/>
 <polyline points="330.0,210.0 778.0,210.0" fill="none" stroke="#0891b2" stroke-width="5.00" stroke-linecap="round" stroke-linejoin="round"/>
 <ellipse cx="400.0" cy="210.0" rx="23.0" ry="23.0" fill="#ffffff" stroke="#0891b2" stroke-width="3.00"/>
 <text x="400.0" y="216.0" font-size="17.0" fill="#155e75" font-weight="700" text-anchor="middle">1</text>
@@ -146,4 +146,15 @@
 <text x="562.0" y="941.0" font-size="17.0" fill="#9d174d" font-weight="700" text-anchor="middle">4</text>
 <text x="377.0" y="893.0" font-size="19.0" fill="#9d174d" font-weight="700" text-anchor="start">5 AI on Kubernetes</text>
 <text x="595.0" y="893.0" font-size="16.0" fill="#475569" text-anchor="start">lab, a model call to RAG</text>
+<polyline points="330.0,1080.0 562.0,1080.0" fill="none" stroke="#059669" stroke-width="5.00" stroke-linecap="round" stroke-linejoin="round"/>
+<ellipse cx="400.0" cy="1080.0" rx="23.0" ry="23.0" fill="#ffffff" stroke="#059669" stroke-width="3.00"/>
+<text x="400.0" y="1086.0" font-size="17.0" fill="#047857" font-weight="700" text-anchor="middle">1</text>
+<ellipse cx="454.0" cy="1080.0" rx="23.0" ry="23.0" fill="#ffffff" stroke="#059669" stroke-width="3.00"/>
+<text x="454.0" y="1086.0" font-size="17.0" fill="#047857" font-weight="700" text-anchor="middle">2</text>
+<ellipse cx="508.0" cy="1080.0" rx="23.0" ry="23.0" fill="#ffffff" stroke="#059669" stroke-width="3.00"/>
+<text x="508.0" y="1086.0" font-size="17.0" fill="#047857" font-weight="700" text-anchor="middle">3</text>
+<ellipse cx="562.0" cy="1080.0" rx="23.0" ry="23.0" fill="#ffffff" stroke="#059669" stroke-width="3.00"/>
+<text x="562.0" y="1086.0" font-size="17.0" fill="#047857" font-weight="700" text-anchor="middle">4</text>
+<text x="377.0" y="1038.0" font-size="19.0" fill="#047857" font-weight="700" text-anchor="start">6 Reliability engineering (SRE)</text>
+<text x="738.0" y="1038.0" font-size="16.0" fill="#475569" text-anchor="start">lab, SLOs to a restore drill</text>
 </svg>

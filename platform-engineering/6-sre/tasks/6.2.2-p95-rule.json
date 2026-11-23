@@ -1,0 +1,21 @@
+{
+  "uid": "checkout-p95",
+  "title": "Checkout p95 above 250 ms",
+  "folderUID": "sre",
+  "ruleGroup": "checkout-latency",
+  "condition": "C",
+  "for": "1m",
+  "noDataState": "OK",
+  "execErrState": "Error",
+  "labels": {"severity": "ticket", "team": "shop"},
+  "annotations": {"summary": "95% of orders take up to {{ $values.A.Value }} s"},
+  "notification_settings": {"receiver": "sre-webhook"},
+  "data": [
+    {"refId": "A", "datasourceUid": "prometheus", "relativeTimeRange": {"from": 300, "to": 0},
+     "model": {"refId": "A", "instant": true,
+               "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"course-sre\", app=\"checkout\"}[5m])))"}},
+    {"refId": "C", "datasourceUid": "__expr__",
+     "model": {"refId": "C", "type": "threshold", "expression": "A",
+               "conditions": [{"evaluator": {"type": "gt", "params": [0.25]}}]}}
+  ]
+}

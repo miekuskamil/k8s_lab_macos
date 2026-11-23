@@ -490,6 +490,54 @@ Module 2.1.
 
 **Trace-to-logs link (derived field).** A trace-to-logs link is a setting on Grafana data sources that lets you jump between Jaeger and Loki by trace ID. It adds "Logs for this span" in a trace. It also adds "Open trace in Jaeger" next to a `trace_id` in a log line. Modules 3.6 and 2.2.
 
+## Reliability engineering
+
+**Site reliability engineering (SRE).** SRE is the practice of running services with software and numbers instead of heroics: teams agree on how reliable a service must be, measure it, and spend the remaining room on change. Track 6.
+
+**Good event and valid event.** An SLI counts events, usually requests. A valid event is one that counts at all, such as every order request; a good event is a valid one that went right, such as an answer without a 5xx in under 250 ms. The SLI is good divided by valid. Module 6.1.
+
+**SLO period.** The SLO period is the window an SLO promises over, usually 30 days. A 99.9% SLO over 30 days allows 43.2 minutes of full outage, the error budget in time. Module 6.1.
+
+**Multi-window, multi-burn-rate alert.** This alert pages only when a long window and a short window both burn the budget too fast: the long window proves the trouble is big, the short one proves it still happens. Google's SRE workbook pairs 1 hour with 5 minutes at burn rate 14.4 and 6 hours with 30 minutes at 6 for a page, and longer windows at 3 and 1 for a ticket. Module 6.1.
+
+**Page and ticket.** A page wakes a person now, because the budget runs out within days; a ticket waits for working hours, because the budget runs out within weeks. Both come from the same SLO with different burn rates. Module 6.1.
+
+**Sloth.** Sloth is a generator that turns a short SLO spec into the Prometheus recording rules and multi-window alerts the spec implies, so every service gets the same, reviewed rules. Module 6.1.
+
+**RED method.** RED watches a service by its Rate (requests per second), Errors (the failing share) and Duration (how long requests take), the three numbers a user feels. Module 6.2.
+
+**USE method.** USE watches a resource, such as a pod's CPU or memory, by its Utilization (how busy), Saturation (how much work waits, such as CPU throttling) and Errors (such as OOM kills). RED finds the slow service, and USE finds the resource behind it. Module 6.2.
+
+**CPU throttling.** When a container uses its whole CPU limit inside one 100 ms period, the kernel stops it until the next period starts. The container waits even though the node has idle CPU, so requests get slower. `container_cpu_cfs_throttled_periods_total` counts those periods. Module 6.2.
+
+**Chained variable.** A chained variable is a Grafana dropdown whose values depend on another one, such as the pods of the namespace you picked, because its query uses the first variable. Module 6.2.
+
+**Repeated row.** A repeated row is a Grafana row that appears once for each selected value of a variable, so one row definition shows every SLO of a service. Module 6.2.
+
+**Simplified routing.** Simplified routing lets a Grafana alert rule name its contact point directly, so the rule reaches a person without a change to the shared notification policy tree. Module 6.2.
+
+**Chaos engineering.** Chaos engineering breaks a system on purpose, in small and controlled ways, to test a written hypothesis about how it copes, before a real failure tests it for you. Module 6.3.
+
+**Steady state and blast radius.** The steady state is what normal looks like in numbers, here the SLIs. The blast radius is how much an experiment may hurt, kept small with selectors, durations and an abort. Module 6.3.
+
+**Chaos Mesh.** Chaos Mesh is a CNCF project that injects faults into Kubernetes pods from custom resources: PodChaos kills pods, NetworkChaos adds delay or cuts the network, StressChaos burns CPU. A daemon on each node applies the fault inside the pod's network namespace or cgroup. Module 6.3.
+
+**Network partition.** A partition drops every packet between two groups of pods, so connections hang until a timeout, which hurts more than a fast refusal. Module 6.3.
+
+**RPO and RTO.** The recovery point objective is how much data you may lose, measured as time since the last good backup. The recovery time objective is how long the restore may take. Module 6.4.
+
+**Velero.** Velero backs up Kubernetes objects and volume data to object storage and restores them, a whole namespace or a selection, into the same or another cluster. Module 6.4.
+
+**File system backup (Kopia).** Without volume snapshots, Velero's node agent reads a pod's volume through the node and uploads the files with Kopia, which stores each changed chunk once. Module 6.4.
+
+**Backup hook.** A backup hook is a command Velero runs in a pod just before it copies the pod's volumes, such as `CHECKPOINT` in PostgreSQL, so the copy needs less repair after a restore. Module 6.4.
+
+**CloudNativePG.** CloudNativePG is an operator that runs PostgreSQL on Kubernetes from a `Cluster` resource: it creates the pods, volumes, Services and replicas, and fails over on its own. Module 6.4.
+
+**Object storage (S3).** Object storage keeps files as objects in buckets behind an HTTP API, and S3 is the API most tools speak. The lab runs SeaweedFS's S3 gateway, because MinIO no longer publishes server images. Module 6.4.
+
+**Restore drill.** A restore drill restores a backup into a new namespace while the original keeps running, so you prove the backup works without an outage. Module 6.4.
+
 ## OpenTelemetry and Tempo
 
 **OpenTelemetry (OTel) and OTLP.** OpenTelemetry is the CNCF standard for telemetry, so you instrument an app once and then choose back ends freely. It has SDKs for every language, one protocol, and the Collector. The protocol is OTLP, on gRPC port 4317 and HTTP port 4318. Module 2.4.

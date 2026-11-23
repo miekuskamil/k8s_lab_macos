@@ -1782,6 +1782,324 @@ module_0_8() {
   expect "clean up: no course containers, networks, volumes or images" "$(docker_left)" '^0 0 0 0$'
 }
 
+# ---- Track 6, reliability engineering. Shared helpers -------------------------------------
+# p6 <query>: the first result's value from Prometheus, through the API server's service proxy.
+p6() {
+  local q
+  q="$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$1")"
+  "${K[@]}" get --raw "/api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/query?query=$q" 2>/dev/null \
+    | python3 -c 'import json,sys; r=json.load(sys.stdin)["data"]["result"]; print(r[0]["value"][1] if r else "")' 2>/dev/null
+}
+# p6_alert <alertname> [severity]: firing, pending or none
+p6_alert() {
+  local sel="alertname=\"$1\"" st
+  [[ -n "${2:-}" ]] && sel="$sel, severity=\"$2\""
+  st="$(p6 "max(ALERTS{$sel, alertstate=\"firing\"})")"
+  if [[ -n "$st" ]]; then echo firing; return; fi
+  st="$(p6 "max(ALERTS{$sel, alertstate=\"pending\"})")"
+  if [[ -n "$st" ]]; then echo pending; else echo none; fi
+}
+# p6_groups <regex>: how many loaded rule groups match
+p6_groups() {
+  "${K[@]}" get --raw /api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/rules 2>/dev/null \
+    | python3 -c 'import json,re,sys; print(sum(1 for g in json.load(sys.stdin)["data"]["groups"] if re.search(sys.argv[1], g["name"])))' "$1" 2>/dev/null || echo 0
+}
+# poll6 <seconds> <command...>: run the command every 5 s until it succeeds
+poll6() { local t=$1 i; shift; for ((i = 0; i < t; i += 5)); do "$@" >/dev/null 2>&1 && return 0; sleep 5; done; return 1; }
+# pct <decimal>: a ratio as a whole percent
+pct() { awk -v v="${1:-0}" 'BEGIN { printf "%d", v * 100 }'; }
+# gf6 <curl args...>: Grafana's API from inside its pod, as admin
+gf6() {
+  "${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- \
+    sh -c 'curl -s -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" "$@"' sh "$@" 2>/dev/null
+}
+# gf6_in <curl args...>: the same, with the request body on stdin (-d @-)
+gf6_in() {
+  "${K[@]}" -n observability exec -i deploy/kube-prometheus-stack-grafana -c grafana -- \
+    sh -c 'curl -s -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" "$@"' sh "$@" 2>/dev/null
+}
+# dash_empty <uid> var=value...: how many panel queries of a dashboard in Grafana return no data,
+# with the variables filled in the way Grafana fills them.
+dash_empty() {
+  local uid=$1; shift
+  local code='import json, subprocess, sys, urllib.parse
+d = json.load(sys.stdin)["dashboard"]
+ctx, subs = sys.argv[1], dict(a.split("=", 1) for a in sys.argv[2:])
+subs["__rate_interval"] = "1m"
+empty = 0
+for p in d["panels"]:
+    for t in p.get("targets", []):
+        e = t["expr"]
+        for k in sorted(subs, key=len, reverse=True):
+            e = e.replace("$" + k, subs[k])
+        path = "/api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/query?query=" + urllib.parse.quote(e)
+        out = subprocess.run(["kubectl", "--context", ctx, "get", "--raw", path], capture_output=True, text=True).stdout
+        try:
+            r = json.loads(out)["data"]["result"]
+        except Exception:
+            r = []
+        if not r:
+            empty += 1
+            print("no data:", p["title"], file=sys.stderr)
+print(empty)'
+  gf6 "localhost:3000/api/dashboards/uid/$uid" | python3 -c "$code" "${KUBE_CONTEXT:-k3d-k8s-lab}" "$@" 2>/dev/null || echo 99
+}
+checkout6() {
+  "${K[@]}" apply -f "$M/6.1-checkout.yaml" >/dev/null
+  "${K[@]}" -n course-sre rollout status deploy/checkout --timeout=180s >/dev/null 2>&1
+  "${K[@]}" -n course-sre rollout status deploy/payments --timeout=180s >/dev/null 2>&1
+  "${K[@]}" -n course-sre rollout status deploy/loadgen --timeout=120s >/dev/null 2>&1
+}
+
+module_6_1() {
+  section "6.1: SLIs, SLOs and error budgets"
+  baseline
+  expect "before the module, Prometheus has no checkout SLO rules" "$(p6_groups '^sloth-slo-.*-checkout-')" '^0$'
+  checkout6
+  expect "checkout answers 200 through its Service" "$("${K[@]}" -n course-sre exec deploy/loadgen -- curl -s -o /dev/null -w '%{http_code}' http://checkout:8080/api/checkout 2>/dev/null)" '^200$'
+  expect "checkout serves a histogram labelled by status" "$("${K[@]}" -n course-sre exec deploy/checkout -- wget -q -O - 127.0.0.1:8080/metrics 2>/dev/null | grep -c '^http_request_duration_seconds_count{method="GET",path="/api/checkout",status="200"}')" '^1$'
+  scraped() { [[ -n "$(p6 'sum(rate(http_request_duration_seconds_count{namespace="course-sre", app="checkout"}[1m]))')" ]]; }
+  poll6 300 scraped
+  # Right after the start the 1m window holds only part of a minute, so wait for a full one.
+  rps10() { p6 'sum(rate(http_request_duration_seconds_count{namespace="course-sre", app="checkout"}[1m]))' | awk '{printf "%d", $1 * 10}'; }
+  full_minute() { (( $(rps10) >= 50 )); }
+  poll6 90 full_minute
+  between "Prometheus sees the client's traffic, about 8 requests a second (x10)" "$(rps10)" 50 120
+  if docker info >/dev/null 2>&1; then
+    local gen; gen="$(mktemp)"
+    docker run --rm -v "$ROOT:$ROOT" -w "$ROOT" ghcr.io/slok/sloth:v0.16.0 generate -i platform-engineering/manifests/6.1-checkout-slos.yaml > "$gen" 2>/dev/null
+    expect "Sloth turns the 60-line spec into the committed rule file" "$(diff <(grep -v '^#' "$gen") <(grep -v '^#' "$M/6.1-checkout-slo-rules.yaml") >/dev/null && echo same)" '^same$'
+    rm -f "$gen"
+  else
+    pass "Sloth turns the spec into the committed rule file (skipped: no Docker here)"
+  fi
+  expect "Sloth wrote 8 windows per SLO" "$(grep -c 'record: slo:sli_error:ratio_rate' "$M/6.1-checkout-slo-rules.yaml")" '^16$'
+  "${K[@]}" apply -f "$M/6.1-checkout-slo-rules.yaml" -f "$M/6.1-budget-minutes.yaml" >/dev/null
+  rules_loaded() { [[ "$(p6_groups '^sloth-slo-.*-checkout-|^checkout-budget-minutes$')" == 7 ]]; }
+  poll6 180 rules_loaded
+  expect "Prometheus loads the 6 Sloth groups and the budget group" "$(p6_groups '^sloth-slo-.*-checkout-|^checkout-budget-minutes$')" '^7$'
+  ratio_there() { [[ -n "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability"}')" ]]; }
+  poll6 90 ratio_there
+  expect "with no errors, the availability error ratio is a real 0" "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability"}')" '^0$'
+  budget_there() { [[ -n "$(p6 'slo:error_budget_minutes:total{sloth_slo="availability"}')" ]]; }
+  poll6 90 budget_there
+  expect "the error budget is 0.1% of 30 days, 43.2 minutes" "$(p6 'slo:error_budget_minutes:total{sloth_slo="availability"}' | awk '{printf "%.1f", $1}')" '^43\.2$'
+  # The SLO remembers: 5xx from an earlier run in the last 30 minutes keep the slow page firing.
+  local recent
+  recent="$(p6 'sum(increase(http_request_duration_seconds_count{namespace="course-sre", app="checkout", status=~"5.."}[35m]))' | awk '{printf "%d", $1}')"
+  if [[ "${recent:-0}" == 0 ]]; then
+    expect "the page alert is quiet" "$(p6_alert CheckoutAvailabilityBudgetBurn page)" '^none$'
+  else
+    pass "the page alert is quiet (skipped: an earlier run left $recent errors in the 30m window)"
+  fi
+  # A bad release: 20% of orders fail.
+  "${K[@]}" -n course-sre set env deploy/checkout ERROR_PERCENT=20 >/dev/null
+  "${K[@]}" -n course-sre rollout status deploy/checkout --timeout=120s >/dev/null 2>&1
+  page() { [[ "$(p6_alert CheckoutAvailabilityBudgetBurn page)" == firing ]]; }
+  local t0=$SECONDS
+  poll6 300 page
+  expect "a bad release that fails 20% of orders fires the page alert ($((SECONDS - t0)) s)" "$(p6_alert CheckoutAvailabilityBudgetBurn page)" '^firing$'
+  between "the 5m error ratio in percent" "$(pct "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability"}')")" 3 30
+  # The burn-rate series sits in Sloth's meta group, which runs on its own 30 s schedule.
+  burn() { p6 'slo:current_burn_rate:ratio{sloth_service="checkout", sloth_slo="availability"}' | awk '{printf "%d", $1}'; }
+  burning() { (( $(burn) >= 15 )); }
+  poll6 90 burning
+  between "the 5m burn rate is far above 14.4" "$(burn)" 15 300
+  expect "the latency SLO stays quiet: errors are fast" "$(p6_alert CheckoutLatencyBudgetBurn page)" '^none$'
+  "${K[@]}" -n course-sre rollout undo deploy/checkout >/dev/null
+  "${K[@]}" -n course-sre rollout status deploy/checkout --timeout=120s >/dev/null 2>&1
+  t0=$SECONDS
+  clean5m() { [[ "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability"}')" == 0 ]]; }
+  poll6 420 clean5m
+  expect "after the rollback the 5m error ratio returns to 0 ($((SECONDS - t0)) s)" "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability"}')" '^0$'
+  expect "the page keeps firing: the 30m window still remembers the errors" "$(p6_alert CheckoutAvailabilityBudgetBurn page)" '^firing$'
+  between "the incident spent part of the budget, in tenths of a minute" "$(p6 'slo:error_budget_minutes:spent{sloth_slo="availability"}' | awk '{printf "%d", $1 * 10}')" 1 200
+  baseline
+  expect "after the reset course-sre and its rules are gone" "$("${K[@]}" get ns course-sre 2>&1 | grep -c NotFound)" '^1$'
+}
+
+module_6_2() {
+  section "6.2: Grafana in depth"
+  baseline
+  local work="${TMPDIR:-/tmp}/k8s-lab-sre-dashboards" port=3012 pf
+  dash_title() { gf6 "localhost:3000/api/dashboards/uid/$1" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["dashboard"]["title"], d["meta"].get("provisioned"))' 2>/dev/null; }
+  app6() { "${K[@]}" -n argocd get app sre-dashboards -o jsonpath="$1" 2>/dev/null; }
+  g() { git -C "$work" -c user.name=lab -c user.email=lab@example.invalid "$@" >/dev/null 2>&1; }
+  push() { g push "http://lab:lab-gitops-pass@localhost:$port/lab/sre-dashboards.git" main; "${K[@]}" -n argocd annotate app sre-dashboards argocd.argoproj.io/refresh=normal --overwrite >/dev/null 2>&1; }
+  expect "before the module, Grafana has no SRE / SLOs dashboard" "$(gf6 -o /dev/null -w '%{http_code}' localhost:3000/api/dashboards/uid/sre-slo)" '^404$'
+  checkout6
+  "${K[@]}" apply -f "$M/6.1-checkout-slo-rules.yaml" -f "$M/6.1-budget-minutes.yaml" -f "$M/6.2-gitea.yaml" >/dev/null
+  "${K[@]}" -n course-sre rollout status deploy/gitea --timeout=180s >/dev/null 2>&1
+  "${K[@]}" -n course-sre rollout status deploy/alert-receiver --timeout=120s >/dev/null 2>&1
+  "${K[@]}" -n course-sre exec deploy/gitea -- gitea admin user create --username lab --password lab-gitops-pass \
+    --email lab@example.invalid --admin --must-change-password=false >/dev/null 2>&1
+  "${K[@]}" -n course-sre port-forward svc/gitea "$port:3000" >/dev/null 2>&1 &
+  pf=$!; settle 3
+  rm -rf "$work"; cp -R "$ROOT/platform-engineering/6-sre/dashboards" "$work"
+  git -C "$work" init -q -b main; g add .; g commit -m "SLO, RED and USE dashboards"
+  g push "http://lab:lab-gitops-pass@localhost:$port/lab/sre-dashboards.git" main
+  expect "a push creates the dashboards repository in Gitea" "$(curl -s "localhost:$port/api/v1/repos/lab/sre-dashboards" | grep -o '"name":"sre-dashboards"' | head -1)" 'sre-dashboards'
+  "${K[@]}" apply -f "$M/6.2-dashboards-app.yaml" >/dev/null 2>&1
+  synced() { [[ "$(app6 '{.status.sync.status} {.status.health.status}')" == "Synced Healthy" ]]; }
+  poll6 120 synced
+  expect "ArgoCD syncs the dashboards from Gitea" "$(app6 '{.status.sync.status} {.status.health.status}')" '^Synced Healthy$'
+  expect "Kustomize made three labelled ConfigMaps" "$("${K[@]}" -n course-sre get cm -l grafana_dashboard=1 --no-headers 2>/dev/null | wc -l | tr -d ' ')" '^3$'
+  loaded() { [[ "$(dash_title sre-use)" == "SRE / USE True" ]]; }
+  poll6 90 loaded
+  expect "Grafana's sidecar loads the SLO dashboard as provisioned" "$(dash_title sre-slo)" '^SRE / SLOs True$'
+  expect "and the RED dashboard" "$(dash_title sre-red)" '^SRE / RED True$'
+  expect "and the USE dashboard" "$(dash_title sre-use)" '^SRE / USE True$'
+  expect "the service variable lists checkout" "$("${K[@]}" get --raw '/api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/label/sloth_service/values?match%5B%5D=slo%3Aobjective%3Aratio' 2>/dev/null | grep -o '"checkout"')" '"checkout"'
+  expect "the app variable lists checkout and payments" "$("${K[@]}" get --raw '/api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/label/app/values?match%5B%5D=http_request_duration_seconds_count%7Bnamespace%3D%22course-sre%22%7D' 2>/dev/null | grep -o '"checkout","payments"')" 'checkout","payments'
+  slo_ready() { [[ -n "$(p6 'slo:error_budget_minutes:remaining_ratio{sloth_slo="availability"}')" ]]; }
+  poll6 120 slo_ready
+  expect "every SLO panel has data for checkout / availability" "$(dash_empty sre-slo service=checkout slo=availability)" '^0$'
+  expect "every RED panel has data for course-sre" "$(dash_empty sre-red namespace=course-sre 'app=.*')" '^0$'
+  expect "every USE panel has data for course-sre" "$(dash_empty sre-use namespace=course-sre 'pod=.*')" '^0$'
+  gf6 localhost:3000/api/dashboards/uid/sre-red | python3 -c 'import json,sys; d=json.load(sys.stdin)["dashboard"]; d["title"]="edited"; print(json.dumps({"dashboard":d,"overwrite":True}))' > "$work.json"
+  expect "Grafana refuses to save over a provisioned dashboard" "$(gf6_in -H 'Content-Type: application/json' -X POST localhost:3000/api/dashboards/db -d @- < "$work.json")" 'Cannot save provisioned dashboard'
+  rm -f "$work.json"
+  sed -i.bak 's/"title": "SRE \/ RED"/"title": "SRE \/ RED v2"/' "$work/red.json"; rm -f "$work/red.json.bak"
+  g commit -am "rename the RED dashboard"; push
+  renamed() { [[ "$(dash_title sre-red)" == "SRE / RED v2 True" ]]; }
+  poll6 150 renamed
+  expect "a pushed change reaches Grafana" "$(dash_title sre-red)" '^SRE / RED v2 True$'
+  "${K[@]}" -n course-sre delete cm dashboard-sre-use >/dev/null
+  healed() { "${K[@]}" -n course-sre get cm dashboard-sre-use >/dev/null 2>&1; }
+  poll6 60 healed
+  expect "self-heal puts back a deleted dashboard ConfigMap" "$("${K[@]}" -n course-sre get cm dashboard-sre-use -o name 2>/dev/null)" 'dashboard-sre-use'
+  # Grafana alerting through the provisioning API: a contact point, a folder and a Loki rule
+  expect "the contact point is created" "$(gf6_in -H 'Content-Type: application/json' -X POST localhost:3000/api/v1/provisioning/contact-points -d @- < "$M/6.2-contact-point.json" | grep -o '"uid":"sre-webhook"')" 'sre-webhook'
+  gf6 -H 'Content-Type: application/json' -X POST localhost:3000/api/folders -d '{"uid":"sre","title":"SRE"}' >/dev/null
+  expect "the Loki-based rule is accepted" "$(gf6_in -H 'Content-Type: application/json' -X POST localhost:3000/api/v1/provisioning/alert-rules -d @- < "$M/6.2-log-alert.json" | grep -o '"uid":"checkout-error-logs"')" 'checkout-error-logs'
+  rule_state() { gf6 localhost:3000/api/prometheus/grafana/api/v1/rules | python3 -c 'import json,sys; r=[r for g in json.load(sys.stdin)["data"]["groups"] for r in g["rules"] if r["name"]=="Checkout logs many errors"]; print(r[0]["health"], r[0]["state"]) if r else print("none")' 2>/dev/null; }
+  evaluated() { [[ "$(rule_state)" == "ok inactive" ]]; }
+  poll6 120 evaluated
+  expect "Grafana evaluates it, and with no errors it stays inactive" "$(rule_state)" '^ok inactive$'
+  "${K[@]}" -n course-sre set env deploy/checkout ERROR_PERCENT=20 >/dev/null
+  rule_firing() { [[ "$(rule_state)" == "ok firing" ]]; }
+  local t0=$SECONDS
+  poll6 300 rule_firing
+  expect "a bad release makes the log rule fire ($((SECONDS - t0)) s)" "$(rule_state)" '^ok firing$'
+  delivered() { "${K[@]}" -n course-sre logs deploy/alert-receiver 2>/dev/null | grep -q 'Checkout logs many errors'; }
+  poll6 120 delivered
+  expect "the webhook receiver gets the notification" "$("${K[@]}" -n course-sre logs deploy/alert-receiver 2>/dev/null | grep -o '"status":"firing"' | head -1)" 'firing'
+  "${K[@]}" -n course-sre rollout undo deploy/checkout >/dev/null
+  kill "$pf" 2>/dev/null; wait "$pf" 2>/dev/null; rm -rf "$work"
+  baseline
+  expect "after the reset the dashboards, the rule and the contact point are gone" "$(gf6 -o /dev/null -w '%{http_code}' localhost:3000/api/dashboards/uid/sre-slo) $(gf6 -o /dev/null -w '%{http_code}' localhost:3000/api/v1/provisioning/alert-rules/checkout-error-logs) $(gf6 localhost:3000/api/v1/provisioning/contact-points | grep -c sre-webhook)" '^404 404 0$'
+}
+
+# chaos6: Chaos Mesh 2.8.7 with the lab's values, as module 6.3 installs it
+chaos6() {
+  helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}" upgrade --install chaos-mesh chaos-mesh --version 2.8.7 \
+    --repo https://charts.chaos-mesh.org -n chaos-mesh --create-namespace -f "$M/6.3-chaos-mesh-values.yaml" --wait --timeout 5m >/dev/null 2>&1
+}
+
+module_6_3() {
+  section "6.3: chaos engineering with Chaos Mesh"
+  baseline
+  expect "before the module, the cluster has no Chaos Mesh CRDs" "$("${K[@]}" get crd -o name | grep -c 'chaos-mesh.org')" '^0$'
+  checkout6
+  "${K[@]}" apply -f "$M/6.1-checkout-slo-rules.yaml" -f "$M/6.1-budget-minutes.yaml" >/dev/null
+  "${K[@]}" apply -k "$ROOT/platform-engineering/6-sre/dashboards" >/dev/null
+  chaos6
+  expect "Chaos Mesh runs its controller and one daemon per node" "$("${K[@]}" -n chaos-mesh get pods --no-headers 2>/dev/null | grep -c ' Running ')" '^2$'
+  between "it installs its CRDs" "$("${K[@]}" get crd -o name | grep -c 'chaos-mesh.org')" 15 40
+  r5() { p6 "slo:sli_error:ratio_rate5m{sloth_service=\"checkout\", sloth_slo=\"$1\"}"; }
+  steady() { [[ "$(r5 availability)" == 0 && "$(r5 latency)" == 0 ]]; }
+  poll6 240 steady
+  expect "steady state: both SLIs show no bad orders over 5m" "$(r5 availability) $(r5 latency)" '^0 0$'
+  # Experiment 1: kill a payments pod every 30 s
+  "${K[@]}" apply -f "$M/6.3-pod-kill.yaml" >/dev/null
+  settle 75
+  between "the Schedule killed payments pods (PodChaos runs)" "$("${K[@]}" -n course-sre get podchaos --no-headers 2>/dev/null | wc -l | tr -d ' ')" 2 5
+  between "two replicas keep the 5m error ratio under 1% (in tenths of a percent)" "$(r5 availability | awk '{printf "%d", $1 * 1000}')" 0 9
+  "${K[@]}" -n course-sre delete schedule payments-pod-kill >/dev/null
+  # Experiment 2: 300 ms on every packet that leaves the payments pods
+  "${K[@]}" apply -f "$M/6.3-latency.yaml" >/dev/null
+  injected() { [[ "$("${K[@]}" -n course-sre get networkchaos payments-latency -o jsonpath='{.status.conditions[?(@.type=="AllInjected")].status}' 2>/dev/null)" == True ]]; }
+  poll6 60 injected
+  expect "the delay is injected into both payments pods" "$("${K[@]}" -n course-sre get networkchaos payments-latency -o jsonpath='{.status.conditions[?(@.type=="AllInjected")].status}')" '^True$'
+  local secs
+  secs="$("${K[@]}" -n course-sre exec deploy/loadgen -- curl -s -o /dev/null -w '%{time_total}' http://checkout:8080/api/checkout 2>/dev/null)"
+  between "an order now takes over 300 ms (ms)" "$(awk -v s="$secs" 'BEGIN { printf "%d", s * 1000 }')" 300 3000
+  latency_page() { [[ "$(p6_alert CheckoutLatencyBudgetBurn page)" == firing ]]; }
+  local t0=$SECONDS
+  poll6 300 latency_page
+  expect "the latency SLO pages ($((SECONDS - t0)) s)" "$(p6_alert CheckoutLatencyBudgetBurn page)" '^firing$'
+  between "while the availability SLI stays under 1% errors (tenths of a percent)" "$(r5 availability | awk '{printf "%d", $1 * 1000}')" 0 9
+  "${K[@]}" -n course-sre delete networkchaos payments-latency >/dev/null
+  secs="$("${K[@]}" -n course-sre exec deploy/loadgen -- curl -s -o /dev/null -w '%{time_total}' http://checkout:8080/api/checkout 2>/dev/null)"
+  between "deleting the experiment removes the delay at once (ms)" "$(awk -v s="$secs" 'BEGIN { printf "%d", s * 1000 }')" 0 150
+  # Experiment 3: cut checkout off from payments
+  "${K[@]}" apply -f "$M/6.3-partition.yaml" >/dev/null
+  avail_page() { [[ "$(p6_alert CheckoutAvailabilityBudgetBurn page)" == firing ]]; }
+  t0=$SECONDS
+  poll6 300 avail_page
+  expect "a partition makes the availability SLO page ($((SECONDS - t0)) s)" "$(p6_alert CheckoutAvailabilityBudgetBurn page)" '^firing$'
+  expect "checkout answers 504 after its 1 s timeout" "$("${K[@]}" -n course-sre exec deploy/loadgen -- curl -s -o /dev/null -w '%{http_code}' http://checkout:8080/api/checkout 2>/dev/null)" '^504$'
+  expect "checkout logs the timeouts" "$("${K[@]}" -n course-sre logs deploy/checkout --tail=50 2>/dev/null | grep -c 'payments timed out')" '^[1-9]'
+  "${K[@]}" -n course-sre delete networkchaos payments-partition >/dev/null
+  expect "after the partition ends, orders succeed again" "$("${K[@]}" -n course-sre exec deploy/loadgen -- curl -s -o /dev/null -w '%{http_code}' http://checkout:8080/api/checkout 2>/dev/null)" '^200$'
+  baseline
+  expect "after the reset Chaos Mesh, its CRDs and course-sre are gone" "$("${K[@]}" get crd -o name | grep -c 'chaos-mesh.org') $("${K[@]}" get ns chaos-mesh course-sre 2>&1 | grep -c NotFound)" '^0 2$'
+}
+
+module_6_4() {
+  section "6.4: backup and disaster recovery"
+  baseline
+  local HH=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}")
+  v6() { "${K[@]}" -n velero exec "$("${K[@]}" -n velero get pod -l name=velero -o name 2>/dev/null)" -c velero -- /velero "$@" 2>/dev/null; }
+  sql() { "${K[@]}" -n "$1" exec "$2" -c postgres -- psql -U postgres -d orders -tAc "$3" 2>/dev/null; }
+  expect "before the module, the cluster has no Velero or CloudNativePG CRDs" "$("${K[@]}" get crd -o name | grep -cE 'velero\.io|cnpg\.io')" '^0$'
+  "${K[@]}" apply -f "$M/6.4-object-store.yaml" >/dev/null
+  "${K[@]}" -n course-backup rollout status deploy/seaweedfs --timeout=300s >/dev/null 2>&1
+  expect "SeaweedFS creates the velero bucket" "$("${K[@]}" -n course-backup exec deploy/seaweedfs -- sh -c 'echo "s3.bucket.create -name velero" | weed shell' 2>/dev/null | grep -o 'created bucket velero')" 'created bucket velero'
+  "${HH[@]}" upgrade --install cnpg cloudnative-pg --repo https://cloudnative-pg.github.io/charts --version 0.29.1 \
+    -n cnpg-system --create-namespace -f "$M/6.4-cnpg-values.yaml" --wait --timeout 5m >/dev/null 2>&1
+  "${HH[@]}" upgrade --install velero velero --repo https://vmware-tanzu.github.io/helm-charts --version 12.2.2 \
+    -n velero --create-namespace -f "$M/6.4-velero-values.yaml" --wait --timeout 6m >/dev/null 2>&1
+  bsl() { [[ "$("${K[@]}" -n velero get backupstoragelocation default -o jsonpath='{.status.phase}' 2>/dev/null)" == Available ]]; }
+  poll6 120 bsl
+  expect "Velero reaches the bucket: the backup location is Available" "$("${K[@]}" -n velero get backupstoragelocation default -o jsonpath='{.status.phase}')" '^Available$'
+  expect "the node agent runs on the node" "$("${K[@]}" -n velero get ds node-agent -o jsonpath='{.status.numberReady}')" '^1$'
+  "${K[@]}" apply -f "$M/6.4-orders-db.yaml" >/dev/null
+  "${K[@]}" -n course-dr wait --for=condition=Ready cluster/orders-db --timeout=300s >/dev/null 2>&1
+  expect "CloudNativePG runs the orders database" "$("${K[@]}" -n course-dr get cluster orders-db -o jsonpath='{.status.phase}')" '^Cluster in healthy state$'
+  sql course-dr orders-db-1 "CREATE TABLE orders (id serial PRIMARY KEY, item text, placed timestamptz DEFAULT now()); INSERT INTO orders (item) SELECT 'book-' || g FROM generate_series(1, 500) g;" >/dev/null
+  expect "500 orders are in the table" "$(sql course-dr orders-db-1 'SELECT count(*) FROM orders')" '^500$'
+  expect "the backup completes" "$(v6 backup create orders-1 --include-namespaces course-dr --default-volumes-to-fs-backup --wait | grep -o 'Completed' | head -1)" '^Completed$'
+  local desc; desc="$(v6 backup describe orders-1 --details)"
+  expect "the CHECKPOINT hook ran in the database pod" "$(echo "$desc" | grep -E 'HooksAttempted|HooksFailed' | tr -s ' ' | tr '\n' ' ')" 'HooksAttempted: 1 HooksFailed: 0'
+  expect "Kopia copied the database volume" "$(echo "$desc" | grep -o 'course-dr/orders-db-1: pgdata')" 'pgdata'
+  expect "the backup sits in the bucket" "$("${K[@]}" -n course-backup exec deploy/seaweedfs -- sh -c 'echo "fs.ls /buckets/velero/backups" | weed shell' 2>/dev/null | grep -c 'orders-1')" '^[1-9]'
+  sql course-dr orders-db-1 "INSERT INTO orders (item) SELECT 'late-' || g FROM generate_series(1, 20) g;" >/dev/null
+  expect "20 more orders arrive after the backup" "$(sql course-dr orders-db-1 'SELECT count(*) FROM orders')" '^520$'
+  # A restore drill into a new namespace, while the original keeps running
+  poll6 120 bsl
+  expect "SeaweedFS never restarted, so the backup location stayed up" "$("${K[@]}" -n course-backup get pod -l app=seaweedfs -o jsonpath="{.items[0].status.containerStatuses[0].restartCount}")" "^0$"
+  expect "the drill restore completes" "$(v6 restore create drill-1 --from-backup orders-1 --namespace-mappings course-dr:course-dr-drill --wait | grep -o 'Completed' | head -1)" '^Completed$'
+  drill_ready() { [[ "$(sql course-dr-drill orders-db-1 'SELECT count(*) FROM orders')" =~ ^[0-9]+$ ]]; }
+  poll6 240 drill_ready
+  expect "the drill copy holds the 500 orders of the backup, not the 20 later ones" "$(sql course-dr-drill orders-db-1 'SELECT count(*) FROM orders')" '^500$'
+  expect "the original still holds 520" "$(sql course-dr orders-db-1 'SELECT count(*) FROM orders')" '^520$'
+  "${K[@]}" delete namespace course-dr-drill --wait=true --timeout=180s >/dev/null 2>&1
+  # The disaster: the namespace is gone
+  "${K[@]}" delete namespace course-dr --wait=true --timeout=180s >/dev/null 2>&1
+  pv_gone() { [[ "$("${K[@]}" get pv --no-headers 2>/dev/null | grep -c 'course-dr/')" == 0 ]]; }
+  poll6 60 pv_gone
+  expect "deleting the namespace removes the database and its volume" "$("${K[@]}" get pvc -n course-dr --no-headers 2>/dev/null | wc -l | tr -d ' ') $("${K[@]}" get pv --no-headers 2>/dev/null | grep -c 'course-dr/')" '^0 0$'
+  local t0=$SECONDS
+  expect "the restore completes" "$(v6 restore create orders-restore-1 --from-backup orders-1 --wait | grep -o 'Completed' | head -1)" '^Completed$'
+  back() { [[ "$("${K[@]}" -n course-dr get cluster orders-db -o jsonpath='{.status.phase}' 2>/dev/null)" == "Cluster in healthy state" && "$(sql course-dr orders-db-1 'SELECT count(*) FROM orders')" =~ ^[0-9]+$ ]]; }
+  poll6 300 back
+  expect "CloudNativePG reports the restored cluster healthy ($((SECONDS - t0)) s)" "$("${K[@]}" -n course-dr get cluster orders-db -o jsonpath='{.status.phase}')" '^Cluster in healthy state$'
+  expect "the restored database holds the 500 orders of the backup" "$(sql course-dr orders-db-1 'SELECT count(*) FROM orders')" '^500$'
+  baseline
+  expect "after the reset Velero, CloudNativePG, their CRDs and namespaces are gone" "$("${K[@]}" get crd -o name | grep -cE 'velero\.io|cnpg\.io') $("${K[@]}" get ns velero cnpg-system course-backup course-dr course-dr-drill 2>&1 | grep -c NotFound)" '^0 5$'
+}
+
 # Module 2.9 upgrades k3s for real, so it is not in the default run: ./platform-engineering/verify.sh 2.9
 module_2_9() {
   section "2.9: k3s certificates, backups and upgrades (the upgrade is one-way)"

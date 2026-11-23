@@ -244,7 +244,10 @@ case "$command" in
   help|-h|--help|shell|toolbox|ollama) ;;
   # The timed tasks and exams reach the nodes with docker exec, orb or ssh, and the Lima VM
   # with limactl, which only the host has. So they run on the host, where bash 3.2 is enough.
-  task|exam) [[ "${LAB_USE_TOOLBOX:-auto}" == always ]] && want_toolbox && { toolbox_start; toolbox_exec "$ROOT/lab.sh" "$command" "$@"; exit $?; } ;;
+  task|exam) [[ "${LAB_USE_TOOLBOX:-auto}" == always ]] && want_toolbox && { toolbox_start; toolbox_exec "$ROOT/lab.sh" "$command" "$@"; exit $?; }
+    # The reliability track's tasks (6.x) run on the lab with kubectl, so on a machine without
+    # kubectl they go through the toolbox, like every other lab command.
+    [[ "$command" == task && "${2:-}" == 6.* ]] && want_toolbox && { toolbox_start; toolbox_exec "$ROOT/lab.sh" "$command" "$@"; exit $?; } ;;
   # The practice cluster on OrbStack machines needs orb, which only the host has.
   practice) [[ "${PRACTICE_PLATFORM:-${CKS_PLATFORM:-kind}}" != orbstack ]] && want_toolbox && { toolbox_start; toolbox_exec "$ROOT/lab.sh" "$command" "$@"; exit $?; } ;;
   *)

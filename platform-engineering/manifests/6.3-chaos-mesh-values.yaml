@@ -1,0 +1,22 @@
+# Module 6.3: Chaos Mesh 2.8.7, sized for the lab.
+#   helm install chaos-mesh chaos-mesh/chaos-mesh --version 2.8.7 -n chaos-mesh --create-namespace \
+#     -f platform-engineering/manifests/6.3-chaos-mesh-values.yaml
+controllerManager:
+  # One controller is enough on one node. The chart's default of three costs 500 MiB more.
+  replicaCount: 1
+  resources:
+    requests: {cpu: 25m, memory: 96Mi}
+    limits: {memory: 256Mi}
+chaosDaemon:
+  # k3s runs containerd with its socket in its own folder, not Docker's.
+  runtime: containerd
+  socketPath: /run/k3s/containerd/containerd.sock
+  resources:
+    requests: {cpu: 10m, memory: 64Mi}
+    limits: {memory: 256Mi}
+# The web console and the DNS fault server stay off: the module drives experiments with
+# YAML and watches them in Grafana, and the lab has no spare port for another UI.
+dashboard:
+  create: false
+dnsServer:
+  create: false

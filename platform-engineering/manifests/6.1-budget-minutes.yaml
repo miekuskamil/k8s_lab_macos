@@ -1,0 +1,24 @@
+# Module 6.1: the error budget in minutes, next to Sloth's rules.
+# Sloth's slo:period_error_budget_remaining:ratio averages only the history Prometheus holds.
+# This lab keeps 6 hours, and a fresh checkout has minutes, so one bad release looks like a
+# disaster there. These rules count the budget the way a 30-day SLO means it: every 30 s
+# evaluation adds its 5-minute error ratio times 30 s, which gives "seconds of full outage",
+# and any time Prometheus never saw counts as clean.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: checkout-budget-minutes
+  namespace: course-sre
+spec:
+  groups:
+    - name: checkout-budget-minutes
+      interval: 30s
+      rules:
+        # The whole budget: 0.1% of 30 days is 43.2 minutes of full outage.
+        - record: slo:error_budget_minutes:total
+          expr: slo:error_budget:ratio * 30 * 24 * 60
+        # What the SLI spent so far, in minutes of full outage. 30 is the rule interval in seconds.
+        - record: slo:error_budget_minutes:spent
+          expr: max without (sloth_window) (sum_over_time(slo:sli_error:ratio_rate5m[30d])) * 30 / 60
+        - record: slo:error_budget_minutes:remaining_ratio
+          expr: 1 - slo:error_budget_minutes:spent / on (sloth_id, sloth_slo, sloth_service) group_left slo:error_budget_minutes:total

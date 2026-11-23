@@ -6,3 +6,4 @@ __pycache__/
 platform-engineering/practice/cluster/kind/.bin/
 lab.env
 /platform-engineering/0-docker/work/
+/platform-engineering/6-sre/work/

@@ -14,6 +14,54 @@ echo "Removing course rules from the shop namespace"
 "${K[@]}" -n shop delete telemetry waypoint-access-logs --ignore-not-found >/dev/null
 "${K[@]}" -n shop delete authorizationpolicy backend-allow-course-client --ignore-not-found >/dev/null
 "${K[@]}" -n course-sidecar delete virtualservice,destinationrule,peerauthentication --all --ignore-not-found >/dev/null 2>&1 || true
+# Module 6.4: Velero's restores and backups first, while Velero still runs to clear their
+# finalizers, then both releases, the namespaces and the CRDs that Helm leaves behind.
+HK=(helm --kube-context "${KUBE_CONTEXT:-k3d-k8s-lab}")
+if "${HK[@]}" -n velero status velero >/dev/null 2>&1; then
+  "${K[@]}" -n velero delete restores.velero.io,schedules.velero.io --all --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || true
+  "${HK[@]}" -n velero uninstall velero --wait >/dev/null 2>&1 || true
+fi
+# Without Velero nobody clears a finalizer, so take any left off by hand.
+for r in $("${K[@]}" -n velero get restores.velero.io,backups.velero.io -o name 2>/dev/null); do
+  "${K[@]}" -n velero patch "$r" --type merge -p '{"metadata":{"finalizers":null}}' >/dev/null 2>&1 || true
+done
+"${K[@]}" delete namespace course-dr course-dr-drill --ignore-not-found --wait=true --timeout=120s >/dev/null 2>&1 || true
+if "${HK[@]}" -n cnpg-system status cnpg >/dev/null 2>&1; then
+  "${HK[@]}" -n cnpg-system uninstall cnpg --wait >/dev/null 2>&1 || true
+fi
+"${K[@]}" delete namespace velero cnpg-system course-backup --ignore-not-found >/dev/null
+"${K[@]}" get crd -o name 2>/dev/null | grep -E '\.velero\.io$|\.postgresql\.cnpg\.io$' | xargs -r "${K[@]}" delete --ignore-not-found >/dev/null 2>&1 || true
+# Module 6.3: experiments first, while the controller still runs to undo their faults and clear
+# their finalizers, then the release and its 23 CRDs.
+if "${HK[@]}" -n chaos-mesh status chaos-mesh >/dev/null 2>&1; then
+  for kind in schedules podchaos networkchaos stresschaos httpchaos; do
+    "${K[@]}" delete "$kind.chaos-mesh.org" -A --all --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || true
+  done
+  "${HK[@]}" -n chaos-mesh uninstall chaos-mesh --wait >/dev/null 2>&1 || true
+fi
+"${K[@]}" delete namespace chaos-mesh --ignore-not-found >/dev/null
+"${K[@]}" get crd -o name 2>/dev/null | grep -E '\.chaos-mesh\.org$' | xargs -r "${K[@]}" delete --ignore-not-found >/dev/null 2>&1 || true
+# Module 6.5: KEDA and prometheus-adapter. Uninstalling them removes their APIServices; the
+# ScaledObjects go first, so KEDA deletes the HPAs it made.
+"${K[@]}" -n course-sre delete scaledobjects.keda.sh --all --ignore-not-found >/dev/null 2>&1 || true
+for rel in keda:keda course-autoscale:prometheus-adapter; do
+  if "${HK[@]}" -n "${rel%%:*}" status "${rel#*:}" >/dev/null 2>&1; then
+    "${HK[@]}" -n "${rel%%:*}" uninstall "${rel#*:}" --wait >/dev/null 2>&1 || true
+  fi
+done
+"${K[@]}" delete namespace keda course-autoscale --ignore-not-found >/dev/null
+"${K[@]}" get crd -o name 2>/dev/null | grep -E '\.keda\.sh$' | xargs -r "${K[@]}" delete --ignore-not-found >/dev/null 2>&1 || true
+# Module 6.2: the Application first (its finalizer deletes the dashboard ConfigMaps), then the
+# alert rule, the folder and the contact point, which live only in Grafana's database.
+"${K[@]}" -n argocd delete application sre-dashboards --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || true
+"${K[@]}" -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- sh -c \
+  'A="$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD"
+   curl -s -o /dev/null -u "$A" -X DELETE localhost:3000/api/v1/provisioning/alert-rules/checkout-error-logs
+   curl -s -o /dev/null -u "$A" -X DELETE "localhost:3000/api/folders/sre?forceDeleteRules=true"
+   curl -s -o /dev/null -u "$A" -X DELETE localhost:3000/api/v1/provisioning/contact-points/sre-webhook' >/dev/null 2>&1 || true
+# Module 6.1: checkout, payments and the client, with the SLO rules, all in course-sre.
+# Modules 6.2 to 6.8 add their own objects to course-sre too, so this one delete covers them.
+"${K[@]}" delete namespace course-sre --ignore-not-found >/dev/null
 # Module 3.16: the outbound client, its waypoint, the ServiceEntry and DestinationRule
 "${K[@]}" delete namespace course-outbound --ignore-not-found >/dev/null
 # Module 3.18: the debugging namespace, with its access logs, routes and break files inside

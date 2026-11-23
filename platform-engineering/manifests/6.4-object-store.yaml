@@ -1,0 +1,66 @@
+# Module 6.4: an S3-compatible object store inside the cluster, for Velero's backups.
+# MinIO no longer publishes its server images, so the lab runs SeaweedFS, whose S3 gateway
+# speaks the same API. It lives in its own namespace, so deleting the app's namespace in the
+# disaster drill leaves the backups alone. Its data sits in an emptyDir: fine for a lab, never
+# for real backups, which belong in another failure domain (another cluster, region or cloud).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: course-backup
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: s3-config
+  namespace: course-backup
+stringData:
+  # One identity, the one Velero signs its requests with.
+  s3.json: |
+    {"identities": [{"name": "velero",
+      "credentials": [{"accessKey": "velero", "secretKey": "velero-lab-secret"}],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]}]}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweedfs
+  namespace: course-backup
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: seaweedfs}
+  template:
+    metadata:
+      labels: {app: seaweedfs}
+    spec:
+      containers:
+        - name: seaweedfs
+          image: chrislusf/seaweedfs:4.48
+          # One process runs every SeaweedFS part: master, volume server, filer and the S3 gateway.
+          args: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json",
+                 "-master.volumeSizeLimitMB=64", "-volume.max=20"]
+          ports:
+            - {name: s3, containerPort: 8333}
+          readinessProbe:
+            tcpSocket: {port: 8333}
+            periodSeconds: 5
+          resources:
+            requests: {cpu: 20m, memory: 96Mi}
+            limits: {memory: 768Mi}   # Kopia uploads in parallel; 384Mi got OOM-killed
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: config, mountPath: /etc/seaweedfs}
+      volumes:
+        - {name: data, emptyDir: {}}
+        - name: config
+          secret: {secretName: s3-config}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seaweedfs
+  namespace: course-backup
+spec:
+  selector: {app: seaweedfs}
+  ports:
+    - {name: s3, port: 8333}

@@ -1,0 +1,28 @@
+# Module 6.5: prometheus-adapter 0.12.0 (chart 5.3.0). It answers the custom metrics API
+# (custom.metrics.k8s.io) with numbers it reads from Prometheus, so an HPA scales on them.
+#   helm install prometheus-adapter prometheus-community/prometheus-adapter --version 5.3.0 \
+#     -n course-autoscale --create-namespace -f platform-engineering/manifests/6.5-adapter-values.yaml
+prometheus:
+  url: http://kube-prometheus-stack-prometheus.observability.svc
+  port: 9090
+logLevel: 2
+resources:
+  requests: {cpu: 20m, memory: 48Mi}
+  limits: {memory: 128Mi}
+rules:
+  # The chart's default rules turn every counter in Prometheus into a custom metric. The lab
+  # needs one, so the adapter serves only the rule below.
+  default: false
+  custom:
+    # One rule: from a counter per pod to a rate per pod, under a new name.
+    - seriesQuery: 'http_request_duration_seconds_count{namespace!="", pod!=""}'
+      resources:
+        # These Prometheus labels say which Kubernetes object a series belongs to.
+        overrides:
+          namespace: {resource: namespace}
+          pod: {resource: pod}
+      name:
+        matches: "^http_request_duration_seconds_count$"
+        as: "http_requests_per_second"
+      # <<.Series>> and <<.LabelMatchers>> are filled in for the pods the HPA asks about.
+      metricsQuery: 'sum by (<<.GroupBy>>) (rate(<<.Series>>{<<.LabelMatchers>>}[1m]))'

@@ -1,0 +1,60 @@
+# Module 6.1: the SLOs of the checkout service, written for Sloth.
+# Sloth turns this short file into a PrometheusRule with the recording rules and the
+# multi-window burn-rate alerts that the spec implies:
+#   docker run --rm -v "$PWD:$PWD" -w "$PWD" ghcr.io/slok/sloth:v0.16.0 generate \
+#     -i platform-engineering/manifests/6.1-checkout-slos.yaml -o platform-engineering/manifests/6.1-checkout-slo-rules.yaml
+apiVersion: sloth.slok.dev/v1
+kind: PrometheusServiceLevel
+metadata:
+  name: checkout
+  namespace: course-sre
+spec:
+  service: checkout
+  labels:
+    team: shop
+  slos:
+    # Availability: 99.9% of orders get an answer that is not a 5xx, over 30 days.
+    # "or vector(0)" turns "no 5xx series yet" into a real zero, so the ratio exists from the start.
+    - name: availability
+      objective: 99.9
+      description: "Orders that checkout answers without a server error."
+      sli:
+        events:
+          errorQuery: sum(rate(http_request_duration_seconds_count{namespace="course-sre", app="checkout", path="/api/checkout", status=~"5.."}[{{.window}}])) or vector(0)
+          totalQuery: sum(rate(http_request_duration_seconds_count{namespace="course-sre", app="checkout", path="/api/checkout"}[{{.window}}]))
+      alerting:
+        name: CheckoutAvailabilityBudgetBurn
+        labels:
+          category: availability
+        annotations:
+          summary: "Checkout spends its availability error budget too fast."
+        pageAlert:
+          labels:
+            severity: page
+        ticketAlert:
+          labels:
+            severity: ticket
+    # Latency: 99% of orders get an answer within 250 ms, over 30 days.
+    # Slow = all requests minus the ones in the 0.25 s bucket.
+    - name: latency
+      objective: 99
+      description: "Orders that checkout answers within 250 ms."
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(http_request_duration_seconds_count{namespace="course-sre", app="checkout", path="/api/checkout"}[{{.window}}]))
+            -
+            sum(rate(http_request_duration_seconds_bucket{namespace="course-sre", app="checkout", path="/api/checkout", le="0.25"}[{{.window}}]))
+          totalQuery: sum(rate(http_request_duration_seconds_count{namespace="course-sre", app="checkout", path="/api/checkout"}[{{.window}}]))
+      alerting:
+        name: CheckoutLatencyBudgetBurn
+        labels:
+          category: latency
+        annotations:
+          summary: "Checkout spends its latency error budget too fast."
+        pageAlert:
+          labels:
+            severity: page
+        ticketAlert:
+          labels:
+            severity: ticket

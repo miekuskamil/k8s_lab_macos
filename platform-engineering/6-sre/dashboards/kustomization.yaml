@@ -1,0 +1,20 @@
+# Track 6: the SLO, RED and USE dashboards as code.
+# Kustomize wraps each JSON file in a ConfigMap with the label Grafana's sidecar watches,
+# so the JSON stays a plain file you diff and review.
+#   kubectl apply -k platform-engineering/6-sre/dashboards     (modules 6.4 to 6.8)
+# Module 6.2 pushes this folder to a Git server and lets ArgoCD apply it instead.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: course-sre
+generatorOptions:
+  # Keep the names stable, so a change updates the ConfigMap instead of adding a new one.
+  disableNameSuffixHash: true
+  labels:
+    grafana_dashboard: "1"
+configMapGenerator:
+  - name: dashboard-sre-slo
+    files: [slo.json]
+  - name: dashboard-sre-red
+    files: [red.json]
+  - name: dashboard-sre-use
+    files: [use.json]

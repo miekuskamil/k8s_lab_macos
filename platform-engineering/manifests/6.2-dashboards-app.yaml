@@ -1,0 +1,23 @@
+# Module 6.2: ArgoCD keeps the dashboards in course-sre equal to the folder in Gitea.
+# Kustomize builds the ConfigMaps from the JSON files; Grafana's sidecar loads them.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sre-dashboards
+  namespace: argocd
+  # Deleting the Application also deletes the ConfigMaps it created, and Grafana drops the dashboards.
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: http://gitea.course-sre.svc.cluster.local:3000/lab/sre-dashboards.git
+    targetRevision: main
+    path: .
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: course-sre
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

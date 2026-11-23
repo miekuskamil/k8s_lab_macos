@@ -1,0 +1,62 @@
+# Module 6.5: a work queue and the workers that empty it.
+# Redis holds a list named "orders". Each worker takes one order, works on it for a second,
+# and takes the next. The workers start at 0 replicas: KEDA decides how many run.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: queue
+  namespace: course-sre
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: queue}
+  template:
+    metadata:
+      labels: {app: queue}
+    spec:
+      containers:
+        - name: redis
+          image: public.ecr.aws/docker/library/redis:7.4.1-alpine
+          ports:
+            - containerPort: 6379
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {memory: 64Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: queue
+  namespace: course-sre
+spec:
+  selector: {app: queue}
+  ports:
+    - {name: redis, port: 6379}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: course-sre
+spec:
+  replicas: 0
+  selector:
+    matchLabels: {app: worker}
+  template:
+    metadata:
+      labels: {app: worker}
+    spec:
+      containers:
+        - name: worker
+          image: public.ecr.aws/docker/library/redis:7.4.1-alpine
+          command: ["sh", "-c"]
+          args:
+            - |
+              while true; do
+                # BRPOP waits up to 5 s for an order, then the loop asks again.
+                order=$(redis-cli -h queue BRPOP orders 5 | tail -1)
+                [ -n "$order" ] && echo "worked on $order" && sleep 1
+              done
+          resources:
+            requests: {cpu: 10m, memory: 8Mi}
+            limits: {memory: 32Mi}

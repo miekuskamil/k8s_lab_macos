@@ -1,0 +1,22 @@
+# Module 6.5: KEDA scales the workers on the length of the Redis list.
+# One worker per 10 waiting orders, at most 5, and none at all when the list stays empty.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: worker
+  namespace: course-sre
+spec:
+  scaleTargetRef:
+    name: worker
+  minReplicaCount: 0
+  maxReplicaCount: 5
+  # KEDA itself asks Redis every 5 s whether to wake the workers from 0.
+  pollingInterval: 5
+  # After the list stays empty for 30 s, KEDA scales the workers back to 0.
+  cooldownPeriod: 30
+  triggers:
+    - type: redis
+      metadata:
+        address: queue.course-sre.svc.cluster.local:6379
+        listName: orders
+        listLength: "10"

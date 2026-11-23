@@ -1,0 +1,7 @@
+{
+  "uid": "sre-webhook",
+  "name": "sre-webhook",
+  "type": "webhook",
+  "settings": {"url": "http://alert-receiver.course-sre.svc.cluster.local:8080/grafana"},
+  "disableResolveMessage": false
+}
