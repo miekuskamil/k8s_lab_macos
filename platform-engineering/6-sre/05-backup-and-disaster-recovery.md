@@ -263,7 +263,7 @@ $ kubectl -n course-dr get events --sort-by=.lastTimestamp | grep -E 'restore-wa
 10s         Normal   Created                 pod/orders-db-1                         Created container postgres
 ```
 
-**What you should see.** Deleting the namespace took the database, its volume and its claim with it, so no PVC is left anywhere. From the start of the restore to a healthy cluster took 34 seconds in the test run, the RTO of this small database, and the table holds the 500 orders of the backup. The events show the restore in order: Velero's `restore-wait` init container held the pod while the node agent wrote the files back, PostgreSQL started on them, and then the operator replaced the pod Velero had restored with one of its own, which found the same data on the volume.
+**What you should see.** Deleting the namespace took the database, its volume and its claim with it, so no PVC is left anywhere. From the start of the restore to a healthy cluster took 43 seconds in the test run, the RTO of this small database, and the table holds the 500 orders of the backup. The events show the restore in order: Velero's `restore-wait` init container held the pod while the node agent wrote the files back, PostgreSQL started on them, and then the operator replaced the pod Velero had restored with one of its own, which found the same data on the volume.
 
 ## Tasks
 
@@ -331,10 +331,10 @@ Prove the backup works: restore it into course-dr-drill without touching course-
 <!-- norun -->
 ```console
 $ kubectl -n velero exec "$(kubectl -n velero get pod -l name=velero -o name)" -c velero -- /velero restore create --from-backup task-6-5-2 --namespace-mappings course-dr:course-dr-drill --wait
-Restore request "task-6-5-2-20261122012229" submitted successfully.
+Restore request "task-6-5-2-20261123194506" submitted successfully.
 Waiting for restore to complete. You may safely press ctrl-c to stop waiting - your restore will continue in the background.
 ...................
-Restore completed with status: Completed. You may check for more information using the commands `velero restore describe task-6-5-2-20261122012229` and `velero restore logs task-6-5-2-20261122012229`.
+Restore completed with status: Completed. You may check for more information using the commands `velero restore describe task-6-5-2-20261123194506` and `velero restore logs task-6-5-2-20261123194506`.
 $ kubectl -n course-dr-drill wait --for=condition=Ready cluster/orders-db --timeout=300s
 cluster.postgresql.cnpg.io/orders-db condition met
 $ kubectl -n course-dr-drill exec orders-db-1 -c postgres -- psql -U postgres -d orders -tAc 'SELECT count(*) FROM orders'

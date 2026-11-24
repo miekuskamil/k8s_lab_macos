@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1600" viewBox="0 0 1600 1600" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="1600" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">Triage the <tspan fill="#7c3aed">checkout outage</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Use the SLO to confirm impact, inspect the fault, remove it and prove that orders recover.</text>
+<rect x="40.0" y="150.0" width="330.0" height="1290.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="57.5,181.0 76.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">your terminal</text>
+<rect x="70.0" y="280.0" width="270.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="205.0" y="317.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">SLO + logs</text>
+<text x="205.0" y="339.7" font-size="17.0" fill="#475569" text-anchor="middle">504, payments timeout</text>
+<rect x="70.0" y="540.0" width="270.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="205.0" y="577.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">kubectl get</text>
+<text x="205.0" y="599.7" font-size="17.0" fill="#475569" text-anchor="middle">find NetworkChaos</text>
+<rect x="70.0" y="800.0" width="270.0" height="90.0" rx="10.0" fill="#fdecf4" stroke="#db2777" stroke-width="1.8"/>
+<text x="205.0" y="837.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">kubectl delete</text>
+<text x="205.0" y="859.7" font-size="17.0" fill="#475569" text-anchor="middle">remove the fault</text>
+<rect x="70.0" y="1060.0" width="270.0" height="90.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="205.0" y="1097.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">20 orders</text>
+<text x="205.0" y="1119.7" font-size="17.0" fill="#475569" text-anchor="middle">all answer 200</text>
+<rect x="420.0" y="150.0" width="1140.0" height="1290.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<ellipse cx="447.0" cy="174.0" rx="9.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.20"/>
+<ellipse cx="447.0" cy="174.0" rx="4.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.00"/>
+<polyline points="438.0,174.0 456.0,174.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="466.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">OrbStack cluster</text>
+<rect x="465.0" y="230.0" width="1050.0" height="480.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="483.0" y="260.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace course-sre</text>
+<rect x="510.0" y="350.0" width="220.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="620.0" y="387.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">loadgen</text>
+<text x="620.0" y="409.7" font-size="17.0" fill="#475569" text-anchor="middle">orders</text>
+<rect x="790.0" y="320.0" width="260.0" height="170.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="817.0,335.0 825.5,339.5 825.5,349.0 817.0,353.5 808.5,349.0 808.5,339.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="808.5,339.5 817.0,344.0 825.5,339.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="817.0,344.0 817.0,353.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="836.0" y="350.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">pod checkout</text>
+<rect x="815.0" y="380.0" width="210.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="920.0" y="412.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">checkout</text>
+<text x="920.0" y="434.7" font-size="17.0" fill="#475569" text-anchor="middle">1 s timeout</text>
+<rect x="1120.0" y="320.0" width="260.0" height="170.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="1147.0,335.0 1155.5,339.5 1155.5,349.0 1147.0,353.5 1138.5,349.0 1138.5,339.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="1138.5,339.5 1147.0,344.0 1155.5,339.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1147.0,344.0 1147.0,353.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1166.0" y="350.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">pod payments</text>
+<rect x="1145.0" y="380.0" width="210.0" height="80.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="1250.0" y="412.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">podinfo</text>
+<text x="1250.0" y="434.7" font-size="17.0" fill="#475569" text-anchor="middle">dependency</text>
+<rect x="1120.0" y="555.0" width="260.0" height="90.0" rx="10.0" fill="#fdecf4" stroke="#db2777" stroke-width="1.8"/>
+<text x="1250.0" y="592.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">NetworkChaos</text>
+<text x="1250.0" y="614.7" font-size="17.0" fill="#475569" text-anchor="middle">delay 2 s</text>
+<rect x="465.0" y="790.0" width="1050.0" height="430.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="483.0" y="820.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace observability</text>
+<rect x="520.0" y="900.0" width="270.0" height="90.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="655.0" y="937.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">Prometheus</text>
+<text x="655.0" y="959.7" font-size="17.0" fill="#475569" text-anchor="middle">availability SLI</text>
+<rect x="900.0" y="900.0" width="240.0" height="90.0" rx="10.0" fill="#fdeeee" stroke="#dc2626" stroke-width="1.8"/>
+<text x="1020.0" y="937.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">page</text>
+<text x="1020.0" y="959.7" font-size="17.0" fill="#475569" text-anchor="middle">budget burn</text>
+<rect x="520.0" y="1060.0" width="270.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="655.0" y="1097.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">checkout log</text>
+<text x="655.0" y="1119.7" font-size="17.0" fill="#475569" text-anchor="middle">payments timeout</text>
+<rect x="900.0" y="1060.0" width="300.0" height="90.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="1050.0" y="1097.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">orders recover</text>
+<text x="1050.0" y="1119.7" font-size="17.0" fill="#475569" text-anchor="middle">200 responses</text>
+<polyline points="730.0,395.0 772.5,395.0 772.5,420.0 805.5,420.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="815.0,420.0 803.5,425.8 803.5,414.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="760.0" cy="395.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="760.0" cy="395.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="760.0" y="401.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<text x="760.0" y="369.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">request</text>
+<polyline points="1025.0,420.0 1135.5,420.0" fill="none" stroke="#dc2626" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1145.0,420.0 1133.5,425.8 1133.5,414.2" fill="#dc2626" stroke="#dc2626" stroke-width="1" stroke-linejoin="round"/>
+<text x="1085.0" y="410.0" font-size="18.0" fill="#991b1b" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">times out</text>
+<polyline points="1250.0,555.0 1250.0,469.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1250.0,460.0 1255.8,471.5 1244.2,471.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1250.0" cy="520.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1250.0" cy="520.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1250.0" y="526.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<text x="1276.0" y="526.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">injects delay</text>
+<polyline points="920.0,460.0 920.0,700.0 655.0,700.0 655.0,890.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="655.0,900.0 649.2,888.5 660.8,888.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="790.0" y="690.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">504s</text>
+<polyline points="790.0,945.0 890.5,945.0" fill="none" stroke="#dc2626" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="900.0,945.0 888.5,950.8 888.5,939.2" fill="#dc2626" stroke="#dc2626" stroke-width="1" stroke-linejoin="round"/>
+<text x="845.0" y="935.0" font-size="18.0" fill="#991b1b" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">burns budget</text>
+<polyline points="920.0,460.0 920.0,740.0 655.0,740.0 655.0,1050.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="655.0,1060.0 649.2,1048.5 660.8,1048.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="790.0" y="730.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">writes timeout</text>
+<polyline points="340.0,845.0 390.0,845.0 1080.0,845.0 1080.0,600.0 1110.5,600.0" fill="none" stroke="#db2777" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1120.0,600.0 1108.5,605.8 1108.5,594.2" fill="#db2777" stroke="#db2777" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="740.0" cy="845.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="740.0" cy="845.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="740.0" y="851.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<text x="740.0" y="819.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">deletes</text>
+<polyline points="1250.0,460.0 1250.0,720.0 1050.0,720.0 1050.0,1025.0 1050.0,1050.5" fill="none" stroke="#059669" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1050.0,1060.0 1044.2,1048.5 1055.8,1048.5" fill="#059669" stroke="#059669" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="1150.0" cy="720.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="1150.0" cy="720.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="1150.0" y="726.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<text x="1150.0" y="694.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">healthy again</text>
+<polyline points="340.0,1105.0 890.5,1105.0" fill="none" stroke="#059669" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="900.0,1105.0 888.5,1110.8 888.5,1099.2" fill="#059669" stroke="#059669" stroke-width="1" stroke-linejoin="round"/>
+<text x="835.0" y="1095.0" font-size="18.0" fill="#047857" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">checks</text>
+</svg>

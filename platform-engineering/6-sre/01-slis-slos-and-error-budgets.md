@@ -283,7 +283,9 @@ Each task gives you a goal without the commands. `./lab.sh task setup` prepares 
 <!-- norun -->
 ```console
 $ ./lab.sh task setup 6.1.1
-TASK-SETUP-6.1.1
+== setup task 6.1.1
+checkout and payments run in course-sre, and Prometheus scrapes both.
+No PrometheusRule named payments-slo exists. Write it (task 6.1.1 in the module).
 ```
 
 > In `course-sre`, create a PrometheusRule named `payments-slo` with two recording rules, `payments:sli_error:ratio_rate5m` and `payments:sli_error:ratio_rate1h`: the share of payments' requests with a 5xx status over 5 minutes and 1 hour, 0 when there are none. Add an alert named `PaymentsAvailabilityBurn` with `severity: page` that fires when both ratios burn a 99.5% SLO 14.4 times too fast.
@@ -291,14 +293,27 @@ TASK-SETUP-6.1.1
 <details>
 <summary>Solution</summary>
 
-TASK-SOLUTION-6.1.1
+The reference rule records both error windows, then pages only when both burn above 14.4 times the 0.5% budget:
+
+```console
+$ kubectl apply -f platform-engineering/6-sre/tasks/6.1.1-payments-slo.yaml
+prometheusrule.monitoring.coreos.com/payments-slo created
+```
 
 </details>
 
 <!-- norun -->
 ```console
 $ ./lab.sh task check 6.1.1
-TASK-CHECK-6.1.1
+== check task 6.1.1
+  PASS  PrometheusRule course-sre/payments-slo exists
+  PASS  Prometheus loaded payments:sli_error:ratio_rate5m and ratio_rate1h
+  PASS  the 5m ratio has a value now, even with no 5xx (0)
+  PASS  it matches the 5xx share of payments' requests over 5m
+  PASS  Prometheus loaded an alert named PaymentsAvailabilityBurn
+  PASS  the alert compares both windows against 14.4 x 0.5% (0.072)
+  PASS  the alert carries severity=page
+== task 6.1.1: 7 passed, 0 failed
 ```
 
 ### Task 6.1.2: a latency SLO with Sloth
@@ -306,7 +321,8 @@ TASK-CHECK-6.1.1
 <!-- norun -->
 ```console
 $ ./lab.sh task setup 6.1.2
-TASK-SETUP-6.1.2
+== setup task 6.1.2
+No PrometheusRule named payments exists. Write a Sloth spec, generate it and apply it (task 6.1.2).
 ```
 
 > Write a Sloth spec for the service `payments` with one SLO named `latency`: 99% of payments' requests within 100 ms. Generate it with Sloth and apply the result, so a PrometheusRule named `payments` exists in `course-sre`.
@@ -314,14 +330,25 @@ TASK-SETUP-6.1.2
 <details>
 <summary>Solution</summary>
 
-TASK-SOLUTION-6.1.2
+The spec at `platform-engineering/6-sre/tasks/6.1.2-payments-sloth.yaml` defines a 99% latency SLO. Sloth generates the PrometheusRule and `kubectl apply` loads it:
+
+```console
+$ docker run --rm -v "$PWD:$PWD" -w "$PWD" ghcr.io/slok/sloth:v0.16.0 generate -i platform-engineering/6-sre/tasks/6.1.2-payments-sloth.yaml 2>/dev/null | kubectl apply -f -
+prometheusrule.monitoring.coreos.com/payments created
+```
 
 </details>
 
 <!-- norun -->
 ```console
 $ ./lab.sh task check 6.1.2
-TASK-CHECK-6.1.2
+== check task 6.1.2
+  PASS  PrometheusRule course-sre/payments exists and Sloth generated it
+  PASS  the SLO is payments / latency with objective 0.99
+  PASS  its SLI counts requests slower than 100 ms (the le="0.1" bucket)
+  PASS  the 5m error ratio has a value
+  PASS  a page alert and a ticket alert exist for it
+== task 6.1.2: 5 passed, 0 failed
 ```
 
 ### Task 6.1.3: silence a page for a migration
@@ -329,7 +356,8 @@ TASK-CHECK-6.1.2
 <!-- norun -->
 ```console
 $ ./lab.sh task setup 6.1.3
-TASK-SETUP-6.1.3
+== setup task 6.1.3
+The checkout SLO rules are loaded. Alertmanager holds no silence for CheckoutAvailabilityBudgetBurn.
 ```
 
 > The payments database migration runs for the next 2 hours. Add an Alertmanager silence that holds back checkout's availability page, `alertname=CheckoutAvailabilityBudgetBurn` with `severity=page`, for 2 hours, with a comment that mentions the migration. Tickets must still arrive.
@@ -337,14 +365,24 @@ TASK-SETUP-6.1.3
 <details>
 <summary>Solution</summary>
 
-TASK-SOLUTION-6.1.3
+Add a silence for the page severity only, so ticket notifications keep working:
+
+```console
+$ kubectl -n observability exec alertmanager-kube-prometheus-stack-alertmanager-0 -c alertmanager -- amtool --alertmanager.url=http://localhost:9093 silence add alertname=CheckoutAvailabilityBudgetBurn severity=page --duration=2h --author=you --comment="payments database migration"
+5f5dc8ae-09e8-4435-b4d5-778d5e3cd296
+```
 
 </details>
 
 <!-- norun -->
 ```console
 $ ./lab.sh task check 6.1.3
-TASK-CHECK-6.1.3
+== check task 6.1.3
+  PASS  an active silence matches alertname=CheckoutAvailabilityBudgetBurn
+  PASS  it matches only severity=page, so tickets still arrive
+  PASS  it lasts 2 hours (got: page 2.0 payments database migration)
+  PASS  its comment names the migration
+== task 6.1.3: 4 passed, 0 failed
 ```
 
 ## Investigate

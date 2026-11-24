@@ -1,6 +1,6 @@
-# Task 6.4.1, the reference solution: 200 ms on the packets checkout sends to payments, and
-# nothing else. The selector picks where the fault runs (checkout's network namespace); the
-# target and direction "to" limit it to packets addressed to payments' pods.
+# Task 6.4.1, the reference solution: 200 ms on packets checkout sends to payments, and nothing
+# else. The selector picks checkout's network namespace; direction "from" and the target limit
+# the fault to packets leaving checkout for payments' pods.
 apiVersion: chaos-mesh.org/v1alpha1
 kind: NetworkChaos
 metadata:
@@ -12,7 +12,7 @@ spec:
   selector:
     namespaces: [course-sre]
     labelSelectors: {app: checkout}
-  direction: to
+  direction: from
   target:
     mode: all
     selector:

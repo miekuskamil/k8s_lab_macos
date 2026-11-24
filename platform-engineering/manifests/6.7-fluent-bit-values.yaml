@@ -13,6 +13,16 @@ resources:
     cpu: 250m
     memory: 128Mi
 
+daemonSetVolumes:
+  - name: varlog
+    hostPath:
+      path: /var/log
+
+daemonSetVolumeMounts:
+  - name: varlog
+    mountPath: /var/log
+    readOnly: true
+
 config:
   service: |
     [SERVICE]

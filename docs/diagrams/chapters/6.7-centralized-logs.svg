@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1600" viewBox="0 0 1600 1600" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1600" height="1600" fill="#ffffff"/>
+<rect x="40.0" y="34.0" width="6.0" height="40.0" rx="3.0" fill="#7c3aed" stroke="none"/>
+<text x="62" y="66" font-size="34" font-weight="700" fill="#0f172a">From container <tspan fill="#7c3aed">to searchable logs</tspan></text>
+<text x="62.0" y="104.0" font-size="20.0" fill="#475569" text-anchor="start">Fluent Bit reads the node&#x27;s container logs, adds Kubernetes labels and sends them to Loki.</text>
+<rect x="40.0" y="150.0" width="300.0" height="1290.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<rect x="60.0" y="167.0" width="14.0" height="10.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.2"/>
+<polyline points="57.5,181.0 76.5,181.0" fill="none" stroke="#475569" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">your terminal</text>
+<rect x="70.0" y="1190.0" width="240.0" height="90.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="190.0" y="1227.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">LogQL query</text>
+<text x="190.0" y="1249.7" font-size="17.0" fill="#475569" text-anchor="middle">namespace + app</text>
+<rect x="70.0" y="1330.0" width="240.0" height="70.0" rx="10.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="190.0" y="1357.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">error lines</text>
+<text x="190.0" y="1379.7" font-size="17.0" fill="#475569" text-anchor="middle">from Loki</text>
+<rect x="390.0" y="150.0" width="1170.0" height="1290.0" rx="22.0" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.6"/>
+<ellipse cx="417.0" cy="174.0" rx="9.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.20"/>
+<ellipse cx="417.0" cy="174.0" rx="4.0" ry="9.0" fill="none" stroke="#475569" stroke-width="1.00"/>
+<polyline points="408.0,174.0 426.0,174.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="436.0" y="180.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">OrbStack cluster</text>
+<rect x="430.0" y="220.0" width="1090.0" height="1180.0" rx="18.0" fill="#f5f7fa" stroke="#d3dae4" stroke-width="1.6"/>
+<rect x="448.0" y="235.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="451.5" cy="237.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="457.0,237.5 462.5,237.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="448.0" y="241.5" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="451.5" cy="244.0" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="457.0,244.0 462.5,244.0" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="448.0" y="248.0" width="18.0" height="5.0" rx="1.5" fill="none" stroke="#475569" stroke-width="1.1"/>
+<ellipse cx="451.5" cy="250.5" rx="0.8" ry="0.8" fill="#475569" stroke="#475569" stroke-width="0.50"/>
+<polyline points="457.0,250.5 462.5,250.5" fill="none" stroke="#475569" stroke-width="1.00" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="476.0" y="250.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">node k3d-k8s-lab-server-0</text>
+<rect x="470.0" y="290.0" width="1010.0" height="245.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="488.0" y="320.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace course-sre</text>
+<rect x="690.0" y="350.0" width="570.0" height="145.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="717.0,365.0 725.5,369.5 725.5,379.0 717.0,383.5 708.5,379.0 708.5,369.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="708.5,369.5 717.0,374.0 725.5,369.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="717.0,374.0 717.0,383.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="736.0" y="380.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">pod checkout</text>
+<rect x="720.0" y="405.0" width="510.0" height="60.0" rx="10.0" fill="#f1f4f8" stroke="#475569" stroke-width="1.8"/>
+<text x="975.0" y="427.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">checkout</text>
+<text x="975.0" y="449.7" font-size="17.0" fill="#475569" text-anchor="middle">JSON to stdout</text>
+<rect x="470.0" y="570.0" width="1010.0" height="75.0" rx="14.0" fill="#e7f7f0" stroke="#059669" stroke-width="1.8"/>
+<text x="530.0" y="604.5" font-size="20.0" fill="#047857" font-weight="700" text-anchor="start">node log files</text>
+<text x="530.0" y="628.5" font-size="17.0" fill="#475569" text-anchor="start">/var/log/containers</text>
+<rect x="470.0" y="700.0" width="470.0" height="330.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="488.0" y="730.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace course-logging</text>
+<rect x="520.0" y="775.0" width="370.0" height="150.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="547.0,790.0 555.5,794.5 555.5,804.0 547.0,808.5 538.5,804.0 538.5,794.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="538.5,794.5 547.0,799.0 555.5,794.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="547.0,799.0 547.0,808.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="566.0" y="805.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Fluent Bit pod</text>
+<rect x="550.0" y="830.0" width="310.0" height="60.0" rx="10.0" fill="#e6f6fa" stroke="#0891b2" stroke-width="1.8"/>
+<text x="705.0" y="852.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">tail + enrich</text>
+<text x="705.0" y="874.7" font-size="17.0" fill="#475569" text-anchor="middle">Kubernetes labels</text>
+<rect x="990.0" y="700.0" width="490.0" height="630.0" rx="16.0" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="1008.0" y="730.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">namespace observability</text>
+<rect x="1040.0" y="775.0" width="390.0" height="150.0" rx="14.0" fill="#ffffff" stroke="#9aa8ba" stroke-width="1.6"/>
+<polygon points="1067.0,790.0 1075.5,794.5 1075.5,804.0 1067.0,808.5 1058.5,804.0 1058.5,794.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linejoin="round"/>
+<polyline points="1058.5,794.5 1067.0,799.0 1075.5,794.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1067.0,799.0 1067.0,808.5" fill="none" stroke="#475569" stroke-width="1.20" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1086.0" y="805.0" font-size="18.0" fill="#475569" font-weight="700" text-anchor="start">Loki pod</text>
+<rect x="1070.0" y="830.0" width="330.0" height="60.0" rx="10.0" fill="#fff2e8" stroke="#ea580c" stroke-width="1.8"/>
+<text x="1235.0" y="852.6" font-size="19.0" fill="#0f172a" font-weight="700" text-anchor="middle">Loki</text>
+<text x="1235.0" y="874.7" font-size="17.0" fill="#475569" text-anchor="middle">shared store</text>
+<polyline points="975.0,465.0 975.0,560.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="975.0,570.0 969.2,558.5 980.8,558.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="975.0" cy="517.5" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="975.0" cy="517.5" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="975.0" y="524.0" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">1</text>
+<polyline points="823.5,645.0 824.0,675.0 705.0,675.0 705.0,820.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="705.0,830.0 699.2,818.5 710.8,818.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="765.0" cy="675.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="765.0" cy="675.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="765.0" y="681.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">2</text>
+<text x="791.0" y="681.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="start">tails</text>
+<polyline points="860.0,860.0 1060.5,860.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1070.0,860.0 1058.5,865.8 1058.5,854.2" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="925.0" cy="860.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="925.0" cy="860.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="925.0" y="866.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">3</text>
+<text x="925.0" y="834.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">pushes labeled lines</text>
+<polyline points="310.0,1235.0 365.0,1235.0 1235.0,1235.0 1235.0,1000.0 1235.0,899.5" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1235.0,890.0 1240.8,901.5 1229.2,901.5" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<ellipse cx="810.0" cy="1235.0" rx="19.0" ry="19.0" fill="#ffffff" stroke="none"/>
+<ellipse cx="810.0" cy="1235.0" rx="16.0" ry="16.0" fill="#f59e0b" stroke="none"/>
+<text x="810.0" y="1241.5" font-size="18.0" fill="#1f2937" font-weight="700" text-anchor="middle">4</text>
+<text x="810.0" y="1209.0" font-size="18.0" fill="#0f172a" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">queries</text>
+<polyline points="1235.0,890.0 1235.0,1355.0 360.0,1355.0 360.0,1365.0 319.5,1365.0" fill="none" stroke="#475569" stroke-width="2.20" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="310.0,1365.0 321.5,1359.2 321.5,1370.8" fill="#475569" stroke="#475569" stroke-width="1" stroke-linejoin="round"/>
+<text x="700.0" y="1377.0" font-size="18.0" fill="#475569" font-weight="700" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" paint-order="stroke" text-anchor="middle">returns matches</text>
+</svg>

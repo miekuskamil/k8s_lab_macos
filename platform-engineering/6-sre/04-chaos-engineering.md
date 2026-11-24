@@ -8,7 +8,7 @@
 
 Every team believes its service survives a lost pod or a slow dependency, until the first real outage shows which beliefs were wrong, at 3 a.m. and with customers watching. Chaos engineering moves that discovery to a time you choose: you write down what should happen, break one small thing on purpose, and compare the numbers with your guess. This module installs Chaos Mesh, runs three experiments against checkout's dependency, payments, and watches each one on the SLO dashboard, which is where the cost of a fault shows up.
 
-Time: about 50 minutes. Memory: Chaos Mesh adds about 150 MiB, and the reset removes it.
+Time: about 50 minutes. Memory: Chaos Mesh requests about 160 MiB, and the reset removes it.
 
 ## Concept: an experiment, not an accident
 
@@ -57,7 +57,143 @@ Chaos Mesh and LitmusChaos are the two CNCF projects for Kubernetes, and the clo
 
 ## Do it
 
-OUT-63
+### 1. Set the steady state and install Chaos Mesh
+
+The experiments need real traffic and rules to measure it. Deploy checkout, add its two SLOs, then install the pinned Chaos Mesh chart:
+
+```console
+$ kubectl apply -f platform-engineering/manifests/6.1-checkout.yaml
+namespace/course-sre created
+configmap/checkout-code created
+deployment.apps/checkout created
+service/checkout created
+podmonitor.monitoring.coreos.com/checkout created
+deployment.apps/payments created
+service/payments created
+podmonitor.monitoring.coreos.com/payments created
+deployment.apps/loadgen created
+
+$ kubectl apply -f platform-engineering/manifests/6.1-checkout-slo-rules.yaml \
+  -f platform-engineering/manifests/6.1-budget-minutes.yaml
+prometheusrule.monitoring.coreos.com/checkout created
+prometheusrule.monitoring.coreos.com/checkout-budget-minutes created
+
+$ helm upgrade --install chaos-mesh chaos-mesh --repo https://charts.chaos-mesh.org \
+  --version 2.8.7 -n chaos-mesh --create-namespace \
+  -f platform-engineering/manifests/6.4-chaos-mesh-values.yaml --wait --timeout 5m
+Release "chaos-mesh" does not exist. Installing it now.
+NAME: chaos-mesh
+NAMESPACE: chaos-mesh
+STATUS: deployed
+
+$ kubectl -n chaos-mesh get pods --no-headers | awk '$3 == "Running" { n++ } END { print n, "Running" }'
+2 Running
+
+$ kubectl get crd -o name | grep -c 'chaos-mesh.org'
+23
+```
+
+In another terminal, wait until the two five-minute error ratios read zero:
+
+```text
+slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability"} 0
+slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="latency"} 0
+```
+
+**What you should see.** Chaos Mesh runs one controller and one daemon on the lab node, and it installs 23 custom resource definitions. The SLO queries give us a baseline before we inject anything.
+
+### 2. Kill one payments pod at a time
+
+The first experiment kills a single payments pod every 30 seconds. The Schedule creates PodChaos objects as it runs; poll until at least two appear:
+
+```console
+$ kubectl apply -f platform-engineering/manifests/6.4-pod-kill.yaml
+schedule.chaos-mesh.org/payments-pod-kill created
+
+$ for _ in $(seq 1 36); do
+    n=$(kubectl -n course-sre get podchaos --no-headers | wc -l | tr -d ' ')
+    [[ "$n" -ge 2 ]] && break
+    sleep 5
+  done
+
+$ kubectl -n course-sre get podchaos --no-headers | wc -l | tr -d ' '
+2
+
+$ kubectl delete -f platform-engineering/manifests/6.4-pod-kill.yaml
+schedule.chaos-mesh.org "payments-pod-kill" deleted
+```
+
+Check checkout's availability ratio in Prometheus:
+
+```text
+slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability"} 0
+```
+
+**What you should see.** Two payments pods stayed available while Chaos Mesh replaced the killed pod. In the test run, two PodChaos objects appeared and the five-minute availability error ratio stayed at zero.
+
+### 3. Add latency to payments
+
+Now delay payments' outgoing packets by 300 ms. The experiment lasts up to ten minutes, so it ends on its own if you lose the terminal:
+
+```console
+$ kubectl apply -f platform-engineering/manifests/6.4-latency.yaml
+networkchaos.chaos-mesh.org/payments-latency created
+
+$ kubectl -n course-sre wait networkchaos/payments-latency \
+  --for=condition=AllInjected --timeout=60s
+networkchaos.chaos-mesh.org/payments-latency condition met
+
+$ kubectl -n course-sre exec deploy/loadgen -- \
+  curl -s -o /dev/null -w '%{time_total}\n' http://checkout:8080/api/checkout
+0.642
+```
+
+The latency SLI counts orders slower than 250 ms as errors. In the test run, its five-minute error ratio reached 54%, and the latency page fired while availability stayed at zero errors.
+
+**What you should see.** An order took 642 ms in the test run, so checkout still returned 200 but the latency SLO counted it as bad. Delete the fault to restore normal response time:
+
+```console
+$ kubectl -n course-sre delete networkchaos payments-latency
+networkchaos.chaos-mesh.org "payments-latency" deleted
+
+$ kubectl -n course-sre exec deploy/loadgen -- \
+  curl -s -o /dev/null -w '%{http_code} %{time_total}\n' http://checkout:8080/api/checkout
+200 0.001
+```
+
+### 4. Cut checkout off from payments
+
+A delay makes an order slow; a partition stops its dependency from answering. Apply the last experiment and wait for Chaos Mesh to inject it before checking checkout:
+
+```console
+$ kubectl apply -f platform-engineering/manifests/6.4-partition.yaml
+networkchaos.chaos-mesh.org/payments-partition created
+
+$ kubectl -n course-sre wait networkchaos/payments-partition \
+  --for=condition=AllInjected --timeout=60s
+networkchaos.chaos-mesh.org/payments-partition condition met
+
+$ kubectl -n course-sre exec deploy/loadgen -- \
+  curl -s -o /dev/null -w '%{http_code}\n' http://checkout:8080/api/checkout
+504
+
+$ kubectl -n course-sre logs deploy/checkout --tail=5 | grep 'payments timed out' | tail -1
+{"level": "error", "path": "/api/checkout", "code": 504, "duration_ms": 1001.2, "msg": "payments timed out"}
+
+```
+
+Prometheus fires the availability page when the partition turns orders into 504 responses. Delete the experiment and send another order:
+
+```console
+$ kubectl -n course-sre delete networkchaos payments-partition
+networkchaos.chaos-mesh.org "payments-partition" deleted
+
+$ kubectl -n course-sre exec deploy/loadgen -- \
+  curl -s -o /dev/null -w '%{http_code}\n' http://checkout:8080/api/checkout
+200
+```
+
+**What you should see.** Checkout waits for its one-second payments timeout, returns 504 and logs the timeout. The availability page fires, then deleting the experiment restores 200 responses. The test run saw the page fire as soon as it checked, because the continuous load had already produced enough failed orders.
 
 ## Tasks
 
@@ -68,7 +204,9 @@ Each task gives you a goal without the commands. `./lab.sh task setup` prepares 
 <!-- norun -->
 ```console
 $ ./lab.sh task setup 6.4.1
-TASK-SETUP-6.4.1
+== setup task 6.4.1
+Installing Chaos Mesh 2.8.7 (about a minute)
+Chaos Mesh runs, and no experiment is active. checkout and payments answer in a few ms.
 ```
 
 > Create a NetworkChaos named `checkout-to-payments-delay` in `course-sre` that adds 200 ms to the packets checkout sends to payments, and to nothing else: the client must still reach payments directly as fast as before.
@@ -76,14 +214,27 @@ TASK-SETUP-6.4.1
 <details>
 <summary>Solution</summary>
 
-TASK-SOLUTION-6.4.1
+Use `direction: from` with checkout as the selector and payments as the target. That limits the delay to calls leaving checkout for payments:
+
+```console
+$ kubectl apply -f platform-engineering/6-sre/tasks/6.4.1-checkout-to-payments-delay.yaml
+networkchaos.chaos-mesh.org/checkout-to-payments-delay created
+$ kubectl -n course-sre wait networkchaos/checkout-to-payments-delay --for=condition=AllInjected --timeout=60s
+networkchaos.chaos-mesh.org/checkout-to-payments-delay condition met
+```
 
 </details>
 
 <!-- norun -->
 ```console
 $ ./lab.sh task check 6.4.1
-TASK-CHECK-6.4.1
+== check task 6.4.1
+  PASS  NetworkChaos course-sre/checkout-to-payments-delay exists
+  PASS  it adds a 200 ms delay
+  PASS  Chaos Mesh injected it
+  PASS  an order through checkout takes 200 ms or more (407 ms)
+  PASS  the client still reaches payments directly in under 100 ms (0 ms)
+== task 6.4.1: 5 passed, 0 failed
 ```
 
 ### Task 6.4.2: find the experiment nobody stopped
@@ -91,7 +242,9 @@ TASK-CHECK-6.4.1
 <!-- norun -->
 ```console
 $ ./lab.sh task setup 6.4.2
-TASK-SETUP-6.4.2
+== setup task 6.4.2
+Orders started to fail a moment ago, and nobody changed checkout or payments.
+Find out why and make the orders work again, without changing either Deployment (task 6.4.2).
 ```
 
 > Orders started to fail, and nobody changed checkout or payments. Find the cause and make 20 orders in a row succeed again, without changing either Deployment.
@@ -99,14 +252,26 @@ TASK-SETUP-6.4.2
 <details>
 <summary>Solution</summary>
 
-TASK-SOLUTION-6.4.2
+Find the experiment across all namespaces, then remove the one in `chaos-mesh`:
+
+```console
+$ kubectl get networkchaos,podchaos,stresschaos -A
+NAMESPACE    NAME                                             ACTION   DURATION
+chaos-mesh   networkchaos.chaos-mesh.org/maintenance-window   loss     2h
+$ kubectl -n chaos-mesh delete networkchaos maintenance-window
+networkchaos.chaos-mesh.org "maintenance-window" deleted
+```
 
 </details>
 
 <!-- norun -->
 ```console
 $ ./lab.sh task check 6.4.2
-TASK-CHECK-6.4.2
+== check task 6.4.2
+  PASS  no chaos experiment exists in any namespace (0 left)
+  PASS  20 orders in a row answer 200 ( 20 200 )
+  PASS  checkout and payments were not changed
+== task 6.4.2: 3 passed, 0 failed
 ```
 
 ## Investigate
@@ -122,7 +287,7 @@ TASK-CHECK-6.4.2
 1. From the gap between a pod's death and the moment checkout stops picking it. The Service's endpoints drop a killed pod within a second or two, but calls already on their way, and connections opened just before, hit a pod that is gone and fail with a refused connection, which checkout turns into a 502. A retry in checkout for idempotent calls, or a `preStop` delay so pods leave the endpoints before they stop, would remove most of them.
 2. Without a timeout, every order would hang until the client's own timeout, here 3 seconds in `loadgen`, and checkout would hold a thread per waiting order, so a slow dependency would exhaust checkout itself. With 30 seconds the same happens, only slower to notice. A good timeout is a little above the dependency's normal p99, so it cuts hangs without cutting slow but healthy calls.
 3. The SLO as an automatic stop condition (abort when the burn rate passes a threshold), a blast radius the budget affords, an owner on call who knows it runs, and evidence from staging that the service survives it. The experiment also needs a budget: if the night run spends 2% of the error budget each time, it uses 60% a month.
-4. Put the fault on checkout's side and limit it with a `target` and `direction: to`, so only packets from checkout to payments' pods get the delay. Task 6.4.1 does exactly that, and its check proves that the client still reaches payments fast.
+4. Put the fault on checkout's side and limit it with a `target` and `direction: from`, so only packets leaving checkout for payments' pods get the delay. Task 6.4.1 does exactly that, and its check proves that the client still reaches payments fast.
 
 </details>
 

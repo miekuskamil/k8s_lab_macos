@@ -19,7 +19,7 @@ setup_6_8_1() {
   page_firing() {
     [[ "$(prom 'ALERTS{alertname="CheckoutAvailabilityBudgetBurn",severity="page",alertstate="firing"}')" == 1 ]]
   }
-  poll 180 page_firing || { echo "The availability page did not fire." >&2; return 1; }
+  poll 300 page_firing || { echo "The availability page did not fire." >&2; return 1; }
   echo "Checkout returns 504s. No release changed, and the 30-minute game day has started."
   echo "Use the SLO, logs and cluster state to restore orders without changing either Deployment."
 }

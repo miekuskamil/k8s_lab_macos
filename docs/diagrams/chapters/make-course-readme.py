@@ -50,7 +50,7 @@ def routes():
     lane(645, BLUE, 21, "3 Istio service mesh", "lab, what a mesh adds to installing it")
     lane(790, RED, 7, "4 Cluster security", "practice cluster, network to kernel", "exams 4-6")
     lane(935, PINK, 4, "5 AI on Kubernetes", "lab, a model call to RAG")
-    lane(1080, GREEN, 4, "6 Reliability engineering (SRE)", "lab, SLOs to a restore drill")
+    lane(1080, GREEN, 8, "6 Reliability engineering (SRE)", "lab, SLOs to an incident drill")
     c.save(OUT, "readme-course-routes")
 
 

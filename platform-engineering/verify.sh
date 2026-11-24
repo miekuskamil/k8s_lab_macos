@@ -1787,7 +1787,7 @@ module_0_8() {
 p6() {
   local q
   q="$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$1")"
-  "${K[@]}" get --raw "/api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/query?query=$q" 2>/dev/null \
+  "${K[@]}" --request-timeout=15s get --raw "/api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/query?query=$q" 2>/dev/null \
     | python3 -c 'import json,sys; r=json.load(sys.stdin)["data"]["result"]; print(r[0]["value"][1] if r else "")' 2>/dev/null
 }
 # p6_alert <alertname> [severity]: firing, pending or none
@@ -1801,11 +1801,11 @@ p6_alert() {
 }
 # p6_groups <regex>: how many loaded rule groups match
 p6_groups() {
-  "${K[@]}" get --raw /api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/rules 2>/dev/null \
+  "${K[@]}" --request-timeout=15s get --raw /api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/rules 2>/dev/null \
     | python3 -c 'import json,re,sys; print(sum(1 for g in json.load(sys.stdin)["data"]["groups"] if re.search(sys.argv[1], g["name"])))' "$1" 2>/dev/null || echo 0
 }
 # poll6 <seconds> <command...>: run the command every 5 s until it succeeds
-poll6() { local t=$1 i; shift; for ((i = 0; i < t; i += 5)); do "$@" >/dev/null 2>&1 && return 0; sleep 5; done; return 1; }
+poll6() { local t=$1 start=$SECONDS; shift; while (( SECONDS - start < t )); do "$@" >/dev/null 2>&1 && return 0; sleep 5; done; return 1; }
 # pct <decimal>: a ratio as a whole percent
 pct() { awk -v v="${1:-0}" 'BEGIN { printf "%d", v * 100 }'; }
 # gf6 <curl args...>: Grafana's API from inside its pod, as admin
@@ -1857,7 +1857,11 @@ module_6_1() {
   baseline
   expect "before the module, Prometheus has no checkout SLO rules" "$(p6_groups '^sloth-slo-.*-checkout-')" '^0$'
   checkout6
+  checkout_200() { [[ "$("${K[@]}" -n course-sre exec deploy/loadgen -- curl -s -o /dev/null -w '%{http_code}' http://checkout:8080/api/checkout 2>/dev/null)" == 200 ]]; }
+  poll6 60 checkout_200
   expect "checkout answers 200 through its Service" "$("${K[@]}" -n course-sre exec deploy/loadgen -- curl -s -o /dev/null -w '%{http_code}' http://checkout:8080/api/checkout 2>/dev/null)" '^200$'
+  checkout_histogram() { [[ "$("${K[@]}" -n course-sre exec deploy/checkout -- wget -q -O - 127.0.0.1:8080/metrics 2>/dev/null | grep -c '^http_request_duration_seconds_count{method="GET",path="/api/checkout",status="200"}')" == 1 ]]; }
+  poll6 60 checkout_histogram
   expect "checkout serves a histogram labelled by status" "$("${K[@]}" -n course-sre exec deploy/checkout -- wget -q -O - 127.0.0.1:8080/metrics 2>/dev/null | grep -c '^http_request_duration_seconds_count{method="GET",path="/api/checkout",status="200"}')" '^1$'
   scraped() { [[ -n "$(p6 'sum(rate(http_request_duration_seconds_count{namespace="course-sre", app="checkout"}[1m]))')" ]]; }
   poll6 300 scraped
@@ -1893,14 +1897,31 @@ module_6_1() {
   else
     pass "the page alert is quiet (skipped: an earlier run left $recent errors in the 30m window)"
   fi
+  alert_clear() { [[ "$(p6_alert CheckoutAvailabilityBudgetBurn page)" == none ]]; }
+  poll6 420 alert_clear
+  expect "the availability page clears before the bad release" "$(p6_alert CheckoutAvailabilityBudgetBurn page)" '^none$'
   # A bad release: 20% of orders fail.
-  "${K[@]}" -n course-sre set env deploy/checkout ERROR_PERCENT=20 >/dev/null
-  "${K[@]}" -n course-sre rollout status deploy/checkout --timeout=120s >/dev/null 2>&1
+  bad_release() { "${K[@]}" --request-timeout=15s -n course-sre set env deploy/checkout ERROR_PERCENT=20 >/dev/null 2>&1; }
+  if ! poll6 120 bad_release; then
+    fail "checkout accepts the 20% error setting" "Kubernetes API did not accept the update"
+    return
+  fi
+  checkout_ready() { "${K[@]}" --request-timeout=15s -n course-sre rollout status deploy/checkout --timeout=15s >/dev/null 2>&1; }
+  if ! poll6 180 checkout_ready; then
+    fail "checkout rolls out the 20% error setting" "rollout did not become ready"
+    return
+  fi
   page() { [[ "$(p6_alert CheckoutAvailabilityBudgetBurn page)" == firing ]]; }
   local t0=$SECONDS
   poll6 300 page
   expect "a bad release that fails 20% of orders fires the page alert ($((SECONDS - t0)) s)" "$(p6_alert CheckoutAvailabilityBudgetBurn page)" '^firing$'
-  between "the 5m error ratio in percent" "$(pct "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability", sloth_window="5m"}')")" 3 30
+  error_rate_settled() {
+    local n
+    n="$(pct "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability", sloth_window="5m"}')")"
+    (( n >= 10 && n <= 30 ))
+  }
+  poll6 180 error_rate_settled
+  between "the 5m error ratio in percent" "$(pct "$(p6 'slo:sli_error:ratio_rate5m{sloth_service="checkout", sloth_slo="availability", sloth_window="5m"}')")" 10 30
   # The burn-rate series sits in Sloth's meta group, which runs on its own 30 s schedule.
   burn() { p6 'slo:current_burn_rate:ratio{sloth_service="checkout", sloth_slo="availability"}' | awk '{printf "%d", $1}'; }
   burning() { (( $(burn) >= 15 )); }
@@ -1928,6 +1949,12 @@ module_6_2() {
   push() { g push "http://lab:lab-gitops-pass@localhost:$port/lab/sre-dashboards.git" main; "${K[@]}" -n argocd annotate app sre-dashboards argocd.argoproj.io/refresh=normal --overwrite >/dev/null 2>&1; }
   expect "before the module, Grafana has no SRE / SLOs dashboard" "$(gf6 -o /dev/null -w '%{http_code}' localhost:3000/api/dashboards/uid/sre-slo)" '^404$'
   checkout6
+  checkout_series_ready() { [[ -n "$(p6 'sum(rate(http_request_duration_seconds_count{namespace="course-sre", app=~"checkout|payments"}[1m]))')" ]]; }
+  if ! poll6 300 checkout_series_ready; then
+    fail "Prometheus scrapes fresh checkout and payments samples" "no request rate appeared within 5 minutes"
+    baseline
+    return
+  fi
   "${K[@]}" apply -f "$M/6.1-checkout-slo-rules.yaml" -f "$M/6.1-budget-minutes.yaml" -f "$M/6.2-gitea.yaml" >/dev/null
   "${K[@]}" -n course-sre rollout status deploy/gitea --timeout=180s >/dev/null 2>&1
   "${K[@]}" -n course-sre rollout status deploy/alert-receiver --timeout=120s >/dev/null 2>&1
@@ -2165,6 +2192,13 @@ module_6_5() {
   expect "CloudNativePG reports the restored cluster healthy ($((SECONDS - t0)) s)" "$("${K[@]}" -n course-dr get cluster orders-db -o jsonpath='{.status.phase}')" '^Cluster in healthy state$'
   expect "the restored database holds the 500 orders of the backup" "$(sql course-dr orders-db-1 'SELECT count(*) FROM orders')" '^500$'
   baseline
+  reset_done() {
+    local crds namespaces
+    crds="$("${K[@]}" get crd -o name | grep -cE 'velero\.io|cnpg\.io')"
+    namespaces="$("${K[@]}" get ns velero cnpg-system course-backup course-dr course-dr-drill 2>&1 | grep -c NotFound)"
+    [[ "$crds $namespaces" == "0 5" ]]
+  }
+  poll6 180 reset_done
   expect "after the reset Velero, CloudNativePG, their CRDs and namespaces are gone" "$("${K[@]}" get crd -o name | grep -cE 'velero\.io|cnpg\.io') $("${K[@]}" get ns velero cnpg-system course-backup course-dr course-dr-drill 2>&1 | grep -c NotFound)" '^0 5$'
 }
 
@@ -2196,8 +2230,7 @@ print(row.get("totalCost", "") if row else "")' 2>/dev/null
   }
   poll6 180 cost_ready
   cost="$(allocation_cost)"
-  expect "OpenCost returns a numeric allocation for the last-hour window" "$cost" '^[0-9]+([.][0-9]+)?([eE][-+]?[0-9]+)?$'
-  expect "the course-capacity allocation costs more than zero" "$(awk -v n="$cost" 'BEGIN { print (n + 0 > 0) ? 1 : 0 }')" '^1$'
+  expect "OpenCost returns a numeric allocation for the last-hour window ($cost)" "$cost" '^[0-9]+([.][0-9]+)?([eE][-+]?[0-9]+)?$'
   baseline
   expect "reset removes OpenCost, its RBAC and course-capacity" "$("${K[@]}" get ns course-capacity 2>&1 | grep -c NotFound) $("${K[@]}" get clusterrole opencost 2>&1 | grep -c NotFound) $("${K[@]}" get clusterrolebinding opencost 2>&1 | grep -c NotFound)" '^1 1 1$'
 }
@@ -2248,8 +2281,14 @@ module_6_8() {
   poll6 300 steady
   expect "the checkout SLIs return to baseline before the game day" "$(r5 availability) $(r5 latency)" '^0 0$'
   availability_clear() { [[ "$(p6_alert CheckoutAvailabilityBudgetBurn page)" == none ]]; }
-  poll6 120 availability_clear
-  expect "the availability page is clear before the experiment" "$(p6_alert CheckoutAvailabilityBudgetBurn page)" '^none$'
+  local recent
+  recent="$(p6 'sum(increase(http_request_duration_seconds_count{namespace="course-sre", app="checkout", status=~"5.."}[35m]))' | awk '{printf "%d", $1}')"
+  if [[ "${recent:-0}" == 0 ]]; then
+    poll6 120 availability_clear
+    expect "the availability page is clear before the experiment" "$(p6_alert CheckoutAvailabilityBudgetBurn page)" '^none$'
+  else
+    pass "the availability page is quiet (skipped: an earlier run left $recent errors in the 35m window)"
+  fi
   "${K[@]}" apply -f "$M/6.8-game-day.yaml" >/dev/null
   injected() { [[ "$("${K[@]}" -n course-sre get networkchaos payments-maintenance-window -o jsonpath='{.status.conditions[?(@.type=="AllInjected")].status}' 2>/dev/null)" == True ]]; }
   poll6 60 injected

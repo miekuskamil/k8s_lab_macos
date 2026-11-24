@@ -29,7 +29,7 @@ done
 if "${HK[@]}" -n cnpg-system status cnpg >/dev/null 2>&1; then
   "${HK[@]}" -n cnpg-system uninstall cnpg --wait >/dev/null 2>&1 || true
 fi
-"${K[@]}" delete namespace velero cnpg-system course-backup --ignore-not-found >/dev/null
+"${K[@]}" delete namespace velero cnpg-system course-backup --ignore-not-found --wait=true --timeout=120s >/dev/null
 "${K[@]}" get crd -o name 2>/dev/null | grep -E '\.velero\.io$|\.postgresql\.cnpg\.io$' | xargs -r "${K[@]}" delete --ignore-not-found >/dev/null 2>&1 || true
 # Module 6.4: experiments first, while the controller still runs to undo their faults and clear
 # their finalizers, then the release and its 23 CRDs.

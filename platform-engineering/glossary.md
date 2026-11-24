@@ -546,6 +546,14 @@ Module 2.1.
 
 **Restore drill.** A restore drill restores a backup into a new namespace while the original keeps running, so you prove the backup works without an outage. Module 6.5.
 
+**Resource request and limit.** A request reserves CPU and memory for scheduling; a limit caps what a container uses. Requests that stay above real demand make a cluster look fuller than it is, while requests below peak demand may leave a pod short of resources. Module 6.6.
+
+**Cost allocation and OpenCost.** Cost allocation estimates each namespace or workload's share of cluster costs. OpenCost combines Kubernetes usage and a configured price model to produce that estimate; local results need validated rates and enough history before teams use them for budgets. Module 6.6.
+
+**Fluent Bit.** Fluent Bit is a small log collector that runs on each node, reads container log files, adds Kubernetes metadata and sends lines to a store such as Loki. Module 6.7.
+
+**Game day and incident triage.** A game day rehearses a failure in a controlled window. Incident triage uses service signals, logs and cluster state to identify the cause before changing the system. Module 6.8.
+
 ## OpenTelemetry and Tempo
 
 **OpenTelemetry (OTel) and OTLP.** OpenTelemetry is the CNCF standard for telemetry, so you instrument an app once and then choose back ends freely. It has SDKs for every language, one protocol, and the Collector. The protocol is OTLP, on gRPC port 4317 and HTTP port 4318. Module 2.4.

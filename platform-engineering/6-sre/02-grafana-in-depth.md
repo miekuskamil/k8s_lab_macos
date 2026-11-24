@@ -58,7 +58,128 @@ Alerting is converging too. Prometheus rules stay the first choice for metrics, 
 
 ## Do it
 
-OUT-62
+### 1. Start checkout and the dashboard Git server
+
+Module 6.1 defines checkout's SLOs and records its requests. Bring those workloads back, then add Gitea and a small webhook receiver for Grafana alerts:
+
+```console
+$ kubectl apply -f platform-engineering/manifests/6.1-checkout.yaml
+namespace/course-sre created
+configmap/checkout-code created
+deployment.apps/checkout created
+service/checkout created
+podmonitor.monitoring.coreos.com/checkout created
+deployment.apps/payments created
+service/payments created
+podmonitor.monitoring.coreos.com/payments created
+deployment.apps/loadgen created
+
+$ kubectl apply -f platform-engineering/manifests/6.1-checkout-slo-rules.yaml \
+  -f platform-engineering/manifests/6.1-budget-minutes.yaml \
+  -f platform-engineering/manifests/6.2-gitea.yaml
+```
+
+Wait for checkout, payments, loadgen, Gitea and the alert receiver to roll out. Create the local Git user after Gitea starts:
+
+```console
+$ kubectl -n course-sre exec deploy/gitea -- gitea admin user create \
+  --username lab --password lab-gitops-pass --email lab@example.invalid \
+  --admin --must-change-password=false
+New user 'lab' has been successfully created!
+```
+
+Gitea keeps its repository in an `emptyDir`, so it lasts only while this lab pod runs. That makes it safe to experiment with a private copy without pushing to the course repository.
+
+### 2. Push the dashboards to Gitea
+
+Open another terminal and forward Gitea's Service to port 3012:
+
+```console
+$ kubectl -n course-sre port-forward svc/gitea 3012:3000
+Forwarding from 127.0.0.1:3012 -> 3000
+```
+
+In the first terminal, copy the dashboard folder into a temporary Git repository. The push creates `sre-dashboards` in Gitea:
+
+```console
+$ mkdir -p /tmp/sre-dashboards
+$ cp -R platform-engineering/6-sre/dashboards/. /tmp/sre-dashboards/
+$ git -C /tmp/sre-dashboards init -b main
+Initialized empty Git repository in /tmp/sre-dashboards/.git/
+$ git -C /tmp/sre-dashboards add .
+$ git -C /tmp/sre-dashboards -c user.name=lab -c user.email=lab@example.invalid \
+  commit -m "SLO, RED and USE dashboards"
+[main (root-commit) ...] SLO, RED and USE dashboards
+$ git -C /tmp/sre-dashboards push \
+  http://lab:lab-gitops-pass@localhost:3012/lab/sre-dashboards.git main
+ * [new branch]      main -> main
+```
+
+The Git server keeps the JSON files plain, which makes the dashboards easy to diff and review. ArgoCD will build the Kustomize folder and apply the ConfigMaps in the next step.
+
+### 3. Let ArgoCD deliver the dashboards
+
+Apply the Application that points ArgoCD at the new Gitea repository:
+
+```console
+$ kubectl apply -f platform-engineering/manifests/6.2-dashboards-app.yaml
+application.argoproj.io/sre-dashboards created
+```
+
+Wait until `sre-dashboards` reports `Synced` and `Healthy`, then list the ConfigMaps:
+
+```console
+$ kubectl -n course-sre get cm -l grafana_dashboard=1 -o name
+configmap/dashboard-sre-red
+configmap/dashboard-sre-slo
+configmap/dashboard-sre-use
+```
+
+Grafana's sidecar reads those labels and loads the dashboards. Open Grafana at http://localhost:3000. The SLO dashboard uses the rules from module 6.1, the RED dashboard groups request metrics by app, and the USE dashboard groups resource metrics by pod. Prometheus may take up to four minutes to discover the PodMonitor, so wait for fresh checkout samples before judging a blank RED panel.
+
+### 4. Follow a panel change through GitOps
+
+Try to save one of the provisioned dashboards in Grafana. Grafana refuses the edit because the sidecar owns that file. Make a change in the temporary Git copy instead:
+
+```console
+$ sed -i.bak 's/"title": "SRE \/ RED"/"title": "SRE \/ RED v2"/' /tmp/sre-dashboards/red.json
+$ rm /tmp/sre-dashboards/red.json.bak
+$ git -C /tmp/sre-dashboards commit -am "rename the RED dashboard"
+$ git -C /tmp/sre-dashboards push \
+  http://lab:lab-gitops-pass@localhost:3012/lab/sre-dashboards.git main
+```
+
+Ask ArgoCD to refresh the Application, then reload Grafana. In the test run, Grafana showed `SRE / RED v2` after the sync. To see self-healing, delete `dashboard-sre-use`; ArgoCD recreates it from Git, and Grafana loads it again.
+
+### 5. Alert on error logs
+
+Grafana already reads Loki, so add a contact point and a folder, then post the log alert rule. The rule counts checkout error lines in one minute and sends the notification to the receiver in `course-sre`:
+
+```console
+$ kubectl -n observability exec -i deploy/kube-prometheus-stack-grafana -c grafana -- \
+  curl -s -u admin:k8s-lab-admin -H 'Content-Type: application/json' \
+  -X POST localhost:3000/api/v1/provisioning/contact-points -d @- \
+  < platform-engineering/manifests/6.2-contact-point.json
+$ kubectl -n observability exec deploy/kube-prometheus-stack-grafana -c grafana -- \
+  curl -s -u admin:k8s-lab-admin -H 'Content-Type: application/json' \
+  -X POST localhost:3000/api/folders -d '{"uid":"sre","title":"SRE"}'
+$ kubectl -n observability exec -i deploy/kube-prometheus-stack-grafana -c grafana -- \
+  curl -s -u admin:k8s-lab-admin -H 'Content-Type: application/json' \
+  -X POST localhost:3000/api/v1/provisioning/alert-rules -d @- \
+  < platform-engineering/manifests/6.2-log-alert.json
+```
+
+Set checkout to fail one order in five and watch Grafana's alert rule and the receiver logs:
+
+```console
+$ kubectl -n course-sre set env deployment/checkout ERROR_PERCENT=20
+deployment.apps/checkout env updated
+$ kubectl -n course-sre rollout status deployment/checkout
+deployment "checkout" successfully rolled out
+$ kubectl -n course-sre logs deployment/alert-receiver | grep 'Checkout logs many errors'
+```
+
+Grafana evaluates this rule every 30 seconds and holds it for one minute. In the test run, the rule fired after 127 seconds and the receiver logged its notification. Roll checkout back, then run `./platform-engineering/reset.sh`; reset removes the Gitea Application, the Grafana rule, its folder and contact point, and the course workloads.
 
 ## Tasks
 
@@ -69,7 +190,9 @@ Each task gives you a goal without the commands. `./lab.sh task setup` prepares 
 <!-- norun -->
 ```console
 $ ./lab.sh task setup 6.2.1
-TASK-SETUP-6.2.1
+== setup task 6.2.1
+The ConfigMap course-sre/dashboard-checkout-calls holds the dashboard 'Checkout / calls to payments'.
+Its Result dropdown is empty and one panel shows No data. Fix the ConfigMap (task 6.2.1).
 ```
 
 > A teammate committed the dashboard *Checkout / calls to payments* as the ConfigMap `dashboard-checkout-calls` in `course-sre`. It loads, but its *Result* dropdown stays empty and one panel says *No data*. Fix the ConfigMap so the dropdown lists the call results and every panel draws.
@@ -77,14 +200,23 @@ TASK-SETUP-6.2.1
 <details>
 <summary>Solution</summary>
 
-TASK-SOLUTION-6.2.1
+The variable uses the wrong metric name, and a panel has a misspelled app label. Correct both in the ConfigMap:
+
+```console
+$ sed -e 's/checkout_payments_call_total/checkout_payments_calls_total/g' -e 's/chekout/checkout/' platform-engineering/6-sre/tasks/6.2.1-calls-dashboard.yaml | kubectl apply -f -
+configmap/dashboard-checkout-calls configured
+```
 
 </details>
 
 <!-- norun -->
 ```console
 $ ./lab.sh task check 6.2.1
-TASK-CHECK-6.2.1
+== check task 6.2.1
+  PASS  Grafana has the dashboard checkout-calls, provisioned from its ConfigMap
+  PASS  the Result variable lists values, ok among them
+  PASS  every panel returns data with Result set to All
+== task 6.2.1: 3 passed, 0 failed
 ```
 
 ### Task 6.2.2: a Grafana alert on checkout's p95
@@ -92,7 +224,8 @@ TASK-CHECK-6.2.1
 <!-- norun -->
 ```console
 $ ./lab.sh task setup 6.2.2
-TASK-SETUP-6.2.2
+== setup task 6.2.2
+Grafana has the folder SRE (uid sre) and the contact point sre-webhook. No rule checkout-p95 exists.
 ```
 
 > In the folder `sre`, create a Grafana-managed alert rule with uid `checkout-p95` that queries the Prometheus data source for checkout's 95th-percentile latency over 5 minutes, from its histogram, fires when it is above 0.25 seconds for 1 minute, and notifies the contact point `sre-webhook` directly.
@@ -100,14 +233,26 @@ TASK-SETUP-6.2.2
 <details>
 <summary>Solution</summary>
 
-TASK-SOLUTION-6.2.2
+The rule in `platform-engineering/6-sre/tasks/6.2.2-p95-rule.json` queries the checkout histogram, compares p95 with 0.25 seconds, waits one minute and routes directly to `sre-webhook`:
+
+```console
+$ kubectl -n observability exec -i deploy/kube-prometheus-stack-grafana -c grafana -- curl -s -u admin:k8s-lab-admin -H 'Content-Type: application/json' -X POST localhost:3000/api/v1/provisioning/alert-rules -d @- < platform-engineering/6-sre/tasks/6.2.2-p95-rule.json
+```
 
 </details>
 
 <!-- norun -->
 ```console
 $ ./lab.sh task check 6.2.2
-TASK-CHECK-6.2.2
+== check task 6.2.2
+  PASS  a Grafana rule with uid checkout-p95 exists in folder sre
+  PASS  it queries the Prometheus data source
+  PASS  it computes checkout's 95th percentile from the histogram
+  PASS  it fires above 0.25 s
+  PASS  it must hold for 1 minute
+  PASS  it notifies the contact point sre-webhook
+  PASS  Grafana evaluates it without errors
+== task 6.2.2: 7 passed, 0 failed
 ```
 
 ## Investigate

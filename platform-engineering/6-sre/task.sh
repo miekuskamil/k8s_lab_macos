@@ -25,7 +25,7 @@ if ! declare -F "$fn" >/dev/null; then
 fi
 echo "== $action task $id"
 cd "$ROOT" || exit 1
-"$fn"
+"$fn" || exit $?
 if [ "$action" = check ]; then
   echo "== task $id: $PASSES passed, $FAILS failed"
   [ "$FAILS" -eq 0 ]
